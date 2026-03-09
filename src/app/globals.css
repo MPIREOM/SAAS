@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border-color);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-arabic: var(--font-ibm-plex-arabic);
+}
+
+:root {
+  /* Dark mode (default) */
+  --background: #0A0A0B;
+  --surface: #141416;
+  --surface-elevated: #1C1C1F;
+  --border-color: #2A2A2E;
+  --text-primary: #EDEDEF;
+  --text-secondary: #8B8B8D;
+  --accent: #2DD4A8;
+  --accent-hover: #25B890;
+  --warning: #F5A623;
+  --destructive: #EF4444;
+  --success: #22C55E;
+  --foreground: #EDEDEF;
+}
+
+[data-theme="light"] {
+  --background: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-elevated: #F5F5F5;
+  --border-color: #E5E5E5;
+  --text-primary: #171717;
+  --text-secondary: #737373;
+  --accent: #0D9373;
+  --accent-hover: #0B7D63;
+  --warning: #D4900E;
+  --destructive: #DC2626;
+  --success: #16A34A;
+  --foreground: #171717;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Ensure numbers stay LTR in RTL context */
+[dir="rtl"] .ltr-nums {
+  direction: ltr;
+  unicode-bidi: embed;
+}
