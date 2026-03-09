@@ -40,15 +40,6 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE user_property_assignments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
-  assigned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  assigned_by UUID REFERENCES users(id),
-  UNIQUE(user_id, property_id)
-);
-
 -- ============================================
 -- PROPERTIES & UNITS
 -- ============================================
@@ -63,6 +54,15 @@ CREATE TABLE properties (
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE user_property_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  assigned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  assigned_by UUID REFERENCES users(id),
+  UNIQUE(user_id, property_id)
 );
 
 CREATE TABLE units (
