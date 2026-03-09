@@ -94,7 +94,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
           aria-modal="true"
           tabIndex={-1}
           className={cn(
-            "relative z-50 w-full rounded-xl border border-border bg-surface p-0 shadow-xl",
+            "relative z-50 w-full mx-4 sm:mx-auto rounded-xl border border-border bg-surface p-0 shadow-xl",
             "animate-in fade-in-0 zoom-in-95",
             maxWidth,
             className

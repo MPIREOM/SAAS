@@ -62,7 +62,8 @@
     "resetPasswordSent": "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
     "newPassword": "كلمة المرور الجديدة",
     "confirmPassword": "تأكيد كلمة المرور",
-    "rememberMe": "تذكرني"
+    "rememberMe": "تذكرني",
+    "loginSubtitle": "سجل دخولك لإدارة عقاراتك"
   },
   "properties": {
     "title": "العقارات",

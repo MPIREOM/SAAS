@@ -62,7 +62,8 @@
     "resetPasswordSent": "Password reset link has been sent to your email",
     "newPassword": "New Password",
     "confirmPassword": "Confirm Password",
-    "rememberMe": "Remember me"
+    "rememberMe": "Remember me",
+    "loginSubtitle": "Sign in to manage your properties"
   },
   "properties": {
     "title": "Properties",

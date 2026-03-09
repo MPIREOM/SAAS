@@ -42,11 +42,11 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
   return (
     <header
       className={cn(
-        "h-14 bg-surface border-b border-border flex items-center justify-between px-6 sticky top-0 z-30"
+        "h-14 bg-surface border-b border-border flex items-center justify-between ps-14 pe-4 md:px-6 sticky top-0 z-30"
       )}
     >
       {/* Search */}
-      <div className="flex items-center gap-2 flex-1 max-w-md">
+      <div className="flex items-center gap-2 flex-1 max-w-xs md:max-w-md">
         <div className="relative w-full">
           <Search className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary start-3" />
           <input
@@ -83,7 +83,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
 
         {/* User info + logout */}
         <div className="flex items-center gap-2 ms-2 ps-2 border-s border-border">
-          <div className="text-end">
+          <div className="text-end hidden sm:block">
             <p className="text-sm text-text-primary leading-tight">
               {userName || userEmail}
             </p>

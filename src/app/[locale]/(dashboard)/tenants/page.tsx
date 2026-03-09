@@ -56,8 +56,8 @@ export default async function TenantsPage({
       </div>
 
       {tenants && tenants.length > 0 ? (
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
-          <table className="w-full">
+        <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">

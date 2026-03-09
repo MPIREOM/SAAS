@@ -146,8 +146,8 @@ export default async function SettingsPage({
         </div>
 
         {allUsers && allUsers.length > 0 ? (
-          <div className="overflow-hidden rounded-md border border-border">
-            <table className="w-full">
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-border bg-surface-elevated">
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">

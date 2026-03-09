@@ -222,7 +222,7 @@ export default async function TenantDetailPage({
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     <div>
                       <span className="text-xs text-text-secondary uppercase tracking-wider">
                         {t("property")}
@@ -291,8 +291,8 @@ export default async function TenantDetailPage({
           {t("payments")}
         </h2>
         {payments && payments.length > 0 ? (
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[550px]">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
@@ -383,8 +383,8 @@ export default async function TenantDetailPage({
           {t("maintenance")}
         </h2>
         {maintenance && maintenance.length > 0 ? (
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[500px]">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
