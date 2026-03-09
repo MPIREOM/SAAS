@@ -25,11 +25,13 @@
 
 | Stack | Total Score (out of 45) |
 |---|---|
-| **Next.js 15 + Supabase** | **43** |
-| Remix + PostgreSQL + Prisma | 34 |
+| **Next.js 16 + Supabase** | **43** |
+| React Router v7 + PostgreSQL + Prisma | 34 |
 | SvelteKit + PocketBase | 26 |
 
-### ★ Recommendation: Next.js 15 (App Router) + Supabase
+> **Note on versions (as of March 2026):** Next.js 16.1.x is current stable (shipped Oct 2025) with Turbopack as default bundler and stable React Compiler. Remix has merged into React Router v7 (Nov 2024). PocketBase remains pre-v1.0 (v0.36.x). Supabase pg_cron now supports sub-minute intervals.
+
+### ★ Recommendation: Next.js 16 (App Router) + Supabase
 
 **Why this stack wins for MPIRE:**
 
@@ -53,7 +55,7 @@
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Framework | Next.js 15 (App Router) | Full-stack React framework |
+| Framework | Next.js 16 (App Router) | Full-stack React framework |
 | Database + Auth | Supabase (PostgreSQL 15) | Auth, DB, RLS, Realtime, Storage |
 | ORM | Drizzle ORM | Type-safe SQL, lightweight, great Supabase compat |
 | UI Components | shadcn/ui + Radix UI | Accessible, customizable components |
@@ -78,11 +80,11 @@
 
 | Aspect | Details |
 |---|---|
-| **Phone coexistence** | **YES** — Since Meta introduced "Coexistence mode" (2024), a number registered on the Cloud API can simultaneously remain active on the WhatsApp Business App on a physical phone. The phone continues to send/receive messages normally. API-sent messages appear on the phone too. |
-| **Setup** | Create Meta Business account → verify business → add phone number → create WhatsApp Business App in Meta Developer Console → generate permanent access token → register message templates for approval |
-| **Cost** | First 1,000 service conversations/month are free. Utility conversations (reminders) cost ~$0.005–0.02 per conversation (24h window) depending on country. For Oman: ~$0.015/conversation. For 200 tenants × 4 reminders/month = ~$12/month. |
+| **Phone coexistence** | **YES** — Meta launched "Coexistence mode" (May 2025, now broadly available). The same number works simultaneously on the WhatsApp Business App (physical phone) and Cloud API (automation). Messages mirror between both. Requires WhatsApp Business App v2.24.17+ on the phone. Minor trade-offs: throughput reduced to 20 msg/sec (irrelevant for rent reminders), disappearing messages and view-once media disabled. |
+| **Setup** | Create Meta Business account → complete Meta Business Verification (requires Oman trade license) → create Developer App → add WhatsApp product → register phone number with Coexistence enabled → submit message templates → generate System User permanent access token |
+| **Cost** | Utility conversations (reminders) cost ~$0.005–0.015 per conversation (24h window) depending on country. For Oman: ~$0.015/conversation. For 200 tenants × 4 reminders/month = ~$12/month. |
 | **Ban risk** | Zero — this is the official API. |
-| **Template messages** | Full support. Templates must be pre-approved by Meta (usually 24h). Supports variables like `{{1}}`, `{{2}}` for tenant name, amount, etc. Arabic and English templates both supported. |
+| **Template messages** | Full support. Templates must be pre-approved by Meta (usually 24h). Supports variables like `{{1}}`, `{{2}}` for tenant name, amount, etc. Utility category = cheapest rates + fastest approval. Arabic and English templates both supported. |
 | **Scheduling** | API is stateless HTTP calls — our cron job calls the API when a reminder is due. |
 | **Rate limits** | Starts at 250 messages/24h, scales to 100K+ with quality rating. More than sufficient for property management. |
 
@@ -104,8 +106,8 @@
 | **Phone coexistence** | Technically yes (mimics WhatsApp Web linked device). But unreliable — sessions drop, require QR re-scan. |
 | **Setup** | npm install + QR code scan from phone. Simple technically but fragile. |
 | **Cost** | Free (open source). |
-| **Ban risk** | **HIGH** — Violates WhatsApp ToS. Business numbers can be permanently banned without warning. Multiple reports of bans increasing in 2025. Unacceptable risk for a business-critical communication channel. |
-| **Verdict** | **Rejected.** The risk of losing the business WhatsApp number makes this a non-starter for a production property management system. |
+| **Ban risk** | **HIGH AND INCREASING** — Violates WhatsApp ToS. Reports of escalating bans throughout 2025: accounts that ran bots for 3+ years are now being permanently banned. A malicious npm package mimicking Baileys was discovered late 2025 (supply chain risk). WWebJS is still alpha (v1.34.5-alpha.3). No predictable pattern — may work for months or get banned in a week. |
+| **Verdict** | **Rejected.** The risk of permanently losing the business WhatsApp number (and the entire tenant contact network) makes this a non-starter. Saving ~$12/month vs. official API does not justify the risk. |
 
 #### Option 4: SaaS Wrappers (WATI, AiSensy, Zoko)
 
