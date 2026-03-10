@@ -88,7 +88,7 @@ export default async function UnitDetailPage({
         <div className="flex items-center gap-2">
           {unit.status === "vacant" && (
             <Link
-              href={`/${locale}/tenants/new`}
+              href={`/${locale}/tenants/new?unitId=${unitId}&propertyId=${propertyId}`}
               className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -249,7 +249,7 @@ export default async function UnitDetailPage({
             <User className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
             <p className="text-sm text-text-secondary mb-3">{t("noTenant")}</p>
             <Link
-              href={`/${locale}/tenants/new`}
+              href={`/${locale}/tenants/new?unitId=${unitId}&propertyId=${propertyId}`}
               className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
             >
               <Plus className="h-4 w-4" />

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Upload, Scan, X, FileText } from "lucide-react";
+import { Upload, Scan, X, FileText, Building2 } from "lucide-react";
 
 export default function NewTenantPage({
   params,
@@ -12,8 +12,10 @@ export default function NewTenantPage({
   params: Promise<{ locale: string }>;
 }) {
   const t = useTranslations("tenants");
+  const tl = useTranslations("leases");
   const tc = useTranslations("common");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +24,38 @@ export default function NewTenantPage({
   const [isPdf, setIsPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Unit context from query params (when assigning from a property/unit page)
+  const unitId = searchParams.get("unitId");
+  const propertyId = searchParams.get("propertyId");
+
+  // Fetch unit info for display when in assignment mode
+  const [unitInfo, setUnitInfo] = useState<{
+    unit_number: string;
+    rent_amount: string;
+    property_name: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (unitId) {
+      const supabase = createClient();
+      supabase
+        .from("units")
+        .select("unit_number, rent_amount, properties(name)")
+        .eq("id", unitId)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            const property = data.properties as unknown as Record<string, string> | null;
+            setUnitInfo({
+              unit_number: data.unit_number,
+              rent_amount: data.rent_amount,
+              property_name: property?.name || "",
+            });
+          }
+        });
+    }
+  }, [unitId]);
 
   const handleIdScan = async (file: File) => {
     setScanning(true);
@@ -103,7 +137,8 @@ export default function NewTenantPage({
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    const { error: insertError } = await supabase.from("tenants").insert({
+    // Create tenant
+    const { data: tenant, error: insertError } = await supabase.from("tenants").insert({
       full_name: formData.get("full_name") as string,
       nationality: (formData.get("nationality") as string) || null,
       national_id: (formData.get("national_id") as string) || null,
@@ -114,11 +149,55 @@ export default function NewTenantPage({
       language_preference: formData.get("language_preference") as string,
       status: "active",
       created_by: user?.id,
-    });
+    }).select("id").single();
 
     if (insertError) {
       setError(insertError.message);
       setLoading(false);
+      return;
+    }
+
+    // If coming from a unit context, create lease and update unit status
+    if (unitId && tenant) {
+      const startDate = formData.get("start_date") as string;
+      const endDate = formData.get("end_date") as string;
+      const monthlyRent = formData.get("monthly_rent") as string;
+      const securityDeposit = (formData.get("security_deposit") as string) || null;
+
+      const { error: leaseError } = await supabase.from("leases").insert({
+        tenant_id: tenant.id,
+        unit_id: unitId,
+        start_date: startDate,
+        end_date: endDate,
+        monthly_rent: monthlyRent,
+        security_deposit: securityDeposit,
+        payment_due_day: 1,
+        is_active: true,
+        created_by: user?.id,
+      });
+
+      if (leaseError) {
+        setError(leaseError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Update unit status to occupied
+      const { error: unitError } = await supabase
+        .from("units")
+        .update({ status: "occupied" })
+        .eq("id", unitId);
+
+      if (unitError) {
+        setError(unitError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Navigate back to the unit page
+      const { locale } = await params;
+      router.push(`/${locale}/properties/${propertyId}/units/${unitId}`);
+      router.refresh();
       return;
     }
 
@@ -131,9 +210,24 @@ export default function NewTenantPage({
     <div className="max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-text-primary">
-          {t("createTenant")}
+          {unitId ? t("assignedUnit") : t("createTenant")}
         </h1>
       </div>
+
+      {/* Unit Context Banner */}
+      {unitId && unitInfo && (
+        <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 mb-5 flex items-center gap-3">
+          <Building2 className="h-5 w-5 text-accent shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-text-primary">
+              {unitInfo.property_name} — {unitInfo.unit_number}
+            </p>
+            <p className="text-xs text-text-secondary">
+              {t("monthlyRent")}: {unitInfo.rent_amount} OMR
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ID Scan Section */}
       <div className="bg-surface border border-border rounded-lg p-6 mb-5">
@@ -309,6 +403,71 @@ export default function NewTenantPage({
             </select>
           </div>
         </div>
+
+        {/* Lease Details - only shown when assigning from a unit */}
+        {unitId && (
+          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+            <h2 className="text-sm font-medium text-text-primary">
+              {t("leaseInfo")}
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">
+                  {tl("startDate")} <span className="text-destructive">*</span>
+                </label>
+                <input
+                  name="start_date"
+                  type="date"
+                  required
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">
+                  {tl("endDate")} <span className="text-destructive">*</span>
+                </label>
+                <input
+                  name="end_date"
+                  type="date"
+                  required
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">
+                  {tl("monthlyRent")} <span className="text-destructive">*</span>
+                </label>
+                <input
+                  name="monthly_rent"
+                  type="number"
+                  step="0.01"
+                  required
+                  defaultValue={unitInfo?.rent_amount || ""}
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">
+                  {tl("securityDeposit")}
+                </label>
+                <input
+                  name="security_deposit"
+                  type="number"
+                  step="0.01"
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <p className="text-sm text-destructive">{error}</p>
