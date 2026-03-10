@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Upload, Scan, X } from "lucide-react";
+import { Upload, Scan, X, FileText } from "lucide-react";
 
 export default function NewTenantPage({
   params,
@@ -19,6 +19,7 @@ export default function NewTenantPage({
   const [error, setError] = useState("");
   const [scanSuccess, setScanSuccess] = useState(false);
   const [idPreview, setIdPreview] = useState<string | null>(null);
+  const [isPdf, setIsPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -26,6 +27,7 @@ export default function NewTenantPage({
     setScanning(true);
     setError("");
     setScanSuccess(false);
+    setIsPdf(file.type === "application/pdf");
 
     // Show preview
     const reader = new FileReader();
@@ -81,12 +83,13 @@ export default function NewTenantPage({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith("image/")) handleIdScan(file);
+    if (file && (file.type.startsWith("image/") || file.type === "application/pdf")) handleIdScan(file);
   };
 
   const clearPreview = () => {
     setIdPreview(null);
     setScanSuccess(false);
+    setIsPdf(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -146,11 +149,18 @@ export default function NewTenantPage({
 
         {idPreview ? (
           <div className="relative">
-            <img
-              src={idPreview}
-              alt="ID Preview"
-              className="w-full max-h-48 object-contain rounded-md border border-border"
-            />
+            {isPdf ? (
+              <div className="w-full h-48 rounded-md border border-border bg-surface-elevated flex flex-col items-center justify-center gap-2">
+                <FileText className="h-12 w-12 text-text-secondary/50" />
+                <span className="text-sm text-text-secondary">PDF Document</span>
+              </div>
+            ) : (
+              <img
+                src={idPreview}
+                alt="ID Preview"
+                className="w-full max-h-48 object-contain rounded-md border border-border"
+              />
+            )}
             <button
               type="button"
               onClick={clearPreview}
@@ -193,7 +203,7 @@ export default function NewTenantPage({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
           onChange={handleFileChange}
           className="hidden"
         />

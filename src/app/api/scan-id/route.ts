@@ -12,10 +12,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    if (!allowedTypes.includes(file.type)) {
+    const allowedImageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const isPdf = file.type === "application/pdf";
+
+    if (!allowedImageTypes.includes(file.type) && !isPdf) {
       return NextResponse.json(
-        { error: "Invalid file type. Please upload a JPG, PNG, WebP, or GIF image." },
+        { error: "Invalid file type. Please upload a JPG, PNG, WebP, GIF image, or PDF." },
         { status: 400 }
       );
     }
@@ -23,24 +25,7 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
-                data: base64,
-              },
-            },
-            {
-              type: "text",
-              text: `You are an ID document scanner for a property management system. Extract the following details from this ID card image:
+    const extractPrompt = `You are an ID document scanner for a property management system. Extract the following details from this ID card:
 
 - full_name: The person's full name as written on the ID
 - nationality: The person's nationality/country
@@ -48,9 +33,39 @@ export async function POST(req: NextRequest) {
 
 Return ONLY a valid JSON object with these three fields. If a field is not visible or readable, set it to null. Do not include any other text or explanation.
 
-Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "national_id": "784-1990-1234567-1"}`,
+Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "national_id": "784-1990-1234567-1"}`;
+
+    const contentBlocks: Anthropic.Messages.ContentBlockParam[] = isPdf
+      ? [
+          {
+            type: "document",
+            source: {
+              type: "base64",
+              media_type: "application/pdf",
+              data: base64,
             },
-          ],
+          },
+          { type: "text", text: extractPrompt },
+        ]
+      : [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+              data: base64,
+            },
+          },
+          { type: "text", text: extractPrompt },
+        ];
+
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      messages: [
+        {
+          role: "user",
+          content: contentBlocks,
         },
       ],
     });
