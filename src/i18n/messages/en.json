@@ -35,7 +35,8 @@
     "uploadFile": "Upload File",
     "dragAndDrop": "Drag and drop files here",
     "or": "or",
-    "browseFiles": "Browse Files"
+    "browseFiles": "Browse Files",
+    "logout": "Logout"
   },
   "nav": {
     "dashboard": "Dashboard",

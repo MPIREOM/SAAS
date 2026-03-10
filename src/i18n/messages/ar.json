@@ -35,7 +35,8 @@
     "uploadFile": "رفع ملف",
     "dragAndDrop": "اسحب الملفات وأفلتها هنا",
     "or": "أو",
-    "browseFiles": "تصفح الملفات"
+    "browseFiles": "تصفح الملفات",
+    "logout": "تسجيل الخروج"
   },
   "nav": {
     "dashboard": "لوحة القيادة",
