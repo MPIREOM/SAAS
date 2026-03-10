@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Upload, Scan, X } from "lucide-react";
 
 export default function NewTenantPage({
   params,
@@ -16,7 +15,80 @@ export default function NewTenantPage({
   const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
+  const [scanSuccess, setScanSuccess] = useState(false);
+  const [idPreview, setIdPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const handleIdScan = async (file: File) => {
+    setScanning(true);
+    setError("");
+    setScanSuccess(false);
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => setIdPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/scan-id", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || t("scanFailed"));
+        return;
+      }
+
+      // Auto-fill form fields
+      const form = formRef.current;
+      if (form) {
+        if (data.full_name) {
+          const input = form.elements.namedItem("full_name") as HTMLInputElement;
+          if (input) input.value = data.full_name;
+        }
+        if (data.nationality) {
+          const input = form.elements.namedItem("nationality") as HTMLInputElement;
+          if (input) input.value = data.nationality;
+        }
+        if (data.national_id) {
+          const input = form.elements.namedItem("national_id") as HTMLInputElement;
+          if (input) input.value = data.national_id;
+        }
+      }
+
+      setScanSuccess(true);
+    } catch {
+      setError(t("scanFailed"));
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleIdScan(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) handleIdScan(file);
+  };
+
+  const clearPreview = () => {
+    setIdPreview(null);
+    setScanSuccess(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -60,7 +132,74 @@ export default function NewTenantPage({
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {/* ID Scan Section */}
+      <div className="bg-surface border border-border rounded-lg p-6 mb-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Scan className="h-4 w-4 text-accent" />
+          <h2 className="text-sm font-medium text-text-primary">
+            {t("scanId")}
+          </h2>
+        </div>
+        <p className="text-xs text-text-secondary mb-4">
+          {t("scanIdDescription")}
+        </p>
+
+        {idPreview ? (
+          <div className="relative">
+            <img
+              src={idPreview}
+              alt="ID Preview"
+              className="w-full max-h-48 object-contain rounded-md border border-border"
+            />
+            <button
+              type="button"
+              onClick={clearPreview}
+              className="absolute top-2 right-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
+            >
+              <X className="h-3 w-3 text-text-secondary" />
+            </button>
+            {scanning && (
+              <div className="absolute inset-0 bg-surface/70 backdrop-blur-sm rounded-md flex items-center justify-center">
+                <div className="flex items-center gap-2 text-sm text-text-secondary">
+                  <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  {t("scanningId")}
+                </div>
+              </div>
+            )}
+            {scanSuccess && (
+              <div className="mt-2 text-xs text-green-600 dark:text-green-400">
+                {t("scanSuccess")}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent/50 transition-colors"
+          >
+            <Upload className="h-8 w-8 text-text-secondary/50 mx-auto mb-2" />
+            <p className="text-sm text-text-secondary">
+              {tc("dragAndDrop")}
+            </p>
+            <p className="text-xs text-text-secondary/70 mt-1">
+              {tc("or")}{" "}
+              <span className="text-accent underline">{tc("browseFiles")}</span>
+            </p>
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+      </div>
+
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
         <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
           <div>
             <label className="block text-sm text-text-secondary mb-1.5">

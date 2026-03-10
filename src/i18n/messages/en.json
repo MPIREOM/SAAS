@@ -237,7 +237,12 @@
       "refunded": "Refunded",
       "deducted": "Deducted"
     },
-    "confirmMoveOut": "Confirm Move-out"
+    "confirmMoveOut": "Confirm Move-out",
+    "scanId": "Scan ID Card",
+    "scanIdDescription": "Upload an Emirates ID or national ID card to auto-fill tenant details using AI.",
+    "scanningId": "Scanning ID...",
+    "scanSuccess": "Details extracted successfully. Please review the auto-filled fields below.",
+    "scanFailed": "Failed to scan ID. Please try again or enter details manually."
   },
   "leases": {
     "title": "Leases",
