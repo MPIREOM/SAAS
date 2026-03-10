@@ -82,18 +82,51 @@ Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "nat
       nationality: parsed.nationality || null,
       national_id: parsed.national_id || null,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("ID scan error:", error);
 
     if (error instanceof SyntaxError) {
       return NextResponse.json(
-        { error: "Failed to parse AI response" },
+        { error: "Failed to parse AI response. Please try again." },
         { status: 500 }
       );
     }
 
+    // Anthropic API errors
+    if (error && typeof error === "object" && "status" in error) {
+      const apiError = error as { status: number; message?: string };
+      const msg = apiError.message || "Unknown API error";
+      console.error("Anthropic API error:", apiError.status, msg);
+
+      if (apiError.status === 401) {
+        return NextResponse.json(
+          { error: "AI service authentication failed. Please check your API key." },
+          { status: 500 }
+        );
+      }
+      if (apiError.status === 413 || msg.includes("too large")) {
+        return NextResponse.json(
+          { error: "File is too large. Please upload a smaller image or PDF." },
+          { status: 400 }
+        );
+      }
+      if (apiError.status === 429) {
+        return NextResponse.json(
+          { error: "AI service rate limit reached. Please wait a moment and try again." },
+          { status: 429 }
+        );
+      }
+      if (apiError.status === 400 && msg.includes("credit balance")) {
+        return NextResponse.json(
+          { error: "AI service credits depleted. Please top up your Anthropic API account." },
+          { status: 500 }
+        );
+      }
+    }
+
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to scan ID. Please try again or enter details manually." },
+      { error: `Failed to scan ID: ${errorMsg}. Please try again or enter details manually.` },
       { status: 500 }
     );
   }
