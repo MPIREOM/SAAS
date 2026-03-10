@@ -125,14 +125,29 @@
       "penthouse": "Penthouse",
       "retail": "Retail",
       "office": "Office",
-      "warehouse": "Warehouse"
+      "warehouse": "Warehouse",
+      "1br": "1 Bedroom",
+      "2br": "2 Bedrooms",
+      "3br": "3 Bedrooms",
+      "4br": "4 Bedrooms",
+      "shop": "Shop"
     },
     "noUnits": "No units found",
     "noUnitsDescription": "Add units to this property",
     "amenities": "Amenities",
     "furnished": "Furnished",
     "unfurnished": "Unfurnished",
-    "semiFurnished": "Semi-Furnished"
+    "semiFurnished": "Semi-Furnished",
+    "unitNumberPlaceholder": "Enter unit number",
+    "floorPlaceholder": "Enter floor",
+    "unitType": "Unit Type",
+    "selectType": "Select type",
+    "sizePlaceholder": "Enter size",
+    "rentPlaceholder": "Enter rent amount",
+    "unitInfo": "Unit Information",
+    "noTenant": "No tenant assigned",
+    "assignTenant": "Assign Tenant",
+    "paymentHistory": "Payment History"
   },
   "tenants": {
     "title": "Tenants",
@@ -191,7 +206,38 @@
     "notes": "Notes",
     "noNotes": "No notes found",
     "noLeases": "No leases found",
-    "noMaintenance": "No maintenance requests"
+    "noMaintenance": "No maintenance requests",
+    "fullNamePlaceholder": "Enter full name",
+    "nationalityPlaceholder": "Enter nationality",
+    "nationalIdPlaceholder": "Enter national ID",
+    "passportNumberPlaceholder": "Enter passport number",
+    "phonePlaceholder": "Enter phone number",
+    "emailPlaceholder": "Enter email address",
+    "emergencyContactPlaceholder": "Enter emergency contact",
+    "moveOutDescription": "Process tenant move-out and vacate the unit",
+    "moveOutDetails": "Move-out Details",
+    "vacateDate": "Vacate Date",
+    "reason": "Reason",
+    "selectReason": "Select reason",
+    "reasons": {
+      "endOfLease": "End of Lease",
+      "relocation": "Relocation",
+      "nonPayment": "Non-Payment",
+      "personal": "Personal Reasons",
+      "other": "Other"
+    },
+    "moveOutNotes": "Notes",
+    "moveOutNotesPlaceholder": "Additional notes about the move-out...",
+    "moveOutChecklist": "Move-out Checklist",
+    "finalInspection": "Final inspection completed",
+    "keysReturned": "Keys returned",
+    "depositStatus": "Deposit Status",
+    "depositStatuses": {
+      "pending": "Pending",
+      "refunded": "Refunded",
+      "deducted": "Deducted"
+    },
+    "confirmMoveOut": "Confirm Move-out"
   },
   "leases": {
     "title": "Leases",

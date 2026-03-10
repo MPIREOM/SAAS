@@ -125,14 +125,29 @@
       "penthouse": "بنتهاوس",
       "retail": "تجاري",
       "office": "مكتب",
-      "warehouse": "مستودع"
+      "warehouse": "مستودع",
+      "1br": "غرفة نوم واحدة",
+      "2br": "غرفتا نوم",
+      "3br": "ثلاث غرف نوم",
+      "4br": "أربع غرف نوم",
+      "shop": "محل تجاري"
     },
     "noUnits": "لم يتم العثور على وحدات",
     "noUnitsDescription": "أضف وحدات لهذا العقار",
     "amenities": "المرافق",
     "furnished": "مفروشة",
     "unfurnished": "غير مفروشة",
-    "semiFurnished": "مفروشة جزئياً"
+    "semiFurnished": "مفروشة جزئياً",
+    "unitNumberPlaceholder": "أدخل رقم الوحدة",
+    "floorPlaceholder": "أدخل الطابق",
+    "unitType": "نوع الوحدة",
+    "selectType": "اختر النوع",
+    "sizePlaceholder": "أدخل المساحة",
+    "rentPlaceholder": "أدخل مبلغ الإيجار",
+    "unitInfo": "معلومات الوحدة",
+    "noTenant": "لا يوجد مستأجر",
+    "assignTenant": "تعيين مستأجر",
+    "paymentHistory": "سجل المدفوعات"
   },
   "tenants": {
     "title": "المستأجرين",
@@ -191,7 +206,38 @@
     "notes": "ملاحظات",
     "noNotes": "لا توجد ملاحظات",
     "noLeases": "لم يتم العثور على عقود",
-    "noMaintenance": "لا توجد طلبات صيانة"
+    "noMaintenance": "لا توجد طلبات صيانة",
+    "fullNamePlaceholder": "أدخل الاسم الكامل",
+    "nationalityPlaceholder": "أدخل الجنسية",
+    "nationalIdPlaceholder": "أدخل رقم الهوية",
+    "passportNumberPlaceholder": "أدخل رقم جواز السفر",
+    "phonePlaceholder": "أدخل رقم الهاتف",
+    "emailPlaceholder": "أدخل البريد الإلكتروني",
+    "emergencyContactPlaceholder": "أدخل جهة اتصال الطوارئ",
+    "moveOutDescription": "معالجة خروج المستأجر وإخلاء الوحدة",
+    "moveOutDetails": "تفاصيل الخروج",
+    "vacateDate": "تاريخ الإخلاء",
+    "reason": "السبب",
+    "selectReason": "اختر السبب",
+    "reasons": {
+      "endOfLease": "انتهاء العقد",
+      "relocation": "انتقال",
+      "nonPayment": "عدم الدفع",
+      "personal": "أسباب شخصية",
+      "other": "أخرى"
+    },
+    "moveOutNotes": "ملاحظات",
+    "moveOutNotesPlaceholder": "ملاحظات إضافية حول الخروج...",
+    "moveOutChecklist": "قائمة مراجعة الخروج",
+    "finalInspection": "تم الفحص النهائي",
+    "keysReturned": "تم إرجاع المفاتيح",
+    "depositStatus": "حالة التأمين",
+    "depositStatuses": {
+      "pending": "قيد الانتظار",
+      "refunded": "مسترد",
+      "deducted": "مخصوم"
+    },
+    "confirmMoveOut": "تأكيد الخروج"
   },
   "leases": {
     "title": "العقود",
