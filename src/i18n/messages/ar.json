@@ -97,7 +97,9 @@
     "noProperties": "لم يتم العثور على عقارات",
     "noPropertiesDescription": "أضف أول عقار للبدء",
     "subtitle": "إدارة محفظة عقاراتك",
-    "noLocation": "لم يتم تحديد الموقع"
+    "noLocation": "لم يتم تحديد الموقع",
+    "namePlaceholder": "أدخل اسم العقار",
+    "locationPlaceholder": "أدخل الموقع"
   },
   "units": {
     "title": "الوحدات",

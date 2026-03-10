@@ -97,7 +97,9 @@
     "noProperties": "No properties found",
     "noPropertiesDescription": "Add your first property to get started",
     "subtitle": "Manage your property portfolio",
-    "noLocation": "No location specified"
+    "noLocation": "No location specified",
+    "namePlaceholder": "Enter property name",
+    "locationPlaceholder": "Enter location"
   },
   "units": {
     "title": "Units",
