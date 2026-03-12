@@ -1,14 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
 import {
-  Settings,
   User,
   Bell,
   Users,
   MessageSquare,
   Mail,
-  Shield,
 } from "lucide-react";
+import { InviteUserForm } from "@/components/settings/invite-user-form";
 
 export default async function SettingsPage({
   params,
@@ -17,7 +16,6 @@ export default async function SettingsPage({
 }) {
   const { locale } = await params;
   const t = await getTranslations("settings");
-  const tc = await getTranslations("common");
   const supabase = await createClient();
 
   const {
@@ -45,10 +43,10 @@ export default async function SettingsPage({
     <div className="space-y-8 max-w-4xl">
       <div>
         <h1 className="text-2xl font-semibold text-text-primary">
-          Settings
+          {t("title")}
         </h1>
         <p className="text-sm text-text-secondary mt-1">
-          Manage your account, preferences, and system configuration
+          {t("subtitle")}
         </p>
       </div>
 
@@ -60,17 +58,17 @@ export default async function SettingsPage({
           </div>
           <div>
             <h2 className="text-base font-medium text-text-primary">
-              Profile
+              {t("profile")}
             </h2>
             <p className="text-xs text-text-secondary">
-              Your account information and preferences
+              {t("profileDescription")}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <span className="text-xs text-text-secondary uppercase tracking-wider">
-              Name
+              {t("name")}
             </span>
             <p className="text-sm text-text-primary mt-1">
               {(profile?.full_name as string) || user?.email || "—"}
@@ -78,7 +76,7 @@ export default async function SettingsPage({
           </div>
           <div>
             <span className="text-xs text-text-secondary uppercase tracking-wider">
-              Email
+              {t("email")}
             </span>
             <p className="text-sm text-text-primary mt-1 font-mono">
               {user?.email || "—"}
@@ -86,7 +84,7 @@ export default async function SettingsPage({
           </div>
           <div>
             <span className="text-xs text-text-secondary uppercase tracking-wider">
-              Role
+              {t("role")}
             </span>
             <p className="text-sm text-text-primary mt-1 capitalize">
               {(profile?.role as string) || "—"}
@@ -94,7 +92,7 @@ export default async function SettingsPage({
           </div>
           <div>
             <span className="text-xs text-text-secondary uppercase tracking-wider">
-              Member Since
+              {t("memberSince")}
             </span>
             <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
               {user?.created_at
@@ -113,36 +111,37 @@ export default async function SettingsPage({
           </div>
           <div>
             <h2 className="text-base font-medium text-text-primary">
-              Notification Preferences
+              {t("notificationPreferences")}
             </h2>
             <p className="text-xs text-text-secondary">
-              Configure how and when you receive notifications
+              {t("notificationPreferencesDescription")}
             </p>
           </div>
         </div>
         <div className="bg-surface-elevated border border-border rounded-md p-4">
           <p className="text-sm text-text-secondary">
-            Notification preferences configuration coming soon. You will be able
-            to customize rent reminders, lease expiry alerts, and maintenance
-            updates.
+            {t("notificationPreferencesComingSoon")}
           </p>
         </div>
       </div>
 
       {/* User Management */}
       <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <Users className="h-5 w-5 text-accent" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-accent/10 rounded-md">
+              <Users className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <h2 className="text-base font-medium text-text-primary">
+                {t("userManagement")}
+              </h2>
+              <p className="text-xs text-text-secondary">
+                {t("userManagementDescription")}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary">
-              User Management
-            </h2>
-            <p className="text-xs text-text-secondary">
-              Manage team members and their access levels
-            </p>
-          </div>
+          <InviteUserForm />
         </div>
 
         {allUsers && allUsers.length > 0 ? (
@@ -151,19 +150,19 @@ export default async function SettingsPage({
               <thead>
                 <tr className="border-b border-border bg-surface-elevated">
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    Name
+                    {t("name")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    Email
+                    {t("email")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    Role
+                    {t("role")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    Status
+                    {t("users")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    Properties
+                    {t("properties")}
                   </th>
                 </tr>
               </thead>
@@ -203,7 +202,7 @@ export default async function SettingsPage({
                               : "bg-text-secondary/10 text-text-secondary"
                           }`}
                         >
-                          {u.is_active ? "Active" : "Inactive"}
+                          {u.is_active ? t("active") : t("inactive")}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -217,7 +216,7 @@ export default async function SettingsPage({
                                 )
                                 .filter(Boolean)
                                 .join(", ")
-                            : "All"}
+                            : t("allProperties")}
                         </span>
                       </td>
                     </tr>
@@ -228,7 +227,7 @@ export default async function SettingsPage({
           </div>
         ) : (
           <div className="bg-surface-elevated border border-border rounded-md p-4">
-            <p className="text-sm text-text-secondary">No users found.</p>
+            <p className="text-sm text-text-secondary">{t("noUsersFound")}</p>
           </div>
         )}
       </div>
@@ -241,18 +240,16 @@ export default async function SettingsPage({
           </div>
           <div>
             <h2 className="text-base font-medium text-text-primary">
-              WhatsApp Configuration
+              {t("whatsappConfig")}
             </h2>
             <p className="text-xs text-text-secondary">
-              Configure WhatsApp Business API for tenant notifications
+              {t("whatsappConfigDescription")}
             </p>
           </div>
         </div>
         <div className="bg-surface-elevated border border-border rounded-md p-4">
           <p className="text-sm text-text-secondary">
-            WhatsApp integration configuration coming soon. Connect your
-            WhatsApp Business account to send automated rent reminders and
-            notifications.
+            {t("whatsappComingSoon")}
           </p>
         </div>
       </div>
@@ -265,17 +262,16 @@ export default async function SettingsPage({
           </div>
           <div>
             <h2 className="text-base font-medium text-text-primary">
-              Email Configuration
+              {t("emailConfig")}
             </h2>
             <p className="text-xs text-text-secondary">
-              Set up email sending for notifications and reports
+              {t("emailConfigDescription")}
             </p>
           </div>
         </div>
         <div className="bg-surface-elevated border border-border rounded-md p-4">
           <p className="text-sm text-text-secondary">
-            Email configuration coming soon. Configure SMTP settings or connect
-            an email service provider for automated notifications.
+            {t("emailComingSoon")}
           </p>
         </div>
       </div>

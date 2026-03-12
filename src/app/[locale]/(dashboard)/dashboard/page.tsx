@@ -10,6 +10,7 @@ import {
   Calendar,
   FileCheck,
 } from "lucide-react";
+import { RentChart } from "@/components/dashboard/rent-chart";
 
 async function getDashboardStats() {
   const supabase = await createClient();
@@ -109,6 +110,14 @@ export default async function DashboardPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* Rent Collection Chart */}
+      <div className="bg-surface border border-border rounded-lg p-5">
+        <h3 className="text-sm font-medium text-text-primary mb-4">
+          {t("rentCollection")}
+        </h3>
+        <RentChart />
       </div>
 
       {/* Placeholder sections for detailed dashboard content */}

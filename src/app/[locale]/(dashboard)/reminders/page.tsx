@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
-import { Bell, FileText, Plus, Send } from "lucide-react";
+import { Bell, FileText, Plus } from "lucide-react";
 
 export default async function RemindersPage({
   params,
@@ -10,7 +10,6 @@ export default async function RemindersPage({
 }) {
   const { locale } = await params;
   const t = await getTranslations("reminders");
-  const tc = await getTranslations("common");
   const supabase = await createClient();
 
   const { data: reminders } = await supabase
@@ -44,10 +43,10 @@ export default async function RemindersPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">
-            Reminders & Notifications
+            {t("title")}
           </h1>
           <p className="text-sm text-text-secondary mt-1">
-            Manage reminders, notification logs, and message templates
+            {t("subtitle")}
           </p>
         </div>
       </div>
@@ -57,7 +56,7 @@ export default async function RemindersPage({
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium text-text-primary flex items-center gap-2">
             <Bell className="h-5 w-5 text-text-secondary" />
-            Reminder Log
+            {t("log")}
           </h2>
         </div>
 
@@ -67,22 +66,22 @@ export default async function RemindersPage({
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    Date
+                    {t("date")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    Tenant
+                    {t("tenant")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    Type
+                    {t("type")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    Channel
+                    {t("channel")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    Status
+                    {t("status")}
                   </th>
                   <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    Message
+                    {t("message")}
                   </th>
                 </tr>
               </thead>
@@ -144,10 +143,10 @@ export default async function RemindersPage({
           <div className="bg-surface border border-border rounded-lg p-12 text-center">
             <Bell className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
             <h3 className="text-base font-medium text-text-primary mb-1">
-              No reminders sent yet
+              {t("noRemindersSent")}
             </h3>
             <p className="text-sm text-text-secondary">
-              Reminders will appear here once they are sent to tenants
+              {t("noRemindersSentDescription")}
             </p>
           </div>
         )}
@@ -158,14 +157,14 @@ export default async function RemindersPage({
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium text-text-primary flex items-center gap-2">
             <FileText className="h-5 w-5 text-text-secondary" />
-            Notification Templates
+            {t("notificationTemplates")}
           </h2>
           <Link
             href={`/${locale}/reminders/templates/new`}
             className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
           >
             <Plus className="h-4 w-4" />
-            New Template
+            {t("newTemplate")}
           </Link>
         </div>
 
@@ -186,12 +185,12 @@ export default async function RemindersPage({
                   </span>
                 </div>
                 <p className="text-xs text-text-secondary line-clamp-2">
-                  {(template.body as string)?.slice(0, 120) || "No content"}
+                  {(template.body as string)?.slice(0, 120) || "—"}
                   {(template.body as string)?.length > 120 ? "..." : ""}
                 </p>
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                   <span className="text-xs text-text-secondary capitalize">
-                    Type: {(template.template_type as string)?.replace("_", " ") || "general"}
+                    {t("templateType")}: {(template.template_type as string)?.replace("_", " ") || "—"}
                   </span>
                 </div>
               </Link>
@@ -201,17 +200,17 @@ export default async function RemindersPage({
           <div className="bg-surface border border-border rounded-lg p-12 text-center">
             <FileText className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
             <h3 className="text-base font-medium text-text-primary mb-1">
-              No templates yet
+              {t("noTemplates")}
             </h3>
             <p className="text-sm text-text-secondary mb-4">
-              Create notification templates for rent reminders, lease renewals, and more
+              {t("noTemplatesDescription")}
             </p>
             <Link
               href={`/${locale}/reminders/templates/new`}
               className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
             >
               <Plus className="h-4 w-4" />
-              New Template
+              {t("newTemplate")}
             </Link>
           </div>
         )}

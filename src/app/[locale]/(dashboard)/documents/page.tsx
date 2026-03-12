@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
-import { FolderOpen, Plus, AlertTriangle, Upload } from "lucide-react";
+import { FolderOpen, AlertTriangle, Upload } from "lucide-react";
 
 export default async function DocumentsPage({
   params,
@@ -10,7 +10,6 @@ export default async function DocumentsPage({
 }) {
   const { locale } = await params;
   const t = await getTranslations("documents");
-  const tc = await getTranslations("common");
   const supabase = await createClient();
 
   const { data: documents } = await supabase
@@ -39,10 +38,10 @@ export default async function DocumentsPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">
-            Documents
+            {t("title")}
           </h1>
           <p className="text-sm text-text-secondary mt-1">
-            Manage and track all property and tenant documents
+            {t("subtitle")}
           </p>
         </div>
         <Link
@@ -50,7 +49,7 @@ export default async function DocumentsPage({
           className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
         >
           <Upload className="h-4 w-4" />
-          Upload Document
+          {t("upload")}
         </Link>
       </div>
 
@@ -60,19 +59,19 @@ export default async function DocumentsPage({
             <thead>
               <tr className="border-b border-border">
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Document Name
+                  {t("documentName")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Type
+                  {t("documentType")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Entity
+                  {t("entity")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Expiry Date
+                  {t("expiryDate")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Uploaded
+                  {t("uploaded")}
                 </th>
               </tr>
             </thead>
@@ -150,17 +149,17 @@ export default async function DocumentsPage({
         <div className="bg-surface border border-border rounded-lg p-12 text-center">
           <FolderOpen className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
           <h3 className="text-base font-medium text-text-primary mb-1">
-            No documents
+            {t("noDocuments")}
           </h3>
           <p className="text-sm text-text-secondary mb-4">
-            Upload your first document to start organizing
+            {t("noDocumentsDescription")}
           </p>
           <Link
             href={`/${locale}/documents/upload`}
             className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
           >
             <Upload className="h-4 w-4" />
-            Upload Document
+            {t("upload")}
           </Link>
         </div>
       )}

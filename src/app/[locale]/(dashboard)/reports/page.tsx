@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
   BarChart3,
@@ -18,50 +18,44 @@ export default async function ReportsPage({
 }) {
   const { locale } = await params;
   const t = await getTranslations("reports");
-  const tc = await getTranslations("common");
 
   const reports = [
     {
       id: "monthly-rent",
-      title: "Monthly Rent Collection",
-      description:
-        "Summary of rent payments collected, outstanding amounts, and collection rate for the selected period.",
+      titleKey: "monthlyRentCollection" as const,
+      descKey: "monthlyRentCollectionDesc" as const,
       icon: DollarSign,
       color: "text-success",
       bgColor: "bg-success/10",
     },
     {
       id: "tenant-roster",
-      title: "Tenant Roster",
-      description:
-        "Complete list of all active tenants with their unit assignments, contact information, and lease details.",
+      titleKey: "tenantRoster" as const,
+      descKey: "tenantRosterDesc" as const,
       icon: Users,
       color: "text-accent",
       bgColor: "bg-accent/10",
     },
     {
       id: "maintenance-summary",
-      title: "Maintenance Summary",
-      description:
-        "Overview of maintenance requests by status, category, and response time. Includes cost analysis.",
+      titleKey: "maintenanceSummary" as const,
+      descKey: "maintenanceSummaryDesc" as const,
       icon: Wrench,
       color: "text-warning",
       bgColor: "bg-warning/10",
     },
     {
       id: "cheque-tracker",
-      title: "Cheque Tracker",
-      description:
-        "Track post-dated cheques by status, upcoming deposits, and bounced cheque history.",
+      titleKey: "chequeTracker" as const,
+      descKey: "chequeTrackerDesc" as const,
       icon: CreditCard,
       color: "text-accent",
       bgColor: "bg-accent/10",
     },
     {
       id: "document-expiry",
-      title: "Document Expiry Report",
-      description:
-        "List of documents nearing expiry or already expired. Includes tenant IDs, contracts, and insurance.",
+      titleKey: "documentExpiry" as const,
+      descKey: "documentExpiryDesc" as const,
       icon: AlertTriangle,
       color: "text-destructive",
       bgColor: "bg-destructive/10",
@@ -72,10 +66,10 @@ export default async function ReportsPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-text-primary">
-          Reports
+          {t("title")}
         </h1>
         <p className="text-sm text-text-secondary mt-1">
-          Generate and download property management reports
+          {t("subtitle")}
         </p>
       </div>
 
@@ -94,20 +88,28 @@ export default async function ReportsPage({
                 </div>
               </div>
               <h3 className="text-base font-medium text-text-primary mb-2">
-                {report.title}
+                {t(report.titleKey)}
               </h3>
               <p className="text-xs text-text-secondary leading-relaxed mb-4 flex-1">
-                {report.description}
+                {t(report.descKey)}
               </p>
               <div className="flex items-center gap-2 pt-3 border-t border-border">
-                <button className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent hover:bg-accent-hover text-background text-xs font-medium rounded-md transition-colors">
+                <Link
+                  href={`/api/reports/${report.id}?format=pdf`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent hover:bg-accent-hover text-background text-xs font-medium rounded-md transition-colors"
+                >
                   <FileText className="h-3.5 w-3.5" />
-                  PDF
-                </button>
-                <button className="inline-flex items-center gap-1.5 h-8 px-3 bg-surface-elevated border border-border text-text-primary text-xs font-medium rounded-md hover:bg-border/30 transition-colors">
+                  {t("exportPdf")}
+                </Link>
+                <Link
+                  href={`/api/reports/${report.id}?format=csv`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 bg-surface-elevated border border-border text-text-primary text-xs font-medium rounded-md hover:bg-border/30 transition-colors"
+                >
                   <Download className="h-3.5 w-3.5" />
-                  Excel
-                </button>
+                  {t("exportExcel")}
+                </Link>
               </div>
             </div>
           );

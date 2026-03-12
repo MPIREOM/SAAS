@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Upload, Scan, X, FileText, Building2 } from "lucide-react";
+import { Upload, Scan, X, FileText, Home, Building2 } from "lucide-react";
 
 export default function NewTenantPage({
   params,
@@ -28,6 +28,8 @@ export default function NewTenantPage({
   // Unit context from query params (when assigning from a property/unit page)
   const unitId = searchParams.get("unitId");
   const propertyId = searchParams.get("propertyId");
+  const defaultRent = searchParams.get("rentAmount") || "";
+  const isAssigningToUnit = Boolean(unitId && propertyId);
 
   // Fetch unit info for display when in assignment mode
   const [unitInfo, setUnitInfo] = useState<{
@@ -63,7 +65,6 @@ export default function NewTenantPage({
     setScanSuccess(false);
     setIsPdf(file.type === "application/pdf");
 
-    // Show preview
     const reader = new FileReader();
     reader.onload = (e) => setIdPreview(e.target?.result as string);
     reader.readAsDataURL(file);
@@ -84,7 +85,6 @@ export default function NewTenantPage({
         return;
       }
 
-      // Auto-fill form fields
       const form = formRef.current;
       if (form) {
         if (data.full_name) {
@@ -117,7 +117,8 @@ export default function NewTenantPage({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file && (file.type.startsWith("image/") || file.type === "application/pdf")) handleIdScan(file);
+    if (file && (file.type.startsWith("image/") || file.type === "application/pdf"))
+      handleIdScan(file);
   };
 
   const clearPreview = () => {
@@ -135,34 +136,42 @@ export default function NewTenantPage({
     const formData = new FormData(e.currentTarget);
     const supabase = createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     // Create tenant
-    const { data: tenant, error: insertError } = await supabase.from("tenants").insert({
-      full_name: formData.get("full_name") as string,
-      nationality: (formData.get("nationality") as string) || null,
-      national_id: (formData.get("national_id") as string) || null,
-      passport_number: (formData.get("passport_number") as string) || null,
-      phone: formData.get("phone") as string,
-      email: (formData.get("email") as string) || null,
-      emergency_contact: (formData.get("emergency_contact") as string) || null,
-      language_preference: formData.get("language_preference") as string,
-      status: "active",
-      created_by: user?.id,
-    }).select("id").single();
+    const { data: tenant, error: insertError } = await supabase
+      .from("tenants")
+      .insert({
+        full_name: formData.get("full_name") as string,
+        nationality: (formData.get("nationality") as string) || null,
+        national_id: (formData.get("national_id") as string) || null,
+        passport_number: (formData.get("passport_number") as string) || null,
+        phone: formData.get("phone") as string,
+        email: (formData.get("email") as string) || null,
+        emergency_contact: (formData.get("emergency_contact") as string) || null,
+        language_preference: formData.get("language_preference") as string,
+        status: "active",
+        created_by: user?.id,
+      })
+      .select("id")
+      .single();
 
-    if (insertError) {
-      setError(insertError.message);
+    if (insertError || !tenant) {
+      setError(insertError?.message || "Failed to create tenant");
       setLoading(false);
       return;
     }
 
-    // If coming from a unit context, create lease and update unit status
-    if (unitId && tenant) {
-      const startDate = formData.get("start_date") as string;
-      const endDate = formData.get("end_date") as string;
+    // If assigning to a unit, create lease and update unit status
+    if (isAssigningToUnit) {
+      const startDate = formData.get("lease_start_date") as string;
+      const endDate = formData.get("lease_end_date") as string;
       const monthlyRent = formData.get("monthly_rent") as string;
-      const securityDeposit = (formData.get("security_deposit") as string) || null;
+      const securityDeposit =
+        (formData.get("security_deposit") as string) || null;
+      const paymentDueDay = formData.get("payment_due_day") as string;
 
       const { error: leaseError } = await supabase.from("leases").insert({
         tenant_id: tenant.id,
@@ -171,7 +180,7 @@ export default function NewTenantPage({
         end_date: endDate,
         monthly_rent: monthlyRent,
         security_deposit: securityDeposit,
-        payment_due_day: 1,
+        payment_due_day: parseInt(paymentDueDay) || 1,
         is_active: true,
         created_by: user?.id,
       });
@@ -210,8 +219,14 @@ export default function NewTenantPage({
     <div className="max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-text-primary">
-          {unitId ? t("assignedUnit") : t("createTenant")}
+          {isAssigningToUnit ? t("assignTenantToUnit") || t("createTenant") : t("createTenant")}
         </h1>
+        {isAssigningToUnit && (
+          <p className="text-sm text-text-secondary mt-1 flex items-center gap-1.5">
+            <Home className="h-3.5 w-3.5" />
+            {t("assigningToUnit") || "Creating tenant and lease for this unit"}
+          </p>
+        )}
       </div>
 
       {/* Unit Context Banner */}
@@ -246,7 +261,9 @@ export default function NewTenantPage({
             {isPdf ? (
               <div className="w-full h-48 rounded-md border border-border bg-surface-elevated flex flex-col items-center justify-center gap-2">
                 <FileText className="h-12 w-12 text-text-secondary/50" />
-                <span className="text-sm text-text-secondary">PDF Document</span>
+                <span className="text-sm text-text-secondary">
+                  PDF Document
+                </span>
               </div>
             ) : (
               <img
@@ -284,9 +301,7 @@ export default function NewTenantPage({
             className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent/50 transition-colors"
           >
             <Upload className="h-8 w-8 text-text-secondary/50 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">
-              {tc("dragAndDrop")}
-            </p>
+            <p className="text-sm text-text-secondary">{tc("dragAndDrop")}</p>
             <p className="text-xs text-text-secondary/70 mt-1">
               {tc("or")}{" "}
               <span className="text-accent underline">{tc("browseFiles")}</span>
@@ -304,6 +319,7 @@ export default function NewTenantPage({
       </div>
 
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
+        {/* Tenant Info */}
         <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
           <div>
             <label className="block text-sm text-text-secondary mb-1.5">
@@ -404,10 +420,11 @@ export default function NewTenantPage({
           </div>
         </div>
 
-        {/* Lease Details - only shown when assigning from a unit */}
-        {unitId && (
+        {/* Lease Details - only shown when assigning to a unit */}
+        {isAssigningToUnit && (
           <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
-            <h2 className="text-sm font-medium text-text-primary">
+            <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
+              <FileText className="h-4 w-4 text-accent" />
               {t("leaseInfo")}
             </h2>
 
@@ -417,21 +434,28 @@ export default function NewTenantPage({
                   {tl("startDate")} <span className="text-destructive">*</span>
                 </label>
                 <input
-                  name="start_date"
+                  name="lease_start_date"
                   type="date"
                   required
+                  defaultValue={new Date().toISOString().split("T")[0]}
                   className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
                 />
               </div>
-
               <div>
                 <label className="block text-sm text-text-secondary mb-1.5">
                   {tl("endDate")} <span className="text-destructive">*</span>
                 </label>
                 <input
-                  name="end_date"
+                  name="lease_end_date"
                   type="date"
                   required
+                  defaultValue={
+                    new Date(
+                      new Date().setFullYear(new Date().getFullYear() + 1)
+                    )
+                      .toISOString()
+                      .split("T")[0]
+                  }
                   className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
                 />
               </div>
@@ -440,22 +464,22 @@ export default function NewTenantPage({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-text-secondary mb-1.5">
-                  {tl("monthlyRent")} <span className="text-destructive">*</span>
+                  {tl("monthlyRent")} (OMR){" "}
+                  <span className="text-destructive">*</span>
                 </label>
                 <input
                   name="monthly_rent"
                   type="number"
                   step="0.01"
                   required
-                  defaultValue={unitInfo?.rent_amount || ""}
+                  defaultValue={unitInfo?.rent_amount || defaultRent}
                   className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
                   placeholder="0.00"
                 />
               </div>
-
               <div>
                 <label className="block text-sm text-text-secondary mb-1.5">
-                  {tl("securityDeposit")}
+                  {tl("securityDeposit")} (OMR)
                 </label>
                 <input
                   name="security_deposit"
@@ -466,12 +490,27 @@ export default function NewTenantPage({
                 />
               </div>
             </div>
+
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">
+                {t("paymentDueDay") || "Payment Due Day"}
+              </label>
+              <select
+                name="payment_due_day"
+                defaultValue="1"
+                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                  <option key={day} value={day}>
+                    {day}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex items-center gap-3">
           <button
@@ -479,7 +518,11 @@ export default function NewTenantPage({
             disabled={loading}
             className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
           >
-            {loading ? tc("loading") : tc("save")}
+            {loading
+              ? tc("loading")
+              : isAssigningToUnit
+              ? t("assignTenant") || tc("save")
+              : tc("save")}
           </button>
           <button
             type="button"

@@ -14,7 +14,7 @@ import {
   Phone,
   Mail,
   Globe,
-  Shield,
+  Pencil,
 } from "lucide-react";
 
 export default async function TenantDetailPage({
@@ -94,6 +94,13 @@ export default async function TenantDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/${locale}/tenants/${id}/edit`}
+            className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
+          >
+            <Pencil className="h-4 w-4" />
+            {t("editTenant")}
+          </Link>
           {tenant.status === "active" && (
             <Link
               href={`/${locale}/tenants/${id}/move-out`}

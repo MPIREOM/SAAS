@@ -9,6 +9,11 @@ import {
   CreditCard,
   Plus,
   Building2,
+  Folder,
+  FileText,
+  Wrench,
+  AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 
 export default async function UnitDetailPage({
@@ -20,6 +25,8 @@ export default async function UnitDetailPage({
   const t = await getTranslations("units");
   const tt = await getTranslations("tenants");
   const tc = await getTranslations("common");
+  const td = await getTranslations("documents");
+  const tch = await getTranslations("cheques");
   const supabase = await createClient();
 
   const { data: unit } = await supabase
@@ -35,21 +42,55 @@ export default async function UnitDetailPage({
   // Fetch current tenant via active lease
   const { data: activeLease } = await supabase
     .from("leases")
-    .select("*, tenants(id, full_name, phone, email)")
+    .select("*, tenants(id, full_name, phone, email, nationality, national_id, emergency_contact, language_preference, status)")
     .eq("unit_id", unitId)
     .eq("is_active", true)
     .single();
 
   const currentTenant = activeLease?.tenants as Record<string, unknown> | null;
 
-  // Fetch payment history for this unit
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("*")
-    .eq("unit_id", unitId)
-    .order("payment_date", { ascending: false });
+  const tenantId = currentTenant?.id as string | undefined;
+
+  // Fetch payment history for this unit's lease
+  const { data: payments } = activeLease
+    ? await supabase
+        .from("payments")
+        .select("*")
+        .eq("lease_id", activeLease.id)
+        .order("payment_date", { ascending: false })
+    : { data: null };
+
+  // Fetch cheques for this tenant
+  const { data: cheques } = tenantId
+    ? await supabase
+        .from("cheques")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("cheque_date", { ascending: false })
+    : { data: null };
+
+  // Fetch documents for this tenant
+  const { data: documents } = tenantId
+    ? await supabase
+        .from("documents")
+        .select("*")
+        .eq("entity_type", "tenant")
+        .eq("entity_id", tenantId)
+        .order("uploaded_at", { ascending: false })
+    : { data: null };
+
+  // Fetch maintenance requests for this tenant
+  const { data: maintenance } = tenantId
+    ? await supabase
+        .from("maintenance_requests")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+    : { data: null };
 
   const property = unit.properties as Record<string, unknown> | null;
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   const statusColors: Record<string, string> = {
     vacant: "bg-success/10 text-success",
@@ -88,7 +129,7 @@ export default async function UnitDetailPage({
         <div className="flex items-center gap-2">
           {unit.status === "vacant" && (
             <Link
-              href={`/${locale}/tenants/new?unitId=${unitId}&propertyId=${propertyId}`}
+              href={`/${locale}/tenants/new?unitId=${unitId}&propertyId=${propertyId}&rentAmount=${unit.rent_amount || ""}`}
               className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -204,6 +245,38 @@ export default async function UnitDetailPage({
               </div>
               <div>
                 <span className="text-xs text-text-secondary uppercase tracking-wider">
+                  {tt("nationality")}
+                </span>
+                <p className="text-sm text-text-primary mt-1">
+                  {(currentTenant.nationality as string) || "—"}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary uppercase tracking-wider">
+                  {tt("nationalId")}
+                </span>
+                <p className="text-sm text-text-primary mt-1 font-mono">
+                  {(currentTenant.national_id as string) || "—"}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary uppercase tracking-wider">
+                  {tt("emergencyContact")}
+                </span>
+                <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
+                  {(currentTenant.emergency_contact as string) || "—"}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary uppercase tracking-wider">
+                  {tt("languagePreference")}
+                </span>
+                <p className="text-sm text-text-primary mt-1 uppercase">
+                  {(currentTenant.language_preference as string) || "—"}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary uppercase tracking-wider">
                   {tt("monthlyRent")}
                 </span>
                 <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
@@ -249,7 +322,7 @@ export default async function UnitDetailPage({
             <User className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
             <p className="text-sm text-text-secondary mb-3">{t("noTenant")}</p>
             <Link
-              href={`/${locale}/tenants/new?unitId=${unitId}&propertyId=${propertyId}`}
+              href={`/${locale}/tenants/new?unitId=${unitId}&propertyId=${propertyId}&rentAmount=${unit.rent_amount || ""}`}
               className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -335,6 +408,259 @@ export default async function UnitDetailPage({
           <div className="bg-surface border border-border rounded-lg p-8 text-center">
             <CreditCard className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
             <p className="text-sm text-text-secondary">{tt("noPayments")}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Cheques */}
+      <div>
+        <h2 className="text-lg font-medium text-text-primary mb-3 flex items-center gap-2">
+          <FileText className="h-5 w-5 text-text-secondary" />
+          {tch("title")}
+        </h2>
+        {cheques && cheques.length > 0 ? (
+          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tch("chequeNumber")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tch("bankName")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tch("chequeDate")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tch("amount")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tch("status")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {cheques.map((cheque: Record<string, unknown>) => (
+                  <tr
+                    key={cheque.id as string}
+                    className="hover:bg-surface-elevated/50 transition-colors"
+                  >
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-text-primary font-mono">
+                        {cheque.cheque_number as string}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-text-secondary">
+                        {cheque.bank_name as string}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-text-primary font-mono ltr-nums">
+                        {new Date(cheque.cheque_date as string).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-text-primary font-mono ltr-nums">
+                        {cheque.amount as number} OMR
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                          cheque.status === "cleared"
+                            ? "bg-success/10 text-success"
+                            : cheque.status === "pending"
+                            ? "bg-warning/10 text-warning"
+                            : cheque.status === "bounced"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-text-secondary/10 text-text-secondary"
+                        }`}
+                      >
+                        {cheque.status as string}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-surface border border-border rounded-lg p-8 text-center">
+            <FileText className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
+            <p className="text-sm text-text-secondary">{tt("noPayments")}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Documents */}
+      <div>
+        <h2 className="text-lg font-medium text-text-primary mb-3 flex items-center gap-2">
+          <Folder className="h-5 w-5 text-text-secondary" />
+          {td("title")}
+        </h2>
+        {documents && documents.length > 0 ? (
+          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[550px]">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {td("fileName")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {td("documentType")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {td("expiryDate")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {td("uploadDate")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {documents.map((doc: Record<string, unknown>) => {
+                  const expiryDate = doc.expiry_date
+                    ? new Date(doc.expiry_date as string)
+                    : null;
+                  const isExpiringSoon =
+                    expiryDate && expiryDate <= thirtyDaysFromNow && expiryDate >= now;
+                  const isExpired = expiryDate && expiryDate < now;
+
+                  return (
+                    <tr
+                      key={doc.id as string}
+                      className="hover:bg-surface-elevated/50 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-medium text-text-primary">
+                          {(doc.file_name as string) || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent capitalize">
+                          {((doc.document_type as string) || "").replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-sm font-mono ltr-nums ${
+                              isExpired
+                                ? "text-destructive"
+                                : isExpiringSoon
+                                ? "text-warning"
+                                : "text-text-secondary"
+                            }`}
+                          >
+                            {expiryDate ? expiryDate.toLocaleDateString() : "—"}
+                          </span>
+                          {(isExpiringSoon || isExpired) && (
+                            <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-text-secondary font-mono ltr-nums">
+                          {new Date(doc.uploaded_at as string).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {Boolean(doc.file_url) ? (
+                          <a
+                            href={doc.file_url as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-accent hover:text-accent-hover transition-colors"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-surface border border-border rounded-lg p-8 text-center">
+            <Folder className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
+            <p className="text-sm text-text-secondary">{tt("noDocuments")}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Maintenance */}
+      <div>
+        <h2 className="text-lg font-medium text-text-primary mb-3 flex items-center gap-2">
+          <Wrench className="h-5 w-5 text-text-secondary" />
+          {tt("maintenance")}
+        </h2>
+        {maintenance && maintenance.length > 0 ? (
+          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[500px]">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tt("maintenanceDate")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tt("maintenanceTitle")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tt("maintenancePriority")}
+                  </th>
+                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                    {tt("status")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {maintenance.map((req: Record<string, unknown>) => (
+                  <tr
+                    key={req.id as string}
+                    className="hover:bg-surface-elevated/50 transition-colors"
+                  >
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-text-primary font-mono ltr-nums">
+                        {new Date(req.created_at as string).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-text-primary">
+                        {req.title as string}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-text-secondary capitalize">
+                        {(req.priority as string) || "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                          req.status === "resolved"
+                            ? "bg-success/10 text-success"
+                            : req.status === "in_progress"
+                            ? "bg-warning/10 text-warning"
+                            : "bg-accent/10 text-accent"
+                        }`}
+                      >
+                        {req.status as string}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-surface border border-border rounded-lg p-8 text-center">
+            <Wrench className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
+            <p className="text-sm text-text-secondary">{tt("noMaintenance")}</p>
           </div>
         )}
       </div>

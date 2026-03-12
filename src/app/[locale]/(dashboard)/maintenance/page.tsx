@@ -10,7 +10,6 @@ export default async function MaintenancePage({
 }) {
   const { locale } = await params;
   const t = await getTranslations("maintenance");
-  const tc = await getTranslations("common");
   const supabase = await createClient();
 
   const { data: requests } = await supabase
@@ -43,10 +42,10 @@ export default async function MaintenancePage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">
-            Maintenance Requests
+            {t("title")}
           </h1>
           <p className="text-sm text-text-secondary mt-1">
-            Track and manage maintenance requests across properties
+            {t("subtitle")}
           </p>
         </div>
         <Link
@@ -54,7 +53,7 @@ export default async function MaintenancePage({
           className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
         >
           <Plus className="h-4 w-4" />
-          New Request
+          {t("newRequest")}
         </Link>
       </div>
 
@@ -63,9 +62,9 @@ export default async function MaintenancePage({
         {tabs.map((tab) => (
           <span
             key={tab}
-            className="px-3 py-1.5 text-sm rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors cursor-pointer capitalize"
+            className="px-3 py-1.5 text-sm rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors cursor-pointer"
           >
-            {tab === "in_progress" ? "In Progress" : tab === "all" ? "All" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {t(`tabs.${tab}`)}
           </span>
         ))}
       </div>
@@ -76,28 +75,28 @@ export default async function MaintenancePage({
             <thead>
               <tr className="border-b border-border">
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  ID
+                  {t("table.id")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Unit
+                  {t("table.unit")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Property
+                  {t("table.property")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Category
+                  {t("category")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Description
+                  {t("description")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Urgency
+                  {t("urgency")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Status
+                  {t("status")}
                 </th>
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  Created
+                  {t("table.created")}
                 </th>
               </tr>
             </thead>
@@ -105,7 +104,6 @@ export default async function MaintenancePage({
               {requests.map((request: Record<string, unknown>) => {
                 const unit = request.units as Record<string, unknown> | null;
                 const property = unit?.properties as Record<string, unknown> | null;
-                const tenant = request.tenants as Record<string, unknown> | null;
 
                 return (
                   <tr
@@ -174,17 +172,17 @@ export default async function MaintenancePage({
         <div className="bg-surface border border-border rounded-lg p-12 text-center">
           <Wrench className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
           <h3 className="text-base font-medium text-text-primary mb-1">
-            No maintenance requests
+            {t("noRequests")}
           </h3>
           <p className="text-sm text-text-secondary mb-4">
-            Create your first maintenance request to start tracking
+            {t("noRequestsDescription")}
           </p>
           <Link
             href={`/${locale}/maintenance/new`}
             className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
           >
             <Plus className="h-4 w-4" />
-            New Request
+            {t("newRequest")}
           </Link>
         </div>
       )}
