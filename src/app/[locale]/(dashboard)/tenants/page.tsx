@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
 import { Users, Plus, Phone, Mail } from "lucide-react";
+import { TenantsHeader } from "@/components/tenants/tenants-header";
 
 export default async function TenantsPage({
   params,
@@ -46,13 +47,7 @@ export default async function TenantsPage({
             {t("subtitle")}
           </p>
         </div>
-        <Link
-          href={`/${locale}/tenants/new`}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          {t("createTenant")}
-        </Link>
+        <TenantsHeader locale={locale} />
       </div>
 
       {tenants && tenants.length > 0 ? (

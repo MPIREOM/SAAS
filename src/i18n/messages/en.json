@@ -36,7 +36,8 @@
     "dragAndDrop": "Drag and drop files here",
     "or": "or",
     "browseFiles": "Browse Files",
-    "logout": "Logout"
+    "logout": "Logout",
+    "done": "Done"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -245,7 +246,22 @@
     "scanIdDescription": "Upload an Emirates ID or national ID card to auto-fill tenant details using AI.",
     "scanningId": "Scanning ID...",
     "scanSuccess": "Details extracted successfully. Please review the auto-filled fields below.",
-    "scanFailed": "Failed to scan ID. Please try again or enter details manually."
+    "scanFailed": "Failed to scan ID. Please try again or enter details manually.",
+    "importExcel": "Import Excel",
+    "importTenants": "Import Tenants from Excel",
+    "importDescription": "Upload an Excel (.xlsx, .xls) or CSV file with your tenant details. Required columns: Full Name, Phone.",
+    "expectedColumns": "Expected columns:",
+    "columnMapping": "Column mapping:",
+    "totalRows": "total rows",
+    "validRows": "valid",
+    "errorRows": "errors",
+    "importErrors": "Validation errors (these rows will be skipped):",
+    "showingFirst50": "Showing first 50 of {total} tenants",
+    "importingTenants": "Importing tenants...",
+    "importingCount": "Adding {count} tenants to the system",
+    "importSuccess": "Import complete!",
+    "importedCount": "{count} tenants imported successfully",
+    "importCount": "Import {count} tenants"
   },
   "leases": {
     "title": "Leases",
