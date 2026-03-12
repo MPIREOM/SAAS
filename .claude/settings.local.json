@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"c:/Users/Windows 11/SAAS/src/app/[locale]/\\(dashboard\\)/tenants/\")",
+      "Bash(ls -la \"c:/Users/Windows 11/SAAS/src/app/[locale]/\\(dashboard\\)/tenants/[id]/\")",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(find \"c:/Users/Windows 11/SAAS/src/app/[locale]/\\(dashboard\\)/reports\" -type f)"
+    ]
+  }
+}

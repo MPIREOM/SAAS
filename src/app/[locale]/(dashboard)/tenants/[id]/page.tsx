@@ -15,7 +15,11 @@ import {
   Mail,
   Globe,
   Shield,
+  Pencil,
 } from "lucide-react";
+import TenantDocuments from "@/components/tenants/TenantDocuments";
+import TenantCheques from "@/components/tenants/TenantCheques";
+import TenantNotes from "@/components/tenants/TenantNotes";
 
 export default async function TenantDetailPage({
   params,
@@ -94,6 +98,13 @@ export default async function TenantDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/${locale}/tenants/${id}/edit`}
+            className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
+          >
+            <Pencil className="h-4 w-4" />
+            {t("editTenant")}
+          </Link>
           {tenant.status === "active" && (
             <Link
               href={`/${locale}/tenants/${id}/move-out`}
@@ -138,14 +149,6 @@ export default async function TenantDetailPage({
             </div>
             <div>
               <span className="text-xs text-text-secondary uppercase tracking-wider">
-                {t("passportNumber")}
-              </span>
-              <p className="text-sm text-text-primary mt-1 font-mono">
-                {tenant.passport_number || "—"}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
                 {t("phone")}
               </span>
               <p className="text-sm text-text-primary mt-1 font-mono ltr-nums flex items-center gap-1.5">
@@ -182,6 +185,9 @@ export default async function TenantDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Cheques Section */}
+      <TenantCheques tenantId={id} />
 
       {/* Lease Info Section */}
       <div>
@@ -365,16 +371,7 @@ export default async function TenantDetailPage({
       </div>
 
       {/* Documents Section */}
-      <div>
-        <h2 className="text-lg font-medium text-text-primary mb-3 flex items-center gap-2">
-          <Folder className="h-5 w-5 text-text-secondary" />
-          {t("documents")}
-        </h2>
-        <div className="bg-surface border border-border rounded-lg p-8 text-center">
-          <Folder className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
-          <p className="text-sm text-text-secondary">{t("noDocuments")}</p>
-        </div>
-      </div>
+      <TenantDocuments tenantId={id} />
 
       {/* Maintenance Section */}
       <div>
@@ -449,16 +446,7 @@ export default async function TenantDetailPage({
       </div>
 
       {/* Notes Section */}
-      <div>
-        <h2 className="text-lg font-medium text-text-primary mb-3 flex items-center gap-2">
-          <StickyNote className="h-5 w-5 text-text-secondary" />
-          {t("notes")}
-        </h2>
-        <div className="bg-surface border border-border rounded-lg p-8 text-center">
-          <StickyNote className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
-          <p className="text-sm text-text-secondary">{t("noNotes")}</p>
-        </div>
-      </div>
+      <TenantNotes tenantId={id} />
     </div>
   );
 }

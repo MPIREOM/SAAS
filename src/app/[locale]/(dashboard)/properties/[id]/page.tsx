@@ -39,7 +39,7 @@ export default async function PropertyDetailPage({
 
   const statusColors: Record<string, string> = {
     vacant: "bg-success/10 text-success",
-    occupied: "bg-accent/10 text-accent",
+    occupied: "bg-destructive/10 text-destructive",
     maintenance: "bg-warning/10 text-warning",
   };
 

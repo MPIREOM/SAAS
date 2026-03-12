@@ -15,7 +15,6 @@ export const entityTypeEnum = pgEnum("entity_type", ["tenant", "property"]);
 export const documentTypeEnum = pgEnum("document_type", [
   "lease_agreement",
   "id_copy",
-  "passport",
   "visa",
   "noc",
   "title_deed",

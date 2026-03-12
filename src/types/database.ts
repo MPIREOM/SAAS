@@ -103,7 +103,6 @@ export interface Tenant {
   full_name: string;
   nationality: string;
   national_id: string;
-  passport_number: string;
   phone: string;
   email: string;
   emergency_contact: string;

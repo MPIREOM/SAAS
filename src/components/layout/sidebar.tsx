@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Receipt,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,6 +31,7 @@ const navItems = [
   { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
   { key: "properties", href: "/properties", icon: Building2 },
   { key: "tenants", href: "/tenants", icon: Users },
+  { key: "invoices", href: "/invoices", icon: Receipt },
   { key: "payments", href: "/payments", icon: CreditCard },
   { key: "cheques", href: "/cheques", icon: FileCheck },
   { key: "maintenance", href: "/maintenance", icon: Wrench },

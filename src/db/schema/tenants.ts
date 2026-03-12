@@ -32,7 +32,6 @@ export const tenants = pgTable("tenants", {
   fullName: text("full_name").notNull(),
   nationality: text("nationality"),
   nationalId: text("national_id"),
-  passportNumber: text("passport_number"),
   phone: text("phone").notNull(),
   email: text("email"),
   emergencyContact: text("emergency_contact"),

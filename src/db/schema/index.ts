@@ -5,3 +5,4 @@ export * from "./payments";
 export * from "./maintenance";
 export * from "./documents";
 export * from "./reminders";
+export * from "./invoices";

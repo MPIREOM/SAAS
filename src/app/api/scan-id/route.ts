@@ -31,9 +31,9 @@ export async function POST(req: NextRequest) {
 - nationality: The person's nationality/country
 - national_id: The ID number on the card
 
-Return ONLY a valid JSON object with these three fields. If a field is not visible or readable, set it to null. Do not include any other text or explanation.
+Return ONLY a valid JSON object with these three fields. If a field is not visible or readable, set it to null. Do not include any other text, explanation, or markdown formatting. Just the raw JSON object.
 
-Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "national_id": "784-1990-1234567-1"}`;
+Example: {"full_name": "Ahmed Al-Rawahi", "nationality": "Oman", "national_id": "123456789"}`;
 
     const contentBlocks: Anthropic.Messages.ContentBlockParam[] = isPdf
       ? [
@@ -75,7 +75,16 @@ Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "nat
       return NextResponse.json({ error: "Failed to extract text from response" }, { status: 500 });
     }
 
-    const parsed = JSON.parse(textBlock.text);
+    let responseText = textBlock.text.trim();
+
+    // Remove markdown code blocks if present
+    if (responseText.startsWith('```json')) {
+      responseText = responseText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (responseText.startsWith('```')) {
+      responseText = responseText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
+    const parsed = JSON.parse(responseText);
 
     return NextResponse.json({
       full_name: parsed.full_name || null,
