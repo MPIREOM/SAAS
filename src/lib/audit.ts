@@ -9,6 +9,7 @@ type AuditAction =
   | "invite_user"
   | "move_out"
   | "mark_paid"
+  | "status_update"
   | "export_report";
 
 type EntityType =
@@ -19,6 +20,7 @@ type EntityType =
   | "invoice"
   | "payment"
   | "cheque"
+  | "expense"
   | "maintenance_request"
   | "document"
   | "notification_template"
@@ -43,7 +45,7 @@ export async function logAudit(
       data: { user },
     } = await supabase.auth.getUser();
 
-    await supabase.from("audit_logs").insert({
+    await supabase.from("audit_log").insert({
       user_id: user?.id ?? null,
       action: entry.action,
       entity_type: entry.entity_type,

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
 import { Wrench, Plus } from "lucide-react";
@@ -15,6 +16,14 @@ export default async function MaintenancePage({
   const resolvedSearchParams = await searchParams;
   const t = await getTranslations("maintenance");
   const supabase = await createClient();
+
+  // Property-level access control
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  let unitIds: string[] | null = null;
+  if (propertyIds !== null) {
+    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
+    unitIds = units?.map(u => u.id) || [];
+  }
 
   const statusFilter =
     typeof resolvedSearchParams.status === "string"
@@ -38,6 +47,10 @@ export default async function MaintenancePage({
     query = query.eq("status", statusFilter);
   }
 
+  if (unitIds !== null) {
+    query = query.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  }
+
   // Pagination
   const PAGE_SIZE = 50;
   const currentPage = Math.max(1, parseInt(page || "1", 10));
@@ -49,6 +62,9 @@ export default async function MaintenancePage({
 
   if (statusFilter !== "all") {
     countQuery = countQuery.eq("status", statusFilter);
+  }
+  if (unitIds !== null) {
+    countQuery = countQuery.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
   }
   const { count: totalCount } = await countQuery;
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);

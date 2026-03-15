@@ -9,6 +9,7 @@ interface InvoicesTabsProps {
   availableMonths: string[];
   currentStatus: string;
   currentMonth: string;
+  currentProperty?: string;
   locale: string;
 }
 
@@ -17,6 +18,7 @@ export function InvoicesTabs({
   availableMonths,
   currentStatus,
   currentMonth,
+  currentProperty,
   locale,
 }: InvoicesTabsProps) {
   const t = useTranslations("invoices");
@@ -46,6 +48,7 @@ export function InvoicesTabs({
     const params = new URLSearchParams();
     if (status && status !== "all") params.set("status", status);
     if (month) params.set("month", month);
+    if (currentProperty) params.set("property", currentProperty);
     const qs = params.toString();
     return `/${locale}/invoices${qs ? `?${qs}` : ""}`;
   }

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
 import Link from "next/link";
@@ -6,7 +7,9 @@ import {
   Receipt,
   Plus,
   Building2,
+  Pencil,
 } from "lucide-react";
+import { CURRENCY } from "@/lib/currency";
 
 export default async function ExpensesPage({
   params,
@@ -19,6 +22,9 @@ export default async function ExpensesPage({
   const { property, page } = await searchParams;
   const t = await getTranslations("expenses");
   const supabase = await createClient();
+
+  // Property-level access control
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
 
   // Build query
   let query = supabase
@@ -34,6 +40,10 @@ export default async function ExpensesPage({
     query = query.eq("property_id", property);
   }
 
+  if (propertyIds !== null) {
+    query = query.in("property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
+  }
+
   // Pagination
   const PAGE_SIZE = 50;
   const currentPage = Math.max(1, parseInt(page || "1", 10));
@@ -47,6 +57,10 @@ export default async function ExpensesPage({
     countQuery = countQuery.eq("property_id", property);
   }
 
+  if (propertyIds !== null) {
+    countQuery = countQuery.in("property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
+  }
+
   const { count: totalCount } = await countQuery;
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
@@ -54,10 +68,14 @@ export default async function ExpensesPage({
     .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
   // Get properties for filter
-  const { data: properties } = await supabase
+  let propertiesQuery = supabase
     .from("properties")
     .select("id, name")
     .order("name");
+  if (propertyIds !== null) {
+    propertiesQuery = propertiesQuery.in("id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
+  }
+  const { data: properties } = await propertiesQuery;
 
   const allExpenses = expenses || [];
   const totalAmount = allExpenses.reduce(
@@ -178,9 +196,13 @@ export default async function ExpensesPage({
                         }}
                       >
                         <td className="px-5 py-3.5">
-                          <span className="text-sm text-text-primary font-mono tabular-nums">
+                          <Link
+                            href={`/${locale}/expenses/${expense.id}/edit`}
+                            className="text-sm text-text-primary font-mono tabular-nums hover:text-accent transition-colors inline-flex items-center gap-1.5"
+                          >
                             {formatDate(expense.expense_date as string)}
-                          </span>
+                            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                          </Link>
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
@@ -211,7 +233,7 @@ export default async function ExpensesPage({
                           <span className="text-sm font-semibold font-mono tabular-nums text-text-primary">
                             {formatAmount(expense.amount as number)}
                             <span className="text-[10px] font-normal text-text-secondary ml-0.5">
-                              OMR
+                              {CURRENCY.code}
                             </span>
                           </span>
                         </td>
@@ -234,7 +256,7 @@ export default async function ExpensesPage({
               {allExpenses.length} {t("title").toLowerCase()}
             </span>
             <span className="text-xs font-mono font-medium text-text-secondary tabular-nums">
-              {t("totalExpenses")}: {formatAmount(totalAmount)} OMR
+              {t("totalExpenses")}: {formatAmount(totalAmount)} {CURRENCY.code}
             </span>
           </div>
 

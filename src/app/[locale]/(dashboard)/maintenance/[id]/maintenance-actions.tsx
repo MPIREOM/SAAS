@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
 
 interface MaintenanceActionsProps {
   requestId: string;
@@ -24,6 +25,7 @@ export default function MaintenanceActions({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [noteText, setNoteText] = useState("");
+  const [costInput, setCostInput] = useState("");
 
   const handleStatusUpdate = async () => {
     if (!nextStatus) return;
@@ -35,6 +37,9 @@ export default function MaintenanceActions({
 
     if (nextStatus === "resolved") {
       updateData.resolved_at = new Date().toISOString();
+      if (costInput) {
+        updateData.actual_cost = parseFloat(costInput);
+      }
     }
 
     const { error: updateError } = await supabase
@@ -46,6 +51,35 @@ export default function MaintenanceActions({
       setError(updateError.message);
       setLoading(false);
       return;
+    }
+
+    await logAudit(supabase, {
+      action: "status_update",
+      entity_type: "maintenance_request",
+      entity_id: requestId,
+      metadata: { from: currentStatus, to: nextStatus },
+    });
+
+    // Auto-create expense record when resolved with actual_cost
+    if (nextStatus === "resolved") {
+      const { data: request } = await supabase
+        .from("maintenance_requests")
+        .select("actual_cost, unit_id, category, description, units:unit_id(property_id)")
+        .eq("id", requestId)
+        .single();
+
+      if (request?.actual_cost && Number(request.actual_cost) > 0) {
+        const unit = request.units as unknown as { property_id: string } | null;
+        await supabase.from("expenses").insert({
+          property_id: unit?.property_id,
+          unit_id: request.unit_id,
+          category: "maintenance",
+          description: `Maintenance: ${request.category} - ${request.description?.slice(0, 100) || ""}`,
+          amount: request.actual_cost,
+          expense_date: new Date().toISOString().split("T")[0],
+          created_by: (await supabase.auth.getUser()).data.user?.id,
+        });
+      }
     }
 
     router.refresh();
@@ -119,6 +153,19 @@ export default function MaintenanceActions({
 
   return (
     <div className="space-y-2">
+      {nextStatus === "resolved" && (
+        <div className="mb-3">
+          <label className="block text-xs text-text-secondary mb-1">{t("actualCostInput")} (OMR)</label>
+          <input
+            type="number"
+            step="0.01"
+            value={costInput}
+            onChange={(e) => setCostInput(e.target.value)}
+            placeholder="0.00"
+            className="w-full h-9 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary font-mono focus:outline-none focus:border-accent transition-colors"
+          />
+        </div>
+      )}
       <button
         onClick={handleStatusUpdate}
         disabled={loading}

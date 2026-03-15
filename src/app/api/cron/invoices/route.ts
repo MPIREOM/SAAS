@@ -74,5 +74,13 @@ export async function GET(request: Request) {
     }
   }
 
+  // Auto-mark overdue invoices
+  const todayStr = new Date().toISOString().split("T")[0];
+  await supabase
+    .from("invoices")
+    .update({ status: "overdue" })
+    .eq("status", "pending")
+    .lt("due_date", todayStr);
+
   return NextResponse.json({ created, skipped, total: leases.length });
 }

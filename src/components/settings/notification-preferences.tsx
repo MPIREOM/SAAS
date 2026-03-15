@@ -1,49 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Mail, MessageSquare } from "lucide-react";
+import { Mail, MessageSquare, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { createClient } from "@/lib/supabase/client";
 
 interface NotificationPrefs {
-  rentUpcoming: { email: boolean; whatsapp: boolean };
-  rentOverdue: { email: boolean; whatsapp: boolean };
-  chequeDue: { email: boolean; whatsapp: boolean };
-  leaseExpiry: { email: boolean; whatsapp: boolean };
+  rent_upcoming: { email: boolean; whatsapp: boolean };
+  rent_overdue: { email: boolean; whatsapp: boolean };
+  cheque_due: { email: boolean; whatsapp: boolean };
+  lease_expiry: { email: boolean; whatsapp: boolean };
 }
 
-const STORAGE_KEY = "notification_preferences";
-
 const DEFAULT_PREFS: NotificationPrefs = {
-  rentUpcoming: { email: true, whatsapp: false },
-  rentOverdue: { email: true, whatsapp: false },
-  chequeDue: { email: true, whatsapp: false },
-  leaseExpiry: { email: true, whatsapp: false },
+  rent_upcoming: { email: true, whatsapp: true },
+  rent_overdue: { email: true, whatsapp: true },
+  cheque_due: { email: true, whatsapp: false },
+  lease_expiry: { email: true, whatsapp: false },
 };
 
 type ReminderType = keyof NotificationPrefs;
 type Channel = "email" | "whatsapp";
 
 const REMINDER_TYPES: ReminderType[] = [
-  "rentUpcoming",
-  "rentOverdue",
-  "chequeDue",
-  "leaseExpiry",
+  "rent_upcoming",
+  "rent_overdue",
+  "cheque_due",
+  "lease_expiry",
 ];
+
+const REMINDER_TYPE_LABELS: Record<ReminderType, string> = {
+  rent_upcoming: "rentUpcoming",
+  rent_overdue: "rentOverdue",
+  cheque_due: "chequeDue",
+  lease_expiry: "leaseExpiry",
+};
 
 function Toggle({
   enabled,
   onToggle,
+  disabled,
 }: {
   enabled: boolean;
   onToggle: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onToggle}
+      disabled={disabled}
       className={`relative h-5 w-9 rounded-full transition-colors ${
         enabled ? "bg-accent" : "bg-border"
-      }`}
+      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
       <span
         className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
@@ -58,47 +67,86 @@ export function NotificationPreferences() {
   const t = useTranslations("settings");
   const { toast } = useToast();
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setPrefs(JSON.parse(stored));
+    async function fetchPreferences() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+        setUserId(user.id);
+
+        const { data: profile } = await supabase
+          .from("users")
+          .select("notification_preferences")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.notification_preferences) {
+          setPrefs(profile.notification_preferences as NotificationPrefs);
+        }
+      } catch {
+        // Fall back to defaults on error
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      // ignore parse errors
     }
-    setLoaded(true);
+
+    fetchPreferences();
   }, []);
 
-  function toggle(type: ReminderType, channel: Channel) {
-    setPrefs((prev) => {
-      const updated = {
-        ...prev,
+  const toggle = useCallback(
+    async (type: ReminderType, channel: Channel) => {
+      if (!userId || saving) return;
+
+      const newPrefs = {
+        ...prefs,
         [type]: {
-          ...prev[type],
-          [channel]: !prev[type][channel],
+          ...prefs[type],
+          [channel]: !prefs[type][channel],
         },
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      toast({
-        title: t("preferencesSaved"),
-        variant: "success",
-      });
-      return updated;
-    });
-  }
 
-  if (!loaded) {
+      setPrefs(newPrefs);
+      setSaving(true);
+
+      try {
+        const supabase = createClient();
+        const { error } = await supabase
+          .from("users")
+          .update({ notification_preferences: newPrefs })
+          .eq("id", userId);
+
+        if (error) throw error;
+
+        toast({
+          title: t("preferencesSaved"),
+          variant: "success",
+        });
+      } catch {
+        // Revert on failure
+        setPrefs(prefs);
+        toast({
+          title: t("preferencesError") ?? "Failed to save preferences",
+          variant: "destructive",
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [prefs, userId, saving, toast, t]
+  );
+
+  if (loading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="h-12 bg-surface-elevated border border-border rounded-md animate-pulse"
-          />
-        ))}
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-text-secondary" />
       </div>
     );
   }
@@ -124,16 +172,18 @@ export function NotificationPreferences() {
           className="flex items-center justify-between bg-surface-elevated border border-border rounded-md px-4 py-3"
         >
           <span className="text-sm text-text-primary font-medium">
-            {t(type)}
+            {t(REMINDER_TYPE_LABELS[type])}
           </span>
           <div className="flex items-center gap-10">
             <Toggle
               enabled={prefs[type].email}
               onToggle={() => toggle(type, "email")}
+              disabled={saving}
             />
             <Toggle
               enabled={prefs[type].whatsapp}
               onToggle={() => toggle(type, "whatsapp")}
+              disabled={saving}
             />
           </div>
         </div>

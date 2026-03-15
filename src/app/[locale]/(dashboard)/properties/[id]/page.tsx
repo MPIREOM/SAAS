@@ -13,6 +13,7 @@ import {
   Wrench,
   ChevronRight,
 } from "lucide-react";
+import { CURRENCY } from "@/lib/currency";
 
 export default async function PropertyDetailPage({
   params,
@@ -209,7 +210,7 @@ export default async function PropertyDetailPage({
                 minimumFractionDigits: 2,
               })}
               <span className="text-xs font-sans font-normal text-text-secondary ml-1.5">
-                OMR
+                {CURRENCY.code}
               </span>
             </p>
           </div>
@@ -277,7 +278,7 @@ export default async function PropertyDetailPage({
                         minimumFractionDigits: 0,
                       })}{" "}
                       <span className="text-[10px] font-normal text-text-secondary">
-                        OMR
+                        {CURRENCY.code}
                       </span>
                     </p>
                   ) : null}

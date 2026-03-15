@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
 import {
   Check,
   CreditCard,
@@ -91,17 +92,6 @@ export function MarkPaidButton({
 
     const supabase = createClient();
 
-    // If cheque method, update the cheque status to cleared
-    if (method === "cheque" && selectedChequeId) {
-      await supabase
-        .from("cheques")
-        .update({
-          status: "cleared",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", selectedChequeId);
-    }
-
     // Fetch the invoice to get lease_id
     const { data: invoice } = await supabase
       .from("invoices")
@@ -136,6 +126,20 @@ export function MarkPaidButton({
         method,
         reference_number: referenceNumber,
         notes: notes || null,
+      });
+
+      // If paid by cheque, mark the cheque as cleared
+      if (method === "cheque" && selectedChequeId) {
+        await supabase
+          .from("cheques")
+          .update({ status: "cleared", updated_at: new Date().toISOString() })
+          .eq("id", selectedChequeId);
+      }
+
+      await logAudit(supabase, {
+        action: "mark_paid",
+        entity_type: "invoice",
+        entity_id: invoiceId,
       });
 
       setOpen(false);

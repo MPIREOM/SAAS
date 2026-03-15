@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
+import Link from "next/link";
 import {
   FileText,
   TrendingUp,
@@ -8,21 +10,45 @@ import {
   AlertTriangle,
   CheckCircle2,
   Receipt,
+  Building2,
 } from "lucide-react";
 import { InvoicesTabs } from "@/components/invoices/invoices-tabs";
 import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
+import { CURRENCY } from "@/lib/currency";
 
 export default async function InvoicesPage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ status?: string; month?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; month?: string; page?: string; property?: string }>;
 }) {
   const { locale } = await params;
-  const { status, month, page } = await searchParams;
+  const { status, month, page, property } = await searchParams;
   const t = await getTranslations("invoices");
   const supabase = await createClient();
+
+  // Property-level access control
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  let unitIds: string[] | null = null;
+  if (propertyIds !== null) {
+    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
+    unitIds = units?.map(u => u.id) || [];
+  }
+
+  // Fetch properties for filter dropdown
+  let propertiesQuery = supabase.from("properties").select("id, name").eq("is_archived", false).order("name");
+  if (propertyIds !== null) {
+    propertiesQuery = propertiesQuery.in("id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
+  }
+  const { data: properties } = await propertiesQuery;
+
+  // If property filter is selected, get units for that property
+  let propertyUnitIds: string[] | null = null;
+  if (property) {
+    const { data: propUnits } = await supabase.from("units").select("id").eq("property_id", property);
+    propertyUnitIds = propUnits?.map(u => u.id) || [];
+  }
 
   // Build query
   let query = supabase
@@ -48,6 +74,14 @@ export default async function InvoicesPage({
     query = query.gte("due_date", monthStart).lte("due_date", monthEnd);
   }
 
+  if (unitIds !== null) {
+    query = query.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  }
+
+  if (propertyUnitIds !== null) {
+    query = query.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__none__"]);
+  }
+
   // Pagination
   const PAGE_SIZE = 50;
   const currentPage = Math.max(1, parseInt(page || "1", 10));
@@ -68,6 +102,12 @@ export default async function InvoicesPage({
     const ld = new Date(y, m, 0).getDate();
     const me = `${y}-${String(m).padStart(2, "0")}-${ld}`;
     countQuery = countQuery.gte("due_date", ms).lte("due_date", me);
+  }
+  if (unitIds !== null) {
+    countQuery = countQuery.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  }
+  if (propertyUnitIds !== null) {
+    countQuery = countQuery.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__none__"]);
   }
   const { count: totalCount } = await countQuery;
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
@@ -168,7 +208,7 @@ export default async function InvoicesPage({
             <p className="text-xl font-bold text-text-primary font-mono tabular-nums">
               {formatAmount(totalAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ml-1">
-                OMR
+                {CURRENCY.code}
               </span>
             </p>
             <p className="text-xs text-text-secondary mt-1">
@@ -192,7 +232,7 @@ export default async function InvoicesPage({
             <p className="text-xl font-bold text-success font-mono tabular-nums">
               {formatAmount(paidAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ml-1">
-                OMR
+                {CURRENCY.code}
               </span>
             </p>
             <div className="flex items-center gap-1.5 mt-1">
@@ -220,7 +260,7 @@ export default async function InvoicesPage({
             <p className="text-xl font-bold text-warning font-mono tabular-nums">
               {formatAmount(pendingAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ml-1">
-                OMR
+                {CURRENCY.code}
               </span>
             </p>
             <p className="text-xs text-text-secondary mt-1">
@@ -244,7 +284,7 @@ export default async function InvoicesPage({
             <p className="text-xl font-bold text-destructive font-mono tabular-nums">
               {formatAmount(overdueAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ml-1">
-                OMR
+                {CURRENCY.code}
               </span>
             </p>
             <p className="text-xs text-text-secondary mt-1">
@@ -254,12 +294,45 @@ export default async function InvoicesPage({
         </div>
       </div>
 
+      {/* Property Filter */}
+      {properties && properties.length > 1 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-text-secondary" />
+            <Link
+              href={`/${locale}/invoices${status ? `?status=${status}` : ""}${month ? `${status ? "&" : "?"}month=${month}` : ""}`}
+              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                !property
+                  ? "bg-accent/10 text-accent font-medium"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
+              }`}
+            >
+              {t("allProperties")}
+            </Link>
+            {properties.map((p: Record<string, unknown>) => (
+              <Link
+                key={p.id as string}
+                href={`/${locale}/invoices?property=${p.id as string}${status ? `&status=${status}` : ""}${month ? `&month=${month}` : ""}`}
+                className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                  property === (p.id as string)
+                    ? "bg-accent/10 text-accent font-medium"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
+                }`}
+              >
+                {p.name as string}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <InvoicesTabs
         invoices={allInvoices}
         availableMonths={availableMonths}
         currentStatus={status || "all"}
         currentMonth={month || ""}
+        currentProperty={property || ""}
         locale={locale}
       />
 
@@ -387,7 +460,7 @@ export default async function InvoicesPage({
                           >
                             {formatAmount(invoice.amount as number)}
                             <span className="text-[10px] font-normal text-text-secondary ml-0.5">
-                              OMR
+                              {CURRENCY.code}
                             </span>
                           </span>
                         </td>
@@ -448,7 +521,7 @@ export default async function InvoicesPage({
               {allInvoices.length} {t("title").toLowerCase()}
             </span>
             <span className="text-xs font-mono font-medium text-text-secondary tabular-nums">
-              {t("total")}: {formatAmount(totalAmount)} OMR
+              {t("total")}: {formatAmount(totalAmount)} {CURRENCY.code}
             </span>
           </div>
 
@@ -460,6 +533,7 @@ export default async function InvoicesPage({
             searchParams={{
               ...(status ? { status } : {}),
               ...(month ? { month } : {}),
+              ...(property ? { property } : {}),
             }}
           />
         </div>

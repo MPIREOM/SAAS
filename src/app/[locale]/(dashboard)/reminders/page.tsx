@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Bell, FileText, Plus } from "lucide-react";
 import { ReminderTriggerButton } from "@/components/reminders/trigger-button";
@@ -13,7 +14,17 @@ export default async function RemindersPage({
   const t = await getTranslations("reminders");
   const supabase = await createClient();
 
-  const { data: reminders } = await supabase
+  // Property-level access control
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  let accessibleTenantIds: string[] | null = null;
+  if (propertyIds !== null) {
+    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
+    const unitIds = units?.map(u => u.id) || [];
+    const { data: leases } = await supabase.from("leases").select("tenant_id").in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+    accessibleTenantIds = [...new Set(leases?.map(l => l.tenant_id) || [])];
+  }
+
+  let remindersQuery = supabase
     .from("reminder_logs")
     .select(`
       *,
@@ -21,6 +32,10 @@ export default async function RemindersPage({
     `)
     .order("created_at", { ascending: false })
     .limit(50);
+  if (accessibleTenantIds !== null) {
+    remindersQuery = remindersQuery.in("tenant_id", accessibleTenantIds.length > 0 ? accessibleTenantIds : ["__no_access__"]);
+  }
+  const { data: reminders } = await remindersQuery;
 
   const { data: templates } = await supabase
     .from("notification_templates")

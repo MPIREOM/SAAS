@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
 import { FolderOpen, AlertTriangle, Upload } from "lucide-react";
@@ -16,24 +17,35 @@ export default async function DocumentsPage({
   const t = await getTranslations("documents");
   const supabase = await createClient();
 
+  // Property-level access control
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+
   // Pagination
   const PAGE_SIZE = 50;
   const currentPage = Math.max(1, parseInt(page || "1", 10));
 
   // Get total count for pagination
-  const { count: totalCount } = await supabase
+  let countQuery = supabase
     .from("documents")
     .select("*", { count: "exact", head: true });
+  if (propertyIds !== null) {
+    countQuery = countQuery.in("property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
+  }
+  const { count: totalCount } = await countQuery;
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
-  const { data: documents } = await supabase
+  let docsQuery = supabase
     .from("documents")
     .select(`
       *,
       tenants:tenant_id(full_name),
       properties:property_id(name)
     `)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (propertyIds !== null) {
+    docsQuery = docsQuery.in("property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
+  }
+  const { data: documents } = await docsQuery
     .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
   const typeColors: Record<string, string> = {

@@ -351,7 +351,8 @@
     "chequeDate": "تاريخ الشيك",
     "total": "الإجمالي",
     "collected": "المحصّل",
-    "collectionProgress": "تقدم التحصيل"
+    "collectionProgress": "تقدم التحصيل",
+    "allProperties": "جميع العقارات"
   },
   "cheques": {
     "title": "الشيكات",
@@ -444,7 +445,8 @@
     "requestClosed": "هذا الطلب مغلق. لا تتوفر تغييرات إضافية على الحالة.",
     "markInProgress": "تعيين قيد التنفيذ",
     "markResolved": "تعيين تم الحل",
-    "closeRequest": "إغلاق الطلب"
+    "closeRequest": "إغلاق الطلب",
+    "actualCostInput": "التكلفة الفعلية"
   },
   "documents": {
     "title": "المستندات",
@@ -621,7 +623,9 @@
     "occupiedUnits": "الوحدات المشغولة",
     "collectionRate": "نسبة التحصيل",
     "pendingMaintenance": "صيانة معلّقة",
-    "rentCollection": "تحصيل الإيجار (12 شهر)"
+    "rentCollection": "تحصيل الإيجار (12 شهر)",
+    "expensesThisMonth": "مصروفات هذا الشهر",
+    "netIncome": "صافي الدخل"
   },
   "reports": {
     "title": "التقارير",
@@ -659,6 +663,8 @@
     "occupancy": "الإشغال",
     "monthlyRevenueLabel": "الإيرادات الشهرية",
     "collectedLabel": "المحصّل",
+    "expenses": "المصروفات",
+    "net": "الصافي",
     "exportReports": "تصدير التقارير"
   },
   "expenses": {
@@ -676,6 +682,11 @@
     "noExpensesDescription": "أضف أول مصروف للبدء في التتبع",
     "totalExpenses": "إجمالي المصروفات",
     "allProperties": "جميع العقارات",
+    "editExpense": "تعديل المصروف",
+    "deleteExpense": "حذف المصروف",
+    "confirmDeleteExpense": "هل أنت متأكد من حذف هذا المصروف؟",
+    "expenseUpdated": "تم تحديث المصروف",
+    "expenseDeleted": "تم حذف المصروف",
     "categories": {
       "maintenance": "صيانة",
       "insurance": "تأمين",

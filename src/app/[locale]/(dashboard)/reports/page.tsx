@@ -8,13 +8,13 @@ import {
   AlertTriangle,
   Building2,
   Download,
-  FileText,
   Users,
   Wrench,
   CreditCard,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
 import { CollectionChart, type MonthlyCollectionData } from "@/components/reports/collection-chart";
+import { CURRENCY } from "@/lib/currency";
 
 /* ------------------------------------------------------------------ */
 /*  Data-fetching helpers                                              */
@@ -151,6 +151,8 @@ interface PropertyPerformance {
   occupancyPct: number;
   monthlyRevenue: number;
   collectedThisMonth: number;
+  expensesThisMonth: number;
+  net: number;
 }
 
 async function getPropertyPerformance(): Promise<PropertyPerformance[]> {
@@ -182,6 +184,15 @@ async function getPropertyPerformance(): Promise<PropertyPerformance[]> {
     .gte("due_date", monthStart)
     .lte("due_date", monthEnd);
 
+  // Fetch expenses this month grouped by property
+  let expensesQ = supabase
+    .from("expenses")
+    .select("property_id, amount")
+    .gte("expense_date", monthStart)
+    .lte("expense_date", monthEnd);
+  expensesQ = filterByProperties(expensesQ, propertyIds);
+  const { data: expenseData } = await expensesQ;
+
   const unitMap = new Map<string, { property_id: string }>();
   (units || []).forEach((u) => {
     unitMap.set(u.id, { property_id: u.property_id });
@@ -205,6 +216,14 @@ async function getPropertyPerformance(): Promise<PropertyPerformance[]> {
       .filter((inv) => inv.status === "paid")
       .reduce((sum, inv) => sum + parseFloat(inv.amount as string), 0);
 
+    // Expenses for this property this month
+    const propExpenses = (expenseData || [])
+      .filter((exp) => exp.property_id === prop.id)
+      .reduce((sum, exp) => sum + parseFloat(exp.amount as string), 0);
+
+    const expensesRounded = Math.round(propExpenses * 100) / 100;
+    const collectedRounded = Math.round(collectedThisMonth * 100) / 100;
+
     return {
       id: prop.id,
       name: prop.name,
@@ -212,7 +231,9 @@ async function getPropertyPerformance(): Promise<PropertyPerformance[]> {
       occupiedUnits,
       occupancyPct: totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0,
       monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
-      collectedThisMonth: Math.round(collectedThisMonth * 100) / 100,
+      collectedThisMonth: collectedRounded,
+      expensesThisMonth: expensesRounded,
+      net: Math.round((collectedRounded - expensesRounded) * 100) / 100,
     };
   });
 
@@ -280,7 +301,7 @@ export default async function ReportsPage({
   const metricCards = [
     {
       label: t("revenueThisMonth"),
-      value: `${metrics.revenueThisMonth.toLocaleString()} OMR`,
+      value: `${metrics.revenueThisMonth.toLocaleString()} ${CURRENCY.code}`,
       icon: DollarSign,
       gradient: "from-success/20 to-success/5",
       iconColor: "text-success",
@@ -302,7 +323,7 @@ export default async function ReportsPage({
     },
     {
       label: t("outstandingBalance"),
-      value: `${metrics.outstandingBalance.toLocaleString()} OMR`,
+      value: `${metrics.outstandingBalance.toLocaleString()} ${CURRENCY.code}`,
       icon: AlertTriangle,
       gradient: metrics.outstandingBalance > 0
         ? "from-destructive/20 to-destructive/5"
@@ -398,8 +419,14 @@ export default async function ReportsPage({
                   <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
                     {t("monthlyRevenueLabel")}
                   </th>
-                  <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 ps-4">
+                  <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
                     {t("collectedLabel")}
+                  </th>
+                  <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
+                    {t("expenses")}
+                  </th>
+                  <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 ps-4">
+                    {t("net")}
                   </th>
                 </tr>
               </thead>
@@ -434,10 +461,18 @@ export default async function ReportsPage({
                       </span>
                     </td>
                     <td className="text-right py-3.5 px-4 font-mono ltr-nums text-text-primary font-medium">
-                      {prop.monthlyRevenue.toLocaleString()} OMR
+                      {prop.monthlyRevenue.toLocaleString()} {CURRENCY.code}
                     </td>
-                    <td className="text-right py-3.5 ps-4 font-mono ltr-nums text-accent font-medium">
-                      {prop.collectedThisMonth.toLocaleString()} OMR
+                    <td className="text-right py-3.5 px-4 font-mono ltr-nums text-accent font-medium">
+                      {prop.collectedThisMonth.toLocaleString()} {CURRENCY.code}
+                    </td>
+                    <td className="text-right py-3.5 px-4 font-mono ltr-nums text-destructive font-medium">
+                      {prop.expensesThisMonth.toLocaleString()} {CURRENCY.code}
+                    </td>
+                    <td className={`text-right py-3.5 ps-4 font-mono ltr-nums font-medium ${
+                      prop.net >= 0 ? "text-success" : "text-destructive"
+                    }`}>
+                      {prop.net.toLocaleString()} {CURRENCY.code}
                     </td>
                   </tr>
                 ))}
@@ -470,17 +505,9 @@ export default async function ReportsPage({
                 </div>
                 <div className="flex items-center gap-1.5 mt-auto">
                   <Link
-                    href={`/api/reports/${report.id}?format=pdf`}
-                    target="_blank"
-                    className="inline-flex items-center gap-1 h-7 px-2.5 bg-accent hover:bg-accent-hover text-background text-[11px] font-medium rounded-md transition-colors"
-                  >
-                    <FileText className="h-3 w-3" />
-                    {t("exportPdf")}
-                  </Link>
-                  <Link
                     href={`/api/reports/${report.id}?format=csv`}
                     target="_blank"
-                    className="inline-flex items-center gap-1 h-7 px-2.5 bg-surface border border-border text-text-primary text-[11px] font-medium rounded-md hover:bg-border/30 transition-colors"
+                    className="inline-flex items-center gap-1 h-7 px-2.5 bg-accent hover:bg-accent-hover text-background text-[11px] font-medium rounded-md transition-colors"
                   >
                     <Download className="h-3 w-3" />
                     {t("exportExcel")}

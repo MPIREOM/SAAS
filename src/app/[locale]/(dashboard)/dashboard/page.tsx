@@ -12,8 +12,10 @@ import {
   TrendingUp,
   UserPlus,
   Bell,
+  Receipt,
 } from "lucide-react";
 import { RentChart } from "@/components/dashboard/rent-chart";
+import { CURRENCY } from "@/lib/currency";
 import { format } from "date-fns";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
 
@@ -29,6 +31,10 @@ interface OverdueInvoice {
 async function getDashboardStats() {
   const supabase = await createClient();
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
+
+  const now = new Date();
+  const monthStart = format(new Date(now.getFullYear(), now.getMonth(), 1), "yyyy-MM-dd");
+  const monthEnd = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), "yyyy-MM-dd");
 
   // Properties query - filter by accessible IDs
   let propertiesQuery = supabase
@@ -50,19 +56,58 @@ async function getDashboardStats() {
     .eq("status", "occupied");
   occupiedQuery = filterByProperties(occupiedQuery, propertyIds);
 
+  // Expenses this month - filter by property_id
+  let expensesQuery = supabase
+    .from("expenses")
+    .select("amount")
+    .gte("expense_date", monthStart)
+    .lte("expense_date", monthEnd);
+  expensesQuery = filterByProperties(expensesQuery, propertyIds);
+
+  // Units for filtering invoices by property
+  let unitsForInvoicesQuery = supabase
+    .from("units")
+    .select("id");
+  unitsForInvoicesQuery = filterByProperties(unitsForInvoicesQuery, propertyIds);
+
   const [
     { count: propertyCount },
     { count: unitCount },
     { count: occupiedCount },
     { count: tenantCount },
     { count: openMaintenanceCount },
+    { data: expensesData },
+    { data: accessibleUnits },
   ] = await Promise.all([
     propertiesQuery,
     unitsQuery,
     occupiedQuery,
     supabase.from("tenants").select("*", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("maintenance_requests").select("*", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+    expensesQuery,
+    unitsForInvoicesQuery,
   ]);
+
+  // Revenue this month (paid invoices) - filter by accessible unit IDs
+  const unitIds = (accessibleUnits || []).map((u) => u.id);
+  let revenueThisMonth = 0;
+  if (unitIds.length > 0) {
+    const { data: paidInvoices } = await supabase
+      .from("invoices")
+      .select("amount")
+      .eq("status", "paid")
+      .gte("due_date", monthStart)
+      .lte("due_date", monthEnd)
+      .in("unit_id", unitIds);
+    revenueThisMonth = (paidInvoices || []).reduce(
+      (sum, inv) => sum + parseFloat(inv.amount as string), 0
+    );
+  }
+
+  const expensesThisMonth = (expensesData || []).reduce(
+    (sum, exp) => sum + parseFloat(exp.amount as string), 0
+  );
+  const netIncome = Math.round((revenueThisMonth - expensesThisMonth) * 100) / 100;
 
   const occupancyRate = unitCount ? Math.round(((occupiedCount || 0) / unitCount) * 100) : 0;
 
@@ -73,6 +118,8 @@ async function getDashboardStats() {
     tenantCount: tenantCount || 0,
     openMaintenanceCount: openMaintenanceCount || 0,
     occupancyRate,
+    expensesThisMonth: Math.round(expensesThisMonth * 100) / 100,
+    netIncome,
   };
 }
 
@@ -257,6 +304,24 @@ export default async function DashboardPage({
       iconColor: overdueInvoices.length > 0 ? "text-destructive" : "text-text-secondary",
       href: `/${locale}/invoices?status=pending`,
     },
+    {
+      label: t("expensesThisMonth"),
+      value: `${stats.expensesThisMonth.toLocaleString()} ${CURRENCY.code}`,
+      icon: Receipt,
+      gradient: "from-destructive/20 to-destructive/5",
+      iconColor: "text-destructive",
+      href: `/${locale}/expenses`,
+    },
+    {
+      label: t("netIncome"),
+      value: `${stats.netIncome.toLocaleString()} ${CURRENCY.code}`,
+      icon: TrendingUp,
+      gradient: stats.netIncome >= 0
+        ? "from-success/20 to-success/5"
+        : "from-destructive/20 to-destructive/5",
+      iconColor: stats.netIncome >= 0 ? "text-success" : "text-destructive",
+      href: `/${locale}/reports`,
+    },
   ];
 
   return (
@@ -289,7 +354,7 @@ export default async function DashboardPage({
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 stagger-children">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger-children">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
@@ -370,7 +435,7 @@ export default async function DashboardPage({
                   </div>
                   <div className="text-right shrink-0 ml-3 flex items-center gap-2.5">
                     <span className="text-sm font-bold font-mono text-text-primary ltr-nums">
-                      {inv.amount} OMR
+                      {inv.amount} {CURRENCY.code}
                     </span>
                     <span
                       className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${
@@ -426,7 +491,7 @@ export default async function DashboardPage({
                   </div>
                   <div className="text-right shrink-0 ml-3">
                     <p className="text-sm font-bold font-mono text-destructive">
-                      {item.amount} OMR
+                      {item.amount} {CURRENCY.code}
                     </p>
                     <p className="text-xs text-destructive/60 mt-0.5">
                       {t("daysOverdue", { days: item.daysOverdue })}

@@ -15,7 +15,7 @@ interface TopbarProps {
 }
 
 interface SearchResult {
-  type: "tenant" | "property" | "unit";
+  type: "tenant" | "property" | "unit" | "invoice" | "maintenance";
   id: string;
   title: string;
   subtitle?: string;
@@ -86,7 +86,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
       const supabase = createClient();
       const results: SearchResult[] = [];
 
-      const [{ data: tenants }, { data: properties }, { data: units }] =
+      const [{ data: tenants }, { data: properties }, { data: units }, { data: invoices }, { data: maintenanceRequests }] =
         await Promise.all([
           supabase
             .from("tenants")
@@ -103,6 +103,16 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
             .select("id, unit_number, property_id, properties(name)")
             .ilike("unit_number", `%${query}%`)
             .limit(5),
+          supabase
+            .from("invoices")
+            .select("id, amount, status, due_date, tenants!inner(full_name)")
+            .or(`status.eq.pending,status.eq.overdue`)
+            .limit(3),
+          supabase
+            .from("maintenance_requests")
+            .select("id, category, status, description")
+            .ilike("description", `%${query}%`)
+            .limit(3),
         ]);
 
       tenants?.forEach((t) =>
@@ -136,6 +146,27 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
         });
       });
 
+      invoices?.forEach((inv) => {
+        const tenant = inv.tenants as unknown as { full_name: string };
+        results.push({
+          type: "invoice",
+          id: inv.id,
+          title: `${tenant.full_name} - ${inv.amount} OMR`,
+          subtitle: `${inv.status} · ${new Date(inv.due_date).toLocaleDateString()}`,
+          href: `/${locale}/invoices`,
+        });
+      });
+
+      maintenanceRequests?.forEach((m) => {
+        results.push({
+          type: "maintenance",
+          id: m.id,
+          title: m.category.charAt(0).toUpperCase() + m.category.slice(1),
+          subtitle: m.description?.slice(0, 50) + (m.description?.length > 50 ? "..." : ""),
+          href: `/${locale}/maintenance/${m.id}`,
+        });
+      });
+
       setSearchResults(results);
       setSearching(false);
     },
@@ -152,6 +183,8 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
     tenant: t("tenant") || "Tenant",
     property: t("property") || "Property",
     unit: t("unit") || "Unit",
+    invoice: "Invoice",
+    maintenance: "Maintenance",
   };
 
   return (

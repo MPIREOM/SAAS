@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
+import { CURRENCY } from "@/lib/currency";
 
 export default async function PropertiesPage({
   params,
@@ -175,7 +176,7 @@ export default async function PropertiesPage({
             <p className="text-2xl font-bold font-mono tabular-nums text-text-primary">
               {totalRevenue.toLocaleString("en-OM", { minimumFractionDigits: 2 })}
               <span className="text-sm font-sans font-normal text-text-secondary ml-1.5">
-                OMR
+                {CURRENCY.code}
               </span>
             </p>
           </div>
@@ -283,7 +284,7 @@ export default async function PropertiesPage({
                     )}
                     {propRevenue > 0 && (
                       <span className="text-xs font-bold font-mono tabular-nums text-accent ml-auto">
-                        {propRevenue.toLocaleString("en-OM", { minimumFractionDigits: 0 })} OMR
+                        {propRevenue.toLocaleString("en-OM", { minimumFractionDigits: 0 })} {CURRENCY.code}
                       </span>
                     )}
                   </div>

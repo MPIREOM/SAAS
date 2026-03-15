@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
 import { Users, Plus, Phone, Mail } from "lucide-react";
@@ -18,6 +19,16 @@ export default async function TenantsPage({
   const t = await getTranslations("tenants");
   const tc = await getTranslations("common");
   const supabase = await createClient();
+
+  // Property-level access control
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  let accessibleTenantIds: string[] | null = null;
+  if (propertyIds !== null) {
+    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
+    const accessUnitIds = units?.map(u => u.id) || [];
+    const { data: leases } = await supabase.from("leases").select("tenant_id").in("unit_id", accessUnitIds.length > 0 ? accessUnitIds : ["__no_access__"]);
+    accessibleTenantIds = [...new Set(leases?.map(l => l.tenant_id) || [])];
+  }
 
   const status =
     typeof resolvedSearchParams.status === "string"
@@ -60,6 +71,10 @@ export default async function TenantsPage({
     );
   }
 
+  if (accessibleTenantIds !== null) {
+    query = query.in("id", accessibleTenantIds.length > 0 ? accessibleTenantIds : ["__no_access__"]);
+  }
+
   // Pagination
   const PAGE_SIZE = 50;
   const currentPage = Math.max(1, parseInt(page || "1", 10));
@@ -76,6 +91,9 @@ export default async function TenantsPage({
     countQuery = countQuery.or(
       `full_name.ilike.%${search}%,phone.ilike.%${search}%,national_id.ilike.%${search}%`
     );
+  }
+  if (accessibleTenantIds !== null) {
+    countQuery = countQuery.in("id", accessibleTenantIds.length > 0 ? accessibleTenantIds : ["__no_access__"]);
   }
   const { count: totalCount } = await countQuery;
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
