@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { CURRENCY } from "@/lib/currency";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
@@ -205,7 +206,7 @@ export default async function TenantsPage({
                     <td className="px-4 py-3">
                       <span className="text-sm text-text-primary font-mono ltr-nums">
                         {displayLease
-                          ? `${displayLease.monthly_rent} OMR`
+                          ? `${displayLease.monthly_rent} ${CURRENCY.code}`
                           : "—"}
                       </span>
                     </td>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { CURRENCY } from "@/lib/currency";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
@@ -27,6 +28,7 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 
 export default async function UnitDetailPage({
   params,
@@ -48,6 +50,11 @@ export default async function UnitDetailPage({
     .single();
 
   if (!unit) {
+    notFound();
+  }
+
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  if (propertyIds !== null && !propertyIds.includes(propertyId)) {
     notFound();
   }
 
@@ -220,7 +227,7 @@ export default async function UnitDetailPage({
           {
             label: t("rentAmount"),
             value: unit.rent_amount
-              ? `${Number(unit.rent_amount).toLocaleString("en-OM", { minimumFractionDigits: 0 })} OMR`
+              ? `${Number(unit.rent_amount).toLocaleString("en-OM", { minimumFractionDigits: 0 })} ${CURRENCY.code}`
               : "—",
             icon: Banknote,
             mono: true,
@@ -315,7 +322,7 @@ export default async function UnitDetailPage({
                         { minimumFractionDigits: 2 }
                       )}
                       <span className="text-xs font-sans font-normal text-text-secondary ml-1">
-                        OMR
+                        {CURRENCY.code}
                       </span>
                     </p>
                   </div>
@@ -392,7 +399,7 @@ export default async function UnitDetailPage({
                     {
                       label: tt("securityDeposit"),
                       value: activeLease.security_deposit
-                        ? `${activeLease.security_deposit} OMR`
+                        ? `${activeLease.security_deposit} ${CURRENCY.code}`
                         : "—",
                       icon: Shield,
                     },
@@ -574,7 +581,7 @@ export default async function UnitDetailPage({
                           minimumFractionDigits: 2,
                         })}
                         <span className="text-[10px] font-normal text-text-secondary ml-1">
-                          OMR
+                          {CURRENCY.code}
                         </span>
                       </span>
                     </td>
@@ -677,7 +684,7 @@ export default async function UnitDetailPage({
                           minimumFractionDigits: 2,
                         })}
                         <span className="text-[10px] font-normal text-text-secondary ml-1">
-                          OMR
+                          {CURRENCY.code}
                         </span>
                       </span>
                     </td>

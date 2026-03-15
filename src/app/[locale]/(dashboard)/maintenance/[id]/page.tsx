@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { CURRENCY } from "@/lib/currency";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
@@ -12,6 +13,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import MaintenanceActions from "./maintenance-actions";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 
 export default async function MaintenanceDetailPage({
   params,
@@ -34,6 +36,26 @@ export default async function MaintenanceDetailPage({
 
   if (!request) {
     notFound();
+  }
+
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  if (propertyIds !== null) {
+    const unitData = request.units as Record<string, unknown> | null;
+    const propertyData = unitData?.properties as Record<string, unknown> | null;
+    // The query joins units -> properties, but we need property_id from the unit.
+    // Since property is joined via property_id, we can get it from request.unit_id's property.
+    // Actually the unit is joined as units:unit_id(unit_number, properties:property_id(name))
+    // We need the property_id. Let's fetch it from the unit directly.
+    if (request.unit_id) {
+      const { data: unitForAccess } = await supabase
+        .from("units")
+        .select("property_id")
+        .eq("id", request.unit_id as string)
+        .single();
+      if (unitForAccess && !propertyIds.includes(unitForAccess.property_id)) {
+        notFound();
+      }
+    }
   }
 
   const { data: notes } = await supabase
@@ -125,7 +147,7 @@ export default async function MaintenanceDetailPage({
               <div className="flex items-center gap-2">
                 <DollarSign className="h-3.5 w-3.5 text-text-secondary" />
                 <span className="text-sm text-text-primary font-mono ltr-nums">
-                  {request.estimated_cost as number} OMR
+                  {request.estimated_cost as number} {CURRENCY.code}
                 </span>
               </div>
             )}
@@ -133,7 +155,7 @@ export default async function MaintenanceDetailPage({
               <div className="flex items-center gap-2">
                 <DollarSign className="h-3.5 w-3.5 text-accent" />
                 <span className="text-sm text-accent font-mono ltr-nums">
-                  {request.actual_cost as number} OMR (Actual)
+                  {request.actual_cost as number} {CURRENCY.code} (Actual)
                 </span>
               </div>
             )}

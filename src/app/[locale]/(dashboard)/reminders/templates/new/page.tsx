@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { CURRENCY } from "@/lib/currency";
 
 export default function NewTemplatePage({
   params,
@@ -136,7 +137,7 @@ export default function NewTemplatePage({
               required
               rows={6}
               className="w-full bg-surface-elevated border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors resize-none"
-              placeholder={"Dear {{tenant_name}},\n\nThis is a reminder that your rent of {{amount}} OMR is due on {{due_date}}.\n\nThank you."}
+              placeholder={`Dear {{tenant_name}},\n\nThis is a reminder that your rent of {{amount}} ${CURRENCY.code} is due on {{due_date}}.\n\nThank you.`}
             />
             <p className="text-xs text-text-secondary mt-1.5">
               Available variables: {"{{tenant_name}}"}, {"{{amount}}"}, {"{{due_date}}"}, {"{{property}}"}, {"{{unit}}"}

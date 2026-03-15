@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
 import { FileText } from "lucide-react";
 import {
   ChequeFormRows,
@@ -49,6 +50,29 @@ export default function EditTenantPage({
         .eq("id", id)
         .single();
       if (data) setTenant(data as Tenant);
+
+      // Access control check
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
+        if (profile?.role !== "super_admin") {
+          const { data: access } = await supabase
+            .from("user_property_access")
+            .select("property_id")
+            .eq("user_id", user.id);
+          const { data: leases } = await supabase
+            .from("leases")
+            .select("units(property_id)")
+            .eq("tenant_id", id)
+            .limit(1);
+          const propId = (leases?.[0]?.units as unknown as { property_id: string })?.property_id;
+          if (propId && access && !access.some(a => a.property_id === propId)) {
+            const { locale } = await params;
+            router.push(`/${locale}/tenants`);
+            return;
+          }
+        }
+      }
 
       // Load existing cheques
       const { data: existingCheques } = await supabase
@@ -103,6 +127,13 @@ export default function EditTenantPage({
       setLoading(false);
       return;
     }
+
+    logAudit(supabase, {
+      action: "update",
+      entity_type: "tenant",
+      entity_id: tenant.id,
+      metadata: { full_name: formData.get("full_name") as string },
+    });
 
     // Insert only new cheques (ones without an id)
     const newCheques = cheques.filter(

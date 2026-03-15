@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 
 export default async function PropertyDetailPage({
   params,
@@ -33,6 +34,11 @@ export default async function PropertyDetailPage({
     .single();
 
   if (!property) {
+    notFound();
+  }
+
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  if (propertyIds !== null && !propertyIds.includes(id)) {
     notFound();
   }
 

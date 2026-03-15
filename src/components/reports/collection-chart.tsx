@@ -1,5 +1,6 @@
 "use client";
 
+import { CURRENCY } from "@/lib/currency";
 import {
   BarChart,
   Bar,
@@ -62,7 +63,7 @@ export function CollectionChart({ data }: CollectionChartProps) {
               boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
-            formatter={(value) => [`${Number(value).toFixed(2)} OMR`]}
+            formatter={(value) => [`${Number(value).toFixed(2)} ${CURRENCY.code}`]}
             cursor={{ fill: "var(--color-surface-elevated)", opacity: 0.3 }}
           />
           <Legend

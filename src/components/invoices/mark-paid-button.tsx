@@ -13,6 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { CURRENCY } from "@/lib/currency";
 import {
   Dialog,
   DialogContent,
@@ -200,7 +201,7 @@ export function MarkPaidButton({
                       minimumFractionDigits: 2,
                     })}
                     <span className="text-xs font-sans font-normal text-text-secondary ml-1">
-                      OMR
+                      {CURRENCY.code}
                     </span>
                   </p>
                 </div>
@@ -280,7 +281,7 @@ export function MarkPaidButton({
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-bold font-mono text-text-primary tabular-nums">
-                                  {ch.amount} OMR
+                                  {ch.amount} {CURRENCY.code}
                                 </span>
                                 <div
                                   className={`h-4 w-4 rounded-full border-2 flex items-center justify-center transition-all ${

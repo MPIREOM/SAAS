@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { logAudit } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
@@ -108,9 +109,11 @@ export default function NewExpensePage({
       const vendor = formData.get("vendor") as string;
       if (vendor) payload.vendor = vendor;
 
-      const { error: insertError } = await supabase
+      const { data: expense, error: insertError } = await supabase
         .from("expenses")
-        .insert(payload);
+        .insert(payload)
+        .select("id")
+        .single();
 
       if (insertError) {
         console.error("Expense insert error:", insertError);
@@ -118,6 +121,16 @@ export default function NewExpensePage({
         setLoading(false);
         return;
       }
+
+      logAudit(supabase, {
+        action: "create",
+        entity_type: "expense",
+        entity_id: expense?.id,
+        metadata: {
+          amount: payload.amount,
+          category: payload.category,
+        },
+      });
 
       router.push(`/${locale}/expenses`);
       router.refresh();

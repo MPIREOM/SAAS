@@ -1,5 +1,6 @@
 "use client";
 
+import { CURRENCY } from "@/lib/currency";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -188,13 +189,13 @@ export default function TenantPortalPage({
                       <div>
                         <span className="text-xs text-text-secondary">{t("monthlyRent")}</span>
                         <p className="text-text-primary font-mono ltr-nums mt-0.5">
-                          {lease.monthly_rent as number} OMR
+                          {lease.monthly_rent as number} {CURRENCY.code}
                         </p>
                       </div>
                       <div>
                         <span className="text-xs text-text-secondary">{t("deposit")}</span>
                         <p className="text-text-primary font-mono ltr-nums mt-0.5">
-                          {(lease.security_deposit as number) || 0} OMR
+                          {(lease.security_deposit as number) || 0} {CURRENCY.code}
                         </p>
                       </div>
                     </div>
@@ -242,7 +243,7 @@ export default function TenantPortalPage({
                       </td>
                       <td className="px-4 py-3 text-end">
                         <span className="text-sm font-medium text-text-primary font-mono ltr-nums">
-                          {Number(inv.amount).toFixed(2)} OMR
+                          {Number(inv.amount).toFixed(2)} {CURRENCY.code}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -288,7 +289,7 @@ export default function TenantPortalPage({
                       </td>
                       <td className="px-4 py-3 text-end">
                         <span className="text-sm font-medium text-text-primary font-mono ltr-nums">
-                          {Number(p.amount).toFixed(2)} OMR
+                          {Number(p.amount).toFixed(2)} {CURRENCY.code}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -354,7 +355,7 @@ export default function TenantPortalPage({
                       </td>
                       <td className="px-4 py-3 text-end">
                         <span className="text-sm font-medium text-text-primary font-mono ltr-nums">
-                          {Number(c.amount).toFixed(2)} OMR
+                          {Number(c.amount).toFixed(2)} {CURRENCY.code}
                         </span>
                       </td>
                       <td className="px-4 py-3">

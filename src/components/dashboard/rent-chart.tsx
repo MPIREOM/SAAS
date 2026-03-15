@@ -12,6 +12,7 @@ import {
   Legend,
 } from "recharts";
 import { createClient } from "@/lib/supabase/client";
+import { CURRENCY } from "@/lib/currency";
 
 interface MonthData {
   month: string;
@@ -19,7 +20,11 @@ interface MonthData {
   pending: number;
 }
 
-export function RentChart() {
+interface RentChartProps {
+  propertyIds?: string[] | null;
+}
+
+export function RentChart({ propertyIds }: RentChartProps) {
   const [data, setData] = useState<MonthData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,12 +36,39 @@ export function RentChart() {
       const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
       const startDate = twelveMonthsAgo.toISOString().split("T")[0];
 
-      // Fetch all invoices within the last 12 months
-      const { data: invoiceRows } = await supabase
+      // If propertyIds is provided (non-null), first get unit IDs for those properties
+      let unitIds: string[] | null = null;
+      if (propertyIds !== undefined && propertyIds !== null) {
+        if (propertyIds.length === 0) {
+          // User has no property access — show empty chart
+          setData([]);
+          setLoading(false);
+          return;
+        }
+        const { data: units } = await supabase
+          .from("units")
+          .select("id")
+          .in("property_id", propertyIds);
+        unitIds = (units || []).map((u) => u.id);
+        if (unitIds.length === 0) {
+          setData([]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fetch invoices within the last 12 months, filtered by unit if needed
+      let query = supabase
         .from("invoices")
         .select("amount, due_date, status")
         .gte("due_date", startDate)
         .order("due_date", { ascending: true });
+
+      if (unitIds !== null) {
+        query = query.in("unit_id", unitIds);
+      }
+
+      const { data: invoiceRows } = await query;
 
       const months: MonthData[] = [];
       for (let i = 0; i < 12; i++) {
@@ -73,7 +105,7 @@ export function RentChart() {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [propertyIds]);
 
   if (loading) {
     return (
@@ -115,7 +147,7 @@ export function RentChart() {
               boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
-            formatter={(value) => [`${Number(value).toFixed(2)} OMR`]}
+            formatter={(value) => [`${Number(value).toFixed(2)} ${CURRENCY.code}`]}
             cursor={{ fill: "var(--color-surface-elevated)", opacity: 0.3 }}
           />
           <Legend

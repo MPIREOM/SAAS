@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { sendWhatsAppTemplate, buildRentReminderComponents } from "@/lib/whatsapp/client";
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
+import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, parseISO } from "date-fns";
 
 // Vercel Cron: runs daily at 8:00 AM (configured in vercel.json)
@@ -371,11 +372,11 @@ function getDefaultEmailBody(params: ReminderParams, lang: string): string {
 
   switch (params.reminderType) {
     case "rent_upcoming":
-      return `Dear ${params.tenantName},<br><br>This is a reminder that your rent of ${params.amount} OMR for unit ${params.unitNumber} at ${params.propertyName} is due on ${params.dueDate}.<br><br>Please ensure timely payment.`;
+      return `Dear ${params.tenantName},<br><br>This is a reminder that your rent of ${params.amount} ${CURRENCY.code} for unit ${params.unitNumber} at ${params.propertyName} is due on ${params.dueDate}.<br><br>Please ensure timely payment.`;
     case "rent_overdue":
-      return `Dear ${params.tenantName},<br><br>Your rent of ${params.amount} OMR for unit ${params.unitNumber} at ${params.propertyName} is overdue. The due date was ${params.dueDate}.<br><br>Please settle the amount at your earliest convenience.`;
+      return `Dear ${params.tenantName},<br><br>Your rent of ${params.amount} ${CURRENCY.code} for unit ${params.unitNumber} at ${params.propertyName} is overdue. The due date was ${params.dueDate}.<br><br>Please settle the amount at your earliest convenience.`;
     case "cheque_due":
-      return `Dear ${params.tenantName},<br><br>This is a reminder that cheque #${params.chequeNumber || ""} for ${params.amount} OMR is due on ${params.dueDate}.<br><br>Please ensure sufficient funds are available.`;
+      return `Dear ${params.tenantName},<br><br>This is a reminder that cheque #${params.chequeNumber || ""} for ${params.amount} ${CURRENCY.code} is due on ${params.dueDate}.<br><br>Please ensure sufficient funds are available.`;
     case "lease_expiry":
       return `Dear ${params.tenantName},<br><br>Your lease for unit ${params.unitNumber} at ${params.propertyName} is expiring on ${params.dueDate}.<br><br>Please contact us to discuss renewal options.`;
     default:

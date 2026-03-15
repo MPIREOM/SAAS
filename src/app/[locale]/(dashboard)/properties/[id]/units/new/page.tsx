@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { CURRENCY } from "@/lib/currency";
 import {
   ArrowLeft,
   Home,
@@ -174,7 +175,7 @@ export default function NewUnitPage({
                 placeholder={t("rentPlaceholder")}
               />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-text-secondary">
-                OMR
+                {CURRENCY.code}
               </span>
             </div>
           </div>

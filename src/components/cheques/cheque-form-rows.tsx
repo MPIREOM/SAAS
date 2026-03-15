@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2, FileText, Hash, Building2, Calendar, Banknote } from "lucide-react";
+import { CURRENCY } from "@/lib/currency";
 
 export interface ChequeEntry {
   id?: string; // Only set for existing cheques
@@ -158,7 +159,7 @@ export function ChequeFormRows({
 
               <div>
                 <label className="block text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                  {t("amount")} (OMR)
+                  {t("amount")} ({CURRENCY.code})
                 </label>
                 <div className="relative">
                   <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { CURRENCY } from "@/lib/currency";
 
 export async function GET(
   request: NextRequest,
@@ -47,7 +48,7 @@ export async function GET(
           return NextResponse.json({ error: "Failed to fetch payments data" }, { status: 500 });
         }
 
-        csvContent = "Tenant,Property,Unit,Amount (OMR),Date,Method,Reference\n";
+        csvContent = `Tenant,Property,Unit,Amount (${CURRENCY.code}),Date,Method,Reference\n`;
         (payments || []).forEach((p: Record<string, unknown>) => {
           const tenant = p.tenants as Record<string, unknown> | null;
           const lease = p.leases as Record<string, unknown> | null;
@@ -122,7 +123,7 @@ export async function GET(
           return NextResponse.json({ error: "Failed to fetch cheques data" }, { status: 500 });
         }
 
-        csvContent = "Cheque #,Bank,Date,Amount (OMR),Status,Tenant\n";
+        csvContent = `Cheque #,Bank,Date,Amount (${CURRENCY.code}),Status,Tenant\n`;
         (cheques || []).forEach((c: Record<string, unknown>) => {
           const tenant = c.tenants as Record<string, unknown> | null;
           csvContent += `"${csvSafe(c.cheque_number)}","${csvSafe(c.bank_name)}","${c.cheque_date}",${c.amount},"${csvSafe(c.status)}","${csvSafe(tenant?.full_name)}"\n`;

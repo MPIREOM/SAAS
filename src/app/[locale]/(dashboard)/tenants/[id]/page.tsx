@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { CURRENCY } from "@/lib/currency";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { ShareLinkButton } from "@/components/maintenance/share-link-button";
@@ -27,6 +28,7 @@ import {
   Hash,
   Shield,
 } from "lucide-react";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 
 export default async function TenantDetailPage({
   params,
@@ -48,6 +50,19 @@ export default async function TenantDetailPage({
 
   if (!tenant) {
     notFound();
+  }
+
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  if (propertyIds !== null) {
+    const { data: tenantLeases } = await supabase
+      .from("leases")
+      .select("units(property_id)")
+      .eq("tenant_id", id)
+      .limit(1);
+    const tenantPropertyId = (tenantLeases?.[0]?.units as unknown as { property_id: string })?.property_id;
+    if (tenantPropertyId && !propertyIds.includes(tenantPropertyId)) {
+      notFound();
+    }
   }
 
   // Fetch leases, payments, maintenance, documents, cheques in parallel
@@ -426,7 +441,7 @@ export default async function TenantDetailPage({
                         {t("monthlyRent")}
                       </span>
                       <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
-                        {lease.monthly_rent as number} OMR
+                        {lease.monthly_rent as number} {CURRENCY.code}
                       </p>
                     </div>
                     <div>
@@ -434,7 +449,7 @@ export default async function TenantDetailPage({
                         {t("securityDeposit")}
                       </span>
                       <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
-                        {(lease.security_deposit as number) || 0} OMR
+                        {(lease.security_deposit as number) || 0} {CURRENCY.code}
                       </p>
                     </div>
                   </div>
@@ -491,7 +506,7 @@ export default async function TenantDetailPage({
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-text-primary font-mono ltr-nums">
-                        {payment.amount as number} OMR
+                        {payment.amount as number} {CURRENCY.code}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -586,7 +601,7 @@ export default async function TenantDetailPage({
                           minimumFractionDigits: 2,
                         })}
                         <span className="text-[10px] font-normal text-text-secondary ml-1">
-                          OMR
+                          {CURRENCY.code}
                         </span>
                       </span>
                     </td>

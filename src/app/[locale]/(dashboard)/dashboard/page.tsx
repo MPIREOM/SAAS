@@ -120,6 +120,7 @@ async function getDashboardStats() {
     occupancyRate,
     expensesThisMonth: Math.round(expensesThisMonth * 100) / 100,
     netIncome,
+    propertyIds,
   };
 }
 
@@ -392,7 +393,7 @@ export default async function DashboardPage({
           </h3>
           <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
         </div>
-        <RentChart />
+        <RentChart propertyIds={stats.propertyIds} />
       </div>
 
       {/* Bottom grid */}

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import { Globe, Moon, Sun, Search, LogOut, X } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { CURRENCY } from "@/lib/currency";
 import Link from "next/link";
 
 interface TopbarProps {
@@ -151,7 +152,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
         results.push({
           type: "invoice",
           id: inv.id,
-          title: `${tenant.full_name} - ${inv.amount} OMR`,
+          title: `${tenant.full_name} - ${inv.amount} ${CURRENCY.code}`,
           subtitle: `${inv.status} · ${new Date(inv.due_date).toLocaleDateString()}`,
           href: `/${locale}/invoices`,
         });
