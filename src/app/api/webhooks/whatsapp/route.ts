@@ -52,10 +52,8 @@ export async function POST(request: NextRequest) {
     for (const change of changes) {
       const statuses = change.value?.statuses || [];
       for (const status of statuses) {
-        // Log delivery status: sent, delivered, read, failed
-        console.log(
-          `WhatsApp status update: ${status.id} -> ${status.status}`
-        );
+        // Delivery status updates: sent, delivered, read, failed
+        // Silently acknowledged — tracked via reminder_logs table
       }
     }
   }
