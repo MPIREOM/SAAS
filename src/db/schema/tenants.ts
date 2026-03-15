@@ -32,7 +32,6 @@ export const tenants = pgTable("tenants", {
   fullName: text("full_name").notNull(),
   nationality: text("nationality"),
   nationalId: text("national_id"),
-  passportNumber: text("passport_number"),
   phone: text("phone").notNull(),
   email: text("email"),
   emergencyContact: text("emergency_contact"),
@@ -57,6 +56,14 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   reminderLogs: many(reminderLogs),
 }));
 
+// ── Enums (move-out) ────────────────────────────────────────────────────────
+
+export const depositStatusEnum = pgEnum("deposit_status", [
+  "pending",
+  "refunded",
+  "deducted",
+]);
+
 // ── Leases ─────────────────────────────────────────────────────────────────
 
 export const leases = pgTable("leases", {
@@ -77,6 +84,13 @@ export const leases = pgTable("leases", {
   leaseDocumentUrl: text("lease_document_url"),
   isActive: boolean("is_active").notNull().default(true),
   notes: text("notes"),
+  // Move-out metadata
+  vacateDate: date("vacate_date"),
+  vacateReason: text("vacate_reason"),
+  vacateNotes: text("vacate_notes"),
+  finalInspection: boolean("final_inspection").default(false),
+  keysReturned: boolean("keys_returned").default(false),
+  depositStatus: depositStatusEnum("deposit_status").default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

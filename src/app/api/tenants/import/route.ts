@@ -8,7 +8,6 @@ interface TenantRow {
   email?: string;
   nationality?: string;
   national_id?: string;
-  passport_number?: string;
   emergency_contact?: string;
   language_preference?: string;
 }
@@ -44,12 +43,6 @@ const COLUMN_MAP: Record<string, keyof TenantRow> = {
   emiratesid: "national_id",
   "id number": "national_id",
   "civil id": "national_id",
-  // passport_number
-  passport_number: "passport_number",
-  passportnumber: "passport_number",
-  passport: "passport_number",
-  "passport number": "passport_number",
-  "passport no": "passport_number",
   // emergency_contact
   emergency_contact: "emergency_contact",
   emergencycontact: "emergency_contact",
@@ -103,6 +96,15 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    // Validate file size (5MB max)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File too large. Maximum size is 5MB." },
+        { status: 400 }
+      );
     }
 
     // Validate file type
@@ -213,7 +215,6 @@ export async function POST(request: NextRequest) {
       email: t.email || null,
       nationality: t.nationality || null,
       national_id: t.national_id || null,
-      passport_number: t.passport_number || null,
       emergency_contact: t.emergency_contact || null,
       language_preference: t.language_preference || "en",
       status: "active" as const,

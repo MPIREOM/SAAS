@@ -1,16 +1,30 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
+import { Pagination } from "@/components/ui/pagination";
 import { FolderOpen, AlertTriangle, Upload } from "lucide-react";
 
 export default async function DocumentsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { locale } = await params;
+  const { page } = await searchParams;
   const t = await getTranslations("documents");
   const supabase = await createClient();
+
+  // Pagination
+  const PAGE_SIZE = 50;
+  const currentPage = Math.max(1, parseInt(page || "1", 10));
+
+  // Get total count for pagination
+  const { count: totalCount } = await supabase
+    .from("documents")
+    .select("*", { count: "exact", head: true });
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
   const { data: documents } = await supabase
     .from("documents")
@@ -19,7 +33,8 @@ export default async function DocumentsPage({
       tenants:tenant_id(full_name),
       properties:property_id(name)
     `)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
   const typeColors: Record<string, string> = {
     lease: "bg-accent/10 text-accent",
@@ -37,7 +52,7 @@ export default async function DocumentsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
+          <h1 className="text-2xl font-semibold text-text-primary font-display">
             {t("title")}
           </h1>
           <p className="text-sm text-text-secondary mt-1">
@@ -55,7 +70,7 @@ export default async function DocumentsPage({
 
       {documents && documents.length > 0 ? (
         <div className="bg-surface border border-border rounded-lg overflow-x-auto">
-          <table className="w-full min-w-[600px]">
+          <table className="w-full min-w-[600px] mobile-card-view">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
@@ -144,11 +159,19 @@ export default async function DocumentsPage({
               })}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            baseUrl={`/${locale}/documents`}
+            searchParams={{}}
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg p-12 text-center">
           <FolderOpen className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
-          <h3 className="text-base font-medium text-text-primary mb-1">
+          <h3 className="text-base font-medium text-text-primary mb-1 font-display">
             {t("noDocuments")}
           </h3>
           <p className="text-sm text-text-secondary mb-4">

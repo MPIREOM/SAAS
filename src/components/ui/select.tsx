@@ -22,7 +22,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="text-sm font-medium text-foreground"
+            className="text-sm font-medium text-foreground tracking-tight"
           >
             {label}
           </label>
@@ -39,15 +39,15 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                 : undefined
           }
           className={cn(
-            "flex h-10 w-full appearance-none rounded-lg border bg-surface px-3 py-2 pr-8",
+            "flex h-10 w-full appearance-none rounded-lg border bg-surface-elevated/50 px-3 py-2 pr-8",
             "text-sm text-foreground",
-            "transition-colors duration-150",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:border-accent",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            "bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23888%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[position:right_0.5rem_center] bg-no-repeat",
+            "transition-all duration-200",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/50 focus-visible:bg-surface-elevated",
+            "disabled:cursor-not-allowed disabled:opacity-40",
+            "bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238A8697%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[position:right_0.5rem_center] bg-no-repeat",
             error
-              ? "border-red-500 focus-visible:ring-red-500/50 focus-visible:border-red-500"
-              : "border-border",
+              ? "border-destructive/60 focus-visible:ring-destructive/30 focus-visible:border-destructive"
+              : "border-border/60",
             className
           )}
           {...props}
@@ -60,12 +60,12 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           {children}
         </select>
         {error && (
-          <p id={`${selectId}-error`} className="text-xs text-red-400" role="alert">
+          <p id={`${selectId}-error`} className="text-xs text-destructive" role="alert">
             {error}
           </p>
         )}
         {!error && helperText && (
-          <p id={`${selectId}-helper`} className="text-xs text-muted-foreground">
+          <p id={`${selectId}-helper`} className="text-xs text-text-secondary">
             {helperText}
           </p>
         )}

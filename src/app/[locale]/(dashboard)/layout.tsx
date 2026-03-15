@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { ToastProvider } from "@/components/ui/toast";
 
 export default async function DashboardLayout({
   children,
@@ -31,11 +32,11 @@ export default async function DashboardLayout({
   const isRtl = locale === "ar";
 
   return (
-    <div className="min-h-screen bg-background" dir={isRtl ? "rtl" : "ltr"}>
+    <div className="min-h-screen bg-background noise-overlay" dir={isRtl ? "rtl" : "ltr"}>
       <Sidebar locale={locale} />
       <div
-        className={`transition-all duration-200 ${
-          isRtl ? "md:mr-60" : "md:ml-60"
+        className={`transition-all duration-300 ease-out ${
+          isRtl ? "md:mr-64" : "md:ml-64"
         }`}
       >
         <Topbar
@@ -43,7 +44,7 @@ export default async function DashboardLayout({
           userEmail={user.email}
           userName={profile?.full_name}
         />
-        <main className="p-4 md:p-6">{children}</main>
+        <main className="p-4 md:p-8"><ToastProvider>{children}</ToastProvider></main>
       </div>
     </div>
   );

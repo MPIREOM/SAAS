@@ -1,6 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
-import { FileText } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  FileText,
+  TrendingUp,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  Receipt,
+} from "lucide-react";
 import { InvoicesTabs } from "@/components/invoices/invoices-tabs";
 import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
 
@@ -9,14 +17,14 @@ export default async function InvoicesPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ status?: string; month?: string }>;
+  searchParams: Promise<{ status?: string; month?: string; page?: string }>;
 }) {
   const { locale } = await params;
-  const { status, month } = await searchParams;
+  const { status, month, page } = await searchParams;
   const t = await getTranslations("invoices");
   const supabase = await createClient();
 
-  // Build query - unit_id is directly on invoices table
+  // Build query
   let query = supabase
     .from("invoices")
     .select(`
@@ -26,14 +34,12 @@ export default async function InvoicesPage({
     `)
     .order("due_date", { ascending: false });
 
-  // Filter by status
   if (status === "pending") {
     query = query.in("status", ["pending", "overdue"]);
   } else if (status === "paid") {
     query = query.eq("status", "paid");
   }
 
-  // Filter by month (format: YYYY-MM)
   if (month) {
     const [year, mon] = month.split("-").map(Number);
     const monthStart = `${year}-${String(mon).padStart(2, "0")}-01`;
@@ -42,7 +48,32 @@ export default async function InvoicesPage({
     query = query.gte("due_date", monthStart).lte("due_date", monthEnd);
   }
 
-  const { data: invoices } = await query.limit(200);
+  // Pagination
+  const PAGE_SIZE = 50;
+  const currentPage = Math.max(1, parseInt(page || "1", 10));
+
+  // Get total count for pagination
+  let countQuery = supabase
+    .from("invoices")
+    .select("*", { count: "exact", head: true });
+
+  if (status === "pending") {
+    countQuery = countQuery.in("status", ["pending", "overdue"]);
+  } else if (status === "paid") {
+    countQuery = countQuery.eq("status", "paid");
+  }
+  if (month) {
+    const [y, m] = month.split("-").map(Number);
+    const ms = `${y}-${String(m).padStart(2, "0")}-01`;
+    const ld = new Date(y, m, 0).getDate();
+    const me = `${y}-${String(m).padStart(2, "0")}-${ld}`;
+    countQuery = countQuery.gte("due_date", ms).lte("due_date", me);
+  }
+  const { count: totalCount } = await countQuery;
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
+
+  const { data: invoices } = await query
+    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
   // Get available months for filter
   const { data: monthsRaw } = await supabase
@@ -58,133 +89,389 @@ export default async function InvoicesPage({
     )
   );
 
+  // Compute summary stats
+  const allInvoices = invoices || [];
+  const now = new Date();
+  const totalAmount = allInvoices.reduce(
+    (sum, inv) => sum + Number(inv.amount || 0),
+    0
+  );
+  const paidInvoices = allInvoices.filter(
+    (inv) => (inv.status as string) === "paid"
+  );
+  const paidAmount = paidInvoices.reduce(
+    (sum, inv) => sum + Number(inv.amount || 0),
+    0
+  );
+  const pendingInvoices = allInvoices.filter(
+    (inv) => (inv.status as string) === "pending"
+  );
+  const pendingAmount = pendingInvoices.reduce(
+    (sum, inv) => sum + Number(inv.amount || 0),
+    0
+  );
+  const overdueInvoices = allInvoices.filter(
+    (inv) =>
+      (inv.status as string) === "overdue" ||
+      ((inv.status as string) === "pending" &&
+        new Date(inv.due_date as string) < now)
+  );
+  const overdueAmount = overdueInvoices.reduce(
+    (sum, inv) => sum + Number(inv.amount || 0),
+    0
+  );
+  const collectionRate =
+    totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+
+  function formatAmount(amount: number) {
+    return amount.toLocaleString("en-OM", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function formatDate(dateStr: string) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-text-primary">
-          {t("title")}
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">{t("subtitle")}</p>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary font-display tracking-tight">
+            {t("title")}
+          </h1>
+          <p className="text-sm text-text-secondary mt-1">{t("subtitle")}</p>
+        </div>
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Total */}
+        <div className="group relative bg-surface border border-border/60 rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-accent/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Receipt className="h-4 w-4 text-accent" />
+              </div>
+              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                {t("total")}
+              </span>
+            </div>
+            <p className="text-xl font-bold text-text-primary font-mono tabular-nums">
+              {formatAmount(totalAmount)}
+              <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+                OMR
+              </span>
+            </p>
+            <p className="text-xs text-text-secondary mt-1">
+              {allInvoices.length} {t("title").toLowerCase()}
+            </p>
+          </div>
+        </div>
+
+        {/* Collected */}
+        <div className="group relative bg-surface border border-border/60 rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-success/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+              </div>
+              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                {t("collected")}
+              </span>
+            </div>
+            <p className="text-xl font-bold text-success font-mono tabular-nums">
+              {formatAmount(paidAmount)}
+              <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+                OMR
+              </span>
+            </p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <TrendingUp className="h-3 w-3 text-success" />
+              <span className="text-xs font-medium text-success">
+                {collectionRate}%
+              </span>
+              <span className="text-xs text-text-secondary">{t("collected").toLowerCase()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Pending */}
+        <div className="group relative bg-surface border border-border/60 rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-warning/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-warning/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
+                <Clock className="h-4 w-4 text-warning" />
+              </div>
+              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                {t("pending")}
+              </span>
+            </div>
+            <p className="text-xl font-bold text-warning font-mono tabular-nums">
+              {formatAmount(pendingAmount)}
+              <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+                OMR
+              </span>
+            </p>
+            <p className="text-xs text-text-secondary mt-1">
+              {pendingInvoices.length} {t("pending").toLowerCase()}
+            </p>
+          </div>
+        </div>
+
+        {/* Overdue */}
+        <div className="group relative bg-surface border border-border/60 rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-destructive/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-destructive/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+              </div>
+              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                {t("overdue")}
+              </span>
+            </div>
+            <p className="text-xl font-bold text-destructive font-mono tabular-nums">
+              {formatAmount(overdueAmount)}
+              <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+                OMR
+              </span>
+            </p>
+            <p className="text-xs text-text-secondary mt-1">
+              {overdueInvoices.length} {t("overdue").toLowerCase()}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
       <InvoicesTabs
-        invoices={invoices || []}
+        invoices={allInvoices}
         availableMonths={availableMonths}
         currentStatus={status || "all"}
         currentMonth={month || ""}
         locale={locale}
       />
 
-      {invoices && invoices.length > 0 ? (
-        <div className="bg-surface border border-border rounded-lg overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("dueDate")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("tenant")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("property")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("unit")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("amount")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("status")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("paidAt")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {invoices.map((invoice: Record<string, unknown>) => {
-                const tenant = invoice.tenants as Record<
-                  string,
-                  unknown
-                > | null;
-                const unit = invoice.units as Record<
-                  string,
-                  unknown
-                > | null;
-                const property = unit?.properties as Record<
-                  string,
-                  unknown
-                > | null;
-                const invoiceStatus = invoice.status as string;
-                const isOverdue = invoiceStatus === "overdue" ||
-                  (invoiceStatus === "pending" &&
-                    new Date(invoice.due_date as string) < new Date());
+      {/* Table */}
+      {allInvoices.length > 0 ? (
+        <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          {/* Collection progress bar */}
+          <div className="px-5 pt-4 pb-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-text-secondary">
+                {t("collectionProgress")}
+              </span>
+              <span className="text-xs font-mono font-medium text-accent tabular-nums">
+                {collectionRate}%
+              </span>
+            </div>
+            <div className="h-1.5 bg-surface-elevated rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${collectionRate}%`,
+                  background:
+                    "linear-gradient(90deg, var(--accent), var(--success))",
+                }}
+              />
+            </div>
+          </div>
 
-                return (
-                  <tr
-                    key={invoice.id as string}
-                    className="hover:bg-surface-elevated/50 transition-colors"
-                  >
-                    <td className="px-4 py-3 text-sm text-text-primary font-mono ltr-nums">
-                      {invoice.due_date as string}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-text-primary">
-                      {(tenant?.full_name as string) || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-text-secondary">
-                      {(property?.name as string) || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-text-primary font-mono">
-                      {(unit?.unit_number as string) || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-text-primary font-mono ltr-nums">
-                      {invoice.amount as number} OMR
-                    </td>
-                    <td className="px-4 py-3">
-                      {invoiceStatus === "paid" ? (
-                        <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium bg-success/10 text-success">
-                          {t("paid")}
-                        </span>
-                      ) : isOverdue ? (
-                        <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium bg-destructive/10 text-destructive">
-                          {t("overdue")}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium bg-warning/10 text-warning">
-                          {t("pending")}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-text-secondary font-mono ltr-nums">
-                      {(invoice.paid_date as string) || "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {invoiceStatus !== "paid" && (
-                        <MarkPaidButton
-                          invoiceId={invoice.id as string}
-                          amount={String(invoice.amount)}
-                          tenantName={(tenant?.full_name as string) || "—"}
-                          tenantId={invoice.tenant_id as string}
-                        />
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-t border-b border-border/40">
+                  <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                    {t("dueDate")}
+                  </th>
+                  <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                    {t("tenant")}
+                  </th>
+                  <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                    {t("property")} / {t("unit")}
+                  </th>
+                  <th className="text-end text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                    {t("amount")}
+                  </th>
+                  <th className="text-center text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                    {t("status")}
+                  </th>
+                  <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                    {t("paidAt")}
+                  </th>
+                  <th className="text-end text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {allInvoices.map(
+                  (invoice: Record<string, unknown>, index: number) => {
+                    const tenant = invoice.tenants as Record<
+                      string,
+                      unknown
+                    > | null;
+                    const unit = invoice.units as Record<
+                      string,
+                      unknown
+                    > | null;
+                    const property = unit?.properties as Record<
+                      string,
+                      unknown
+                    > | null;
+                    const invoiceStatus = invoice.status as string;
+                    const isOverdue =
+                      invoiceStatus === "overdue" ||
+                      (invoiceStatus === "pending" &&
+                        new Date(invoice.due_date as string) < now);
+                    const isPaid = invoiceStatus === "paid";
+
+                    return (
+                      <tr
+                        key={invoice.id as string}
+                        className="group border-b border-border/20 last:border-0 hover:bg-surface-elevated/40 transition-colors duration-150"
+                        style={{
+                          animationDelay: `${index * 20}ms`,
+                        }}
+                      >
+                        {/* Due Date */}
+                        <td className="px-5 py-3.5">
+                          <span className="text-sm text-text-primary font-mono tabular-nums">
+                            {formatDate(invoice.due_date as string)}
+                          </span>
+                        </td>
+
+                        {/* Tenant */}
+                        <td className="px-5 py-3.5">
+                          <span className="text-sm font-medium text-text-primary">
+                            {(tenant?.full_name as string) || "—"}
+                          </span>
+                        </td>
+
+                        {/* Property / Unit — merged column */}
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-text-secondary">
+                              {(property?.name as string) || "—"}
+                            </span>
+                            {unit?.unit_number ? (
+                              <>
+                                <span className="text-border">/</span>
+                                <span className="text-sm font-mono text-text-primary">
+                                  {unit?.unit_number as string}
+                                </span>
+                              </>
+                            ) : null}
+                          </div>
+                        </td>
+
+                        {/* Amount */}
+                        <td className="px-5 py-3.5 text-end">
+                          <span
+                            className={`text-sm font-semibold font-mono tabular-nums ${
+                              isPaid
+                                ? "text-text-secondary"
+                                : isOverdue
+                                ? "text-destructive"
+                                : "text-text-primary"
+                            }`}
+                          >
+                            {formatAmount(invoice.amount as number)}
+                            <span className="text-[10px] font-normal text-text-secondary ml-0.5">
+                              OMR
+                            </span>
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-5 py-3.5 text-center">
+                          {isPaid ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-success/10 text-success border border-success/20">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {t("paid")}
+                            </span>
+                          ) : isOverdue ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-destructive/10 text-destructive border border-destructive/20 animate-pulse">
+                              <AlertTriangle className="h-3 w-3" />
+                              {t("overdue")}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-warning/10 text-warning border border-warning/20">
+                              <Clock className="h-3 w-3" />
+                              {t("pending")}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Paid Date */}
+                        <td className="px-5 py-3.5">
+                          <span className="text-sm text-text-secondary font-mono tabular-nums">
+                            {invoice.paid_date
+                              ? formatDate(invoice.paid_date as string)
+                              : "—"}
+                          </span>
+                        </td>
+
+                        {/* Action */}
+                        <td className="px-5 py-3.5 text-end">
+                          {!isPaid && (
+                            <MarkPaidButton
+                              invoiceId={invoice.id as string}
+                              amount={String(invoice.amount)}
+                              tenantName={
+                                (tenant?.full_name as string) || "—"
+                              }
+                              tenantId={invoice.tenant_id as string}
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  }
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-3 border-t border-border/40 flex items-center justify-between">
+            <span className="text-xs text-text-secondary">
+              {allInvoices.length} {t("title").toLowerCase()}
+            </span>
+            <span className="text-xs font-mono font-medium text-text-secondary tabular-nums">
+              {t("total")}: {formatAmount(totalAmount)} OMR
+            </span>
+          </div>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            baseUrl={`/${locale}/invoices`}
+            searchParams={{
+              ...(status ? { status } : {}),
+              ...(month ? { month } : {}),
+            }}
+          />
         </div>
       ) : (
-        <div className="bg-surface border border-border rounded-lg p-12 text-center">
-          <FileText className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
-          <h3 className="text-base font-medium text-text-primary mb-1">
+        <div className="bg-surface border border-border/60 rounded-xl p-16 text-center">
+          <div className="mx-auto w-14 h-14 rounded-xl bg-surface-elevated flex items-center justify-center mb-4">
+            <FileText className="h-7 w-7 text-text-secondary/40" />
+          </div>
+          <h3 className="text-base font-semibold text-text-primary font-display mb-1">
             {t("noInvoices")}
           </h3>
-          <p className="text-sm text-text-secondary">
+          <p className="text-sm text-text-secondary max-w-xs mx-auto">
             {t("noInvoicesDescription")}
           </p>
         </div>

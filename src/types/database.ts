@@ -16,6 +16,8 @@ export type PaymentMethod = "cash" | "bank_transfer" | "cheque";
 
 export type ChequeStatus = "pending" | "cleared" | "bounced" | "cancelled";
 
+export type DepositStatus = "pending" | "refunded" | "deducted";
+
 export type MaintenanceStatus = "open" | "in_progress" | "resolved" | "closed";
 
 export type MaintenanceUrgency = "low" | "medium" | "high" | "emergency";
@@ -103,7 +105,6 @@ export interface Tenant {
   full_name: string;
   nationality: string;
   national_id: string;
-  passport_number: string;
   phone: string;
   email: string;
   emergency_contact: string;
@@ -125,6 +126,13 @@ export interface Lease {
   payment_due_day: number;
   lease_document_url: string | null;
   is_active: boolean;
+  notes: string | null;
+  vacate_date: string | null;
+  vacate_reason: string | null;
+  vacate_notes: string | null;
+  final_inspection: boolean;
+  keys_returned: boolean;
+  deposit_status: DepositStatus;
   created_at: string;
   updated_at: string;
   created_by: string;

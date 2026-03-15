@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Upload, Scan, X, FileText, Home, Building2 } from "lucide-react";
+import { logAudit } from "@/lib/audit";
+import { ChequeFormRows, ChequeEntry } from "@/components/cheques/cheque-form-rows";
 
 export default function NewTenantPage({
   params,
@@ -24,6 +26,7 @@ export default function NewTenantPage({
   const [isPdf, setIsPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [cheques, setCheques] = useState<ChequeEntry[]>([]);
 
   // Unit context from query params (when assigning from a property/unit page)
   const unitId = searchParams.get("unitId");
@@ -130,10 +133,47 @@ export default function NewTenantPage({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
     const formData = new FormData(e.currentTarget);
+
+    // Client-side validation
+    const fullName = (formData.get("full_name") as string).trim();
+    const phone = (formData.get("phone") as string).trim();
+    const email = (formData.get("email") as string)?.trim() || "";
+
+    if (!fullName) {
+      setError(t("fullNameRequired") || "Full name is required");
+      return;
+    }
+
+    if (!phone) {
+      setError(t("phoneRequired") || "Phone number is required");
+      return;
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError(t("invalidEmail") || "Please enter a valid email address");
+      return;
+    }
+
+    if (isAssigningToUnit) {
+      const startDate = formData.get("lease_start_date") as string;
+      const endDate = formData.get("lease_end_date") as string;
+      const monthlyRent = parseFloat(formData.get("monthly_rent") as string);
+
+      if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+        setError(t("endDateAfterStart") || "End date must be after start date");
+        return;
+      }
+
+      if (isNaN(monthlyRent) || monthlyRent <= 0) {
+        setError(t("invalidRent") || "Monthly rent must be greater than 0");
+        return;
+      }
+    }
+
+    setLoading(true);
     const supabase = createClient();
 
     const {
@@ -144,13 +184,12 @@ export default function NewTenantPage({
     const { data: tenant, error: insertError } = await supabase
       .from("tenants")
       .insert({
-        full_name: formData.get("full_name") as string,
-        nationality: (formData.get("nationality") as string) || null,
-        national_id: (formData.get("national_id") as string) || null,
-        passport_number: (formData.get("passport_number") as string) || null,
-        phone: formData.get("phone") as string,
-        email: (formData.get("email") as string) || null,
-        emergency_contact: (formData.get("emergency_contact") as string) || null,
+        full_name: fullName,
+        nationality: (formData.get("nationality") as string)?.trim() || null,
+        national_id: (formData.get("national_id") as string)?.trim() || null,
+        phone,
+        email: email || null,
+        emergency_contact: (formData.get("emergency_contact") as string)?.trim() || null,
         language_preference: formData.get("language_preference") as string,
         status: "active",
         created_by: user?.id,
@@ -163,6 +202,13 @@ export default function NewTenantPage({
       setLoading(false);
       return;
     }
+
+    logAudit(supabase, {
+      action: "create",
+      entity_type: "tenant",
+      entity_id: tenant.id,
+      metadata: { full_name: fullName },
+    });
 
     // If assigning to a unit, create lease and update unit status
     if (isAssigningToUnit) {
@@ -203,6 +249,23 @@ export default function NewTenantPage({
         return;
       }
 
+      // Insert cheques if any were added
+      const validCheques = cheques.filter(
+        (c) => c.cheque_number && c.bank_name && c.cheque_date && c.amount
+      );
+      if (validCheques.length > 0) {
+        await supabase.from("cheques").insert(
+          validCheques.map((c) => ({
+            tenant_id: tenant.id,
+            cheque_number: c.cheque_number,
+            bank_name: c.bank_name,
+            cheque_date: c.cheque_date,
+            amount: c.amount,
+            status: "pending" as const,
+          }))
+        );
+      }
+
       // Navigate back to the unit page
       const { locale } = await params;
       router.push(`/${locale}/properties/${propertyId}/units/${unitId}`);
@@ -218,7 +281,7 @@ export default function NewTenantPage({
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">
+        <h1 className="text-2xl font-semibold text-text-primary font-display">
           {isAssigningToUnit ? t("assignTenantToUnit") || t("createTenant") : t("createTenant")}
         </h1>
         {isAssigningToUnit && (
@@ -357,17 +420,6 @@ export default function NewTenantPage({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("passportNumber")}
-            </label>
-            <input
-              name="passport_number"
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-              placeholder={t("passportNumberPlaceholder")}
-            />
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
@@ -471,6 +523,7 @@ export default function NewTenantPage({
                   name="monthly_rent"
                   type="number"
                   step="0.01"
+                  min="0.01"
                   required
                   defaultValue={unitInfo?.rent_amount || defaultRent}
                   className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
@@ -510,7 +563,25 @@ export default function NewTenantPage({
           </div>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {/* Cheques Section - shown when assigning to a unit */}
+        {isAssigningToUnit && (
+          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+            <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
+              <FileText className="h-4 w-4 text-accent" />
+              {tc("cheques") || "Post-Dated Cheques"}
+            </h2>
+            <p className="text-xs text-text-secondary">
+              {tc("chequesOptional") || "Optionally add post-dated cheques for this tenant's lease payments."}
+            </p>
+            <ChequeFormRows cheques={cheques} onChange={setCheques} />
+          </div>
+        )}
+
+        {error && (
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+            {error}
+          </div>
+        )}
 
         <div className="flex items-center gap-3">
           <button

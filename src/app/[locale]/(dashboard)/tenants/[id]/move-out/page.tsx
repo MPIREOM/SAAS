@@ -90,7 +90,7 @@ export default function MoveOutPage({
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary flex items-center gap-2">
+        <h1 className="text-2xl font-semibold text-text-primary font-display flex items-center gap-2">
           <LogOut className="h-6 w-6 text-text-secondary" />
           {t("moveOut")}
         </h1>

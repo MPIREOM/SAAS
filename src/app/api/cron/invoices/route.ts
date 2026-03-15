@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { format } from "date-fns";
+import { format, lastDayOfMonth, startOfMonth } from "date-fns";
 
 // Vercel Cron: runs daily at 00:05 AM
 export const maxDuration = 60;
@@ -18,7 +18,13 @@ function createSupabaseAdmin() {
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Verify cron secret to prevent unauthorized invocations
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createSupabaseAdmin();
   const today = new Date();
   const currentDay = today.getDate();
@@ -39,11 +45,13 @@ export async function GET() {
   }
 
   const dueDate = format(today, "yyyy-MM-dd");
+  const periodStart = format(startOfMonth(today), "yyyy-MM-dd");
+  const periodEnd = format(lastDayOfMonth(today), "yyyy-MM-dd");
   let created = 0;
   let skipped = 0;
 
   for (const lease of leases) {
-    // Upsert to prevent duplicates (unique index on lease_id + due_date)
+    // Upsert to prevent duplicates (unique index on lease_id + period_start)
     const { error: insertError } = await supabase.from("invoices").upsert(
       {
         lease_id: lease.id,
@@ -52,9 +60,11 @@ export async function GET() {
         amount: lease.monthly_rent,
         due_date: dueDate,
         issued_date: dueDate,
+        period_start: periodStart,
+        period_end: periodEnd,
         status: "pending",
       },
-      { onConflict: "lease_id,due_date", ignoreDuplicates: true }
+      { onConflict: "lease_id,period_start", ignoreDuplicates: true }
     );
 
     if (insertError) {

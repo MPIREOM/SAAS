@@ -1,18 +1,31 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
+import { Pagination } from "@/components/ui/pagination";
 import { Wrench, Plus } from "lucide-react";
 
 export default async function MaintenancePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { locale } = await params;
+  const resolvedSearchParams = await searchParams;
   const t = await getTranslations("maintenance");
   const supabase = await createClient();
 
-  const { data: requests } = await supabase
+  const statusFilter =
+    typeof resolvedSearchParams.status === "string"
+      ? resolvedSearchParams.status
+      : "all";
+  const page =
+    typeof resolvedSearchParams.page === "string"
+      ? resolvedSearchParams.page
+      : "1";
+
+  let query = supabase
     .from("maintenance_requests")
     .select(`
       *,
@@ -20,6 +33,28 @@ export default async function MaintenancePage({
       tenants:tenant_id(full_name)
     `)
     .order("created_at", { ascending: false });
+
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  // Pagination
+  const PAGE_SIZE = 50;
+  const currentPage = Math.max(1, parseInt(page || "1", 10));
+
+  // Get total count for pagination
+  let countQuery = supabase
+    .from("maintenance_requests")
+    .select("*", { count: "exact", head: true });
+
+  if (statusFilter !== "all") {
+    countQuery = countQuery.eq("status", statusFilter);
+  }
+  const { count: totalCount } = await countQuery;
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
+
+  const { data: requests } = await query
+    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
   const urgencyColors: Record<string, string> = {
     low: "bg-text-secondary/10 text-text-secondary",
@@ -41,7 +76,7 @@ export default async function MaintenancePage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
+          <h1 className="text-2xl font-semibold text-text-primary font-display">
             {t("title")}
           </h1>
           <p className="text-sm text-text-secondary mt-1">
@@ -60,12 +95,17 @@ export default async function MaintenancePage({
       {/* Filter Tabs */}
       <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1 w-fit overflow-x-auto">
         {tabs.map((tab) => (
-          <span
+          <Link
             key={tab}
-            className="px-3 py-1.5 text-sm rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors cursor-pointer"
+            href={`/${locale}/maintenance${tab === "all" ? "" : `?status=${tab}`}`}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              statusFilter === tab
+                ? "bg-accent text-background font-medium"
+                : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
+            }`}
           >
             {t(`tabs.${tab}`)}
-          </span>
+          </Link>
         ))}
       </div>
 
@@ -167,11 +207,21 @@ export default async function MaintenancePage({
               })}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            baseUrl={`/${locale}/maintenance`}
+            searchParams={{
+              ...(statusFilter && statusFilter !== "all" ? { status: statusFilter } : {}),
+            }}
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg p-12 text-center">
           <Wrench className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
-          <h3 className="text-base font-medium text-text-primary mb-1">
+          <h3 className="text-base font-medium text-text-primary mb-1 font-display">
             {t("noRequests")}
           </h3>
           <p className="text-sm text-text-secondary mb-4">

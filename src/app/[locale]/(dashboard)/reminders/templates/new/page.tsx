@@ -50,7 +50,7 @@ export default function NewTemplatePage({
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">
+        <h1 className="text-2xl font-semibold text-text-primary font-display">
           {t("newTemplate") || "New Template"}
         </h1>
       </div>

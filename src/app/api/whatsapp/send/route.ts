@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await sendWhatsAppTemplate({
-    to: tenant.phone.replace(/\D/g, ""),
+    to: (tenant.phone.replace(/[^\d+]/g, "").startsWith("+") ? tenant.phone.replace(/[^\d+]/g, "") : "+" + tenant.phone.replace(/[^\d+]/g, "")),
     templateName,
     languageCode: languageCode || tenant.language_preference || "en",
     components: parameters
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
   // Log the reminder
   await supabase.from("reminder_logs").insert({
     tenant_id: tenantId,
-    reminder_type: "rent_upcoming",
+    reminder_type: body.reminderType || "rent_upcoming",
     channel: "whatsapp",
     template_name: templateName,
     message_content: `Manual WhatsApp to ${tenant.full_name}`,

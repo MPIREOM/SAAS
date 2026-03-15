@@ -20,7 +20,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label
             htmlFor={textareaId}
-            className="text-sm font-medium text-foreground"
+            className="text-sm font-medium text-foreground tracking-tight"
           >
             {label}
           </label>
@@ -37,25 +37,25 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
                 : undefined
           }
           className={cn(
-            "flex min-h-[80px] w-full rounded-lg border bg-surface px-3 py-2",
-            "text-sm text-foreground placeholder:text-muted-foreground",
-            "transition-colors duration-150 resize-y",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:border-accent",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+            "flex min-h-[80px] w-full rounded-lg border bg-surface-elevated/50 px-3 py-2",
+            "text-sm text-foreground placeholder:text-text-secondary/50",
+            "transition-all duration-200 resize-y",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/50 focus-visible:bg-surface-elevated",
+            "disabled:cursor-not-allowed disabled:opacity-40",
             error
-              ? "border-red-500 focus-visible:ring-red-500/50 focus-visible:border-red-500"
-              : "border-border",
+              ? "border-destructive/60 focus-visible:ring-destructive/30 focus-visible:border-destructive"
+              : "border-border/60",
             className
           )}
           {...props}
         />
         {error && (
-          <p id={`${textareaId}-error`} className="text-xs text-red-400" role="alert">
+          <p id={`${textareaId}-error`} className="text-xs text-destructive" role="alert">
             {error}
           </p>
         )}
         {!error && helperText && (
-          <p id={`${textareaId}-helper`} className="text-xs text-muted-foreground">
+          <p id={`${textareaId}-helper`} className="text-xs text-text-secondary">
             {helperText}
           </p>
         )}

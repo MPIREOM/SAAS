@@ -27,54 +27,40 @@ export function RentChart() {
     const load = async () => {
       const supabase = createClient();
 
-      // Get all active leases with their monthly rent
-      const { data: leases } = await supabase
-        .from("leases")
-        .select("id, monthly_rent, start_date, end_date, is_active")
-        .eq("is_active", true);
-
-      // Get all payments from the last 12 months
       const now = new Date();
       const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
       const startDate = twelveMonthsAgo.toISOString().split("T")[0];
 
-      const { data: payments } = await supabase
-        .from("payments")
-        .select("amount, payment_date, lease_id")
-        .gte("payment_date", startDate)
-        .order("payment_date", { ascending: true });
+      // Fetch all invoices within the last 12 months
+      const { data: invoiceRows } = await supabase
+        .from("invoices")
+        .select("amount, due_date, status")
+        .gte("due_date", startDate)
+        .order("due_date", { ascending: true });
 
-      // Build monthly data
       const months: MonthData[] = [];
       for (let i = 0; i < 12; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
         const monthLabel = date.toLocaleDateString("en", {
           month: "short",
           year: "2-digit",
         });
 
-        // Sum paid amounts for this month
-        const paid = (payments || [])
-          .filter((p) => {
-            const pDate = new Date(p.payment_date as string);
-            return (
-              pDate.getFullYear() === date.getFullYear() &&
-              pDate.getMonth() === date.getMonth()
-            );
-          })
-          .reduce((sum, p) => sum + parseFloat(p.amount as string), 0);
+        const monthInvoices = (invoiceRows || []).filter((inv) => {
+          const d = new Date(inv.due_date as string);
+          return (
+            d.getFullYear() === date.getFullYear() &&
+            d.getMonth() === date.getMonth()
+          );
+        });
 
-        // Calculate expected rent for this month
-        const expected = (leases || [])
-          .filter((l) => {
-            const start = new Date(l.start_date as string);
-            const end = new Date(l.end_date as string);
-            return start <= new Date(date.getFullYear(), date.getMonth() + 1, 0) && end >= date;
-          })
-          .reduce((sum, l) => sum + parseFloat(l.monthly_rent as string), 0);
+        const paid = monthInvoices
+          .filter((inv) => inv.status === "paid")
+          .reduce((sum, inv) => sum + parseFloat(inv.amount as string), 0);
 
-        const pending = Math.max(0, expected - paid);
+        const pending = monthInvoices
+          .filter((inv) => inv.status === "pending" || inv.status === "overdue")
+          .reduce((sum, inv) => sum + parseFloat(inv.amount as string), 0);
 
         months.push({
           month: monthLabel,
@@ -104,32 +90,36 @@ export function RentChart() {
           <CartesianGrid
             strokeDasharray="3 3"
             stroke="var(--color-border)"
+            strokeOpacity={0.4}
             vertical={false}
           />
           <XAxis
             dataKey="month"
-            tick={{ fill: "var(--color-text-secondary)", fontSize: 11 }}
-            axisLine={{ stroke: "var(--color-border)" }}
+            tick={{ fill: "var(--color-text-secondary)", fontSize: 11, fontWeight: 500 }}
+            axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.4 }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: "var(--color-text-secondary)", fontSize: 11 }}
+            tick={{ fill: "var(--color-text-secondary)", fontSize: 11, fontWeight: 500 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => `${v}`}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "var(--color-surface)",
+              backgroundColor: "var(--color-surface-elevated)",
               border: "1px solid var(--color-border)",
-              borderRadius: "6px",
+              borderRadius: "10px",
               fontSize: "12px",
+              fontWeight: 500,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
             }}
-            labelStyle={{ color: "var(--color-text-primary)", fontWeight: 500 }}
+            labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
             formatter={(value) => [`${Number(value).toFixed(2)} OMR`]}
+            cursor={{ fill: "var(--color-surface-elevated)", opacity: 0.3 }}
           />
           <Legend
-            wrapperStyle={{ fontSize: "12px" }}
+            wrapperStyle={{ fontSize: "12px", fontWeight: 500 }}
             iconType="square"
             iconSize={10}
           />
@@ -137,13 +127,13 @@ export function RentChart() {
             dataKey="paid"
             name="Paid"
             fill="var(--color-success)"
-            radius={[3, 3, 0, 0]}
+            radius={[4, 4, 0, 0]}
           />
           <Bar
             dataKey="pending"
             name="Pending"
             fill="var(--color-warning)"
-            radius={[3, 3, 0, 0]}
+            radius={[4, 4, 0, 0]}
           />
         </BarChart>
       </ResponsiveContainer>

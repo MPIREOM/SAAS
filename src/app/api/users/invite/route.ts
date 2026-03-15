@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   // Verify the requesting user is authenticated and is an admin
@@ -33,6 +34,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
 
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+  }
+
+  // Validate role
+  const validRoles = ["super_admin", "property_manager", "accountant"];
+  if (role && !validRoles.includes(role)) {
+    return NextResponse.json(
+      { error: `Invalid role. Must be one of: ${validRoles.join(", ")}` },
+      { status: 400 }
+    );
+  }
+
   // Use service role client to create the user
   const adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,7 +67,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: authError.message }, { status: 400 });
   }
 
-  // Insert into users table
+  // Insert into users table — rollback auth user if this fails
   const { error: insertError } = await adminClient.from("users").upsert({
     id: authData.user.id,
     email,
@@ -61,8 +77,17 @@ export async function POST(request: NextRequest) {
   });
 
   if (insertError) {
+    // Rollback: delete the auth user to avoid orphan state
+    await adminClient.auth.admin.deleteUser(authData.user.id);
     return NextResponse.json({ error: insertError.message }, { status: 400 });
   }
+
+  logAudit(supabase, {
+    action: "invite_user",
+    entity_type: "user",
+    entity_id: authData.user.id,
+    metadata: { email, role: role || "property_manager" },
+  });
 
   return NextResponse.json({ success: true, user_id: authData.user.id });
 }

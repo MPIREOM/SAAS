@@ -8,6 +8,7 @@ import {
   Mail,
 } from "lucide-react";
 import { InviteUserForm } from "@/components/settings/invite-user-form";
+import { NotificationPreferences } from "@/components/settings/notification-preferences";
 
 export default async function SettingsPage({
   params,
@@ -42,7 +43,7 @@ export default async function SettingsPage({
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary">
+        <h1 className="text-2xl font-semibold text-text-primary font-display">
           {t("title")}
         </h1>
         <p className="text-sm text-text-secondary mt-1">
@@ -57,7 +58,7 @@ export default async function SettingsPage({
             <User className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-base font-medium text-text-primary">
+            <h2 className="text-base font-medium text-text-primary font-display">
               {t("profile")}
             </h2>
             <p className="text-xs text-text-secondary">
@@ -110,7 +111,7 @@ export default async function SettingsPage({
             <Bell className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-base font-medium text-text-primary">
+            <h2 className="text-base font-medium text-text-primary font-display">
               {t("notificationPreferences")}
             </h2>
             <p className="text-xs text-text-secondary">
@@ -118,11 +119,7 @@ export default async function SettingsPage({
             </p>
           </div>
         </div>
-        <div className="bg-surface-elevated border border-border rounded-md p-4">
-          <p className="text-sm text-text-secondary">
-            {t("notificationPreferencesComingSoon")}
-          </p>
-        </div>
+        <NotificationPreferences />
       </div>
 
       {/* User Management */}
@@ -133,7 +130,7 @@ export default async function SettingsPage({
               <Users className="h-5 w-5 text-accent" />
             </div>
             <div>
-              <h2 className="text-base font-medium text-text-primary">
+              <h2 className="text-base font-medium text-text-primary font-display">
                 {t("userManagement")}
               </h2>
               <p className="text-xs text-text-secondary">
@@ -239,7 +236,7 @@ export default async function SettingsPage({
             <MessageSquare className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-base font-medium text-text-primary">
+            <h2 className="text-base font-medium text-text-primary font-display">
               {t("whatsappConfig")}
             </h2>
             <p className="text-xs text-text-secondary">
@@ -261,7 +258,7 @@ export default async function SettingsPage({
             <Mail className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-base font-medium text-text-primary">
+            <h2 className="text-base font-medium text-text-primary font-display">
               {t("emailConfig")}
             </h2>
             <p className="text-xs text-text-secondary">

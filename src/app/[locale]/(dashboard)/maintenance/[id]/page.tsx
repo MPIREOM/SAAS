@@ -76,7 +76,7 @@ export default async function MaintenanceDetailPage({
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-2xl font-semibold text-text-primary">
+            <h1 className="text-2xl font-semibold text-text-primary font-display">
               Request #{(request.id as string).slice(0, 8)}
             </h1>
           </div>
@@ -106,7 +106,7 @@ export default async function MaintenanceDetailPage({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
           <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-            Details
+            {t("details")}
           </h3>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export default async function MaintenanceDetailPage({
 
         <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
           <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-            Tenant
+            {t("tenant")}
           </h3>
           {tenant ? (
             <div className="space-y-2">
@@ -168,7 +168,7 @@ export default async function MaintenanceDetailPage({
 
         <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
           <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-            Assigned To
+            {t("assignedTo")}
           </h3>
           {request.assigned_to_name ? (
             <div className="space-y-2">
@@ -188,7 +188,7 @@ export default async function MaintenanceDetailPage({
               )}
             </div>
           ) : (
-            <p className="text-sm text-text-secondary">Not assigned yet</p>
+            <p className="text-sm text-text-secondary">{t("notAssigned")}</p>
           )}
         </div>
       </div>
@@ -196,7 +196,7 @@ export default async function MaintenanceDetailPage({
       {/* Description */}
       <div className="bg-surface border border-border rounded-lg p-6">
         <h3 className="text-sm font-medium text-text-primary mb-3">
-          Description
+          {t("description")}
         </h3>
         <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">
           {request.description as string}
@@ -206,7 +206,7 @@ export default async function MaintenanceDetailPage({
       {/* Status Flow */}
       <div className="bg-surface border border-border rounded-lg p-6">
         <h3 className="text-sm font-medium text-text-primary mb-4">
-          Status Update
+          {t("statusUpdate")}
         </h3>
         <div className="flex items-center gap-3 mb-4">
           {statusFlow.map((status, index) => (
@@ -241,7 +241,7 @@ export default async function MaintenanceDetailPage({
       <div className="bg-surface border border-border rounded-lg p-6">
         <h3 className="text-sm font-medium text-text-primary mb-4">
           <MessageSquare className="h-4 w-4 inline-block mr-2 text-text-secondary" />
-          Activity Log
+          {t("activityLog")}
         </h3>
 
         {notes && notes.length > 0 ? (
@@ -262,7 +262,7 @@ export default async function MaintenanceDetailPage({
           </div>
         ) : (
           <p className="text-sm text-text-secondary mb-6">
-            No notes yet. Add the first note below.
+            {t("noNotes")}
           </p>
         )}
 

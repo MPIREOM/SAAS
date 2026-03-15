@@ -4,7 +4,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Trash2 } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Template {
   id: string;
@@ -27,6 +36,7 @@ export default function EditTemplatePage({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [error, setError] = useState("");
   const [template, setTemplate] = useState<Template | null>(null);
 
@@ -77,7 +87,7 @@ export default function EditTemplatePage({
   };
 
   const handleDelete = async () => {
-    if (!template || !confirm("Are you sure you want to delete this template?")) return;
+    if (!template) return;
     setDeleting(true);
 
     const supabase = createClient();
@@ -102,17 +112,53 @@ export default function EditTemplatePage({
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">
+        <h1 className="text-2xl font-semibold text-text-primary font-display">
           {t("editTemplate") || "Edit Template"}
         </h1>
         <button
-          onClick={handleDelete}
+          onClick={() => setShowDeleteDialog(true)}
           disabled={deleting}
           className="inline-flex items-center gap-2 h-9 px-4 bg-destructive/10 text-destructive text-sm font-medium rounded-md hover:bg-destructive/20 transition-colors disabled:opacity-50"
         >
           <Trash2 className="h-4 w-4" />
           {tc("delete") || "Delete"}
         </button>
+
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent maxWidth="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{tc("confirmDelete") || "Delete Template"}</DialogTitle>
+              <DialogDescription>
+                {t("deleteTemplateConfirm") || "Are you sure you want to delete this template? This action cannot be undone."}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                <p className="text-sm text-text-secondary">
+                  <span className="font-medium text-text-primary">{template.name}</span>
+                </p>
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setShowDeleteDialog(false)}
+                className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
+              >
+                {tc("cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="h-9 px-4 bg-destructive hover:bg-destructive/90 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+              >
+                {deleting ? tc("loading") : tc("delete") || "Delete"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">

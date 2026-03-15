@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { UserPlus, X } from "lucide-react";
 
 export function InviteUserForm() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,7 +35,7 @@ export function InviteUserForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to invite user");
+        setError(data.error || tc("error"));
         setLoading(false);
         return;
       }
@@ -40,7 +43,7 @@ export function InviteUserForm() {
       setOpen(false);
       router.refresh();
     } catch {
-      setError("Something went wrong");
+      setError(tc("error"));
     } finally {
       setLoading(false);
     }
@@ -53,7 +56,7 @@ export function InviteUserForm() {
         className="inline-flex items-center gap-2 h-8 px-3 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
       >
         <UserPlus className="h-3.5 w-3.5" />
-        Add User
+        {t("addUser")}
       </button>
     );
   }
@@ -61,7 +64,7 @@ export function InviteUserForm() {
   return (
     <div className="bg-surface-elevated border border-border rounded-md p-4 mb-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-text-primary">Invite New User</h3>
+        <h3 className="text-sm font-medium text-text-primary font-display">{t("inviteNewUser")}</h3>
         <button
           onClick={() => {
             setOpen(false);
@@ -77,7 +80,7 @@ export function InviteUserForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-text-secondary mb-1">
-              Email <span className="text-destructive">*</span>
+              {t("email")} <span className="text-destructive">*</span>
             </label>
             <input
               name="email"
@@ -89,11 +92,10 @@ export function InviteUserForm() {
           </div>
           <div>
             <label className="block text-xs text-text-secondary mb-1">
-              Full Name
+              {t("name")}
             </label>
             <input
               name="full_name"
-              placeholder="John Doe"
               className="w-full h-9 bg-surface border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
             />
           </div>
@@ -101,7 +103,7 @@ export function InviteUserForm() {
 
         <div>
           <label className="block text-xs text-text-secondary mb-1">
-            Role <span className="text-destructive">*</span>
+            {t("role")} <span className="text-destructive">*</span>
           </label>
           <select
             name="role"
@@ -109,8 +111,8 @@ export function InviteUserForm() {
             defaultValue="property_manager"
             className="w-full h-9 bg-surface border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
           >
-            <option value="property_manager">Property Manager</option>
-            <option value="super_admin">Super Admin</option>
+            <option value="property_manager">{t("propertyManager")}</option>
+            <option value="super_admin">{t("superAdmin")}</option>
           </select>
         </div>
 
@@ -122,7 +124,7 @@ export function InviteUserForm() {
             disabled={loading}
             className="h-8 px-3 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
           >
-            {loading ? "Inviting..." : "Invite User"}
+            {loading ? tc("loading") : t("inviteUser")}
           </button>
           <button
             type="button"
@@ -132,7 +134,7 @@ export function InviteUserForm() {
             }}
             className="h-8 px-3 bg-surface border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
           >
-            Cancel
+            {tc("cancel")}
           </button>
         </div>
       </form>

@@ -1,15 +1,34 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const client = new Anthropic();
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth check — this endpoint processes PII (ID documents)
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File too large. Maximum size is 10MB." },
+        { status: 400 }
+      );
     }
 
     const allowedImageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -75,7 +94,12 @@ Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "nat
       return NextResponse.json({ error: "Failed to extract text from response" }, { status: 500 });
     }
 
-    const parsed = JSON.parse(textBlock.text);
+    let parsed;
+    try {
+      parsed = JSON.parse(textBlock.text);
+    } catch {
+      return NextResponse.json({ error: "Failed to parse AI response" }, { status: 500 });
+    }
 
     return NextResponse.json({
       full_name: parsed.full_name || null,

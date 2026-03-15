@@ -4,13 +4,17 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { FileText } from "lucide-react";
+import {
+  ChequeFormRows,
+  ChequeEntry,
+} from "@/components/cheques/cheque-form-rows";
 
 interface Tenant {
   id: string;
   full_name: string;
   nationality: string | null;
   national_id: string | null;
-  passport_number: string | null;
   phone: string;
   email: string | null;
   emergency_contact: string | null;
@@ -25,21 +29,47 @@ export default function EditTenantPage({
 }) {
   const t = useTranslations("tenants");
   const tc = useTranslations("common");
+  const tch = useTranslations("cheques");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [cheques, setCheques] = useState<ChequeEntry[]>([]);
+  const [chequesLoaded, setChequesLoaded] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       const { id } = await params;
       const supabase = createClient();
+
+      // Load tenant
       const { data } = await supabase
         .from("tenants")
         .select("*")
         .eq("id", id)
         .single();
       if (data) setTenant(data as Tenant);
+
+      // Load existing cheques
+      const { data: existingCheques } = await supabase
+        .from("cheques")
+        .select("id, cheque_number, bank_name, cheque_date, amount, status")
+        .eq("tenant_id", id)
+        .order("cheque_date", { ascending: true });
+
+      if (existingCheques) {
+        setCheques(
+          existingCheques.map((c) => ({
+            id: c.id,
+            cheque_number: c.cheque_number,
+            bank_name: c.bank_name,
+            cheque_date: c.cheque_date,
+            amount: String(c.amount),
+            status: c.status,
+          }))
+        );
+      }
+      setChequesLoaded(true);
     };
     load();
   }, [params]);
@@ -59,10 +89,10 @@ export default function EditTenantPage({
         full_name: formData.get("full_name") as string,
         nationality: (formData.get("nationality") as string) || null,
         national_id: (formData.get("national_id") as string) || null,
-        passport_number: (formData.get("passport_number") as string) || null,
         phone: formData.get("phone") as string,
         email: (formData.get("email") as string) || null,
-        emergency_contact: (formData.get("emergency_contact") as string) || null,
+        emergency_contact:
+          (formData.get("emergency_contact") as string) || null,
         language_preference: formData.get("language_preference") as string,
         status: formData.get("status") as string,
       })
@@ -72,6 +102,29 @@ export default function EditTenantPage({
       setError(updateError.message);
       setLoading(false);
       return;
+    }
+
+    // Insert only new cheques (ones without an id)
+    const newCheques = cheques.filter(
+      (c) => !c.id && c.cheque_number && c.bank_name && c.cheque_date && c.amount
+    );
+    if (newCheques.length > 0) {
+      const { error: chequeError } = await supabase.from("cheques").insert(
+        newCheques.map((c) => ({
+          tenant_id: tenant.id,
+          cheque_number: c.cheque_number,
+          bank_name: c.bank_name,
+          cheque_date: c.cheque_date,
+          amount: c.amount,
+          status: "pending" as const,
+        }))
+      );
+
+      if (chequeError) {
+        setError(chequeError.message);
+        setLoading(false);
+        return;
+      }
     }
 
     const { locale } = await params;
@@ -90,7 +143,7 @@ export default function EditTenantPage({
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">
+        <h1 className="text-2xl font-semibold text-text-primary font-display">
           {t("editTenant")}
         </h1>
       </div>
@@ -160,18 +213,6 @@ export default function EditTenantPage({
             </div>
           </div>
 
-          {/* Passport Number */}
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("passportNumber")}
-            </label>
-            <input
-              name="passport_number"
-              defaultValue={tenant.passport_number || ""}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-            />
-          </div>
-
           {/* Emergency Contact */}
           <div>
             <label className="block text-sm text-text-secondary mb-1.5">
@@ -214,6 +255,29 @@ export default function EditTenantPage({
             </div>
           </div>
         </div>
+
+        {/* Cheques Section */}
+        {chequesLoaded && (
+          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+            <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
+              <FileText className="h-4 w-4 text-accent" />
+              {tch("title")}
+              {cheques.filter((c) => c.id).length > 0 && (
+                <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
+                  {cheques.filter((c) => c.id).length}
+                </span>
+              )}
+            </h2>
+            <p className="text-xs text-text-secondary">
+              {tch("subtitle")}
+            </p>
+            <ChequeFormRows
+              cheques={cheques}
+              onChange={setCheques}
+              showStatus
+            />
+          </div>
+        )}
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 

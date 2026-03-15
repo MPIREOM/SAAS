@@ -1,0 +1,56 @@
+import { SupabaseClient } from "@supabase/supabase-js";
+
+type AuditAction =
+  | "create"
+  | "update"
+  | "delete"
+  | "login"
+  | "logout"
+  | "invite_user"
+  | "move_out"
+  | "mark_paid"
+  | "export_report";
+
+type EntityType =
+  | "tenant"
+  | "property"
+  | "unit"
+  | "lease"
+  | "invoice"
+  | "payment"
+  | "cheque"
+  | "maintenance_request"
+  | "document"
+  | "notification_template"
+  | "user";
+
+interface AuditLogEntry {
+  action: AuditAction;
+  entity_type: EntityType;
+  entity_id?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Log an audit event. Fire-and-forget — errors are logged but don't block the caller.
+ */
+export async function logAudit(
+  supabase: SupabaseClient,
+  entry: AuditLogEntry
+) {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    await supabase.from("audit_logs").insert({
+      user_id: user?.id ?? null,
+      action: entry.action,
+      entity_type: entry.entity_type,
+      entity_id: entry.entity_id ?? null,
+      metadata: entry.metadata ?? {},
+    });
+  } catch (err) {
+    console.error("Audit log error:", err);
+  }
+}

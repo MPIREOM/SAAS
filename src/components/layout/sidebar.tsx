@@ -15,6 +15,7 @@ import {
   Bell,
   Settings,
   BarChart3,
+  Receipt,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -30,6 +31,7 @@ const navItems = [
   { key: "properties", href: "/properties", icon: Building2 },
   { key: "tenants", href: "/tenants", icon: Users },
   { key: "invoices", href: "/invoices", icon: FileText },
+  { key: "expenses", href: "/expenses", icon: Receipt },
   { key: "maintenance", href: "/maintenance", icon: Wrench },
   { key: "documents", href: "/documents", icon: FolderOpen },
   { key: "reminders", href: "/reminders", icon: Bell },
@@ -65,20 +67,20 @@ export function Sidebar({ locale }: SidebarProps) {
   const sidebarContent = (isMobile: boolean) => (
     <>
       {/* Logo */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-border">
+      <div className="h-16 flex items-center justify-between px-5 border-b border-border/50">
         {(!collapsed || isMobile) && (
-          <span className="text-lg font-semibold text-accent tracking-tight">
+          <span className="text-xl font-display font-bold gold-shimmer tracking-tight">
             MPIRE
           </span>
         )}
         {collapsed && !isMobile && (
-          <span className="text-lg font-semibold text-accent mx-auto">M</span>
+          <span className="text-xl font-display font-bold text-accent mx-auto">M</span>
         )}
         {/* Close button for mobile */}
         {isMobile && (
           <button
             onClick={() => setMobileOpen(false)}
-            className="p-1 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+            className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all duration-200"
           >
             <X className="h-5 w-5" />
           </button>
@@ -86,8 +88,8 @@ export function Sidebar({ locale }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-2 overflow-y-auto">
-        <ul className="space-y-0.5 px-2">
+      <nav className="flex-1 py-4 overflow-y-auto">
+        <ul className="space-y-1 px-3">
           {navItems.map((item) => {
             const isActive = pathname.includes(item.href);
             const Icon = item.icon;
@@ -96,15 +98,25 @@ export function Sidebar({ locale }: SidebarProps) {
                 <Link
                   href={`/${locale}${item.href}`}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                    "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                     isActive
-                      ? "bg-accent/10 text-accent"
+                      ? "bg-accent/10 text-accent border-glow"
                       : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
                   )}
                   title={collapsed && !isMobile ? t(item.key) : undefined}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {(!collapsed || isMobile) && <span>{t(item.key)}</span>}
+                  <Icon
+                    className={cn(
+                      "h-[18px] w-[18px] shrink-0 transition-transform duration-200",
+                      !isActive && "group-hover:scale-110"
+                    )}
+                  />
+                  {(!collapsed || isMobile) && (
+                    <span className="truncate">{t(item.key)}</span>
+                  )}
+                  {isActive && (!collapsed || isMobile) && (
+                    <div className="ms-auto h-1.5 w-1.5 rounded-full bg-accent animate-fade-in" />
+                  )}
                 </Link>
               </li>
             );
@@ -114,10 +126,10 @@ export function Sidebar({ locale }: SidebarProps) {
 
       {/* Collapse toggle - desktop only */}
       {!isMobile && (
-        <div className="border-t border-border p-2">
+        <div className="border-t border-border/50 p-3">
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="flex items-center justify-center w-full py-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+            className="flex items-center justify-center w-full py-2.5 rounded-lg text-text-secondary hover:text-accent hover:bg-surface-elevated transition-all duration-200"
           >
             {collapsed ? (
               isRtl ? (
@@ -141,7 +153,7 @@ export function Sidebar({ locale }: SidebarProps) {
       {/* Mobile hamburger button */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed top-3 z-50 p-2 rounded-md bg-surface border border-border text-text-secondary hover:text-text-primary transition-colors"
+        className="md:hidden fixed top-3.5 z-50 p-2 rounded-lg glass border border-border/50 text-text-secondary hover:text-accent transition-all duration-200"
         style={{ [isRtl ? "right" : "left"]: "0.75rem" }}
       >
         <Menu className="h-5 w-5" />
@@ -150,7 +162,7 @@ export function Sidebar({ locale }: SidebarProps) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -158,7 +170,7 @@ export function Sidebar({ locale }: SidebarProps) {
       {/* Mobile sidebar */}
       <aside
         className={cn(
-          "md:hidden fixed top-0 h-screen w-60 bg-surface border-border flex flex-col z-50 transition-transform duration-200",
+          "md:hidden fixed top-0 h-screen w-64 bg-surface border-border/50 flex flex-col z-50 transition-transform duration-300 ease-out",
           isRtl ? "right-0 border-l" : "left-0 border-r",
           mobileOpen
             ? "translate-x-0"
@@ -173,9 +185,9 @@ export function Sidebar({ locale }: SidebarProps) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "hidden md:flex fixed top-0 h-screen bg-surface border-border flex-col transition-all duration-200 z-40",
+          "hidden md:flex fixed top-0 h-screen bg-surface/80 backdrop-blur-xl border-border/50 flex-col transition-all duration-300 ease-out z-40",
           isRtl ? "right-0 border-l" : "left-0 border-r",
-          collapsed ? "w-16" : "w-60"
+          collapsed ? "w-[68px]" : "w-64"
         )}
       >
         {sidebarContent(false)}

@@ -1,4 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
+
+// Verify Meta webhook signature (X-Hub-Signature-256 header)
+function verifySignature(body: string, signature: string | null): boolean {
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (!appSecret || !signature) return false;
+
+  const expectedSig =
+    "sha256=" +
+    crypto.createHmac("sha256", appSecret).update(body).digest("hex");
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSig)
+  );
+}
 
 // WhatsApp webhook verification (GET)
 export async function GET(request: NextRequest) {
@@ -19,7 +35,15 @@ export async function GET(request: NextRequest) {
 
 // WhatsApp webhook for delivery status updates (POST)
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  const rawBody = await request.text();
+
+  // Verify webhook signature from Meta
+  const signature = request.headers.get("x-hub-signature-256");
+  if (!process.env.WHATSAPP_APP_SECRET || !verifySignature(rawBody, signature)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+  }
+
+  const body = JSON.parse(rawBody);
 
   // Process status updates
   const entries = body.entry || [];

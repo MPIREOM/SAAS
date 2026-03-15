@@ -1,6 +1,16 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+
+function getResend(): Resend {
+  if (!_resend) {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY environment variable is not set");
+    }
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 
 interface EmailOptions {
   to: string;
@@ -14,6 +24,7 @@ export async function sendEmail(
   const from = process.env.RESEND_FROM_EMAIL || "noreply@mpire.om";
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: `MPIRE Property Management <${from}>`,
       to: options.to,

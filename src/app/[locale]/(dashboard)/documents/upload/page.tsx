@@ -134,7 +134,7 @@ export default function UploadDocumentPage({
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">
+        <h1 className="text-2xl font-semibold text-text-primary font-display">
           {t("upload")}
         </h1>
       </div>
@@ -212,21 +212,21 @@ export default function UploadDocumentPage({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
-                Entity Type <span className="text-destructive">*</span>
+                {t("entityType")} <span className="text-destructive">*</span>
               </label>
               <select
                 value={entityType}
                 onChange={(e) => setEntityType(e.target.value as "tenant" | "property")}
                 className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
               >
-                <option value="tenant">Tenant</option>
-                <option value="property">Property</option>
+                <option value="tenant">{tc("tenant") || "Tenant"}</option>
+                <option value="property">{tc("property") || "Property"}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
-                {entityType === "tenant" ? "Tenant" : "Property"}{" "}
+                {entityType === "tenant" ? (tc("tenant") || "Tenant") : (tc("property") || "Property")}{" "}
                 <span className="text-destructive">*</span>
               </label>
               <select

@@ -36,8 +36,10 @@ export async function updateSession(request: NextRequest) {
   // Redirect unauthenticated users to login (except for auth pages and API routes)
   const isAuthPage = request.nextUrl.pathname.includes("/auth/");
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+  const isPublicPage = request.nextUrl.pathname.includes("/maintenance-request/") ||
+    request.nextUrl.pathname.includes("/tenant-portal/");
 
-  if (!user && !isAuthPage && !isApiRoute) {
+  if (!user && !isAuthPage && !isApiRoute && !isPublicPage) {
     const locale = request.nextUrl.pathname.split("/")[1] || "en";
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/auth/login`;

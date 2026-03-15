@@ -1,20 +1,38 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
+import { Pagination } from "@/components/ui/pagination";
 import { Users, Plus, Phone, Mail } from "lucide-react";
 import { TenantsHeader } from "@/components/tenants/tenants-header";
+import { TenantsFilter } from "@/components/tenants/tenants-filter";
 
 export default async function TenantsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { locale } = await params;
+  const resolvedSearchParams = await searchParams;
   const t = await getTranslations("tenants");
   const tc = await getTranslations("common");
   const supabase = await createClient();
 
-  const { data: tenants } = await supabase
+  const status =
+    typeof resolvedSearchParams.status === "string"
+      ? resolvedSearchParams.status
+      : "active";
+  const search =
+    typeof resolvedSearchParams.search === "string"
+      ? resolvedSearchParams.search.trim()
+      : "";
+  const page =
+    typeof resolvedSearchParams.page === "string"
+      ? resolvedSearchParams.page
+      : "1";
+
+  let query = supabase
     .from("tenants")
     .select(`
       *,
@@ -28,8 +46,42 @@ export default async function TenantsPage({
         units(unit_number, property_id, properties(name))
       )
     `)
-    .eq("status", "active")
     .order("created_at", { ascending: false });
+
+  // Filter by status (default: active)
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  // Search by name, phone, or national_id
+  if (search) {
+    query = query.or(
+      `full_name.ilike.%${search}%,phone.ilike.%${search}%,national_id.ilike.%${search}%`
+    );
+  }
+
+  // Pagination
+  const PAGE_SIZE = 50;
+  const currentPage = Math.max(1, parseInt(page || "1", 10));
+
+  // Get total count for pagination
+  let countQuery = supabase
+    .from("tenants")
+    .select("*", { count: "exact", head: true });
+
+  if (status !== "all") {
+    countQuery = countQuery.eq("status", status);
+  }
+  if (search) {
+    countQuery = countQuery.or(
+      `full_name.ilike.%${search}%,phone.ilike.%${search}%,national_id.ilike.%${search}%`
+    );
+  }
+  const { count: totalCount } = await countQuery;
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
+
+  const { data: tenants } = await query
+    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
   const statusColors: Record<string, string> = {
     active: "bg-success/10 text-success",
@@ -40,7 +92,7 @@ export default async function TenantsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
+          <h1 className="text-2xl font-semibold text-text-primary font-display">
             {t("title")}
           </h1>
           <p className="text-sm text-text-secondary mt-1">
@@ -50,9 +102,11 @@ export default async function TenantsPage({
         <TenantsHeader locale={locale} />
       </div>
 
+      <TenantsFilter />
+
       {tenants && tenants.length > 0 ? (
         <div className="bg-surface border border-border rounded-lg overflow-x-auto">
-          <table className="w-full min-w-[600px]">
+          <table className="w-full min-w-[600px] mobile-card-view">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
@@ -77,13 +131,26 @@ export default async function TenantsPage({
             </thead>
             <tbody className="divide-y divide-border">
               {tenants.map((tenant: Record<string, unknown>) => {
-                const activeLease = Array.isArray(tenant.leases)
-                  ? (tenant.leases as Record<string, unknown>[]).find(
-                      (l) => l.is_active
-                    )
-                  : null;
-                const unit = activeLease
-                  ? (activeLease.units as Record<string, unknown>)
+                const leases = Array.isArray(tenant.leases)
+                  ? (tenant.leases as Record<string, unknown>[])
+                  : [];
+
+                // For active tenants, show active lease; for archived, show most recent lease
+                const activeLease = leases.find((l) => l.is_active);
+                const lastLease =
+                  leases.length > 0
+                    ? leases.sort(
+                        (a, b) =>
+                          new Date(b.end_date as string).getTime() -
+                          new Date(a.end_date as string).getTime()
+                      )[0]
+                    : null;
+
+                const displayLease =
+                  tenant.status === "archived" ? lastLease : activeLease;
+
+                const unit = displayLease
+                  ? (displayLease.units as Record<string, unknown>)
                   : null;
                 const property = unit
                   ? (unit.properties as Record<string, unknown>)
@@ -119,8 +186,8 @@ export default async function TenantsPage({
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-text-primary font-mono ltr-nums">
-                        {activeLease
-                          ? `${activeLease.monthly_rent} OMR`
+                        {displayLease
+                          ? `${displayLease.monthly_rent} OMR`
                           : "—"}
                       </span>
                     </td>
@@ -138,11 +205,22 @@ export default async function TenantsPage({
               })}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            baseUrl={`/${locale}/tenants`}
+            searchParams={{
+              ...(status ? { status } : {}),
+              ...(search ? { search } : {}),
+            }}
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg p-12 text-center">
           <Users className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
-          <h3 className="text-base font-medium text-text-primary mb-1">
+          <h3 className="text-base font-medium text-text-primary mb-1 font-display">
             {t("noTenants")}
           </h3>
           <p className="text-sm text-text-secondary mb-4">

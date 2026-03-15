@@ -18,7 +18,6 @@ interface PreviewTenant {
   email?: string;
   nationality?: string;
   national_id?: string;
-  passport_number?: string;
   emergency_contact?: string;
   language_preference?: string;
 }
@@ -226,8 +225,7 @@ export function ImportTenantsDialog({
                     "Phone *",
                     "Email",
                     "Nationality",
-                    "National ID",
-                    "Passport Number",
+                    "ID Number",
                     "Emergency Contact",
                     "Language",
                   ].map((col) => (

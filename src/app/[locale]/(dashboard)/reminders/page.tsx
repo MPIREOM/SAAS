@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
 import { Bell, FileText, Plus } from "lucide-react";
+import { ReminderTriggerButton } from "@/components/reminders/trigger-button";
 
 export default async function RemindersPage({
   params,
@@ -13,7 +14,7 @@ export default async function RemindersPage({
   const supabase = await createClient();
 
   const { data: reminders } = await supabase
-    .from("reminder_log")
+    .from("reminder_logs")
     .select(`
       *,
       tenants:tenant_id(full_name)
@@ -42,19 +43,20 @@ export default async function RemindersPage({
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
+          <h1 className="text-2xl font-semibold text-text-primary font-display">
             {t("title")}
           </h1>
           <p className="text-sm text-text-secondary mt-1">
             {t("subtitle")}
           </p>
         </div>
+        <ReminderTriggerButton />
       </div>
 
       {/* Reminder Log Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-text-primary flex items-center gap-2">
+          <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
             <Bell className="h-5 w-5 text-text-secondary" />
             {t("log")}
           </h2>
@@ -129,8 +131,8 @@ export default async function RemindersPage({
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-text-secondary max-w-[250px] truncate block">
-                          {(reminder.message as string)?.slice(0, 60) || "—"}
-                          {(reminder.message as string)?.length > 60 ? "..." : ""}
+                          {(reminder.message_content as string)?.slice(0, 60) || "—"}
+                          {(reminder.message_content as string)?.length > 60 ? "..." : ""}
                         </span>
                       </td>
                     </tr>
@@ -142,7 +144,7 @@ export default async function RemindersPage({
         ) : (
           <div className="bg-surface border border-border rounded-lg p-12 text-center">
             <Bell className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
-            <h3 className="text-base font-medium text-text-primary mb-1">
+            <h3 className="text-base font-medium text-text-primary mb-1 font-display">
               {t("noRemindersSent")}
             </h3>
             <p className="text-sm text-text-secondary">
@@ -155,7 +157,7 @@ export default async function RemindersPage({
       {/* Templates Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-text-primary flex items-center gap-2">
+          <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
             <FileText className="h-5 w-5 text-text-secondary" />
             {t("notificationTemplates")}
           </h2>
@@ -177,7 +179,7 @@ export default async function RemindersPage({
                 className="bg-surface border border-border rounded-lg p-5 hover:border-accent/30 transition-colors group"
               >
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
+                  <h3 className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors font-display">
                     {template.name as string}
                   </h3>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent capitalize">
@@ -185,12 +187,12 @@ export default async function RemindersPage({
                   </span>
                 </div>
                 <p className="text-xs text-text-secondary line-clamp-2">
-                  {(template.body as string)?.slice(0, 120) || "—"}
-                  {(template.body as string)?.length > 120 ? "..." : ""}
+                  {(template.body_template as string)?.slice(0, 120) || "—"}
+                  {(template.body_template as string)?.length > 120 ? "..." : ""}
                 </p>
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                   <span className="text-xs text-text-secondary capitalize">
-                    {t("templateType")}: {(template.template_type as string)?.replace("_", " ") || "—"}
+                    {t("type")}: {(template.reminder_type as string)?.replace("_", " ") || "—"}
                   </span>
                 </div>
               </Link>
@@ -199,7 +201,7 @@ export default async function RemindersPage({
         ) : (
           <div className="bg-surface border border-border rounded-lg p-12 text-center">
             <FileText className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
-            <h3 className="text-base font-medium text-text-primary mb-1">
+            <h3 className="text-base font-medium text-text-primary mb-1 font-display">
               {t("noTemplates")}
             </h3>
             <p className="text-sm text-text-secondary mb-4">

@@ -10,7 +10,7 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         ref={ref}
         aria-hidden="true"
         className={cn(
-          "animate-pulse rounded-lg bg-muted/50",
+          "animate-pulse rounded-lg bg-surface-elevated/60",
           className
         )}
         {...props}
