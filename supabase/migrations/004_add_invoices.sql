@@ -1,0 +1,35 @@
+-- Invoices table (already exists in the database)
+-- This migration is a reference for the schema
+
+-- CREATE TYPE invoice_status AS ENUM ('pending', 'paid', 'overdue');
+--
+-- CREATE TABLE invoices (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   lease_id UUID NOT NULL REFERENCES leases(id) ON DELETE CASCADE,
+--   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+--   unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+--   amount NUMERIC NOT NULL,
+--   due_date DATE NOT NULL,
+--   issued_date DATE,
+--   period_start DATE,
+--   period_end DATE,
+--   status invoice_status NOT NULL DEFAULT 'pending',
+--   paid_date DATE,
+--   notes TEXT,
+--   created_by UUID,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+--
+-- CREATE UNIQUE INDEX idx_invoices_lease_due_date ON invoices (lease_id, due_date);
+-- CREATE INDEX idx_invoices_status ON invoices (status);
+-- CREATE INDEX idx_invoices_due_date ON invoices (due_date);
+-- CREATE INDEX idx_invoices_tenant ON invoices (tenant_id);
+--
+-- ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY "Authenticated users can manage invoices"
+--   ON invoices FOR ALL
+--   TO authenticated
+--   USING (true)
+--   WITH CHECK (true);
