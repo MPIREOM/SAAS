@@ -27,8 +27,10 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  LogOut,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
+import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
 
 export default async function UnitDetailPage({
   params,
@@ -99,13 +101,11 @@ export default async function UnitDetailPage({
             .eq("entity_id", tenantId)
             .order("uploaded_at", { ascending: false })
         : Promise.resolve({ data: null }),
-      tenantId
-        ? supabase
+      supabase
             .from("maintenance_requests")
             .select("*")
-            .eq("tenant_id", tenantId)
-            .order("created_at", { ascending: false })
-        : Promise.resolve({ data: null }),
+            .eq("unit_id", unitId)
+            .order("created_at", { ascending: false }),
       supabase
         .from("leases")
         .select("*, tenants(id, full_name, phone, status)")
@@ -176,6 +176,7 @@ export default async function UnitDetailPage({
                 <StatusIcon className="h-3 w-3" />
                 {t(unitStatus)}
               </span>
+              <UnitStatusToggle unitId={unitId} currentStatus={unitStatus} />
             </div>
           </div>
           <div className="flex items-center gap-1.5 ml-10">
@@ -311,22 +312,31 @@ export default async function UnitDetailPage({
                     </div>
                   </div>
                 </div>
-                {activeLease?.monthly_rent && (
-                  <div className="text-end hidden sm:block">
-                    <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-                      {tt("monthlyRent")}
-                    </p>
-                    <p className="text-lg font-bold font-mono tabular-nums text-accent">
-                      {Number(activeLease.monthly_rent).toLocaleString(
-                        "en-OM",
-                        { minimumFractionDigits: 2 }
-                      )}
-                      <span className="text-xs font-sans font-normal text-text-secondary ml-1">
-                        {CURRENCY.code}
-                      </span>
-                    </p>
-                  </div>
-                )}
+                <div className="flex items-center gap-3">
+                  {activeLease?.monthly_rent && (
+                    <div className="text-end hidden sm:block">
+                      <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                        {tt("monthlyRent")}
+                      </p>
+                      <p className="text-lg font-bold font-mono tabular-nums text-accent">
+                        {Number(activeLease.monthly_rent).toLocaleString(
+                          "en-OM",
+                          { minimumFractionDigits: 2 }
+                        )}
+                        <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+                          {CURRENCY.code}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  <Link
+                    href={`/${locale}/tenants/${currentTenant.id}/move-out`}
+                    className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border text-text-secondary text-xs rounded-md hover:bg-border/30 hover:text-text-primary transition-colors"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    {t("moveOut") || "Move Out"}
+                  </Link>
+                </div>
               </div>
             </div>
 
