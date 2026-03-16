@@ -32,10 +32,14 @@ export default function NewMaintenanceRequestPage({
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [locale, setLocale] = useState("en");
+  const [preselectedUnitId, setPreselectedUnitId] = useState("");
 
-  // Resolve locale from params once
+  // Resolve locale from params and read query params
   useEffect(() => {
     params.then((p) => setLocale(p.locale));
+    const searchParams = new URLSearchParams(window.location.search);
+    const unitId = searchParams.get("unitId");
+    if (unitId) setPreselectedUnitId(unitId);
   }, [params]);
 
   useEffect(() => {
@@ -168,7 +172,7 @@ export default function NewMaintenanceRequestPage({
                 <label className={labelClass}>
                   {t("table.unit")} <span className="text-destructive">*</span>
                 </label>
-                <select name="unit_id" required className={inputClass}>
+                <select name="unit_id" required className={inputClass} defaultValue={preselectedUnitId}>
                   <option value="">Select unit...</option>
                   {units.map((unit) => (
                     <option key={unit.id} value={unit.id}>

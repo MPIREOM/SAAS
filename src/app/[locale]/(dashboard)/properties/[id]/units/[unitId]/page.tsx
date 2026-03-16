@@ -735,17 +735,28 @@ export default async function UnitDetailPage({
 
       {/* Documents */}
       <section>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-1.5 rounded-lg bg-accent/10">
-            <Folder className="h-4 w-4 text-accent" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-accent/10">
+              <Folder className="h-4 w-4 text-accent" />
+            </div>
+            <h2 className="text-lg font-semibold text-text-primary font-display tracking-tight">
+              {td("title")}
+            </h2>
+            {documents && documents.length > 0 && (
+              <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
+                {documents.length}
+              </span>
+            )}
           </div>
-          <h2 className="text-lg font-semibold text-text-primary font-display tracking-tight">
-            {td("title")}
-          </h2>
-          {documents && documents.length > 0 && (
-            <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
-              {documents.length}
-            </span>
+          {tenantId && (
+            <Link
+              href={`/${locale}/documents/upload?entityType=tenant&entityId=${tenantId}`}
+              className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent/10 text-accent text-xs font-semibold rounded-lg hover:bg-accent/20 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {td("uploadDocument")}
+            </Link>
           )}
         </div>
 
@@ -848,25 +859,43 @@ export default async function UnitDetailPage({
         ) : (
           <div className="bg-surface border border-border rounded-xl p-10 text-center">
             <Folder className="h-8 w-8 text-text-secondary/30 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">{tt("noDocuments")}</p>
+            <p className="text-sm text-text-secondary mb-3">{tt("noDocuments")}</p>
+            {tenantId && (
+              <Link
+                href={`/${locale}/documents/upload?entityType=tenant&entityId=${tenantId}`}
+                className="inline-flex items-center gap-1.5 h-8 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {td("uploadDocument")}
+              </Link>
+            )}
           </div>
         )}
       </section>
 
       {/* Maintenance */}
       <section>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-1.5 rounded-lg bg-destructive/10">
-            <Wrench className="h-4 w-4 text-destructive" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-destructive/10">
+              <Wrench className="h-4 w-4 text-destructive" />
+            </div>
+            <h2 className="text-lg font-semibold text-text-primary font-display tracking-tight">
+              {tt("maintenance")}
+            </h2>
+            {maintenance && maintenance.length > 0 && (
+              <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
+                {maintenance.length}
+              </span>
+            )}
           </div>
-          <h2 className="text-lg font-semibold text-text-primary font-display tracking-tight">
-            {tt("maintenance")}
-          </h2>
-          {maintenance && maintenance.length > 0 && (
-            <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
-              {maintenance.length}
-            </span>
-          )}
+          <Link
+            href={`/${locale}/maintenance/new?unitId=${unitId}&propertyId=${propertyId}`}
+            className="inline-flex items-center gap-1.5 h-8 px-3 bg-destructive/10 text-destructive text-xs font-semibold rounded-lg hover:bg-destructive/20 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {tt("newRequest") || "New Request"}
+          </Link>
         </div>
 
         {maintenance && maintenance.length > 0 ? (
@@ -899,22 +928,22 @@ export default async function UnitDetailPage({
                   return (
                     <tr
                       key={req.id as string}
-                      className="hover:bg-surface-elevated/30 transition-colors"
+                      className="hover:bg-surface-elevated/30 transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-3.5">
-                        <span className="text-sm text-text-primary font-mono tabular-nums">
+                        <Link href={`/${locale}/maintenance/${req.id}`} className="text-sm text-text-primary font-mono tabular-nums hover:text-accent transition-colors">
                           {new Date(
                             req.created_at as string
                           ).toLocaleDateString()}
-                        </span>
+                        </Link>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="text-sm font-medium text-text-primary">
+                        <Link href={`/${locale}/maintenance/${req.id}`} className="text-sm font-medium text-text-primary hover:text-accent transition-colors">
                           {(req.description as string)?.slice(0, 60) || "—"}
                           {(req.description as string)?.length > 60
                             ? "..."
                             : ""}
-                        </span>
+                        </Link>
                       </td>
                       <td className="px-5 py-3.5">
                         <span
@@ -958,9 +987,16 @@ export default async function UnitDetailPage({
         ) : (
           <div className="bg-surface border border-border rounded-xl p-10 text-center">
             <Wrench className="h-8 w-8 text-text-secondary/30 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-text-secondary mb-3">
               {tt("noMaintenance")}
             </p>
+            <Link
+              href={`/${locale}/maintenance/new?unitId=${unitId}&propertyId=${propertyId}`}
+              className="inline-flex items-center gap-1.5 h-8 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {tt("newRequest") || "New Request"}
+            </Link>
           </div>
         )}
       </section>
