@@ -32,6 +32,7 @@ import {
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
 import { AddChequeDialog } from "@/components/cheques/add-cheque-dialog";
+import { ChequeActions } from "@/components/cheques/cheque-actions";
 
 export default async function UnitDetailPage({
   params,
@@ -667,6 +668,7 @@ export default async function UnitDetailPage({
                   <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3">
                     {tch("status")}
                   </th>
+                  <th className="w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -723,6 +725,9 @@ export default async function UnitDetailPage({
                         ) : null}
                         {cheque.status as string}
                       </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <ChequeActions chequeId={cheque.id as string} currentStatus={cheque.status as string} />
                     </td>
                   </tr>
                 ))}
