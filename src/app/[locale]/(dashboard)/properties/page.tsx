@@ -108,7 +108,7 @@ export default async function PropertiesPage({
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-fade-in-up">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary font-display tracking-tight">
             {t("title")}
@@ -197,7 +197,7 @@ export default async function PropertiesPage({
       {/* Properties Grid */}
       {properties && properties.length > 0 ? (
         <>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
           {properties.map((property: Record<string, unknown>) => {
             const units = (property.units as Record<string, unknown>[]) || [];
             const propOccupied = units.filter((u) => u.status === "occupied").length;

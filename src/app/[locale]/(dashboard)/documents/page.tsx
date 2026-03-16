@@ -62,7 +62,7 @@ export default async function DocumentsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-fade-in-up">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary font-display">
             {t("title")}
@@ -73,7 +73,7 @@ export default async function DocumentsPage({
         </div>
         <Link
           href={`/${locale}/documents/upload`}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
+          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
         >
           <Upload className="h-4 w-4" />
           {t("upload")}
@@ -81,7 +81,7 @@ export default async function DocumentsPage({
       </div>
 
       {documents && documents.length > 0 ? (
-        <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+        <div className="bg-surface border border-border rounded-lg overflow-x-auto animate-fade-in">
           <table className="w-full min-w-[600px] mobile-card-view">
             <thead>
               <tr className="border-b border-border">
@@ -181,8 +181,10 @@ export default async function DocumentsPage({
           />
         </div>
       ) : (
-        <div className="bg-surface border border-border rounded-lg p-12 text-center">
-          <FolderOpen className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
+        <div className="bg-surface border border-border rounded-xl p-16 text-center">
+          <div className="p-3 bg-accent/10 rounded-2xl w-fit mx-auto mb-3">
+            <FolderOpen className="h-8 w-8 text-accent/50" />
+          </div>
           <h3 className="text-base font-medium text-text-primary mb-1 font-display">
             {t("noDocuments")}
           </h3>
@@ -191,7 +193,7 @@ export default async function DocumentsPage({
           </p>
           <Link
             href={`/${locale}/documents/upload`}
-            className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
+            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
           >
             <Upload className="h-4 w-4" />
             {t("upload")}

@@ -102,7 +102,7 @@ export default async function ExpensesPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between animate-fade-in-up">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-display tracking-tight">
             {t("title")}
@@ -111,7 +111,7 @@ export default async function ExpensesPage({
         </div>
         <Link
           href={`/${locale}/expenses/new`}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-accent text-background text-sm font-medium hover:bg-accent/90 transition-colors"
+          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
           {t("addExpense")}
@@ -150,7 +150,7 @@ export default async function ExpensesPage({
 
       {/* Table */}
       {allExpenses.length > 0 ? (
-        <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-border/60 rounded-xl overflow-hidden animate-fade-in">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead>
@@ -283,7 +283,7 @@ export default async function ExpensesPage({
           </p>
           <Link
             href={`/${locale}/expenses/new`}
-            className="inline-flex items-center gap-2 mt-4 h-10 px-4 rounded-lg bg-accent text-background text-sm font-medium hover:bg-accent/90 transition-colors"
+            className="inline-flex items-center gap-2 mt-4 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
             {t("addExpense")}

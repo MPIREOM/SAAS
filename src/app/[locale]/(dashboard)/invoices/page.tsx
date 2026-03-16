@@ -182,7 +182,7 @@ export default async function InvoicesPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between animate-fade-in-up">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-display tracking-tight">
             {t("title")}
@@ -192,9 +192,9 @@ export default async function InvoicesPage({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-children">
         {/* Total */}
-        <div className="group relative bg-surface border border-border/60 rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-accent/30">
+        <div className="group relative bg-surface border border-border rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-accent/30">
           <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
@@ -218,7 +218,7 @@ export default async function InvoicesPage({
         </div>
 
         {/* Collected */}
-        <div className="group relative bg-surface border border-border/60 rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-success/30">
+        <div className="group relative bg-surface border border-border rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-success/30">
           <div className="absolute inset-0 bg-gradient-to-br from-success/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
@@ -246,7 +246,7 @@ export default async function InvoicesPage({
         </div>
 
         {/* Pending */}
-        <div className="group relative bg-surface border border-border/60 rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-warning/30">
+        <div className="group relative bg-surface border border-border rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-warning/30">
           <div className="absolute inset-0 bg-gradient-to-br from-warning/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
@@ -270,7 +270,7 @@ export default async function InvoicesPage({
         </div>
 
         {/* Overdue */}
-        <div className="group relative bg-surface border border-border/60 rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-destructive/30">
+        <div className="group relative bg-surface border border-border rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-destructive/30">
           <div className="absolute inset-0 bg-gradient-to-br from-destructive/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
@@ -338,7 +338,7 @@ export default async function InvoicesPage({
 
       {/* Table */}
       {allInvoices.length > 0 ? (
-        <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-border rounded-xl overflow-hidden animate-fade-in">
           {/* Collection progress bar */}
           <div className="px-5 pt-4 pb-3">
             <div className="flex items-center justify-between mb-2">
@@ -364,7 +364,7 @@ export default async function InvoicesPage({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead>
-                <tr className="border-t border-b border-border/40">
+                <tr className="border-t border-b border-border">
                   <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
                     {t("dueDate")}
                   </th>
@@ -516,7 +516,7 @@ export default async function InvoicesPage({
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-border/40 flex items-center justify-between">
+          <div className="px-5 py-3 border-t border-border flex items-center justify-between">
             <span className="text-xs text-text-secondary">
               {allInvoices.length} {t("title").toLowerCase()}
             </span>
@@ -538,7 +538,7 @@ export default async function InvoicesPage({
           />
         </div>
       ) : (
-        <div className="bg-surface border border-border/60 rounded-xl p-16 text-center">
+        <div className="bg-surface border border-border rounded-xl p-16 text-center">
           <div className="mx-auto w-14 h-14 rounded-xl bg-surface-elevated flex items-center justify-center mb-4">
             <FileText className="h-7 w-7 text-text-secondary/40" />
           </div>

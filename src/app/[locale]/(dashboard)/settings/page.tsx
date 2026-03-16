@@ -41,8 +41,8 @@ export default async function SettingsPage({
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      <div>
+    <div className="space-y-8 max-w-4xl stagger-children">
+      <div className="animate-fade-in-up">
         <h1 className="text-2xl font-semibold text-text-primary font-display">
           {t("title")}
         </h1>

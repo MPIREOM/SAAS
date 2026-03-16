@@ -22,7 +22,7 @@ export function TenantsHeader({ locale }: { locale: string }) {
         </button>
         <Link
           href={`/${locale}/tenants/new`}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
+          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
           {t("createTenant")}

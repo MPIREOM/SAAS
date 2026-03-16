@@ -56,7 +56,7 @@ export default async function RemindersPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-fade-in-up">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary font-display">
             {t("title")}
@@ -78,7 +78,7 @@ export default async function RemindersPage({
         </div>
 
         {reminders && reminders.length > 0 ? (
-          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+          <div className="bg-surface border border-border rounded-lg overflow-x-auto animate-fade-in">
             <table className="w-full min-w-[650px]">
               <thead>
                 <tr className="border-b border-border">
@@ -178,7 +178,7 @@ export default async function RemindersPage({
           </h2>
           <Link
             href={`/${locale}/reminders/templates/new`}
-            className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
+            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
             {t("newTemplate")}
@@ -224,7 +224,7 @@ export default async function RemindersPage({
             </p>
             <Link
               href={`/${locale}/reminders/templates/new`}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
+              className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
             >
               <Plus className="h-4 w-4" />
               {t("newTemplate")}

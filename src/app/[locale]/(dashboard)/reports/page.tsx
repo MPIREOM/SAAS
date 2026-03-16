@@ -358,7 +358,7 @@ export default async function ReportsPage({
           return (
             <div
               key={card.label}
-              className="group relative bg-surface border border-border/40 rounded-xl p-5 overflow-hidden"
+              className="group relative bg-surface border border-border rounded-xl p-5 overflow-hidden"
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-60`} />
               <div className="relative">
@@ -380,7 +380,7 @@ export default async function ReportsPage({
       </div>
 
       {/* Monthly Collection Trend */}
-      <div className="bg-surface border border-border/40 rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
             {t("collectionTrend")}
@@ -391,7 +391,7 @@ export default async function ReportsPage({
       </div>
 
       {/* Property Performance Table */}
-      <div className="bg-surface border border-border/40 rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "300ms" }}>
+      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "300ms" }}>
         <h3 className="text-base font-display font-semibold text-text-primary tracking-tight mb-5">
           {t("propertyPerformance")}
         </h3>
@@ -406,7 +406,7 @@ export default async function ReportsPage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/40">
+                <tr className="border-b border-border">
                   <th className="text-left text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 pe-4">
                     {t("propertyName")}
                   </th>
@@ -483,7 +483,7 @@ export default async function ReportsPage({
       </div>
 
       {/* Export Reports */}
-      <div className="bg-surface border border-border/40 rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "400ms" }}>
+      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "400ms" }}>
         <h3 className="text-base font-display font-semibold text-text-primary tracking-tight mb-5">
           {t("exportReports")}
         </h3>

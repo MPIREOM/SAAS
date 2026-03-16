@@ -362,7 +362,7 @@ export default async function DashboardPage({
             <Link
               key={card.label}
               href={card.href}
-              className="group relative bg-surface border border-border/40 rounded-xl p-5 hover:border-accent/30 transition-all duration-300 overflow-hidden"
+              className="group relative bg-surface border border-border rounded-xl p-5 hover:border-accent/30 transition-all duration-300 overflow-hidden"
             >
               {/* Gradient background */}
               <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
@@ -386,7 +386,7 @@ export default async function DashboardPage({
       </div>
 
       {/* Rent Collection Chart */}
-      <div className="bg-surface border border-border/40 rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
             {t("rentCollection")}
@@ -399,7 +399,7 @@ export default async function DashboardPage({
       {/* Bottom grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
         {/* Recent Invoices */}
-        <div className="bg-surface border border-border/40 rounded-xl p-6">
+        <div className="bg-surface border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
               {t("recentInvoices")}
@@ -457,7 +457,7 @@ export default async function DashboardPage({
         </div>
 
         {/* Overdue Payments */}
-        <div className="bg-surface border border-border/40 rounded-xl p-6">
+        <div className="bg-surface border border-border rounded-xl p-6">
           <div className="flex items-center gap-3 mb-5">
             <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
               {t("overdueInvoices")}
@@ -505,7 +505,7 @@ export default async function DashboardPage({
         </div>
 
         {/* Upcoming Lease Expirations */}
-        <div className="bg-surface border border-border/40 rounded-xl p-6">
+        <div className="bg-surface border border-border rounded-xl p-6">
           <h3 className="text-base font-display font-semibold text-text-primary mb-5 tracking-tight">
             {t("upcomingLeaseExpirations")}
           </h3>

@@ -1,6 +1,6 @@
 export default function ExpensesLoading() {
   return (
-    <div className="space-y-6 animate-pulse">
+    <div className="space-y-6 animate-fade-in">
       {/* Header skeleton */}
       <div className="flex items-start justify-between">
         <div>
