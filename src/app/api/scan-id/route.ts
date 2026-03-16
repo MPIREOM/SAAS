@@ -107,8 +107,6 @@ Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "nat
       national_id: parsed.national_id || null,
     });
   } catch (error: unknown) {
-    console.error("ID scan error:", error);
-
     if (error instanceof SyntaxError) {
       return NextResponse.json(
         { error: "Failed to parse AI response. Please try again." },

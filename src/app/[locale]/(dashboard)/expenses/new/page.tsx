@@ -50,8 +50,8 @@ export default function NewExpensePage({
         ]);
         if (propsRes.data) setProperties(propsRes.data as PropertyOption[]);
         if (unitsRes.data) setAllUnits(unitsRes.data as UnitOption[]);
-      } catch (err) {
-        console.error("Failed to load form options:", err);
+      } catch {
+        // Options load failure is non-critical; form will show empty selects
       } finally {
         setOptionsLoading(false);
       }
@@ -116,7 +116,6 @@ export default function NewExpensePage({
         .single();
 
       if (insertError) {
-        console.error("Expense insert error:", insertError);
         setError(insertError.message);
         setLoading(false);
         return;
@@ -135,7 +134,6 @@ export default function NewExpensePage({
       router.push(`/${locale}/expenses`);
       router.refresh();
     } catch (err) {
-      console.error("Unexpected error creating expense:", err);
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred."
       );

@@ -146,9 +146,8 @@ export async function GET(request: NextRequest) {
             });
             results.leaseExpiry++;
           }
-        } catch (err) {
+        } catch {
           results.errors++;
-          console.error(`Reminder error for lease ${lease.id}:`, err);
         }
       }
     }
@@ -181,15 +180,13 @@ export async function GET(request: NextRequest) {
             chequeNumber: cheque.cheque_number as string,
           });
           results.chequeDue++;
-        } catch (err) {
+        } catch {
           results.errors++;
-          console.error(`Reminder error for cheque ${cheque.id}:`, err);
         }
       }
     }
-  } catch (error) {
+  } catch {
     results.errors++;
-    console.error("Cron reminder fatal error:", error);
   }
 
   return NextResponse.json({
@@ -336,19 +333,19 @@ function getDefaultEmailSubject(type: string, lang: string): string {
   const subjects: Record<string, Record<string, string>> = {
     rent_upcoming: {
       en: "Rent Payment Reminder - MPIRE",
-      ar: "تذكير بدفع الإيجار - MPIRE",
+      ar: "\u062A\u0630\u0643\u064A\u0631 \u0628\u062F\u0641\u0639 \u0627\u0644\u0625\u064A\u062C\u0627\u0631 - MPIRE",
     },
     rent_overdue: {
       en: "Overdue Rent Notice - MPIRE",
-      ar: "إشعار تأخر الإيجار - MPIRE",
+      ar: "\u0625\u0634\u0639\u0627\u0631 \u062A\u0623\u062E\u0631 \u0627\u0644\u0625\u064A\u062C\u0627\u0631 - MPIRE",
     },
     cheque_due: {
       en: "Cheque Due Reminder - MPIRE",
-      ar: "تذكير باستحقاق الشيك - MPIRE",
+      ar: "\u062A\u0630\u0643\u064A\u0631 \u0628\u0627\u0633\u062A\u062D\u0642\u0627\u0642 \u0627\u0644\u0634\u064A\u0643 - MPIRE",
     },
     lease_expiry: {
       en: "Lease Expiry Notice - MPIRE",
-      ar: "إشعار انتهاء عقد الإيجار - MPIRE",
+      ar: "\u0625\u0634\u0639\u0627\u0631 \u0627\u0646\u062A\u0647\u0627\u0621 \u0639\u0642\u062F \u0627\u0644\u0625\u064A\u062C\u0627\u0631 - MPIRE",
     },
   };
   return subjects[type]?.[lang] || subjects[type]?.en || "MPIRE Notification";
@@ -358,13 +355,13 @@ function getDefaultEmailBody(params: ReminderParams, lang: string): string {
   if (lang === "ar") {
     switch (params.reminderType) {
       case "rent_upcoming":
-        return `عزيزي/عزيزتي ${params.tenantName}،<br><br>هذا تذكير بأن إيجار الوحدة ${params.unitNumber} في ${params.propertyName} بمبلغ ${params.amount} ر.ع. يستحق في ${params.dueDate}.<br><br>يرجى التأكد من الدفع في الموعد المحدد.`;
+        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0647\u0630\u0627 \u062A\u0630\u0643\u064A\u0631 \u0628\u0623\u0646 \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u064A\u0633\u062A\u062D\u0642 \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u062F\u0641\u0639 \u0641\u064A \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u0645\u062D\u062F\u062F.`;
       case "rent_overdue":
-        return `عزيزي/عزيزتي ${params.tenantName}،<br><br>نود إبلاغكم بأن إيجار الوحدة ${params.unitNumber} في ${params.propertyName} بمبلغ ${params.amount} ر.ع. متأخر. كان تاريخ الاستحقاق ${params.dueDate}.<br><br>يرجى تسوية المبلغ في أقرب وقت ممكن.`;
+        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0646\u0648\u062F \u0625\u0628\u0644\u0627\u063A\u0643\u0645 \u0628\u0623\u0646 \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u0645\u062A\u0623\u062E\u0631. \u0643\u0627\u0646 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642 ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u062A\u0633\u0648\u064A\u0629 \u0627\u0644\u0645\u0628\u0644\u063A \u0641\u064A \u0623\u0642\u0631\u0628 \u0648\u0642\u062A \u0645\u0645\u0643\u0646.`;
       case "cheque_due":
-        return `عزيزي/عزيزتي ${params.tenantName}،<br><br>هذا تذكير بأن الشيك رقم ${params.chequeNumber || ""} بمبلغ ${params.amount} ر.ع. يستحق في ${params.dueDate}.<br><br>يرجى التأكد من توفر الرصيد الكافي.`;
+        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0647\u0630\u0627 \u062A\u0630\u0643\u064A\u0631 \u0628\u0623\u0646 \u0627\u0644\u0634\u064A\u0643 \u0631\u0642\u0645 ${params.chequeNumber || ""} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u064A\u0633\u062A\u062D\u0642 \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0648\u0641\u0631 \u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0643\u0627\u0641\u064A.`;
       case "lease_expiry":
-        return `عزيزي/عزيزتي ${params.tenantName}،<br><br>نود إبلاغكم بأن عقد إيجار الوحدة ${params.unitNumber} في ${params.propertyName} ينتهي في ${params.dueDate}.<br><br>يرجى التواصل معنا لمناقشة تجديد العقد.`;
+        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0646\u0648\u062F \u0625\u0628\u0644\u0627\u063A\u0643\u0645 \u0628\u0623\u0646 \u0639\u0642\u062F \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u064A\u0646\u062A\u0647\u064A \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627 \u0644\u0645\u0646\u0627\u0642\u0634\u0629 \u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0639\u0642\u062F.`;
       default:
         return "";
     }

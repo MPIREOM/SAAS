@@ -76,7 +76,7 @@ function normalizePhone(phone: string): string {
 function normalizeLanguage(lang: string | undefined): "en" | "ar" {
   if (!lang) return "en";
   const l = lang.toString().trim().toLowerCase();
-  if (l === "ar" || l === "arabic" || l === "عربي" || l === "عربية") return "ar";
+  if (l === "ar" || l === "arabic" || l === "\u0639\u0631\u0628\u064A" || l === "\u0639\u0631\u0628\u064A\u0629") return "ar";
   return "en";
 }
 
@@ -240,7 +240,6 @@ export async function POST(request: NextRequest) {
       tenants: inserted,
     });
   } catch (error) {
-    console.error("Import error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to process file" },
       { status: 500 }

@@ -342,8 +342,7 @@ export async function GET() {
       chequeSummary,
       documentExpiry,
     });
-  } catch (err) {
-    console.error("Analytics error:", err);
+  } catch {
     return NextResponse.json(
       { error: "Failed to generate analytics" },
       { status: 500 }

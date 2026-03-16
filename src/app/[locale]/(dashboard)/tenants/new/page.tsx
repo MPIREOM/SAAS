@@ -254,7 +254,7 @@ export default function NewTenantPage({
         (c) => c.cheque_number && c.bank_name && c.cheque_date && c.amount
       );
       if (validCheques.length > 0) {
-        await supabase.from("cheques").insert(
+        const { error: chequesError } = await supabase.from("cheques").insert(
           validCheques.map((c) => ({
             tenant_id: tenant.id,
             cheque_number: c.cheque_number,
@@ -264,6 +264,11 @@ export default function NewTenantPage({
             status: "pending" as const,
           }))
         );
+        if (chequesError) {
+          setError(chequesError.message);
+          setLoading(false);
+          return;
+        }
       }
 
       // Navigate back to the unit page

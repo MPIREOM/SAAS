@@ -163,8 +163,7 @@ export async function GET(
       default:
         return NextResponse.json({ error: "Unknown report" }, { status: 404 });
     }
-  } catch (err) {
-    console.error("Report generation error:", err);
+  } catch {
     return NextResponse.json({ error: "Failed to generate report" }, { status: 500 });
   }
 

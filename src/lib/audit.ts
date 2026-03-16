@@ -34,7 +34,7 @@ interface AuditLogEntry {
 }
 
 /**
- * Log an audit event. Fire-and-forget — errors are logged but don't block the caller.
+ * Log an audit event. Fire-and-forget — errors are silently ignored.
  */
 export async function logAudit(
   supabase: SupabaseClient,
@@ -52,7 +52,7 @@ export async function logAudit(
       entity_id: entry.entity_id ?? null,
       metadata: entry.metadata ?? {},
     });
-  } catch (err) {
-    console.error("Audit log error:", err);
+  } catch {
+    // Silent failure — audit logging is fire-and-forget
   }
 }

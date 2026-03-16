@@ -103,17 +103,22 @@ export async function POST(request: NextRequest) {
   }
 
   // Insert attachments
+  let attachmentWarning: string | null = null;
   if (attachments.length > 0) {
-    await supabase.from("maintenance_attachments").insert(
+    const { error: attachError } = await supabase.from("maintenance_attachments").insert(
       attachments.map((a) => ({
         request_id: maintenanceRequest.id,
         ...a,
       }))
     );
+    if (attachError) {
+      attachmentWarning = "Request created but some attachments failed to save";
+    }
   }
 
   return NextResponse.json({
     success: true,
     request_id: maintenanceRequest.id,
+    ...(attachmentWarning && { warning: attachmentWarning }),
   });
 }

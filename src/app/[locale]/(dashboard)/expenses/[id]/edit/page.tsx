@@ -79,8 +79,7 @@ export default function EditExpensePage({
         if (expenseRes.error) {
           setError("Expense not found.");
         }
-      } catch (err) {
-        console.error("Failed to load expense:", err);
+      } catch {
         setError("Failed to load expense data.");
       } finally {
         setOptionsLoading(false);
@@ -133,7 +132,6 @@ export default function EditExpensePage({
         .eq("id", expenseId);
 
       if (updateError) {
-        console.error("Expense update error:", updateError);
         setError(updateError.message);
         setLoading(false);
         return;
@@ -148,7 +146,6 @@ export default function EditExpensePage({
       router.push(`/${locale}/expenses`);
       router.refresh();
     } catch (err) {
-      console.error("Unexpected error updating expense:", err);
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred."
       );
@@ -170,7 +167,6 @@ export default function EditExpensePage({
         .eq("id", expenseId);
 
       if (deleteError) {
-        console.error("Expense delete error:", deleteError);
         setError(deleteError.message);
         setDeleting(false);
         return;
@@ -185,7 +181,6 @@ export default function EditExpensePage({
       router.push(`/${locale}/expenses`);
       router.refresh();
     } catch (err) {
-      console.error("Unexpected error deleting expense:", err);
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred."
       );

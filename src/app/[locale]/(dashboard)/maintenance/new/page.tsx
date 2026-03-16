@@ -57,8 +57,8 @@ export default function NewMaintenanceRequestPage({
 
         if (unitsRes.data) setUnits(unitsRes.data as unknown as UnitOption[]);
         if (tenantsRes.data) setTenants(tenantsRes.data as unknown as TenantOption[]);
-      } catch (err) {
-        console.error("Failed to load form options:", err);
+      } catch {
+        // Options load failure is non-critical; form will show empty selects
       } finally {
         setOptionsLoading(false);
       }
@@ -120,7 +120,6 @@ export default function NewMaintenanceRequestPage({
         .insert(payload);
 
       if (insertError) {
-        console.error("Maintenance insert error:", insertError);
         setError(insertError.message);
         setLoading(false);
         return;
@@ -129,7 +128,6 @@ export default function NewMaintenanceRequestPage({
       router.push(`/${locale}/maintenance`);
       router.refresh();
     } catch (err) {
-      console.error("Unexpected error creating maintenance request:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
       setLoading(false);
     }
