@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
+import { AddChequeDialog } from "@/components/cheques/add-cheque-dialog";
 
 export default async function UnitDetailPage({
   params,
@@ -629,18 +630,21 @@ export default async function UnitDetailPage({
       {/* Cheques */}
 
       <section>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-1.5 rounded-lg bg-warning/10">
-            <FileText className="h-4 w-4 text-warning" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-warning/10">
+              <FileText className="h-4 w-4 text-warning" />
+            </div>
+            <h2 className="text-lg font-semibold text-text-primary font-display tracking-tight">
+              {tch("title")}
+            </h2>
+            {cheques && cheques.length > 0 && (
+              <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
+                {cheques.length}
+              </span>
+            )}
           </div>
-          <h2 className="text-lg font-semibold text-text-primary font-display tracking-tight">
-            {tch("title")}
-          </h2>
-          {cheques && cheques.length > 0 && (
-            <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
-              {cheques.length}
-            </span>
-          )}
+          {tenantId && <AddChequeDialog tenantId={tenantId} />}
         </div>
 
         {cheques && cheques.length > 0 ? (
@@ -728,7 +732,8 @@ export default async function UnitDetailPage({
         ) : (
           <div className="bg-surface border border-border rounded-xl p-10 text-center">
             <FileText className="h-8 w-8 text-text-secondary/30 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">{tch("noCheques")}</p>
+            <p className="text-sm text-text-secondary mb-3">{tch("noCheques")}</p>
+            {tenantId && <AddChequeDialog tenantId={tenantId} />}
           </div>
         )}
       </section>
