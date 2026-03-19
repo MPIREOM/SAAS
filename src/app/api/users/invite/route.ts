@@ -78,7 +78,11 @@ export async function POST(request: NextRequest) {
 
   if (insertError) {
     // Rollback: delete the auth user to avoid orphan state
-    await adminClient.auth.admin.deleteUser(authData.user.id);
+    try {
+      await adminClient.auth.admin.deleteUser(authData.user.id);
+    } catch (rollbackError) {
+      console.error("Failed to rollback auth user:", authData.user.id, rollbackError);
+    }
     return NextResponse.json({ error: insertError.message }, { status: 400 });
   }
 

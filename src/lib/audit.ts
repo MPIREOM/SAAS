@@ -52,7 +52,7 @@ export async function logAudit(
       entity_id: entry.entity_id ?? null,
       metadata: entry.metadata ?? {},
     });
-  } catch {
-    // Silent failure — audit logging is fire-and-forget
+  } catch (error) {
+    console.warn("Audit log failed:", error instanceof Error ? error.message : error);
   }
 }

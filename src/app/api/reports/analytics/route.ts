@@ -78,7 +78,7 @@ export async function GET() {
       // Active leases for monthly revenue
       supabase
         .from("leases")
-        .select("unit_id, monthly_rent, units!inner(property_id)")
+        .select("unit_id, tenant_id, monthly_rent, units!inner(property_id)")
         .eq("is_active", true),
 
       // Invoices paid this month (per-property collection)
@@ -124,6 +124,7 @@ export async function GET() {
     };
     type LeaseRow = WithPropertyUnit & {
       unit_id: string;
+      tenant_id: string;
       monthly_rent: string;
     };
     type PaidInvoiceRow = WithPropertyUnit & {
@@ -170,7 +171,21 @@ export async function GET() {
     const allMaintenanceResolved = filterByProperty(
       (maintenanceResolvedRes.data as unknown as MaintenanceResolvedRow[]) || []
     );
-    const allCheques = (chequesRes.data as unknown as ChequeRow[]) || [];
+    // Build accessible tenant set from leases for filtering cheques
+    const accessibleTenantIds = propertyIds !== null
+      ? new Set(((leasesRes.data as unknown as LeaseRow[]) || [])
+          .filter((l) => propertyIds.includes(l.units.property_id))
+          .map((l) => l.tenant_id)
+        )
+      : null;
+
+    const allCheques = ((chequesRes.data as unknown as ChequeRow[]) || []).filter(
+      (c) => {
+        if (propertyIds === null) return true;
+        if (accessibleTenantIds !== null) return accessibleTenantIds.has(c.tenant_id);
+        return true;
+      }
+    );
     const allDocuments = ((documentsRes.data as unknown as DocumentRow[]) || []).filter(
       (d) => {
         if (propertyIds === null) return true;

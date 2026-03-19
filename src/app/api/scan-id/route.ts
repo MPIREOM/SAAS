@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logAudit } from "@/lib/audit";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const client = new Anthropic();
@@ -100,6 +101,12 @@ Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "nat
     } catch {
       return NextResponse.json({ error: "Failed to parse AI response" }, { status: 500 });
     }
+
+    logAudit(supabase, {
+      action: "create",
+      entity_type: "document",
+      metadata: { scan_type: "id_document" },
+    });
 
     return NextResponse.json({
       full_name: parsed.full_name || null,
