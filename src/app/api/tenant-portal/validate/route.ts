@@ -63,12 +63,36 @@ export async function POST(request: NextRequest) {
         .order("cheque_date", { ascending: false }),
     ]);
 
+  // Generate signed URLs for document downloads
+  const docs = (documentsRes.data || []) as Array<Record<string, unknown>>;
+  if (docs.length > 0) {
+    const storagePaths = docs
+      .filter((d) => d.file_url && !(d.file_url as string).startsWith("http"))
+      .map((d) => d.file_url as string);
+
+    if (storagePaths.length > 0) {
+      const { data: signedData } = await supabase.storage
+        .from("documents")
+        .createSignedUrls(storagePaths, 3600);
+
+      if (signedData) {
+        const urlMap = new Map(signedData.map((s) => [s.path, s.signedUrl]));
+        for (const doc of docs) {
+          const url = doc.file_url as string;
+          if (url && !url.startsWith("http") && urlMap.has(url)) {
+            doc.file_url = urlMap.get(url)!;
+          }
+        }
+      }
+    }
+  }
+
   return NextResponse.json({
     tenant: tenantRes.data,
     leases: leasesRes.data || [],
     invoices: invoicesRes.data || [],
     payments: paymentsRes.data || [],
-    documents: documentsRes.data || [],
+    documents: docs,
     cheques: chequesRes.data || [],
   });
 }

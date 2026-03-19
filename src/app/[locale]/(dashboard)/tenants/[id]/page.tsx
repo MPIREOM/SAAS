@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCY } from "@/lib/currency";
+import { getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { ShareLinkButton } from "@/components/maintenance/share-link-button";
@@ -103,6 +104,11 @@ export default async function TenantDetailPage({
   const maintenance = maintenanceRes.data;
   const documents = documentsRes.data;
   const cheques = chequesRes.data;
+
+  // Generate signed URLs for document downloads
+  const docUrlMap = documents && documents.length > 0
+    ? await getDocumentUrls(supabase, documents as Array<{ file_url: string }>)
+    : new Map<string, string>();
 
   const now = new Date();
   const thirtyDaysFromNow = new Date(
@@ -740,9 +746,9 @@ export default async function TenantDetailPage({
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        {Boolean(doc.file_url) ? (
+                        {Boolean(doc.file_url) && docUrlMap.get(doc.file_url as string) ? (
                           <a
-                            href={doc.file_url as string}
+                            href={docUrlMap.get(doc.file_url as string)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 rounded-lg text-accent hover:bg-accent/10 transition-colors inline-flex"

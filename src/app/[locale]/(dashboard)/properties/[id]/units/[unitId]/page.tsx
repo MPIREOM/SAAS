@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCY } from "@/lib/currency";
+import { getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
@@ -121,6 +122,11 @@ export default async function UnitDetailPage({
   const documents = documentsRes.data;
   const maintenance = maintenanceRes.data;
   const pastLeases = pastLeasesRes.data;
+
+  // Generate signed URLs for document downloads
+  const docUrlMap = documents && documents.length > 0
+    ? await getDocumentUrls(supabase, documents as Array<{ file_url: string }>)
+    : new Map<string, string>();
 
   const property = unit.properties as Record<string, unknown> | null;
   const now = new Date();
@@ -849,9 +855,9 @@ export default async function UnitDetailPage({
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
-                        {Boolean(doc.file_url) ? (
+                        {Boolean(doc.file_url) && docUrlMap.get(doc.file_url as string) ? (
                           <a
-                            href={doc.file_url as string}
+                            href={docUrlMap.get(doc.file_url as string)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 rounded-lg text-accent hover:bg-accent/10 transition-colors inline-flex"

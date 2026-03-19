@@ -1,27 +1,30 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Upload, X, FileText } from "lucide-react";
 
-export default function UploadDocumentPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default function UploadDocumentPage() {
   const t = useTranslations("documents");
   const tc = useTranslations("common");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [entityType, setEntityType] = useState<"tenant" | "property">("tenant");
+  const [entityType, setEntityType] = useState<"tenant" | "property">(
+    (searchParams.get("entityType") as "tenant" | "property") || "tenant"
+  );
+  const [entityId, setEntityId] = useState(searchParams.get("entityId") || "");
   const [tenants, setTenants] = useState<{ id: string; full_name: string }[]>([]);
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Pre-filled from URL params (e.g., from unit detail page)
+  const prefilled = Boolean(searchParams.get("entityId"));
 
   useEffect(() => {
     const load = async () => {
@@ -72,6 +75,14 @@ export default function UploadDocumentPage({
     setError("");
 
     const formData = new FormData(e.currentTarget);
+    const selectedEntityId = entityId || (formData.get("entity_id") as string);
+
+    if (!selectedEntityId) {
+      setError(tc("required"));
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -89,16 +100,12 @@ export default function UploadDocumentPage({
       return;
     }
 
-    const { data: urlData } = supabase.storage
-      .from("documents")
-      .getPublicUrl(filePath);
-
-    // Insert document record
+    // Insert document record — store the storage path for signed URL generation
     const { error: insertError } = await supabase.from("documents").insert({
       entity_type: entityType,
-      entity_id: formData.get("entity_id") as string,
+      entity_id: selectedEntityId,
       document_type: formData.get("document_type") as string,
-      file_url: urlData.publicUrl,
+      file_url: filePath,
       file_name: file.name,
       expiry_date: (formData.get("expiry_date") as string) || null,
       uploaded_by: user?.id,
@@ -110,8 +117,7 @@ export default function UploadDocumentPage({
       return;
     }
 
-    const { locale } = await params;
-    router.push(`/${locale}/documents`);
+    router.back();
     router.refresh();
   };
 
@@ -130,6 +136,11 @@ export default function UploadDocumentPage({
   const entities = entityType === "tenant"
     ? tenants.map((t) => ({ id: t.id, label: t.full_name }))
     : properties.map((p) => ({ id: p.id, label: p.name }));
+
+  // Find the display name for the pre-filled entity
+  const prefilledLabel = prefilled
+    ? entities.find((e) => e.id === entityId)?.label
+    : null;
 
   return (
     <div className="max-w-2xl">
@@ -209,40 +220,56 @@ export default function UploadDocumentPage({
             </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {prefilled ? (
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
-                {t("entityType")} <span className="text-destructive">*</span>
+                {entityType === "tenant" ? (tc("tenant") || "Tenant") : (tc("property") || "Property")}
               </label>
-              <select
-                value={entityType}
-                onChange={(e) => setEntityType(e.target.value as "tenant" | "property")}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="tenant">{tc("tenant") || "Tenant"}</option>
-                <option value="property">{tc("property") || "Property"}</option>
-              </select>
+              <div className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 flex items-center text-sm text-text-primary">
+                {prefilledLabel || entityId}
+              </div>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">
+                  {t("entityType")} <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={entityType}
+                  onChange={(e) => {
+                    setEntityType(e.target.value as "tenant" | "property");
+                    setEntityId("");
+                  }}
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                >
+                  <option value="tenant">{tc("tenant") || "Tenant"}</option>
+                  <option value="property">{tc("property") || "Property"}</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {entityType === "tenant" ? (tc("tenant") || "Tenant") : (tc("property") || "Property")}{" "}
-                <span className="text-destructive">*</span>
-              </label>
-              <select
-                name="entity_id"
-                required
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="">--</option>
-                {entities.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.label}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">
+                  {entityType === "tenant" ? (tc("tenant") || "Tenant") : (tc("property") || "Property")}{" "}
+                  <span className="text-destructive">*</span>
+                </label>
+                <select
+                  name="entity_id"
+                  required
+                  value={entityId}
+                  onChange={(e) => setEntityId(e.target.value)}
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                >
+                  <option value="">--</option>
+                  {entities.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm text-text-secondary mb-1.5">
