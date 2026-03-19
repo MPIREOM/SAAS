@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Receipt,
   Building2,
+  Printer,
 } from "lucide-react";
 import { InvoicesTabs } from "@/components/invoices/invoices-tabs";
 import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
@@ -496,16 +497,26 @@ export default async function InvoicesPage({
 
                         {/* Action */}
                         <td className="px-5 py-3.5 text-end">
-                          {!isPaid && (
-                            <MarkPaidButton
-                              invoiceId={invoice.id as string}
-                              amount={String(invoice.amount)}
-                              tenantName={
-                                (tenant?.full_name as string) || "—"
-                              }
-                              tenantId={invoice.tenant_id as string}
-                            />
-                          )}
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/api/invoices/${invoice.id}/pdf`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-accent text-xs rounded-md border border-border/50 hover:border-accent/30 transition-colors"
+                              title="View PDF"
+                            >
+                              <Printer className="h-3 w-3" />
+                            </Link>
+                            {!isPaid && (
+                              <MarkPaidButton
+                                invoiceId={invoice.id as string}
+                                amount={String(invoice.amount)}
+                                tenantName={
+                                  (tenant?.full_name as string) || "—"
+                                }
+                                tenantId={invoice.tenant_id as string}
+                              />
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

@@ -236,6 +236,16 @@
     "notes": "ملاحظات",
     "noNotes": "لا توجد ملاحظات",
     "noLeases": "لم يتم العثور على عقود",
+    "statement": "كشف حساب",
+    "statementDescription": "السجل المالي الكامل لهذا المستأجر",
+    "totalCharges": "إجمالي الرسوم",
+    "totalPayments": "إجمالي المدفوعات",
+    "outstandingBalance": "الرصيد المستحق",
+    "noTransactions": "لا توجد معاملات",
+    "charge": "رسوم",
+    "payment": "دفعة",
+    "balance": "الرصيد",
+    "renewLease": "تجديد العقد",
     "noMaintenance": "لا توجد طلبات صيانة",
     "fullNamePlaceholder": "أدخل الاسم الكامل",
     "nationalityPlaceholder": "أدخل الجنسية",
@@ -313,7 +323,9 @@
     "terminateLease": "إنهاء العقد",
     "noLeases": "لم يتم العثور على عقود",
     "leaseTerms": "شروط العقد",
-    "annualRent": "الإيجار السنوي"
+    "annualRent": "الإيجار السنوي",
+    "currentLease": "العقد الحالي",
+    "newLeaseTerms": "شروط العقد الجديد"
   },
   "invoices": {
     "title": "الفواتير",
@@ -598,7 +610,15 @@
     "selectAll": "تحديد الكل",
     "selectNone": "إلغاء التحديد",
     "assignProperties": "تعيين العقارات",
-    "propertiesSelected": "محدد"
+    "propertiesSelected": "محدد",
+    "changePassword": "تغيير كلمة المرور",
+    "newPassword": "كلمة المرور الجديدة",
+    "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
+    "updatePassword": "تحديث كلمة المرور",
+    "passwordUpdated": "تم تحديث كلمة المرور!",
+    "activityLog": "سجل النشاط",
+    "activityLogDescription": "الإجراءات الأخيرة في النظام",
+    "noActivityLogs": "لم يتم تسجيل أي نشاط بعد"
   },
   "dashboard": {
     "title": "لوحة القيادة",
@@ -697,6 +717,9 @@
     "confirmDeleteExpense": "هل أنت متأكد من حذف هذا المصروف؟",
     "expenseUpdated": "تم تحديث المصروف",
     "expenseDeleted": "تم حذف المصروف",
+    "receipt": "إيصال",
+    "uploadReceipt": "رفع إيصال",
+    "receiptUploaded": "تم إرفاق الإيصال",
     "categories": {
       "maintenance": "صيانة",
       "insurance": "تأمين",

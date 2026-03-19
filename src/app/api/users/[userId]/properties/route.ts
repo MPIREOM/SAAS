@@ -29,7 +29,7 @@ export async function GET(
   }
 
   const { data: assignments, error } = await supabase
-    .from("user_property_access")
+    .from("user_property_assignments")
     .select("property_id")
     .eq("user_id", userId);
 
@@ -95,7 +95,7 @@ export async function PUT(
 
   // Delete existing assignments and insert new ones
   const { error: deleteError } = await supabase
-    .from("user_property_access")
+    .from("user_property_assignments")
     .delete()
     .eq("user_id", userId);
 
@@ -111,7 +111,7 @@ export async function PUT(
     }));
 
     const { error: insertError } = await supabase
-      .from("user_property_access")
+      .from("user_property_assignments")
       .insert(rows);
 
     if (insertError) {

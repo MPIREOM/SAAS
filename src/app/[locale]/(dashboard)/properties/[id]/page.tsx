@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Wrench,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
@@ -125,13 +126,22 @@ export default async function PropertyDetailPage({
             </div>
           </div>
         </div>
-        <Link
-          href={`/${locale}/properties/${id}/units/new`}
-          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
-        >
-          <Plus className="h-4 w-4" />
-          {tu("addUnit")}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/${locale}/properties/${id}/edit`}
+            className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200"
+          >
+            <Pencil className="h-4 w-4" />
+            {t("editProperty")}
+          </Link>
+          <Link
+            href={`/${locale}/properties/${id}/units/new`}
+            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" />
+            {tu("addUnit")}
+          </Link>
+        </div>
       </div>
 
       {/* Property Stats */}
@@ -289,7 +299,16 @@ export default async function PropertyDetailPage({
                     </p>
                   ) : null}
 
-                  <ChevronRight className="h-3 w-3 text-text-secondary/0 group-hover:text-text-secondary/60 transition-all duration-200 mt-2" />
+                  <div className="flex items-center justify-between mt-2">
+                    <Link
+                      href={`/${locale}/properties/${id}/units/${unit.id}/edit`}
+                      className="text-[10px] text-text-secondary/0 group-hover:text-accent transition-all duration-200 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {tu("editUnit")}
+                    </Link>
+                    <ChevronRight className="h-3 w-3 text-text-secondary/0 group-hover:text-text-secondary/60 transition-all duration-200" />
+                  </div>
                 </Link>
               );
             })}

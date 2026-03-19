@@ -29,6 +29,7 @@ CREATE TABLE expenses (
   amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
   expense_date DATE NOT NULL,
   vendor TEXT,
+  receipt_url TEXT,
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

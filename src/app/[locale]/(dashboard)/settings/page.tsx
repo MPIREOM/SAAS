@@ -6,10 +6,13 @@ import {
   Users,
   MessageSquare,
   Mail,
+  Activity,
 } from "lucide-react";
 import { InviteUserForm } from "@/components/settings/invite-user-form";
 import { NotificationPreferences } from "@/components/settings/notification-preferences";
 import { UserManagementTable } from "@/components/settings/user-management-table";
+import { ProfileEditForm } from "@/components/settings/profile-edit-form";
+import { AuditLogViewer } from "@/components/settings/audit-log-viewer";
 
 export default async function SettingsPage({
   params,
@@ -32,7 +35,7 @@ export default async function SettingsPage({
 
   const { data: allUsers } = await supabase
     .from("users")
-    .select("*, user_property_access(property_id, properties(name))")
+    .select("*, user_property_assignments(property_id, properties(name))")
     .order("created_at", { ascending: false });
 
   const { data: allProperties } = await supabase
@@ -73,23 +76,12 @@ export default async function SettingsPage({
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <span className="text-xs text-text-secondary uppercase tracking-wider">
-              {t("name")}
-            </span>
-            <p className="text-sm text-text-primary mt-1">
-              {(profile?.full_name as string) || user?.email || "—"}
-            </p>
-          </div>
-          <div>
-            <span className="text-xs text-text-secondary uppercase tracking-wider">
-              {t("email")}
-            </span>
-            <p className="text-sm text-text-primary mt-1 font-mono">
-              {user?.email || "—"}
-            </p>
-          </div>
+        <ProfileEditForm
+          userId={user?.id || ""}
+          currentName={(profile?.full_name as string) || ""}
+          currentEmail={user?.email || ""}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-border/50">
           <div>
             <span className="text-xs text-text-secondary uppercase tracking-wider">
               {t("role")}
@@ -156,7 +148,7 @@ export default async function SettingsPage({
               email: string;
               role: string;
               is_active: boolean;
-              user_property_access: Array<{
+              user_property_assignments: Array<{
                 property_id: string;
                 properties: { name: string } | null;
               }> | null;
@@ -192,6 +184,26 @@ export default async function SettingsPage({
           </p>
         </div>
       </div>
+
+      {/* Activity Log */}
+      {isSuperAdmin && (
+        <div className="bg-surface border border-border rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-accent/10 rounded-md">
+              <Activity className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <h2 className="text-base font-medium text-text-primary font-display">
+                Activity Log
+              </h2>
+              <p className="text-xs text-text-secondary">
+                Recent actions across the system
+              </p>
+            </div>
+          </div>
+          <AuditLogViewer />
+        </div>
+      )}
 
       {/* Email Configuration */}
       <div className="bg-surface border border-border rounded-lg p-6">

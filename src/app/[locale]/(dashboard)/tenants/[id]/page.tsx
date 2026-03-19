@@ -28,6 +28,8 @@ import {
   Banknote,
   Hash,
   Shield,
+  RefreshCw,
+  ScrollText,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 
@@ -169,8 +171,22 @@ export default async function TenantDetailPage({
             tenantPhone={tenant.phone}
             locale={locale}
           />
+          <Link
+            href={`/${locale}/tenants/${id}/statement`}
+            className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors"
+          >
+            <ScrollText className="h-4 w-4" />
+            Statement
+          </Link>
           {tenant.status === "active" && (
             <>
+              <Link
+                href={`/${locale}/tenants/${id}/renew-lease`}
+                className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Renew Lease
+              </Link>
               <ShareLinkButton
                 tenantId={id}
                 tenantName={tenant.full_name}

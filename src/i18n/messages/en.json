@@ -236,6 +236,16 @@
     "notes": "Notes",
     "noNotes": "No notes found",
     "noLeases": "No leases found",
+    "statement": "Statement of Account",
+    "statementDescription": "Full financial ledger for this tenant",
+    "totalCharges": "Total Charges",
+    "totalPayments": "Total Payments",
+    "outstandingBalance": "Outstanding Balance",
+    "noTransactions": "No transactions found",
+    "charge": "Charge",
+    "payment": "Payment",
+    "balance": "Balance",
+    "renewLease": "Renew Lease",
     "noMaintenance": "No maintenance requests",
     "fullNamePlaceholder": "Enter full name",
     "nationalityPlaceholder": "Enter nationality",
@@ -313,7 +323,9 @@
     "terminateLease": "Terminate Lease",
     "noLeases": "No leases found",
     "leaseTerms": "Lease Terms",
-    "annualRent": "Annual Rent"
+    "annualRent": "Annual Rent",
+    "currentLease": "Current Lease",
+    "newLeaseTerms": "New Lease Terms"
   },
   "invoices": {
     "title": "Invoices",
@@ -598,7 +610,15 @@
     "selectAll": "Select all",
     "selectNone": "Select none",
     "assignProperties": "Assign Properties",
-    "propertiesSelected": "selected"
+    "propertiesSelected": "selected",
+    "changePassword": "Change Password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "updatePassword": "Update Password",
+    "passwordUpdated": "Password updated!",
+    "activityLog": "Activity Log",
+    "activityLogDescription": "Recent actions across the system",
+    "noActivityLogs": "No activity recorded yet"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -697,6 +717,9 @@
     "confirmDeleteExpense": "Are you sure you want to delete this expense?",
     "expenseUpdated": "Expense updated",
     "expenseDeleted": "Expense deleted",
+    "receipt": "Receipt",
+    "uploadReceipt": "Upload Receipt",
+    "receiptUploaded": "Receipt attached",
     "categories": {
       "maintenance": "Maintenance",
       "insurance": "Insurance",

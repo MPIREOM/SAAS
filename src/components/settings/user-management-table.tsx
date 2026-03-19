@@ -16,7 +16,7 @@ interface UserRow {
   email: string;
   role: string;
   is_active: boolean;
-  user_property_access: Array<{
+  user_property_assignments: Array<{
     property_id: string;
     properties: { name: string } | null;
   }> | null;
@@ -75,7 +75,7 @@ export function UserManagementTable({
           </thead>
           <tbody className="divide-y divide-border">
             {users.map((u) => {
-              const access = u.user_property_access;
+              const access = u.user_property_assignments;
               return (
                 <tr
                   key={u.id}
@@ -152,7 +152,7 @@ export function UserManagementTable({
           userName={selectedUser.full_name || selectedUser.email}
           userRole={selectedUser.role}
           currentPropertyIds={
-            selectedUser.user_property_access?.map((a) => a.property_id) || []
+            selectedUser.user_property_assignments?.map((a) => a.property_id) || []
           }
           allProperties={allProperties}
         />
