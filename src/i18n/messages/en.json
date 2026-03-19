@@ -589,7 +589,16 @@
     "leaseExpiry": "Lease Expiry",
     "emailNotification": "Email",
     "whatsappNotification": "WhatsApp",
-    "preferencesSaved": "Preferences saved"
+    "preferencesSaved": "Preferences saved",
+    "managePropertyAccess": "Manage Property Access",
+    "managePropertyAccessDescription": "Select which properties {name} can access",
+    "superAdminAllAccess": "Super admins automatically have access to all properties.",
+    "noPropertiesAvailable": "No properties available. Create a property first.",
+    "noPropertiesAssigned": "No access",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "assignProperties": "Assign Properties",
+    "propertiesSelected": "selected"
   },
   "dashboard": {
     "title": "Dashboard",

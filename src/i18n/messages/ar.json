@@ -589,7 +589,16 @@
     "leaseExpiry": "انتهاء عقد الإيجار",
     "emailNotification": "بريد إلكتروني",
     "whatsappNotification": "واتساب",
-    "preferencesSaved": "تم حفظ التفضيلات"
+    "preferencesSaved": "تم حفظ التفضيلات",
+    "managePropertyAccess": "إدارة صلاحيات العقارات",
+    "managePropertyAccessDescription": "اختر العقارات التي يمكن لـ {name} الوصول إليها",
+    "superAdminAllAccess": "المدير العام لديه صلاحية الوصول لجميع العقارات تلقائياً.",
+    "noPropertiesAvailable": "لا توجد عقارات متاحة. قم بإنشاء عقار أولاً.",
+    "noPropertiesAssigned": "بدون صلاحيات",
+    "selectAll": "تحديد الكل",
+    "selectNone": "إلغاء التحديد",
+    "assignProperties": "تعيين العقارات",
+    "propertiesSelected": "محدد"
   },
   "dashboard": {
     "title": "لوحة القيادة",
