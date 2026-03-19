@@ -46,6 +46,7 @@ export default async function UnitDetailPage({
   const tc = await getTranslations("common");
   const td = await getTranslations("documents");
   const tch = await getTranslations("cheques");
+  const tm = await getTranslations("maintenance");
   const supabase = await createClient();
 
   const { data: unit } = await supabase
@@ -910,7 +911,7 @@ export default async function UnitDetailPage({
             className="inline-flex items-center gap-1.5 h-8 px-3 bg-destructive/10 text-destructive text-xs font-semibold rounded-lg hover:bg-destructive/20 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            {tt("newRequest") || "New Request"}
+            {tm("newRequest")}
           </Link>
         </div>
 
@@ -1011,7 +1012,7 @@ export default async function UnitDetailPage({
               className="inline-flex items-center gap-1.5 h-8 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
-              {tt("newRequest") || "New Request"}
+              {tm("newRequest")}
             </Link>
           </div>
         )}
