@@ -27,7 +27,7 @@ export async function getUserAccessiblePropertyIds(
 
   // Fetch accessible property IDs
   const { data: accessRows } = await supabase
-    .from("user_property_access")
+    .from("user_property_assignments")
     .select("property_id")
     .eq("user_id", user.id);
 
