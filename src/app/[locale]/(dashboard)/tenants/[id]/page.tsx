@@ -521,9 +521,18 @@ export default async function TenantDetailPage({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary font-mono">
-                        {(payment.reference_number as string) || "—"}
-                      </span>
+                      {payment.method === "cheque" && payment.reference_number ? (
+                        <a
+                          href="#cheques-section"
+                          className="text-sm text-accent font-mono font-medium hover:underline"
+                        >
+                          {payment.reference_number as string}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-text-secondary font-mono">
+                          {(payment.reference_number as string) || "—"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-text-secondary">
@@ -544,7 +553,7 @@ export default async function TenantDetailPage({
       </div>
 
       {/* Cheques Section */}
-      <div>
+      <div id="cheques-section">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
             <Banknote className="h-5 w-5 text-text-secondary" />

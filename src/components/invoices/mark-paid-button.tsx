@@ -119,7 +119,7 @@ export function MarkPaidButton({
           : null;
 
       // Insert a payment record
-      await supabase.from("payments").insert({
+      const { data: paymentData } = await supabase.from("payments").insert({
         lease_id: invoice.lease_id,
         tenant_id: invoice.tenant_id,
         amount: invoice.amount,
@@ -127,13 +127,17 @@ export function MarkPaidButton({
         method,
         reference_number: referenceNumber,
         notes: notes || null,
-      });
+      }).select("id").single();
 
-      // If paid by cheque, mark the cheque as cleared
+      // If paid by cheque, mark the cheque as cleared and link to payment
       if (method === "cheque" && selectedChequeId) {
         await supabase
           .from("cheques")
-          .update({ status: "cleared", updated_at: new Date().toISOString() })
+          .update({
+            status: "cleared",
+            payment_id: paymentData?.id || null,
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", selectedChequeId);
       }
 

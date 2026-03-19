@@ -613,9 +613,18 @@ export default async function UnitDetailPage({
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-sm text-text-secondary font-mono">
-                        {(payment.reference_number as string) || "—"}
-                      </span>
+                      {payment.method === "cheque" && payment.reference_number ? (
+                        <a
+                          href="#cheques-section"
+                          className="text-sm text-accent font-mono font-medium hover:underline"
+                        >
+                          {payment.reference_number as string}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-text-secondary font-mono">
+                          {(payment.reference_number as string) || "—"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="text-sm text-text-secondary">
@@ -637,7 +646,7 @@ export default async function UnitDetailPage({
 
       {/* Cheques */}
 
-      <section>
+      <section id="cheques-section">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-warning/10">
