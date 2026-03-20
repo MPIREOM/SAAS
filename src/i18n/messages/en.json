@@ -52,7 +52,8 @@
     "page": "Page",
     "of": "of",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "dashboard": "Dashboard"
   },
   "nav": {
     "dashboard": "Dashboard",

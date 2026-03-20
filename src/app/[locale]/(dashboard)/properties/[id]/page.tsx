@@ -38,7 +38,12 @@ export default async function PropertyDetailPage({
     notFound();
   }
 
-  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  let propertyIds: string[] | null = null;
+  try {
+    propertyIds = await getUserAccessiblePropertyIds(supabase);
+  } catch {
+    propertyIds = [];
+  }
   if (propertyIds !== null && !propertyIds.includes(id)) {
     notFound();
   }

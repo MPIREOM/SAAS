@@ -15,23 +15,29 @@ export async function getUserAccessiblePropertyIds(
   if (!user) return [];
 
   // Check user role
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("role")
     .eq("id", user.id)
     .single();
+
+  // If users table query fails (e.g. table doesn't exist or RLS blocks), treat as no special role
+  if (profileError) {
+    return [];
+  }
 
   if (profile?.role === "super_admin") {
     return null; // null means unrestricted access
   }
 
   // Fetch accessible property IDs
-  const { data: accessRows } = await supabase
+  const { data: accessRows, error: accessError } = await supabase
     .from("user_property_assignments")
     .select("property_id")
     .eq("user_id", user.id);
 
-  if (!accessRows || accessRows.length === 0) {
+  // If assignment table query fails, return empty access
+  if (accessError || !accessRows || accessRows.length === 0) {
     return [];
   }
 

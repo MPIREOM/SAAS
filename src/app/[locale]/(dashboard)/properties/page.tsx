@@ -28,7 +28,13 @@ export default async function PropertiesPage({
   const tu = await getTranslations("units");
   const supabase = await createClient();
 
-  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  let propertyIds: string[] | null = null;
+  try {
+    propertyIds = await getUserAccessiblePropertyIds(supabase);
+  } catch {
+    // If access control fails, default to no access
+    propertyIds = [];
+  }
 
   let propertiesQuery = supabase
     .from("properties")
