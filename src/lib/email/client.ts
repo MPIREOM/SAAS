@@ -21,7 +21,10 @@ interface EmailOptions {
 export async function sendEmail(
   options: EmailOptions
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const from = process.env.RESEND_FROM_EMAIL || "noreply@mpire.om";
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (!from) {
+    return { success: false, error: "RESEND_FROM_EMAIL not configured" };
+  }
 
   try {
     const resend = getResend();

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Upload } from "lucide-react";
 
 interface PropertyOption {
   id: string;
@@ -35,6 +35,7 @@ export default function NewExpensePage({
   const [selectedProperty, setSelectedProperty] = useState("");
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [locale, setLocale] = useState("en");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   useEffect(() => {
     params.then((p) => setLocale(p.locale));
@@ -119,6 +120,20 @@ export default function NewExpensePage({
         setError(insertError.message);
         setLoading(false);
         return;
+      }
+
+      // Upload receipt if provided
+      if (receiptFile && expense?.id) {
+        const ext = receiptFile.name.split(".").pop() || "pdf";
+        const filePath = `receipts/${expense.id}/${Date.now()}.${ext}`;
+        await supabase.storage
+          .from("expense-receipts")
+          .upload(filePath, receiptFile);
+        // Store receipt URL on expense (best-effort, don't block on failure)
+        await supabase
+          .from("expenses")
+          .update({ receipt_url: filePath })
+          .eq("id", expense.id);
       }
 
       logAudit(supabase, {
@@ -277,6 +292,45 @@ export default function NewExpensePage({
                   placeholder={t("vendor") + "..."}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Receipt Upload */}
+          <div className="bg-surface border border-border/40 rounded-xl p-6">
+            <label className={labelClass}>
+              Receipt / Invoice ({tc("optional")})
+            </label>
+            <div className="mt-1.5">
+              {receiptFile ? (
+                <div className="flex items-center gap-3 p-3 bg-success/5 border border-success/20 rounded-lg">
+                  <Upload className="h-4 w-4 text-success" />
+                  <span className="text-sm text-text-primary truncate flex-1">{receiptFile.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setReceiptFile(null)}
+                    className="text-xs text-text-secondary hover:text-destructive transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-border/60 rounded-lg cursor-pointer hover:border-accent/40 transition-colors">
+                  <Upload className="h-6 w-6 text-text-secondary/40 mb-2" />
+                  <span className="text-sm text-text-secondary">Upload receipt (PDF, image)</span>
+                  <span className="text-xs text-text-secondary/60 mt-0.5">Max 10MB</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && file.size <= 10 * 1024 * 1024) {
+                        setReceiptFile(file);
+                      }
+                    }}
+                  />
+                </label>
+              )}
             </div>
           </div>
 

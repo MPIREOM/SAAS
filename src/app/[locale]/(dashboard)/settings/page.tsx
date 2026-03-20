@@ -6,9 +6,13 @@ import {
   Users,
   MessageSquare,
   Mail,
+  Activity,
 } from "lucide-react";
 import { InviteUserForm } from "@/components/settings/invite-user-form";
 import { NotificationPreferences } from "@/components/settings/notification-preferences";
+import { UserManagementTable } from "@/components/settings/user-management-table";
+import { ProfileEditForm } from "@/components/settings/profile-edit-form";
+import { AuditLogViewer } from "@/components/settings/audit-log-viewer";
 
 export default async function SettingsPage({
   params,
@@ -31,14 +35,20 @@ export default async function SettingsPage({
 
   const { data: allUsers } = await supabase
     .from("users")
-    .select("*, user_property_access(property_id, properties(name))")
+    .select("*, user_property_assignments(property_id, properties(name))")
     .order("created_at", { ascending: false });
 
-  const roleColors: Record<string, string> = {
-    admin: "bg-accent/10 text-accent",
-    manager: "bg-warning/10 text-warning",
-    viewer: "bg-text-secondary/10 text-text-secondary",
-  };
+  const { data: allProperties } = await supabase
+    .from("properties")
+    .select("id, name")
+    .eq("is_archived", false)
+    .order("name");
+
+  const isSuperAdmin = profile?.role === "super_admin";
+  const propertiesList = (allProperties || []).map((p) => ({
+    id: p.id as string,
+    name: p.name as string,
+  }));
 
   return (
     <div className="space-y-8 max-w-4xl stagger-children">
@@ -66,23 +76,12 @@ export default async function SettingsPage({
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <span className="text-xs text-text-secondary uppercase tracking-wider">
-              {t("name")}
-            </span>
-            <p className="text-sm text-text-primary mt-1">
-              {(profile?.full_name as string) || user?.email || "—"}
-            </p>
-          </div>
-          <div>
-            <span className="text-xs text-text-secondary uppercase tracking-wider">
-              {t("email")}
-            </span>
-            <p className="text-sm text-text-primary mt-1 font-mono">
-              {user?.email || "—"}
-            </p>
-          </div>
+        <ProfileEditForm
+          userId={user?.id || ""}
+          currentName={(profile?.full_name as string) || ""}
+          currentEmail={user?.email || ""}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-border/50">
           <div>
             <span className="text-xs text-text-secondary uppercase tracking-wider">
               {t("role")}
@@ -138,90 +137,25 @@ export default async function SettingsPage({
               </p>
             </div>
           </div>
-          <InviteUserForm />
+          <InviteUserForm properties={propertiesList} />
         </div>
 
         {allUsers && allUsers.length > 0 ? (
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full min-w-[600px]">
-              <thead>
-                <tr className="border-b border-border bg-surface-elevated">
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    {t("name")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    {t("email")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    {t("role")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    {t("users")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                    {t("properties")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {allUsers.map((u: Record<string, unknown>) => {
-                  const access = u.user_property_access as Record<string, unknown>[] | null;
-
-                  return (
-                    <tr
-                      key={u.id as string}
-                      className="hover:bg-surface-elevated/50 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-text-primary">
-                          {(u.full_name as string) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary font-mono">
-                          {(u.email as string) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                            roleColors[(u.role as string) || "viewer"]
-                          }`}
-                        >
-                          {u.role as string}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            u.is_active
-                              ? "bg-success/10 text-success"
-                              : "bg-text-secondary/10 text-text-secondary"
-                          }`}
-                        >
-                          {u.is_active ? t("active") : t("inactive")}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary">
-                          {access && access.length > 0
-                            ? access
-                                .map(
-                                  (a) =>
-                                    (a.properties as Record<string, unknown>)
-                                      ?.name as string
-                                )
-                                .filter(Boolean)
-                                .join(", ")
-                            : t("allProperties")}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <UserManagementTable
+            users={(allUsers as Array<{
+              id: string;
+              full_name: string | null;
+              email: string;
+              role: string;
+              is_active: boolean;
+              user_property_assignments: Array<{
+                property_id: string;
+                properties: { name: string } | null;
+              }> | null;
+            }>)}
+            allProperties={propertiesList}
+            isSuperAdmin={isSuperAdmin}
+          />
         ) : (
           <div className="bg-surface-elevated border border-border rounded-md p-4">
             <p className="text-sm text-text-secondary">{t("noUsersFound")}</p>
@@ -250,6 +184,26 @@ export default async function SettingsPage({
           </p>
         </div>
       </div>
+
+      {/* Activity Log */}
+      {isSuperAdmin && (
+        <div className="bg-surface border border-border rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-accent/10 rounded-md">
+              <Activity className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <h2 className="text-base font-medium text-text-primary font-display">
+                Activity Log
+              </h2>
+              <p className="text-xs text-text-secondary">
+                Recent actions across the system
+              </p>
+            </div>
+          </div>
+          <AuditLogViewer />
+        </div>
+      )}
 
       {/* Email Configuration */}
       <div className="bg-surface border border-border rounded-lg p-6">

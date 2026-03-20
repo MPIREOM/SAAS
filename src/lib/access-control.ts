@@ -3,7 +3,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 /**
  * Returns the list of property IDs the current user has access to.
  * - If the user is a super_admin, returns null (meaning all properties).
- * - Otherwise returns an array of property_ids from user_property_access.
+ * - Otherwise returns an array of property_ids from user_property_assignments.
  */
 export async function getUserAccessiblePropertyIds(
   supabase: SupabaseClient
@@ -27,7 +27,7 @@ export async function getUserAccessiblePropertyIds(
 
   // Fetch accessible property IDs
   const { data: accessRows } = await supabase
-    .from("user_property_access")
+    .from("user_property_assignments")
     .select("property_id")
     .eq("user_id", user.id);
 

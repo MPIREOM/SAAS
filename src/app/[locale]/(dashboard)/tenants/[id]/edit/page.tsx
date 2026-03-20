@@ -57,7 +57,7 @@ export default function EditTenantPage({
         const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
         if (profile?.role !== "super_admin") {
           const { data: access } = await supabase
-            .from("user_property_access")
+            .from("user_property_assignments")
             .select("property_id")
             .eq("user_id", user.id);
           const { data: leases } = await supabase

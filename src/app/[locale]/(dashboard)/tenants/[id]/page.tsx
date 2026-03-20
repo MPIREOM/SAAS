@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCY } from "@/lib/currency";
+import { getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { ShareLinkButton } from "@/components/maintenance/share-link-button";
@@ -27,6 +28,8 @@ import {
   Banknote,
   Hash,
   Shield,
+  RefreshCw,
+  ScrollText,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 
@@ -104,6 +107,11 @@ export default async function TenantDetailPage({
   const documents = documentsRes.data;
   const cheques = chequesRes.data;
 
+  // Generate signed URLs for document downloads
+  const docUrlMap = documents && documents.length > 0
+    ? await getDocumentUrls(supabase, documents as Array<{ file_url: string }>)
+    : new Map<string, string>();
+
   const now = new Date();
   const thirtyDaysFromNow = new Date(
     now.getTime() + 30 * 24 * 60 * 60 * 1000
@@ -163,8 +171,22 @@ export default async function TenantDetailPage({
             tenantPhone={tenant.phone}
             locale={locale}
           />
+          <Link
+            href={`/${locale}/tenants/${id}/statement`}
+            className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors"
+          >
+            <ScrollText className="h-4 w-4" />
+            Statement
+          </Link>
           {tenant.status === "active" && (
             <>
+              <Link
+                href={`/${locale}/tenants/${id}/renew-lease`}
+                className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Renew Lease
+              </Link>
               <ShareLinkButton
                 tenantId={id}
                 tenantName={tenant.full_name}
@@ -515,9 +537,18 @@ export default async function TenantDetailPage({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary font-mono">
-                        {(payment.reference_number as string) || "—"}
-                      </span>
+                      {payment.method === "cheque" && payment.reference_number ? (
+                        <a
+                          href="#cheques-section"
+                          className="text-sm text-accent font-mono font-medium hover:underline"
+                        >
+                          {payment.reference_number as string}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-text-secondary font-mono">
+                          {(payment.reference_number as string) || "—"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-text-secondary">
@@ -538,7 +569,7 @@ export default async function TenantDetailPage({
       </div>
 
       {/* Cheques Section */}
-      <div>
+      <div id="cheques-section">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
             <Banknote className="h-5 w-5 text-text-secondary" />
@@ -740,9 +771,9 @@ export default async function TenantDetailPage({
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        {Boolean(doc.file_url) ? (
+                        {Boolean(doc.file_url) && docUrlMap.get(doc.file_url as string) ? (
                           <a
-                            href={doc.file_url as string}
+                            href={docUrlMap.get(doc.file_url as string)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 rounded-lg text-accent hover:bg-accent/10 transition-colors inline-flex"

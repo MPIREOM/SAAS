@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
 import { CollectionChart, type MonthlyCollectionData } from "@/components/reports/collection-chart";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { CURRENCY } from "@/lib/currency";
 
 /* ------------------------------------------------------------------ */
@@ -28,13 +29,15 @@ interface FinancialMetrics {
   unitCount: number;
 }
 
-async function getFinancialMetrics(): Promise<FinancialMetrics> {
+async function getFinancialMetrics(selectedMonth?: string, selectedYear?: string): Promise<FinancialMetrics> {
   const supabase = await createClient();
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
 
   const now = new Date();
-  const monthStart = format(new Date(now.getFullYear(), now.getMonth(), 1), "yyyy-MM-dd");
-  const monthEnd = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), "yyyy-MM-dd");
+  const month = selectedMonth ? parseInt(selectedMonth) - 1 : now.getMonth();
+  const year = selectedYear ? parseInt(selectedYear) : now.getFullYear();
+  const monthStart = format(new Date(year, month, 1), "yyyy-MM-dd");
+  const monthEnd = format(new Date(year, month + 1, 0), "yyyy-MM-dd");
 
   // Properties count
   let propertiesQuery = supabase
@@ -155,13 +158,15 @@ interface PropertyPerformance {
   net: number;
 }
 
-async function getPropertyPerformance(): Promise<PropertyPerformance[]> {
+async function getPropertyPerformance(selectedMonth?: string, selectedYear?: string): Promise<PropertyPerformance[]> {
   const supabase = await createClient();
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
 
   const now = new Date();
-  const monthStart = format(new Date(now.getFullYear(), now.getMonth(), 1), "yyyy-MM-dd");
-  const monthEnd = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), "yyyy-MM-dd");
+  const month = selectedMonth ? parseInt(selectedMonth) - 1 : now.getMonth();
+  const year = selectedYear ? parseInt(selectedYear) : now.getFullYear();
+  const monthStart = format(new Date(year, month, 1), "yyyy-MM-dd");
+  const monthEnd = format(new Date(year, month + 1, 0), "yyyy-MM-dd");
 
   // Fetch properties
   let propsQuery = supabase
@@ -286,16 +291,19 @@ const exportReports = [
 
 export default async function ReportsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ month?: string; year?: string }>;
 }) {
   const { locale } = await params;
+  const { month, year } = await searchParams;
   const t = await getTranslations("reports");
 
   const [metrics, monthlyTrend, propertyPerformance] = await Promise.all([
-    getFinancialMetrics(),
+    getFinancialMetrics(month, year),
     getMonthlyTrend(),
-    getPropertyPerformance(),
+    getPropertyPerformance(month, year),
   ]);
 
   const metricCards = [
@@ -342,13 +350,16 @@ export default async function ReportsPage({
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="animate-fade-in-up">
-        <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          {t("subtitle")}
-        </p>
+      <div className="animate-fade-in-up flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">
+            {t("title")}
+          </h1>
+          <p className="text-sm text-text-secondary mt-1">
+            {t("subtitle")}
+          </p>
+        </div>
+        <DateRangeFilter defaultMonth={month} defaultYear={year} />
       </div>
 
       {/* Key Financial Metrics */}

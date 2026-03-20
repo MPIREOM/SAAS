@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { email, full_name, role } = body;
+  const { email, full_name, role, property_ids } = body;
 
   if (!email) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -78,15 +78,40 @@ export async function POST(request: NextRequest) {
 
   if (insertError) {
     // Rollback: delete the auth user to avoid orphan state
-    await adminClient.auth.admin.deleteUser(authData.user.id);
+    try {
+      await adminClient.auth.admin.deleteUser(authData.user.id);
+    } catch (rollbackError) {
+      console.error("Failed to rollback auth user:", authData.user.id, rollbackError);
+    }
     return NextResponse.json({ error: insertError.message }, { status: 400 });
+  }
+
+  // Assign properties if provided (only for non-super_admin)
+  if (
+    Array.isArray(property_ids) &&
+    property_ids.length > 0 &&
+    (role || "property_manager") !== "super_admin"
+  ) {
+    const rows = property_ids.map((propertyId: string) => ({
+      user_id: authData.user.id,
+      property_id: propertyId,
+      assigned_by: user.id,
+    }));
+
+    const { error: assignError } = await adminClient
+      .from("user_property_assignments")
+      .insert(rows);
+
+    if (assignError) {
+      console.error("Failed to assign properties to new user:", assignError.message);
+    }
   }
 
   logAudit(supabase, {
     action: "invite_user",
     entity_type: "user",
     entity_id: authData.user.id,
-    metadata: { email, role: role || "property_manager" },
+    metadata: { email, role: role || "property_manager", property_ids: property_ids || [] },
   });
 
   return NextResponse.json({ success: true, user_id: authData.user.id });

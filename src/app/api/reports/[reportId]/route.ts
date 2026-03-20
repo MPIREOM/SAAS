@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { CURRENCY } from "@/lib/currency";
 
 export async function GET(
@@ -16,6 +17,30 @@ export async function GET(
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Property-level access control
+  const propertyIds = await getUserAccessiblePropertyIds(supabase);
+  if (Array.isArray(propertyIds) && propertyIds.length === 0) {
+    return new NextResponse("", {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="no-access.csv"`,
+      },
+    });
+  }
+
+  // Build set of accessible tenant IDs for filtering cheques
+  let accessibleTenantIds: Set<string> | null = null;
+  if (propertyIds !== null) {
+    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
+    const unitIds = units?.map(u => u.id) || [];
+    if (unitIds.length > 0) {
+      const { data: leases } = await supabase.from("leases").select("tenant_id").in("unit_id", unitIds);
+      accessibleTenantIds = new Set(leases?.map(l => l.tenant_id) || []);
+    } else {
+      accessibleTenantIds = new Set();
+    }
   }
 
   // Sanitize CSV values to prevent formula injection
@@ -40,7 +65,7 @@ export async function GET(
           .select(`
             amount, payment_date, method, reference_number,
             tenants:tenant_id(full_name),
-            leases:lease_id(units(unit_number, properties(name)))
+            leases:lease_id(units(unit_number, property_id, properties:property_id(name)))
           `)
           .order("payment_date", { ascending: false });
 
@@ -54,7 +79,11 @@ export async function GET(
           const lease = p.leases as Record<string, unknown> | null;
           const unit = lease?.units as Record<string, unknown> | null;
           const property = unit?.properties as Record<string, unknown> | null;
-          csvContent += `"${csvSafe(tenant?.full_name)}","${csvSafe(property?.name)}","${csvSafe(unit?.unit_number)}",${p.amount},"${p.payment_date}","${csvSafe(p.method)}","${csvSafe(p.reference_number)}"\n`;
+          if (propertyIds !== null && unit) {
+            const pid = unit.property_id as string;
+            if (!propertyIds.includes(pid)) return;
+          }
+          csvContent += `"${csvSafe(tenant?.full_name)}","${csvSafe(property?.name)}","${csvSafe(unit?.unit_number)}","${csvSafe(p.amount)}","${p.payment_date}","${csvSafe(p.method)}","${csvSafe(p.reference_number)}"\n`;
         });
         break;
       }
@@ -64,8 +93,8 @@ export async function GET(
         const { data: tenants, error } = await supabase
           .from("tenants")
           .select(`
-            full_name, phone, email, nationality, national_id, status,
-            leases(units(unit_number, properties(name)), is_active)
+            id, full_name, phone, email, nationality, national_id, status,
+            leases(units(unit_number, property_id, properties:property_id(name)), is_active)
           `)
           .order("full_name");
 
@@ -75,6 +104,7 @@ export async function GET(
 
         csvContent = "Name,Phone,Email,Nationality,ID Number,Status,Property,Unit\n";
         (tenants || []).forEach((t: Record<string, unknown>) => {
+          if (accessibleTenantIds !== null && !accessibleTenantIds.has(t.id as string)) return;
           const leases = t.leases as Record<string, unknown>[] | null;
           const activeLease = leases?.find((l) => l.is_active);
           const unit = activeLease?.units as Record<string, unknown> | null;
@@ -90,7 +120,7 @@ export async function GET(
           .from("maintenance_requests")
           .select(`
             *,
-            units:unit_id(unit_number, properties:property_id(name)),
+            units:unit_id(unit_number, property_id, properties:property_id(name)),
             tenants:tenant_id(full_name)
           `)
           .order("created_at", { ascending: false });
@@ -103,6 +133,10 @@ export async function GET(
         (requests || []).forEach((r: Record<string, unknown>) => {
           const unit = r.units as Record<string, unknown> | null;
           const property = unit?.properties as Record<string, unknown> | null;
+          if (propertyIds !== null && unit) {
+            const pid = unit.property_id as string;
+            if (!propertyIds.includes(pid)) return;
+          }
           const tenant = r.tenants as Record<string, unknown> | null;
           csvContent += `"${csvSafe(new Date(r.created_at as string).toLocaleDateString())}","${csvSafe(property?.name)}","${csvSafe(unit?.unit_number)}","${csvSafe(tenant?.full_name)}","${csvSafe(r.category)}","${csvSafe(r.description)}","${csvSafe(r.urgency)}","${csvSafe(r.status)}"\n`;
         });
@@ -114,7 +148,7 @@ export async function GET(
         const { data: cheques, error } = await supabase
           .from("cheques")
           .select(`
-            cheque_number, bank_name, cheque_date, amount, status,
+            cheque_number, bank_name, cheque_date, amount, status, tenant_id,
             tenants:tenant_id(full_name)
           `)
           .order("cheque_date", { ascending: false });
@@ -125,8 +159,9 @@ export async function GET(
 
         csvContent = `Cheque #,Bank,Date,Amount (${CURRENCY.code}),Status,Tenant\n`;
         (cheques || []).forEach((c: Record<string, unknown>) => {
+          if (accessibleTenantIds !== null && !accessibleTenantIds.has(c.tenant_id as string)) return;
           const tenant = c.tenants as Record<string, unknown> | null;
-          csvContent += `"${csvSafe(c.cheque_number)}","${csvSafe(c.bank_name)}","${c.cheque_date}",${c.amount},"${csvSafe(c.status)}","${csvSafe(tenant?.full_name)}"\n`;
+          csvContent += `"${csvSafe(c.cheque_number)}","${csvSafe(c.bank_name)}","${c.cheque_date}","${csvSafe(c.amount)}","${csvSafe(c.status)}","${csvSafe(tenant?.full_name)}"\n`;
         });
         break;
       }
@@ -136,7 +171,7 @@ export async function GET(
         const { data: documents, error } = await supabase
           .from("documents")
           .select(`
-            name, document_type, expiry_date, created_at,
+            name, document_type, expiry_date, created_at, tenant_id, property_id,
             tenants:tenant_id(full_name),
             properties:property_id(name)
           `)
@@ -150,6 +185,12 @@ export async function GET(
         const now = new Date();
         csvContent = "Document,Type,Entity,Expiry Date,Status\n";
         (documents || []).forEach((d: Record<string, unknown>) => {
+          if (propertyIds !== null) {
+            const pid = d.property_id as string | null;
+            const tid = d.tenant_id as string | null;
+            if (pid && !propertyIds.includes(pid)) return;
+            if (tid && accessibleTenantIds !== null && !accessibleTenantIds.has(tid)) return;
+          }
           const tenant = d.tenants as Record<string, unknown> | null;
           const property = d.properties as Record<string, unknown> | null;
           const entity = (tenant?.full_name as string) || (property?.name as string) || "";

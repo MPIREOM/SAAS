@@ -15,6 +15,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { RentChart } from "@/components/dashboard/rent-chart";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { CURRENCY } from "@/lib/currency";
 import { format } from "date-fns";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
@@ -28,13 +29,15 @@ interface OverdueInvoice {
   invoiceId: string;
 }
 
-async function getDashboardStats() {
+async function getDashboardStats(selectedMonth?: string, selectedYear?: string) {
   const supabase = await createClient();
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
 
   const now = new Date();
-  const monthStart = format(new Date(now.getFullYear(), now.getMonth(), 1), "yyyy-MM-dd");
-  const monthEnd = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), "yyyy-MM-dd");
+  const month = selectedMonth ? parseInt(selectedMonth) - 1 : now.getMonth();
+  const year = selectedYear ? parseInt(selectedYear) : now.getFullYear();
+  const monthStart = format(new Date(year, month, 1), "yyyy-MM-dd");
+  const monthEnd = format(new Date(year, month + 1, 0), "yyyy-MM-dd");
 
   // Properties query - filter by accessible IDs
   let propertiesQuery = supabase
@@ -235,13 +238,16 @@ async function getOverdueInvoices(): Promise<OverdueInvoice[]> {
 
 export default async function DashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ month?: string; year?: string }>;
 }) {
   const { locale } = await params;
+  const { month, year } = await searchParams;
   const t = await getTranslations("dashboard");
   const [stats, overdueInvoices, recentInvoices, expiringLeases] = await Promise.all([
-    getDashboardStats(),
+    getDashboardStats(month, year),
     getOverdueInvoices(),
     getRecentInvoices(),
     getExpiringLeases(),
@@ -328,13 +334,16 @@ export default async function DashboardPage({
   return (
     <div className="space-y-8">
       {/* Page header */}
-      <div className="animate-fade-in-up">
-        <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          {t("subtitle")}
-        </p>
+      <div className="animate-fade-in-up flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">
+            {t("title")}
+          </h1>
+          <p className="text-sm text-text-secondary mt-1">
+            {t("subtitle")}
+          </p>
+        </div>
+        <DateRangeFilter defaultMonth={month} defaultYear={year} />
       </div>
 
       {/* Quick Actions */}

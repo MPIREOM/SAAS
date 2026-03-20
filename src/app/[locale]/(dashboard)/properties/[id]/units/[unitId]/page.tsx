@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCY } from "@/lib/currency";
+import { getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
@@ -45,6 +46,7 @@ export default async function UnitDetailPage({
   const tc = await getTranslations("common");
   const td = await getTranslations("documents");
   const tch = await getTranslations("cheques");
+  const tm = await getTranslations("maintenance");
   const supabase = await createClient();
 
   const { data: unit } = await supabase
@@ -121,6 +123,11 @@ export default async function UnitDetailPage({
   const documents = documentsRes.data;
   const maintenance = maintenanceRes.data;
   const pastLeases = pastLeasesRes.data;
+
+  // Generate signed URLs for document downloads
+  const docUrlMap = documents && documents.length > 0
+    ? await getDocumentUrls(supabase, documents as Array<{ file_url: string }>)
+    : new Map<string, string>();
 
   const property = unit.properties as Record<string, unknown> | null;
   const now = new Date();
@@ -606,9 +613,18 @@ export default async function UnitDetailPage({
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-sm text-text-secondary font-mono">
-                        {(payment.reference_number as string) || "—"}
-                      </span>
+                      {payment.method === "cheque" && payment.reference_number ? (
+                        <a
+                          href="#cheques-section"
+                          className="text-sm text-accent font-mono font-medium hover:underline"
+                        >
+                          {payment.reference_number as string}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-text-secondary font-mono">
+                          {(payment.reference_number as string) || "—"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="text-sm text-text-secondary">
@@ -630,7 +646,7 @@ export default async function UnitDetailPage({
 
       {/* Cheques */}
 
-      <section>
+      <section id="cheques-section">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-warning/10">
@@ -849,9 +865,9 @@ export default async function UnitDetailPage({
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
-                        {Boolean(doc.file_url) ? (
+                        {Boolean(doc.file_url) && docUrlMap.get(doc.file_url as string) ? (
                           <a
-                            href={doc.file_url as string}
+                            href={docUrlMap.get(doc.file_url as string)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 rounded-lg text-accent hover:bg-accent/10 transition-colors inline-flex"
@@ -904,7 +920,7 @@ export default async function UnitDetailPage({
             className="inline-flex items-center gap-1.5 h-8 px-3 bg-destructive/10 text-destructive text-xs font-semibold rounded-lg hover:bg-destructive/20 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            {tt("newRequest") || "New Request"}
+            {tm("newRequest")}
           </Link>
         </div>
 
@@ -1005,7 +1021,7 @@ export default async function UnitDetailPage({
               className="inline-flex items-center gap-1.5 h-8 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
-              {tt("newRequest") || "New Request"}
+              {tm("newRequest")}
             </Link>
           </div>
         )}
