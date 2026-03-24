@@ -99,7 +99,7 @@ export function MediaUpload({
       {/* Photos */}
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <Camera className="h-4 w-4 text-accent" />
+          <Camera className="h-4 w-4 text-accent" aria-hidden="true" />
           <label className="text-sm font-medium text-text-primary">
             {t("addPhotos")}
           </label>
@@ -133,10 +133,13 @@ export function MediaUpload({
 
         {photos.length < 5 && (
           <div
+            role="button"
+            tabIndex={0}
             onDrop={handlePhotoDrop}
             onDragOver={(e) => e.preventDefault()}
             onClick={() => photoInputRef.current?.click()}
-            className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-accent/50 transition-colors"
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); photoInputRef.current?.click(); } }}
+            className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
           >
             <ImagePlus className="h-6 w-6 text-text-secondary/50 mx-auto mb-1.5" />
             <p className="text-xs text-text-secondary">{t("dragPhotos")}</p>
@@ -157,7 +160,7 @@ export function MediaUpload({
       {/* Video */}
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <Video className="h-4 w-4 text-accent" />
+          <Video className="h-4 w-4 text-accent" aria-hidden="true" />
           <label className="text-sm font-medium text-text-primary">
             {t("addVideo")}
           </label>
@@ -185,10 +188,13 @@ export function MediaUpload({
           </div>
         ) : (
           <div
+            role="button"
+            tabIndex={0}
             onDrop={handleVideoDrop}
             onDragOver={(e) => e.preventDefault()}
             onClick={() => videoInputRef.current?.click()}
-            className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-accent/50 transition-colors"
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); videoInputRef.current?.click(); } }}
+            className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
           >
             <Video className="h-6 w-6 text-text-secondary/50 mx-auto mb-1.5" />
             <p className="text-xs text-text-secondary">{t("dragVideo")}</p>

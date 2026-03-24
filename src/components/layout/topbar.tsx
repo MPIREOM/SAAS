@@ -34,6 +34,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations("common");
+  const tn = useTranslations("nav");
 
   // Persist theme from localStorage
   useEffect(() => {
@@ -87,6 +88,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
       const supabase = createClient();
       const results: SearchResult[] = [];
 
+      try {
       const [{ data: tenants }, { data: properties }, { data: units }, { data: invoices }, { data: maintenanceRequests }] =
         await Promise.all([
           supabase
@@ -169,7 +171,11 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
       });
 
       setSearchResults(results);
-      setSearching(false);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
     },
     [locale]
   );
@@ -181,11 +187,11 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
   };
 
   const typeLabels: Record<string, string> = {
-    tenant: t("tenant") || "Tenant",
-    property: t("property") || "Property",
-    unit: t("unit") || "Unit",
-    invoice: "Invoice",
-    maintenance: "Maintenance",
+    tenant: t("tenant"),
+    property: t("property"),
+    unit: t("unit"),
+    invoice: tn("invoices"),
+    maintenance: tn("maintenance"),
   };
 
   return (
@@ -197,13 +203,14 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
       {/* Search */}
       <div ref={searchRef} className="relative flex-1 max-w-xs md:max-w-md">
         <div className="relative group">
-          <Search className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary start-3 transition-colors group-focus-within:text-accent" />
+          <Search className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary start-3 transition-colors group-focus-within:text-accent" aria-hidden="true" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             onFocus={() => searchQuery.length >= 2 && setSearchOpen(true)}
             placeholder={t("search")}
+            aria-label={t("search")}
             className="w-full h-9 bg-surface-elevated/50 border border-border/50 rounded-lg ps-9 pe-8 text-sm text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:border-accent/50 focus:bg-surface-elevated transition-all duration-200"
           />
           {searchQuery && (
@@ -213,9 +220,10 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
                 setSearchResults([]);
                 setSearchOpen(false);
               }}
+              aria-label={t("close")}
               className="absolute top-1/2 -translate-y-1/2 end-2 p-0.5 rounded text-text-secondary hover:text-text-primary"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -271,20 +279,22 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
           onClick={toggleLanguage}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-text-secondary hover:text-accent hover:bg-surface-elevated/50 transition-all duration-200"
           title={locale === "en" ? "العربية" : "English"}
+          aria-label={locale === "en" ? "Switch to Arabic" : "Switch to English"}
         >
-          <Globe className="h-4 w-4" />
+          <Globe className="h-4 w-4" aria-hidden="true" />
           <span className="text-xs font-medium">{locale === "en" ? "AR" : "EN"}</span>
         </button>
 
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           className="p-2 rounded-lg text-text-secondary hover:text-accent hover:bg-surface-elevated/50 transition-all duration-200"
         >
           {theme === "dark" ? (
-            <Sun className="h-4 w-4" />
+            <Sun className="h-4 w-4" aria-hidden="true" />
           ) : (
-            <Moon className="h-4 w-4" />
+            <Moon className="h-4 w-4" aria-hidden="true" />
           )}
         </button>
 
@@ -304,8 +314,9 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
             onClick={handleLogout}
             className="p-2 rounded-lg text-text-secondary hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
             title={t("logout")}
+            aria-label={t("logout")}
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>

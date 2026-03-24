@@ -52,7 +52,29 @@
     "page": "صفحة",
     "of": "من",
     "previous": "السابق",
-    "next": "التالي"
+    "next": "التالي",
+    "toggleSidebar": "طي/توسيع القائمة",
+    "openMenu": "فتح القائمة",
+    "closeMenu": "إغلاق القائمة",
+    "switchTheme": "تغيير المظهر",
+    "clearSearch": "مسح البحث",
+    "pagination": "التنقل بين الصفحات",
+    "previousPage": "الصفحة السابقة",
+    "nextPage": "الصفحة التالية",
+    "selectMonth": "اختر الشهر",
+    "selectYear": "اختر السنة",
+    "monthJan": "يناير",
+    "monthFeb": "فبراير",
+    "monthMar": "مارس",
+    "monthApr": "أبريل",
+    "monthMay": "مايو",
+    "monthJun": "يونيو",
+    "monthJul": "يوليو",
+    "monthAug": "أغسطس",
+    "monthSep": "سبتمبر",
+    "monthOct": "أكتوبر",
+    "monthNov": "نوفمبر",
+    "monthDec": "ديسمبر"
   },
   "nav": {
     "dashboard": "لوحة القيادة",
@@ -397,7 +419,14 @@
     "depositDate": "تاريخ الإيداع",
     "drawer": "الساحب",
     "payee": "المستفيد",
-    "replacement": "شيك بديل"
+    "replacement": "شيك بديل",
+    "markCleared": "تحويل إلى مُحصّل",
+    "markBounced": "تحويل إلى مرتجع",
+    "resetPending": "إعادة إلى معلق",
+    "deleteCheque": "حذف الشيك",
+    "deleteConfirm": "هل أنت متأكد من حذف هذا الشيك؟",
+    "chequeDeleted": "تم حذف الشيك",
+    "chequeMarked": "تم تحديث حالة الشيك إلى {status}"
   },
   "maintenance": {
     "title": "طلبات الصيانة",
@@ -625,7 +654,9 @@
     "passwordUpdated": "تم تحديث كلمة المرور!",
     "activityLog": "سجل النشاط",
     "activityLogDescription": "الإجراءات الأخيرة في النظام",
-    "noActivityLogs": "لم يتم تسجيل أي نشاط بعد"
+    "noActivityLogs": "لم يتم تسجيل أي نشاط بعد",
+    "passwordMinLength": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
+    "passwordsNoMatch": "كلمتا المرور غير متطابقتين"
   },
   "dashboard": {
     "title": "لوحة القيادة",

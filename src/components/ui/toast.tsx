@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import { cn } from "@/lib/utils/cn";
 
 type ToastVariant = "default" | "success" | "destructive";
 
@@ -70,13 +71,15 @@ function ToastItem({
 
   return (
     <div
-      className={`pointer-events-auto border rounded-xl px-4 py-3 shadow-lg transition-all duration-300 ease-out max-w-sm w-full ${
-        VARIANT_STYLES[toast.variant]
-      } ${
+      role="status"
+      aria-atomic="true"
+      className={cn(
+        "pointer-events-auto border rounded-xl px-4 py-3 shadow-lg transition-all duration-300 ease-out max-w-sm w-full",
+        VARIANT_STYLES[toast.variant],
         visible && !exiting
           ? "translate-y-0 opacity-100"
           : "translate-y-4 opacity-0"
-      }`}
+      )}
     >
       <p className="text-sm font-semibold">{toast.title}</p>
       {toast.description && (
@@ -115,7 +118,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
       {/* Toast container — bottom-right for LTR, bottom-left for RTL */}
-      <div className="fixed bottom-4 right-4 rtl:right-auto rtl:left-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+      <div aria-live="polite" className="fixed bottom-4 right-4 rtl:right-auto rtl:left-4 z-[9999] flex flex-col gap-2 pointer-events-none">
         {toasts.map((t) => (
           <ToastItem key={t.id} toast={t} onRemove={removeToast} />
         ))}

@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils/cn";
 interface DialogContextValue {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  titleId: string;
+  descriptionId: string;
 }
 
 const DialogContext = React.createContext<DialogContextValue | null>(null);
@@ -26,8 +28,11 @@ interface DialogProps {
 }
 
 function Dialog({ open, onOpenChange, children }: DialogProps) {
+  const id = React.useId();
+  const titleId = `${id}dialog-title`;
+  const descriptionId = `${id}dialog-desc`;
   return (
-    <DialogContext.Provider value={{ open, onOpenChange }}>
+    <DialogContext.Provider value={{ open, onOpenChange, titleId, descriptionId }}>
       {children}
     </DialogContext.Provider>
   );
@@ -42,7 +47,7 @@ interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
   ({ className, maxWidth = "max-w-lg", children, ...props }, ref) => {
-    const { open, onOpenChange } = useDialog();
+    const { open, onOpenChange, titleId, descriptionId } = useDialog();
     const contentRef = React.useRef<HTMLDivElement>(null);
 
     // Close on Escape
@@ -92,6 +97,8 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
           }}
           role="dialog"
           aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
           tabIndex={-1}
           className={cn(
             "relative z-50 w-full mx-4 sm:mx-auto rounded-xl border border-border/60 bg-surface p-0 shadow-2xl shadow-black/20",
@@ -157,13 +164,17 @@ DialogHeader.displayName = "DialogHeader";
 const DialogTitle = React.forwardRef<
   HTMLHeadingElement,
   React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h2
-    ref={ref}
-    className={cn("text-lg font-semibold text-foreground font-display tracking-tight", className)}
-    {...props}
-  />
-));
+>(({ className, id, ...props }, ref) => {
+  const ctx = React.useContext(DialogContext);
+  return (
+    <h2
+      ref={ref}
+      id={id || ctx?.titleId}
+      className={cn("text-lg font-semibold text-foreground font-display tracking-tight", className)}
+      {...props}
+    />
+  );
+});
 DialogTitle.displayName = "DialogTitle";
 
 /* ----------------------------- DialogDescription -------------------------- */
@@ -171,13 +182,17 @@ DialogTitle.displayName = "DialogTitle";
 const DialogDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn("text-sm text-text-secondary", className)}
-    {...props}
-  />
-));
+>(({ className, id, ...props }, ref) => {
+  const ctx = React.useContext(DialogContext);
+  return (
+    <p
+      ref={ref}
+      id={id || ctx?.descriptionId}
+      className={cn("text-sm text-text-secondary", className)}
+      {...props}
+    />
+  );
+});
 DialogDescription.displayName = "DialogDescription";
 
 /* ------------------------------- DialogBody ------------------------------- */

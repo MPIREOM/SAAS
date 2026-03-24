@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 
 interface PaginationProps {
   currentPage: number;
@@ -34,19 +35,23 @@ export function Pagination({
     (_, i) => startPage + i
   );
 
+  const linkClass =
+    "h-8 w-8 flex items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
+
   return (
-    <div className="flex items-center justify-center gap-1 py-4">
+    <nav aria-label="Pagination" className="flex items-center justify-center gap-1 py-4">
       {/* Previous */}
       {currentPage > 1 ? (
         <Link
           href={buildUrl(currentPage - 1)}
-          className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+          aria-label="Previous page"
+          className={cn(linkClass, "text-text-secondary hover:text-text-primary hover:bg-surface-elevated")}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
         </Link>
       ) : (
-        <span className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary/30">
-          <ChevronLeft className="h-4 w-4" />
+        <span className={cn(linkClass, "text-text-secondary/30")} aria-hidden="true">
+          <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
         </span>
       )}
 
@@ -55,12 +60,13 @@ export function Pagination({
         <>
           <Link
             href={buildUrl(1)}
-            className="h-8 w-8 flex items-center justify-center rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+            aria-label="Page 1"
+            className={cn(linkClass, "text-sm text-text-secondary hover:text-text-primary hover:bg-surface-elevated")}
           >
             1
           </Link>
           {startPage > 2 && (
-            <span className="text-text-secondary/40 text-sm px-1">...</span>
+            <span className="text-text-secondary/40 text-sm px-1" aria-hidden="true">...</span>
           )}
         </>
       )}
@@ -69,11 +75,15 @@ export function Pagination({
         <Link
           key={page}
           href={buildUrl(page)}
-          className={`h-8 w-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+          aria-label={`Page ${page}`}
+          aria-current={page === currentPage ? "page" : undefined}
+          className={cn(
+            linkClass,
+            "text-sm font-medium",
             page === currentPage
               ? "bg-accent text-background"
               : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
-          }`}
+          )}
         >
           {page}
         </Link>
@@ -82,11 +92,12 @@ export function Pagination({
       {endPage < totalPages && (
         <>
           {endPage < totalPages - 1 && (
-            <span className="text-text-secondary/40 text-sm px-1">...</span>
+            <span className="text-text-secondary/40 text-sm px-1" aria-hidden="true">...</span>
           )}
           <Link
             href={buildUrl(totalPages)}
-            className="h-8 w-8 flex items-center justify-center rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+            aria-label={`Page ${totalPages}`}
+            className={cn(linkClass, "text-sm text-text-secondary hover:text-text-primary hover:bg-surface-elevated")}
           >
             {totalPages}
           </Link>
@@ -97,15 +108,16 @@ export function Pagination({
       {currentPage < totalPages ? (
         <Link
           href={buildUrl(currentPage + 1)}
-          className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+          aria-label="Next page"
+          className={cn(linkClass, "text-text-secondary hover:text-text-primary hover:bg-surface-elevated")}
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
         </Link>
       ) : (
-        <span className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary/30">
-          <ChevronRight className="h-4 w-4" />
+        <span className={cn(linkClass, "text-text-secondary/30")} aria-hidden="true">
+          <ChevronRight className="h-4 w-4 rtl:rotate-180" />
         </span>
       )}
-    </div>
+    </nav>
   );
 }

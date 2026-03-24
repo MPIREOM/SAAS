@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Calendar } from "lucide-react";
 
 interface DateRangeFilterProps {
@@ -12,25 +13,21 @@ export function DateRangeFilter({ defaultMonth, defaultYear }: DateRangeFilterPr
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations("common");
 
   const now = new Date();
   const currentMonth = defaultMonth || searchParams.get("month") || String(now.getMonth() + 1).padStart(2, "0");
   const currentYear = defaultYear || searchParams.get("year") || String(now.getFullYear());
 
-  const months = [
-    { value: "01", label: "Jan" },
-    { value: "02", label: "Feb" },
-    { value: "03", label: "Mar" },
-    { value: "04", label: "Apr" },
-    { value: "05", label: "May" },
-    { value: "06", label: "Jun" },
-    { value: "07", label: "Jul" },
-    { value: "08", label: "Aug" },
-    { value: "09", label: "Sep" },
-    { value: "10", label: "Oct" },
-    { value: "11", label: "Nov" },
-    { value: "12", label: "Dec" },
-  ];
+  const monthKeys = [
+    "monthJan", "monthFeb", "monthMar", "monthApr", "monthMay", "monthJun",
+    "monthJul", "monthAug", "monthSep", "monthOct", "monthNov", "monthDec",
+  ] as const;
+
+  const months = monthKeys.map((key, i) => ({
+    value: String(i + 1).padStart(2, "0"),
+    label: t(key),
+  }));
 
   const years = [];
   for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
@@ -46,11 +43,12 @@ export function DateRangeFilter({ defaultMonth, defaultYear }: DateRangeFilterPr
 
   return (
     <div className="flex items-center gap-2">
-      <Calendar className="h-3.5 w-3.5 text-text-secondary" />
+      <Calendar className="h-3.5 w-3.5 text-text-secondary" aria-hidden="true" />
       <select
         value={currentMonth}
         onChange={(e) => updateFilter(e.target.value, currentYear)}
-        className="h-8 px-2 bg-surface border border-border/50 rounded-lg text-xs text-text-primary focus:outline-none focus:border-accent/50 appearance-none cursor-pointer"
+        aria-label={t("selectMonth")}
+        className="h-8 px-2 bg-surface border border-border/50 rounded-lg text-xs text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 appearance-none cursor-pointer"
       >
         {months.map((m) => (
           <option key={m.value} value={m.value}>{m.label}</option>
@@ -59,7 +57,8 @@ export function DateRangeFilter({ defaultMonth, defaultYear }: DateRangeFilterPr
       <select
         value={currentYear}
         onChange={(e) => updateFilter(currentMonth, e.target.value)}
-        className="h-8 px-2 bg-surface border border-border/50 rounded-lg text-xs text-text-primary focus:outline-none focus:border-accent/50 appearance-none cursor-pointer"
+        aria-label={t("selectYear")}
+        className="h-8 px-2 bg-surface border border-border/50 rounded-lg text-xs text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 appearance-none cursor-pointer"
       >
         {years.map((y) => (
           <option key={y} value={y}>{y}</option>

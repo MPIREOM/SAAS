@@ -46,11 +46,11 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
 
   async function handleSavePassword() {
     if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("passwordMinLength"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordsNoMatch"));
       return;
     }
     setSavingPassword(true);
@@ -131,8 +131,8 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
           {editingPassword ? (
             <div className="space-y-3 p-4 bg-surface-elevated/50 border border-border/50 rounded-lg">
               <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-text-secondary" />
-                <span className="text-sm font-medium text-text-primary">Change Password</span>
+                <Lock className="h-4 w-4 text-text-secondary" aria-hidden="true" />
+                <span className="text-sm font-medium text-text-primary">{t("changePassword")}</span>
               </div>
               <input
                 type="password"
@@ -154,7 +154,7 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
                   disabled={savingPassword}
                   className="h-8 px-4 bg-accent hover:bg-accent-hover text-background text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {savingPassword ? tc("loading") : "Update Password"}
+                  {savingPassword ? tc("loading") : t("updatePassword")}
                 </button>
                 <button
                   onClick={() => { setEditingPassword(false); setNewPassword(""); setConfirmPassword(""); }}
@@ -170,10 +170,10 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
                 onClick={() => setEditingPassword(true)}
                 className="inline-flex items-center gap-1.5 text-xs text-text-secondary hover:text-accent transition-colors"
               >
-                <Lock className="h-3 w-3" />
-                Change Password
+                <Lock className="h-3 w-3" aria-hidden="true" />
+                {t("changePassword")}
               </button>
-              {passwordSuccess && <span className="text-xs text-success">Password updated!</span>}
+              {passwordSuccess && <span className="text-xs text-success">{t("passwordUpdated")}</span>}
             </div>
           )}
         </div>
