@@ -197,7 +197,9 @@ export function MarkPaidButton({
         className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-all duration-200 font-semibold group hover:shadow-sm hover:shadow-accent/10"
       >
         <Check className="h-3 w-3" />
-        {t("markAsPaid")}
+        {alreadyPaid > 0
+          ? `${t("markAsPaid")} (${remainingAmount.toFixed(2)})`
+          : t("markAsPaid")}
         <ChevronRight className="h-3 w-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all duration-200" />
       </button>
 
