@@ -41,7 +41,7 @@ export default async function TenantStatementPage({
   // Fetch all invoices for this tenant
   const { data: invoices } = await supabase
     .from("invoices")
-    .select("id, amount, due_date, status, period_start, period_end, units!inner(unit_number, properties!inner(name))")
+    .select("id, amount, paid_amount, due_date, status, period_start, period_end, units!inner(unit_number, properties!inner(name))")
     .eq("tenant_id", tenantId)
     .order("due_date", { ascending: true });
 
@@ -55,12 +55,21 @@ export default async function TenantStatementPage({
   // Build ledger entries
   const entries: LedgerEntry[] = [];
 
+  const formatMethod = (m: string) => m === "bank_transfer" ? "Bank Transfer" : m === "cash" ? "Cash" : m === "cheque" ? "Cheque" : m;
+
   (invoices || []).forEach((inv) => {
     const unit = inv.units as unknown as { unit_number: string; properties: { name: string } };
+    const paidAmt = parseFloat((inv.paid_amount as string) || "0");
+    const totalAmt = parseFloat(inv.amount as string);
+    const statusNote = inv.status === "partial"
+      ? ` [Partial: ${paidAmt.toLocaleString()}/${totalAmt.toLocaleString()} ${CURRENCY.code}]`
+      : inv.status === "overdue"
+      ? " [Overdue]"
+      : "";
     entries.push({
       date: inv.due_date,
-      description: `Rent - ${unit.properties.name} Unit ${unit.unit_number}${inv.period_start ? ` (${inv.period_start} to ${inv.period_end})` : ""}`,
-      charge: parseFloat(inv.amount as string),
+      description: `Rent - ${unit.properties.name} Unit ${unit.unit_number}${inv.period_start ? ` (${inv.period_start} to ${inv.period_end})` : ""}${statusNote}`,
+      charge: totalAmt,
       payment: 0,
       balance: 0,
       type: "charge",
@@ -70,7 +79,7 @@ export default async function TenantStatementPage({
   (payments || []).forEach((pay) => {
     entries.push({
       date: pay.payment_date,
-      description: `Payment${pay.method ? ` (${pay.method})` : ""}${pay.reference_number ? ` - Ref: ${pay.reference_number}` : ""}`,
+      description: `Payment (${formatMethod(pay.method || "")})${pay.reference_number ? ` - Ref: ${pay.reference_number}` : ""}`,
       charge: 0,
       payment: parseFloat(pay.amount as string),
       balance: 0,
