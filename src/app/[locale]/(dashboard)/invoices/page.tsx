@@ -468,10 +468,27 @@ export default async function InvoicesPage({
                               {CURRENCY.code}
                             </span>
                           </span>
-                          {isPartial && Number(invoice.paid_amount) > 0 && (
-                            <p className="text-[10px] text-info mt-0.5">
-                              {formatAmount(Number(invoice.paid_amount))} {t("paid").toLowerCase()}
-                            </p>
+                          {isPartial && (
+                            <div className="mt-1">
+                              <div className="flex items-center justify-end gap-1.5 text-[10px]">
+                                <span className="text-success font-medium font-mono">
+                                  {formatAmount(Number(invoice.paid_amount || 0))}
+                                </span>
+                                <span className="text-text-secondary">/</span>
+                                <span className="text-text-secondary font-mono">
+                                  {formatAmount(Number(invoice.amount))}
+                                </span>
+                              </div>
+                              <div className="h-1 w-full bg-border/50 rounded-full mt-1 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-info transition-all"
+                                  style={{ width: `${Math.round((Number(invoice.paid_amount || 0) / Number(invoice.amount)) * 100)}%` }}
+                                />
+                              </div>
+                              <p className="text-[10px] text-destructive font-medium mt-0.5 font-mono">
+                                {t("remaining")}: {formatAmount(Number(invoice.amount) - Number(invoice.paid_amount || 0))}
+                              </p>
+                            </div>
                           )}
                         </td>
 
