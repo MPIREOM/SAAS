@@ -218,6 +218,7 @@
     "archived": "مؤرشف",
     "moveIn": "تاريخ الدخول",
     "moveOut": "تاريخ الخروج",
+    "moveOutButton": "إخلاء",
     "leaseInfo": "معلومات العقد",
     "assignTenantToUnit": "تعيين مستأجر للوحدة",
     "assigningToUnit": "إنشاء مستأجر وعقد لهذه الوحدة",
@@ -282,8 +283,10 @@
     "selectReason": "اختر السبب",
     "reasons": {
       "endOfLease": "انتهاء العقد",
+      "end_of_lease": "انتهاء العقد",
       "relocation": "انتقال",
       "nonPayment": "عدم الدفع",
+      "non_payment": "عدم الدفع",
       "personal": "أسباب شخصية",
       "other": "أخرى"
     },
@@ -382,6 +385,7 @@
     "methods": {
       "cash": "نقداً",
       "bankTransfer": "تحويل بنكي",
+      "bank_transfer": "تحويل بنكي",
       "cheque": "شيك"
     },
     "selectCheque": "اختر الشيك",
@@ -461,6 +465,7 @@
     "statuses": {
       "open": "مفتوح",
       "inProgress": "قيد التنفيذ",
+      "in_progress": "قيد التنفيذ",
       "resolved": "تم الحل",
       "closed": "مغلق"
     },
@@ -554,11 +559,17 @@
     "templateType": "النوع",
     "types": {
       "rentUpcoming": "موعد إيجار قادم",
+      "rent_upcoming": "موعد إيجار قادم",
       "rentOverdue": "إيجار متأخر",
+      "rent_overdue": "إيجار متأخر",
       "chequeDue": "موعد استحقاق شيك",
+      "cheque_due": "موعد استحقاق شيك",
       "leaseExpiry": "انتهاء عقد الإيجار",
+      "lease_expiry": "انتهاء عقد الإيجار",
       "documentExpiry": "انتهاء صلاحية مستند",
-      "maintenanceUpdate": "تحديث الصيانة"
+      "document_expiry": "انتهاء صلاحية مستند",
+      "maintenanceUpdate": "تحديث الصيانة",
+      "maintenance_update": "تحديث الصيانة"
     },
     "channels": {
       "whatsapp": "واتساب",
@@ -839,6 +850,11 @@
     "sharePortalDescription": "إنشاء رابط للقراءة فقط لبوابة",
     "generateLink": "إنشاء رابط",
     "activeLinks": "الروابط النشطة",
+    "methods": {
+      "cash": "نقداً",
+      "bank_transfer": "تحويل بنكي",
+      "cheque": "شيك"
+    },
     "whatsappMessage": "مرحباً! يمكنك استخدام هذا الرابط لعرض تفاصيل إيجارك والمستندات وسجل المدفوعات:"
   }
 }

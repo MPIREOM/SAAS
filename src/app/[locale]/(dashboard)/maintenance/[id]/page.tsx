@@ -112,14 +112,14 @@ export default async function MaintenanceDetailPage({
               urgencyColors[(request.urgency as string) || "low"]
             }`}
           >
-            {request.urgency as string}
+            {t(`urgencies.${request.urgency}`)}
           </span>
           <span
             className={`text-xs px-2.5 py-1 rounded-full capitalize ${
               statusColors[(request.status as string) || "open"]
             }`}
           >
-            {(request.status as string)?.replace("_", " ")}
+            {t(`statuses.${request.status}`)}
           </span>
         </div>
       </div>
@@ -133,8 +133,8 @@ export default async function MaintenanceDetailPage({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Wrench className="h-3.5 w-3.5 text-text-secondary" />
-              <span className="text-sm text-text-primary capitalize">
-                {request.category as string}
+              <span className="text-sm text-text-primary">
+                {t(`categories.${request.category}`)}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export default async function MaintenanceDetailPage({
                     : "bg-surface-elevated text-text-secondary"
                 }`}
               >
-                {status.replace("_", " ")}
+                {t(`statuses.${status}`)}
               </div>
               {index < statusFlow.length - 1 && (
                 <div

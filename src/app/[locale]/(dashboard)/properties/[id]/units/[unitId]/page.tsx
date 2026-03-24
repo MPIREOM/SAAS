@@ -47,6 +47,7 @@ export default async function UnitDetailPage({
   const td = await getTranslations("documents");
   const tch = await getTranslations("cheques");
   const tm = await getTranslations("maintenance");
+  const ti = await getTranslations("invoices");
   const supabase = await createClient();
 
   const { data: unit } = await supabase
@@ -343,7 +344,7 @@ export default async function UnitDetailPage({
                     className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border text-text-secondary text-xs rounded-md hover:bg-border/30 hover:text-text-primary transition-colors"
                   >
                     <LogOut className="h-3.5 w-3.5" />
-                    {t("moveOut") || "Move Out"}
+                    {t("moveOutButton")}
                   </Link>
                 </div>
               </div>
@@ -530,8 +531,8 @@ export default async function UnitDetailPage({
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="text-sm text-text-secondary capitalize">
-                          {((lease.vacate_reason as string) || "—").replace(/_/g, " ")}
+                        <span className="text-sm text-text-secondary">
+                          {lease.vacate_reason ? tt(`reasons.${lease.vacate_reason}`) : "—"}
                         </span>
                       </td>
                     </tr>
@@ -605,11 +606,8 @@ export default async function UnitDetailPage({
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-sm text-text-secondary capitalize">
-                        {((payment.method as string) || "—").replace(
-                          "_",
-                          " "
-                        )}
+                      <span className="text-sm text-text-secondary">
+                        {payment.method ? ti(`methods.${payment.method}`) : "—"}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
@@ -1001,7 +999,7 @@ export default async function UnitDetailPage({
                           ) : (
                             <AlertTriangle className="h-3 w-3" />
                           )}
-                          {((req.status as string) || "").replace("_", " ")}
+                          {req.status ? tm(`statuses.${req.status}`) : ""}
                         </span>
                       </td>
                     </tr>
