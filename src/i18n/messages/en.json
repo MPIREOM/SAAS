@@ -527,7 +527,9 @@
     "fileSize": "File Size",
     "expired": "Expired",
     "expiringSoon": "Expiring Soon",
-    "valid": "Valid"
+    "valid": "Valid",
+    "extractingExpiry": "Analyzing document for expiry date...",
+    "expiryExtracted": "Expiry date auto-detected from document"
   },
   "reminders": {
     "title": "Reminders & Notifications",
