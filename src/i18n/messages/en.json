@@ -52,7 +52,29 @@
     "page": "Page",
     "of": "of",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "toggleSidebar": "Toggle sidebar",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "switchTheme": "Switch theme",
+    "clearSearch": "Clear search",
+    "pagination": "Pagination",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "selectMonth": "Select month",
+    "selectYear": "Select year",
+    "monthJan": "Jan",
+    "monthFeb": "Feb",
+    "monthMar": "Mar",
+    "monthApr": "Apr",
+    "monthMay": "May",
+    "monthJun": "Jun",
+    "monthJul": "Jul",
+    "monthAug": "Aug",
+    "monthSep": "Sep",
+    "monthOct": "Oct",
+    "monthNov": "Nov",
+    "monthDec": "Dec"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -397,7 +419,14 @@
     "depositDate": "Deposit Date",
     "drawer": "Drawer",
     "payee": "Payee",
-    "replacement": "Replacement Cheque"
+    "replacement": "Replacement Cheque",
+    "markCleared": "Mark as Cleared",
+    "markBounced": "Mark as Bounced",
+    "resetPending": "Reset to Pending",
+    "deleteCheque": "Delete Cheque",
+    "deleteConfirm": "Are you sure you want to delete this cheque?",
+    "chequeDeleted": "Cheque deleted",
+    "chequeMarked": "Cheque marked as {status}"
   },
   "maintenance": {
     "title": "Maintenance Requests",
@@ -625,7 +654,9 @@
     "passwordUpdated": "Password updated!",
     "activityLog": "Activity Log",
     "activityLogDescription": "Recent actions across the system",
-    "noActivityLogs": "No activity recorded yet"
+    "noActivityLogs": "No activity recorded yet",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordsNoMatch": "Passwords do not match"
   },
   "dashboard": {
     "title": "Dashboard",

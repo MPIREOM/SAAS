@@ -44,6 +44,7 @@ export function Sidebar({ locale }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const t = useTranslations("nav");
+  const tc = useTranslations("common");
 
   const isRtl = locale === "ar";
 
@@ -80,9 +81,10 @@ export function Sidebar({ locale }: SidebarProps) {
         {isMobile && (
           <button
             onClick={() => setMobileOpen(false)}
+            aria-label={tc("closeMenu")}
             className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all duration-200"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -129,6 +131,8 @@ export function Sidebar({ locale }: SidebarProps) {
         <div className="border-t border-border/50 p-3">
           <button
             onClick={() => setCollapsed(!collapsed)}
+            aria-label={tc("toggleSidebar")}
+            aria-pressed={collapsed}
             className="flex items-center justify-center w-full py-2.5 rounded-lg text-text-secondary hover:text-accent hover:bg-surface-elevated transition-all duration-200"
           >
             {collapsed ? (
@@ -153,15 +157,17 @@ export function Sidebar({ locale }: SidebarProps) {
       {/* Mobile hamburger button */}
       <button
         onClick={() => setMobileOpen(true)}
+        aria-label={tc("openMenu")}
         className="md:hidden fixed top-3.5 z-50 p-2 rounded-lg glass border border-border/50 text-text-secondary hover:text-accent transition-all duration-200"
         style={{ [isRtl ? "right" : "left"]: "0.75rem" }}
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
+          role="presentation"
           className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
           onClick={() => setMobileOpen(false)}
         />
