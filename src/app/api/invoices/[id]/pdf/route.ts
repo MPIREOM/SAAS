@@ -30,6 +30,16 @@ export async function GET(
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
 
+  // Fetch payment records for this invoice's tenant/lease within the invoice period
+  const { data: paymentRecords } = await supabase
+    .from("payments")
+    .select("amount, payment_date, method, reference_number")
+    .eq("tenant_id", invoice.tenant_id)
+    .eq("lease_id", invoice.lease_id)
+    .gte("payment_date", invoice.period_start || invoice.due_date)
+    .lte("payment_date", invoice.paid_date || new Date().toISOString().split("T")[0])
+    .order("payment_date", { ascending: true });
+
   const tenant = invoice.tenants as unknown as {
     full_name: string;
     phone: string;
@@ -48,8 +58,28 @@ export async function GET(
     year: "numeric",
   });
 
+  const totalAmount = parseFloat(invoice.amount);
+  const paidAmount = parseFloat(invoice.paid_amount || "0");
+  const balanceDue = Math.max(0, Math.round((totalAmount - paidAmount) * 100) / 100);
+  const hasPaidAnything = paidAmount > 0;
+
   const statusLabel = invoice.status === "paid" ? "PAID" : invoice.status === "partial" ? "PARTIAL" : invoice.status === "overdue" ? "OVERDUE" : "PENDING";
   const statusColor = invoice.status === "paid" ? "#16a34a" : invoice.status === "partial" ? "#3b82f6" : invoice.status === "overdue" ? "#dc2626" : "#ca8a04";
+
+  const formatAmount = (n: number) => n.toLocaleString("en", { minimumFractionDigits: 2 });
+  const formatMethod = (m: string) => m === "bank_transfer" ? "Bank Transfer" : m === "cash" ? "Cash" : m === "cheque" ? "Cheque" : m;
+
+  // Build payment history rows for the table
+  const payments = paymentRecords || [];
+  const paymentRows = payments.map((p) => {
+    const date = new Date(p.payment_date as string).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const amt = parseFloat(p.amount as string);
+    return `<tr>
+      <td style="color: #16a34a;">Payment - ${formatMethod(p.method as string)}${p.reference_number ? ` (Ref: ${p.reference_number})` : ""}</td>
+      <td>${date}</td>
+      <td style="color: #16a34a;">-${formatAmount(amt)} ${CURRENCY.code}</td>
+    </tr>`;
+  }).join("");
 
   const html = `<!DOCTYPE html>
 <html>
@@ -67,17 +97,22 @@ export async function GET(
     .invoice-number { font-size: 12px; color: #666; margin-top: 4px; font-family: monospace; }
     .status { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 700; color: white; background: ${statusColor}; margin-top: 8px; letter-spacing: 1px; }
     .details { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
-    .detail-box { background: #f9f9f7; border: 1px solid #e5e5e0; border-radius: 8px; padding: 16px; }
+    .detail-box { background: #f9f9f7; border: 1px solid #e5e5e0; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
     .detail-box h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #999; margin-bottom: 10px; }
     .detail-box p { font-size: 13px; color: #333; line-height: 1.8; }
     .detail-box .name { font-weight: 600; font-size: 15px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
     th { background: #b8960c; color: white; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px; text-align: left; }
     th:last-child { text-align: right; }
     td { padding: 14px 16px; border-bottom: 1px solid #eee; font-size: 14px; }
     td:last-child { text-align: right; font-family: monospace; font-weight: 600; }
     .total-row { background: #f9f9f7; }
     .total-row td { font-weight: 700; font-size: 16px; border-top: 2px solid #b8960c; }
+    .paid-row td { color: #16a34a; border-top: 1px solid #e5e5e0; }
+    .balance-row { background: ${invoice.status === "paid" ? "#f0fdf4" : "#fef3c7"}; }
+    .balance-row td { font-weight: 700; font-size: 16px; border-top: 2px solid ${invoice.status === "paid" ? "#16a34a" : "#b8960c"}; color: ${invoice.status === "paid" ? "#16a34a" : "#92400e"}; }
+    .payment-section { margin-bottom: 20px; }
+    .payment-table th { background: #f0fdf4; color: #16a34a; }
     .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
     .footer p { font-size: 11px; color: #999; }
     @media print {
@@ -132,26 +167,59 @@ export async function GET(
       <tr>
         <td>Monthly Rent - Unit ${unit.unit_number}</td>
         <td>${invoice.period_start ? `${invoice.period_start} to ${invoice.period_end}` : invoiceDate}</td>
-        <td>${parseFloat(invoice.amount).toLocaleString("en", { minimumFractionDigits: 2 })} ${CURRENCY.code}</td>
+        <td>${formatAmount(totalAmount)} ${CURRENCY.code}</td>
       </tr>
       <tr class="total-row">
         <td colspan="2">Total Due</td>
-        <td>${parseFloat(invoice.amount).toLocaleString("en", { minimumFractionDigits: 2 })} ${CURRENCY.code}</td>
+        <td>${formatAmount(totalAmount)} ${CURRENCY.code}</td>
       </tr>
+      ${hasPaidAnything ? `
+      <tr class="paid-row">
+        <td colspan="2">Amount Paid</td>
+        <td>-${formatAmount(paidAmount)} ${CURRENCY.code}</td>
+      </tr>
+      <tr class="balance-row">
+        <td colspan="2">${invoice.status === "paid" ? "Balance (Fully Paid)" : "Balance Due"}</td>
+        <td>${formatAmount(balanceDue)} ${CURRENCY.code}</td>
+      </tr>
+      ` : ""}
     </tbody>
   </table>
 
+  ${hasPaidAnything && payments.length > 0 ? `
+  <div class="payment-section">
+    <table class="payment-table">
+      <thead>
+        <tr>
+          <th>Payment Details</th>
+          <th>Date</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${paymentRows}
+      </tbody>
+    </table>
+  </div>
+  ` : ""}
+
   ${invoice.status === "paid" ? `
   <div class="detail-box" style="background: #f0fdf4; border-color: #bbf7d0;">
-    <h3 style="color: #16a34a;">Payment Received</h3>
-    <p>Paid on: ${invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString("en-GB") : "—"}</p>
-    ${invoice.payment_method ? `<p>Method: ${invoice.payment_method}</p>` : ""}
-    ${invoice.payment_reference ? `<p>Reference: ${invoice.payment_reference}</p>` : ""}
+    <h3 style="color: #16a34a;">Fully Paid</h3>
+    <p>Paid on: ${invoice.paid_date ? new Date(invoice.paid_date).toLocaleDateString("en-GB") : "—"}</p>
+  </div>
+  ` : ""}
+
+  ${invoice.status === "partial" ? `
+  <div class="detail-box" style="background: #eff6ff; border-color: #bfdbfe;">
+    <h3 style="color: #3b82f6;">Partial Payment</h3>
+    <p>Paid so far: ${formatAmount(paidAmount)} ${CURRENCY.code} of ${formatAmount(totalAmount)} ${CURRENCY.code}</p>
+    <p>Remaining balance: ${formatAmount(balanceDue)} ${CURRENCY.code}</p>
   </div>
   ` : ""}
 
   <div class="footer">
-    <p>Thank you for your payment. This is a computer-generated document.</p>
+    <p>${invoice.status === "paid" ? "Thank you for your payment." : "Please ensure payment is made by the due date."} This is a computer-generated document.</p>
     <p style="margin-top: 4px;">MPIRE Property Management</p>
   </div>
 </body>

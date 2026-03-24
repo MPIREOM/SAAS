@@ -72,6 +72,13 @@ export function MarkPaidButton({
   const [cheques, setCheques] = useState<Cheque[]>([]);
   const [selectedChequeId, setSelectedChequeId] = useState("");
   const [loadingCheques, setLoadingCheques] = useState(false);
+  const [addNewCheque, setAddNewCheque] = useState(false);
+  const [newChequeNumber, setNewChequeNumber] = useState("");
+  const [newChequeBankName, setNewChequeBankName] = useState("");
+  const [newChequeDate, setNewChequeDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [newChequeAmount, setNewChequeAmount] = useState("");
 
   const totalAmount = Number(amount);
   const alreadyPaid = Number(existingPaidAmount || 0);
@@ -80,6 +87,7 @@ export function MarkPaidButton({
   useEffect(() => {
     if (method === "cheque" && open) {
       setLoadingCheques(true);
+      setAddNewCheque(false);
       const supabase = createClient();
       supabase
         .from("cheques")
@@ -90,6 +98,10 @@ export function MarkPaidButton({
         .then(({ data }) => {
           setCheques(data || []);
           setSelectedChequeId("");
+          // Auto-show new cheque form if none exist
+          if (!data || data.length === 0) {
+            setAddNewCheque(true);
+          }
           setLoadingCheques(false);
         });
     }
@@ -133,6 +145,8 @@ export function MarkPaidButton({
       const referenceNumber =
         method === "cheque" && selectedCheque
           ? selectedCheque.cheque_number
+          : method === "cheque" && addNewCheque
+          ? newChequeNumber
           : null;
 
       const { data: paymentData } = await supabase
@@ -150,6 +164,7 @@ export function MarkPaidButton({
         .single();
 
       if (method === "cheque" && selectedChequeId) {
+        // Link existing cheque to payment and mark as cleared
         await supabase
           .from("cheques")
           .update({
@@ -158,6 +173,19 @@ export function MarkPaidButton({
             updated_at: new Date().toISOString(),
           })
           .eq("id", selectedChequeId);
+      } else if (method === "cheque" && addNewCheque && newChequeNumber) {
+        // Create new cheque record and link to payment
+        await supabase
+          .from("cheques")
+          .insert({
+            tenant_id: invoice.tenant_id,
+            payment_id: paymentData?.id || null,
+            cheque_number: newChequeNumber,
+            bank_name: newChequeBankName,
+            cheque_date: newChequeDate,
+            amount: paymentAmount,
+            status: "cleared",
+          });
       }
 
       await logAudit(supabase, {
@@ -330,62 +358,131 @@ export function MarkPaidButton({
               {/* Cheque selection */}
               {method === "cheque" && (
                 <div className="animate-fade-in-up">
-                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                    {t("selectCheque")}
-                  </label>
                   {loadingCheques ? (
                     <div className="flex items-center justify-center py-4">
                       <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                     </div>
-                  ) : cheques.length === 0 ? (
-                    <div className="p-3 rounded-xl bg-warning/5 border border-warning/20 text-sm text-warning">
-                      {t("noPendingCheques")}
-                    </div>
                   ) : (
-                    <div className="space-y-2">
-                      {cheques.map((ch) => {
-                        const isSelected = selectedChequeId === ch.id;
-                        return (
-                          <button
-                            key={ch.id}
-                            type="button"
-                            onClick={() => setSelectedChequeId(ch.id)}
-                            className={`w-full text-start p-3 rounded-xl border transition-all duration-200 ${
-                              isSelected
-                                ? "bg-accent/10 border-accent/40 shadow-sm shadow-accent/10"
-                                : "bg-surface-elevated/50 border-border/40 hover:border-border"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-text-primary font-mono">
-                                  #{ch.cheque_number}
-                                </p>
-                                <p className="text-xs text-text-secondary mt-0.5">
-                                  {ch.bank_name} &middot; {ch.cheque_date}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold font-mono text-text-primary tabular-nums">
-                                  {ch.amount} {CURRENCY.code}
-                                </span>
-                                <div
-                                  className={`h-4 w-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                    <>
+                      {/* Existing cheques list */}
+                      {cheques.length > 0 && !addNewCheque && (
+                        <div>
+                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                            {t("selectCheque")}
+                          </label>
+                          <div className="space-y-2">
+                            {cheques.map((ch) => {
+                              const isSelected = selectedChequeId === ch.id;
+                              return (
+                                <button
+                                  key={ch.id}
+                                  type="button"
+                                  onClick={() => setSelectedChequeId(ch.id)}
+                                  className={`w-full text-start p-3 rounded-xl border transition-all duration-200 ${
                                     isSelected
-                                      ? "border-accent bg-accent"
-                                      : "border-border"
+                                      ? "bg-accent/10 border-accent/40 shadow-sm shadow-accent/10"
+                                      : "bg-surface-elevated/50 border-border/40 hover:border-border"
                                   }`}
                                 >
-                                  {isSelected && (
-                                    <Check className="h-2.5 w-2.5 text-accent-foreground" />
-                                  )}
-                                </div>
-                              </div>
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-sm font-medium text-text-primary font-mono">
+                                        #{ch.cheque_number}
+                                      </p>
+                                      <p className="text-xs text-text-secondary mt-0.5">
+                                        {ch.bank_name} &middot; {ch.cheque_date}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-bold font-mono text-text-primary tabular-nums">
+                                        {ch.amount} {CURRENCY.code}
+                                      </span>
+                                      <div
+                                        className={`h-4 w-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                                          isSelected
+                                            ? "border-accent bg-accent"
+                                            : "border-border"
+                                        }`}
+                                      >
+                                        {isSelected && (
+                                          <Check className="h-2.5 w-2.5 text-accent-foreground" />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Toggle between existing cheques and new cheque form */}
+                      {cheques.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddNewCheque(!addNewCheque);
+                            setSelectedChequeId("");
+                          }}
+                          className="w-full mt-2 text-xs text-accent hover:text-accent-hover font-medium py-2 border border-dashed border-accent/30 rounded-xl hover:border-accent/50 hover:bg-accent/5 transition-all duration-200"
+                        >
+                          {addNewCheque ? t("selectCheque") : `+ ${t("addCheque")}`}
+                        </button>
+                      )}
+
+                      {/* New cheque form */}
+                      {addNewCheque && (
+                        <div className="space-y-3 animate-fade-in-up">
+                          {cheques.length === 0 && (
+                            <div className="p-3 rounded-xl bg-surface-elevated/50 border border-border/40 text-xs text-text-secondary">
+                              {t("noPendingCheques")}
                             </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                          )}
+                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                            {t("addCheque")}
+                          </label>
+                          <div>
+                            <label className="block text-xs text-text-secondary mb-1">
+                              {t("chequeNumber")}
+                            </label>
+                            <input
+                              type="text"
+                              value={newChequeNumber}
+                              onChange={(e) => setNewChequeNumber(e.target.value)}
+                              required
+                              placeholder="e.g. 001234"
+                              className="w-full h-10 bg-surface-elevated/50 border border-border/60 rounded-xl px-3 text-sm text-text-primary font-mono focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-secondary mb-1">
+                              {t("bankName")}
+                            </label>
+                            <input
+                              type="text"
+                              value={newChequeBankName}
+                              onChange={(e) => setNewChequeBankName(e.target.value)}
+                              required
+                              placeholder="e.g. Bank Muscat"
+                              className="w-full h-10 bg-surface-elevated/50 border border-border/60 rounded-xl px-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-secondary mb-1">
+                              {t("chequeDate")}
+                            </label>
+                            <input
+                              type="date"
+                              value={newChequeDate}
+                              onChange={(e) => setNewChequeDate(e.target.value)}
+                              required
+                              className="w-full h-10 bg-surface-elevated/50 border border-border/60 rounded-xl px-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -433,7 +530,8 @@ export function MarkPaidButton({
               form="mark-paid-form"
               disabled={
                 loading ||
-                (method === "cheque" && !selectedChequeId) ||
+                (method === "cheque" && !selectedChequeId && !addNewCheque) ||
+                (method === "cheque" && addNewCheque && (!newChequeNumber || !newChequeBankName)) ||
                 (paymentType === "partial" && (!partialAmount || Number(partialAmount) <= 0))
               }
               className="h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 disabled:opacity-40 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] flex items-center gap-2"
