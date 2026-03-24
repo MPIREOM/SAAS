@@ -120,13 +120,23 @@ export function MarkPaidButton({
       .single();
 
     const currentPaidAmount = Number(invoice?.paid_amount || 0);
+    const invoiceTotal = Number(invoice?.amount || 0);
+    const actualRemaining = Math.max(invoiceTotal - currentPaidAmount, 0);
     const paymentAmount =
       paymentType === "full"
-        ? remainingAmount
-        : Math.min(Number(partialAmount), remainingAmount);
+        ? actualRemaining
+        : Math.min(Number(partialAmount), actualRemaining);
+
+    if (paymentAmount <= 0) {
+      toast({
+        title: "Invoice already fully paid",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     const newPaidAmount = currentPaidAmount + paymentAmount;
-    const invoiceTotal = Number(invoice?.amount || 0);
     const isFullyPaid = newPaidAmount >= invoiceTotal;
 
     const { error } = await supabase
@@ -317,7 +327,7 @@ export function MarkPaidButton({
                   />
                   {partialAmount && Number(partialAmount) > 0 && (
                     <p className="text-xs text-text-secondary mt-1.5">
-                      {t("remaining")}: {(remainingAmount - Number(partialAmount)).toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                      {t("remaining")}: {Math.max(remainingAmount - Number(partialAmount), 0).toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
                     </p>
                   )}
                 </div>
