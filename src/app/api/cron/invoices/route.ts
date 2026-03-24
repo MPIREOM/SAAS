@@ -29,29 +29,34 @@ export async function GET(request: Request) {
   const today = new Date();
   const currentDay = today.getDate();
 
-  // Find all active leases where today is the payment due day
+  // Get ALL active leases whose payment_due_day has passed this month
+  // This ensures we catch up on any missed days (resilient to cron failures)
   const { data: leases, error } = await supabase
     .from("leases")
     .select("id, tenant_id, unit_id, monthly_rent, payment_due_day")
     .eq("is_active", true)
-    .eq("payment_due_day", currentDay);
+    .lte("payment_due_day", currentDay);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   if (!leases || leases.length === 0) {
-    return NextResponse.json({ created: 0, message: "No leases due today" });
+    return NextResponse.json({ created: 0, message: "No leases due yet this month" });
   }
 
-  const dueDate = format(today, "yyyy-MM-dd");
   const periodStart = format(startOfMonth(today), "yyyy-MM-dd");
   const periodEnd = format(lastDayOfMonth(today), "yyyy-MM-dd");
   let created = 0;
   let skipped = 0;
 
   for (const lease of leases) {
+    // Build the due date using the lease's payment_due_day in the current month
+    const dueDay = Math.min(lease.payment_due_day, lastDayOfMonth(today).getDate());
+    const dueDate = format(new Date(today.getFullYear(), today.getMonth(), dueDay), "yyyy-MM-dd");
+
     // Upsert to prevent duplicates (unique index on lease_id + period_start)
+    // ignoreDuplicates: true means existing invoices won't be overwritten
     const { error: insertError } = await supabase.from("invoices").upsert(
       {
         lease_id: lease.id,
@@ -75,7 +80,7 @@ export async function GET(request: Request) {
   }
 
   // Auto-mark overdue invoices (don't override partial payments)
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = today.toISOString().split("T")[0];
   const { error: overdueError } = await supabase
     .from("invoices")
     .update({ status: "overdue" })
@@ -83,5 +88,11 @@ export async function GET(request: Request) {
     .lt("due_date", todayStr);
   // Note: partial invoices keep their "partial" status, not overridden to "overdue"
 
-  return NextResponse.json({ created, skipped, total: leases.length, overdueError: overdueError?.message || null });
+  return NextResponse.json({
+    created,
+    skipped,
+    total: leases.length,
+    overdueUpdated: !overdueError,
+    overdueError: overdueError?.message || null,
+  });
 }
