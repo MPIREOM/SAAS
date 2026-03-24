@@ -122,26 +122,26 @@ export default async function RemindersPage({
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary capitalize">
-                          {(reminder.reminder_type as string)?.replace("_", " ") || "—"}
+                        <span className="text-sm text-text-secondary">
+                          {reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                          className={`text-xs px-2 py-0.5 rounded-full ${
                             channelIcons[(reminder.channel as string) || "email"]
                           }`}
                         >
-                          {reminder.channel as string}
+                          {reminder.channel ? t(`channels.${reminder.channel}`) : "—"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                          className={`text-xs px-2 py-0.5 rounded-full ${
                             statusColors[(reminder.status as string) || "pending"]
                           }`}
                         >
-                          {reminder.status as string}
+                          {reminder.status ? t(`statuses.${reminder.status}`) : "—"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -207,7 +207,7 @@ export default async function RemindersPage({
                 </p>
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                   <span className="text-xs text-text-secondary capitalize">
-                    {t("type")}: {(template.reminder_type as string)?.replace("_", " ") || "—"}
+                    {t("type")}: {template.reminder_type ? t(`types.${template.reminder_type}`) : "—"}
                   </span>
                 </div>
               </Link>

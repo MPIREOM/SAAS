@@ -43,6 +43,8 @@ export default async function TenantDetailPage({
   const tc = await getTranslations("common");
   const td = await getTranslations("documents");
   const tch = await getTranslations("cheques");
+  const ti = await getTranslations("invoices");
+  const tm = await getTranslations("maintenance");
   const supabase = await createClient();
 
   const { data: tenant } = await supabase
@@ -238,9 +240,9 @@ export default async function TenantDetailPage({
               <span className="text-xs text-text-secondary uppercase tracking-wider">
                 {t("vacateReason")}
               </span>
-              <p className="text-sm text-text-primary mt-1 capitalize">
+              <p className="text-sm text-text-primary mt-1">
                 {moveOutLease.vacate_reason
-                  ? (moveOutLease.vacate_reason as string).replace(/_/g, " ")
+                  ? t(`reasons.${moveOutLease.vacate_reason}`)
                   : "—"}
               </p>
             </div>
@@ -251,7 +253,7 @@ export default async function TenantDetailPage({
               <p className="mt-1">
                 {moveOutLease.deposit_status ? (
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-semibold capitalize ${
+                    className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                       moveOutLease.deposit_status === "refunded"
                         ? "bg-success/10 text-success"
                         : moveOutLease.deposit_status === "pending"
@@ -261,7 +263,7 @@ export default async function TenantDetailPage({
                             : "bg-text-secondary/10 text-text-secondary"
                     }`}
                   >
-                    {(moveOutLease.deposit_status as string).replace(/_/g, " ")}
+                    {t(`depositStatuses.${moveOutLease.deposit_status}`)}
                   </span>
                 ) : (
                   <span className="text-sm text-text-primary">—</span>
@@ -532,8 +534,8 @@ export default async function TenantDetailPage({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary capitalize">
-                        {((payment.method as string) || "—").replace("_", " ")}
+                      <span className="text-sm text-text-secondary">
+                        {payment.method ? ti(`methods.${payment.method}`) : "—"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -859,7 +861,7 @@ export default async function TenantDetailPage({
                         ) : (
                           <AlertTriangle className="h-3 w-3" />
                         )}
-                        {((req.status as string) || "").replace("_", " ")}
+                        {req.status ? tm(`statuses.${req.status}`) : ""}
                       </span>
                     </td>
                   </tr>

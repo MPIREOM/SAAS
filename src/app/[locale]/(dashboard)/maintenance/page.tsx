@@ -185,8 +185,8 @@ export default async function MaintenancePage({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary capitalize">
-                        {(request.category as string) || "—"}
+                      <span className="text-sm text-text-secondary">
+                        {request.category ? t(`categories.${request.category}`) : "—"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -201,7 +201,7 @@ export default async function MaintenancePage({
                           urgencyColors[(request.urgency as string) || "low"]
                         }`}
                       >
-                        {request.urgency as string}
+                        {t(`urgencies.${request.urgency}`)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -210,7 +210,7 @@ export default async function MaintenancePage({
                           statusColors[(request.status as string) || "open"]
                         }`}
                       >
-                        {(request.status as string)?.replace("_", " ")}
+                        {t(`statuses.${request.status}`)}
                       </span>
                     </td>
                     <td className="px-4 py-3">

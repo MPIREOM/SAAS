@@ -218,6 +218,7 @@
     "archived": "Archived",
     "moveIn": "Move-in Date",
     "moveOut": "Move-out Date",
+    "moveOutButton": "Move Out",
     "leaseInfo": "Lease Information",
     "assignTenantToUnit": "Assign Tenant to Unit",
     "assigningToUnit": "Creating tenant and lease for this unit",
@@ -282,8 +283,10 @@
     "selectReason": "Select reason",
     "reasons": {
       "endOfLease": "End of Lease",
+      "end_of_lease": "End of Lease",
       "relocation": "Relocation",
       "nonPayment": "Non-Payment",
+      "non_payment": "Non-Payment",
       "personal": "Personal Reasons",
       "other": "Other"
     },
@@ -382,6 +385,7 @@
     "methods": {
       "cash": "Cash",
       "bankTransfer": "Bank Transfer",
+      "bank_transfer": "Bank Transfer",
       "cheque": "Cheque"
     },
     "selectCheque": "Select Cheque",
@@ -461,6 +465,7 @@
     "statuses": {
       "open": "Open",
       "inProgress": "In Progress",
+      "in_progress": "In Progress",
       "resolved": "Resolved",
       "closed": "Closed"
     },
@@ -527,7 +532,9 @@
     "fileSize": "File Size",
     "expired": "Expired",
     "expiringSoon": "Expiring Soon",
-    "valid": "Valid"
+    "valid": "Valid",
+    "extractingExpiry": "Analyzing document for expiry date...",
+    "expiryExtracted": "Expiry date auto-detected from document"
   },
   "reminders": {
     "title": "Reminders & Notifications",
@@ -552,11 +559,17 @@
     "templateType": "Type",
     "types": {
       "rentUpcoming": "Rent Upcoming",
+      "rent_upcoming": "Rent Upcoming",
       "rentOverdue": "Rent Overdue",
+      "rent_overdue": "Rent Overdue",
       "chequeDue": "Cheque Due",
+      "cheque_due": "Cheque Due",
       "leaseExpiry": "Lease Expiry",
+      "lease_expiry": "Lease Expiry",
       "documentExpiry": "Document Expiry",
-      "maintenanceUpdate": "Maintenance Update"
+      "document_expiry": "Document Expiry",
+      "maintenanceUpdate": "Maintenance Update",
+      "maintenance_update": "Maintenance Update"
     },
     "channels": {
       "whatsapp": "WhatsApp",
@@ -837,6 +850,11 @@
     "sharePortalDescription": "Generate a read-only portal link for",
     "generateLink": "Generate Link",
     "activeLinks": "Active Links",
+    "methods": {
+      "cash": "Cash",
+      "bank_transfer": "Bank Transfer",
+      "cheque": "Cheque"
+    },
     "whatsappMessage": "Hi! You can use this link to view your tenancy details, documents, and payment history:"
   }
 }

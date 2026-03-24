@@ -293,8 +293,8 @@ export default function TenantPortalPage({
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary capitalize">
-                          {((p.method as string) || "—").replace("_", " ")}
+                        <span className="text-sm text-text-secondary">
+                          {p.method ? t(`methods.${p.method}`) : "—"}
                         </span>
                       </td>
                       <td className="px-4 py-3">

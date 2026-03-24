@@ -4,7 +4,18 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Upload, X, FileText } from "lucide-react";
+import { Upload, X, FileText, Sparkles, Loader2 } from "lucide-react";
+
+// Document types that typically have expiry dates
+const EXPIRY_TYPES = new Set([
+  "lease_agreement",
+  "id_copy",
+  "passport",
+  "visa",
+  "insurance",
+  "permit",
+  "noc",
+]);
 
 export default function UploadDocumentPage() {
   const t = useTranslations("documents");
@@ -21,6 +32,10 @@ export default function UploadDocumentPage() {
   const [entityId, setEntityId] = useState(searchParams.get("entityId") || "");
   const [tenants, setTenants] = useState<{ id: string; full_name: string }[]>([]);
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
+  const [documentType, setDocumentType] = useState("lease_agreement");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const [autoExtracted, setAutoExtracted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pre-filled from URL params (e.g., from unit detail page)
@@ -53,18 +68,54 @@ export default function UploadDocumentPage() {
     } else {
       setFilePreview(null);
     }
-  };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files?.[0];
-    if (f) selectFile(f);
+    // Auto-extract expiry if document type supports it
+    if (EXPIRY_TYPES.has(documentType)) {
+      extractExpiry(f, documentType);
+    }
   };
 
   const clearFile = () => {
     setFile(null);
     setFilePreview(null);
+    setAutoExtracted(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const extractExpiry = async (targetFile: File, docType: string) => {
+    setExtracting(true);
+    setAutoExtracted(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", targetFile);
+      formData.append("document_type", docType);
+
+      const res = await fetch("/api/extract-expiry", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.expiry_date) {
+          setExpiryDate(data.expiry_date);
+          setAutoExtracted(true);
+        }
+      }
+    } catch {
+      // Non-critical — user can still enter manually
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  // Re-extract when document type changes and file is already selected
+  const handleDocumentTypeChange = (newType: string) => {
+    setDocumentType(newType);
+    if (file && EXPIRY_TYPES.has(newType) && !extracting) {
+      extractExpiry(file, newType);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -100,14 +151,14 @@ export default function UploadDocumentPage() {
       return;
     }
 
-    // Insert document record — store the storage path for signed URL generation
+    // Insert document record
     const { error: insertError } = await supabase.from("documents").insert({
       entity_type: entityType,
       entity_id: selectedEntityId,
-      document_type: formData.get("document_type") as string,
+      document_type: documentType,
       file_url: filePath,
       file_name: file.name,
-      expiry_date: (formData.get("expiry_date") as string) || null,
+      expiry_date: expiryDate || null,
       uploaded_by: user?.id,
     });
 
@@ -170,19 +221,23 @@ export default function UploadDocumentPage() {
               <button
                 type="button"
                 onClick={clearFile}
+                aria-label={tc("close")}
                 className="absolute top-2 right-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
               >
-                <X className="h-3 w-3 text-text-secondary" />
+                <X className="h-3 w-3 text-text-secondary" aria-hidden="true" />
               </button>
             </div>
           ) : (
             <div
-              onDrop={handleDrop}
+              role="button"
+              tabIndex={0}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) selectFile(f); }}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-accent/50 transition-colors"
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
             >
-              <Upload className="h-8 w-8 text-text-secondary/50 mx-auto mb-2" />
+              <Upload className="h-8 w-8 text-text-secondary/50 mx-auto mb-2" aria-hidden="true" />
               <p className="text-sm text-text-secondary">
                 {tc("dragAndDrop")}
               </p>
@@ -210,6 +265,8 @@ export default function UploadDocumentPage() {
             <select
               name="document_type"
               required
+              value={documentType}
+              onChange={(e) => handleDocumentTypeChange(e.target.value)}
               className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
             >
               {documentTypes.map((dt) => (
@@ -223,7 +280,7 @@ export default function UploadDocumentPage() {
           {prefilled ? (
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
-                {entityType === "tenant" ? (tc("tenant") || "Tenant") : (tc("property") || "Property")}
+                {entityType === "tenant" ? tc("tenant") : tc("property")}
               </label>
               <div className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 flex items-center text-sm text-text-primary">
                 {prefilledLabel || entityId}
@@ -243,14 +300,14 @@ export default function UploadDocumentPage() {
                   }}
                   className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
                 >
-                  <option value="tenant">{tc("tenant") || "Tenant"}</option>
-                  <option value="property">{tc("property") || "Property"}</option>
+                  <option value="tenant">{tc("tenant")}</option>
+                  <option value="property">{tc("property")}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm text-text-secondary mb-1.5">
-                  {entityType === "tenant" ? (tc("tenant") || "Tenant") : (tc("property") || "Property")}{" "}
+                  {entityType === "tenant" ? tc("tenant") : tc("property")}{" "}
                   <span className="text-destructive">*</span>
                 </label>
                 <select
@@ -275,11 +332,32 @@ export default function UploadDocumentPage() {
             <label className="block text-sm text-text-secondary mb-1.5">
               {t("expiryDate")}
             </label>
-            <input
-              name="expiry_date"
-              type="date"
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-            />
+            <div className="relative">
+              <input
+                name="expiry_date"
+                type="date"
+                value={expiryDate}
+                onChange={(e) => { setExpiryDate(e.target.value); setAutoExtracted(false); }}
+                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              />
+              {extracting && (
+                <div className="absolute inset-y-0 end-10 flex items-center">
+                  <Loader2 className="h-4 w-4 text-accent animate-spin" aria-hidden="true" />
+                </div>
+              )}
+            </div>
+            {extracting && (
+              <p className="text-xs text-accent mt-1 flex items-center gap-1">
+                <Sparkles className="h-3 w-3" aria-hidden="true" />
+                {t("extractingExpiry")}
+              </p>
+            )}
+            {autoExtracted && !extracting && (
+              <p className="text-xs text-success mt-1 flex items-center gap-1">
+                <Sparkles className="h-3 w-3" aria-hidden="true" />
+                {t("expiryExtracted")}
+              </p>
+            )}
           </div>
         </div>
 
