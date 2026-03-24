@@ -303,7 +303,6 @@ export default async function PropertyDetailPage({
                     <Link
                       href={`/${locale}/properties/${id}/units/${unit.id}/edit`}
                       className="text-[10px] text-text-secondary/0 group-hover:text-accent transition-all duration-200 hover:underline"
-                      onClick={(e) => e.stopPropagation()}
                     >
                       {tu("editUnit")}
                     </Link>

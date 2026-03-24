@@ -30,6 +30,7 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
   "pending",
   "paid",
   "overdue",
+  "partial",
 ]);
 
 // ── Invoices ──────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ export const invoices = pgTable("invoices", {
   periodStart: date("period_start"),
   periodEnd: date("period_end"),
   status: invoiceStatusEnum("status").notNull().default("pending"),
+  paidAmount: numeric("paid_amount").default("0"),
   paidDate: date("paid_date"),
   notes: text("notes"),
   createdBy: uuid("created_by"),

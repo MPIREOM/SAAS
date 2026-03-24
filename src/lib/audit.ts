@@ -9,6 +9,7 @@ type AuditAction =
   | "invite_user"
   | "move_out"
   | "mark_paid"
+  | "partial_payment"
   | "status_update"
   | "export_report";
 

@@ -48,8 +48,8 @@ export async function GET(
     year: "numeric",
   });
 
-  const statusLabel = invoice.status === "paid" ? "PAID" : invoice.status === "overdue" ? "OVERDUE" : "PENDING";
-  const statusColor = invoice.status === "paid" ? "#16a34a" : invoice.status === "overdue" ? "#dc2626" : "#ca8a04";
+  const statusLabel = invoice.status === "paid" ? "PAID" : invoice.status === "partial" ? "PARTIAL" : invoice.status === "overdue" ? "OVERDUE" : "PENDING";
+  const statusColor = invoice.status === "paid" ? "#16a34a" : invoice.status === "partial" ? "#3b82f6" : invoice.status === "overdue" ? "#dc2626" : "#ca8a04";
 
   const html = `<!DOCTYPE html>
 <html>

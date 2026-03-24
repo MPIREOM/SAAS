@@ -31,8 +31,7 @@ export function InvoicesTabs({
     (inv) =>
       (inv.status as string) === "pending" ||
       (inv.status as string) === "overdue" ||
-      ((inv.status as string) === "pending" &&
-        new Date(inv.due_date as string) < now)
+      (inv.status as string) === "partial"
   ).length;
   const paidCount = invoices.filter(
     (inv) => (inv.status as string) === "paid"
