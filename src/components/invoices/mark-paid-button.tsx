@@ -36,6 +36,7 @@ interface Cheque {
 interface MarkPaidButtonProps {
   invoiceId: string;
   amount: string;
+  paidAmount?: string;
   tenantName: string;
   tenantId: string;
 }
@@ -49,6 +50,7 @@ const METHOD_ICONS = {
 export function MarkPaidButton({
   invoiceId,
   amount,
+  paidAmount: existingPaidAmount,
   tenantName,
   tenantId,
 }: MarkPaidButtonProps) {
@@ -61,6 +63,8 @@ export function MarkPaidButton({
   const [method, setMethod] = useState<"cash" | "bank_transfer" | "cheque">(
     "cash"
   );
+  const [paymentType, setPaymentType] = useState<"full" | "partial">("full");
+  const [partialAmount, setPartialAmount] = useState("");
   const [paidDate, setPaidDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -68,6 +72,10 @@ export function MarkPaidButton({
   const [cheques, setCheques] = useState<Cheque[]>([]);
   const [selectedChequeId, setSelectedChequeId] = useState("");
   const [loadingCheques, setLoadingCheques] = useState(false);
+
+  const totalAmount = Number(amount);
+  const alreadyPaid = Number(existingPaidAmount || 0);
+  const remainingAmount = totalAmount - alreadyPaid;
 
   useEffect(() => {
     if (method === "cheque" && open) {
@@ -93,43 +101,54 @@ export function MarkPaidButton({
 
     const supabase = createClient();
 
-    // Fetch the invoice to get lease_id
     const { data: invoice } = await supabase
       .from("invoices")
-      .select("lease_id, tenant_id, amount")
+      .select("lease_id, tenant_id, amount, paid_amount")
       .eq("id", invoiceId)
       .single();
+
+    const currentPaidAmount = Number(invoice?.paid_amount || 0);
+    const paymentAmount =
+      paymentType === "full"
+        ? remainingAmount
+        : Math.min(Number(partialAmount), remainingAmount);
+
+    const newPaidAmount = currentPaidAmount + paymentAmount;
+    const invoiceTotal = Number(invoice?.amount || 0);
+    const isFullyPaid = newPaidAmount >= invoiceTotal;
 
     const { error } = await supabase
       .from("invoices")
       .update({
-        status: "paid",
-        paid_date: paidDate,
+        status: isFullyPaid ? "paid" : "partial",
+        paid_amount: newPaidAmount,
+        paid_date: isFullyPaid ? paidDate : null,
         notes: notes || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", invoiceId);
 
     if (!error && invoice) {
-      // Build reference number from cheque if applicable
       const selectedCheque = cheques.find((c) => c.id === selectedChequeId);
       const referenceNumber =
         method === "cheque" && selectedCheque
           ? selectedCheque.cheque_number
           : null;
 
-      // Insert a payment record
-      const { data: paymentData } = await supabase.from("payments").insert({
-        lease_id: invoice.lease_id,
-        tenant_id: invoice.tenant_id,
-        amount: invoice.amount,
-        payment_date: paidDate,
-        method,
-        reference_number: referenceNumber,
-        notes: notes || null,
-      }).select("id").single();
+      const { data: paymentData } = await supabase
+        .from("payments")
+        .insert({
+          lease_id: invoice.lease_id,
+          tenant_id: invoice.tenant_id,
+          amount: paymentAmount,
+          payment_date: paidDate,
+          method,
+          reference_number: referenceNumber,
+          notes: notes || null,
+        })
+        .select("id")
+        .single();
 
-      // If paid by cheque, mark the cheque as cleared and link to payment
       if (method === "cheque" && selectedChequeId) {
         await supabase
           .from("cheques")
@@ -142,17 +161,22 @@ export function MarkPaidButton({
       }
 
       await logAudit(supabase, {
-        action: "mark_paid",
+        action: isFullyPaid ? "mark_paid" : "partial_payment",
         entity_type: "invoice",
         entity_id: invoiceId,
       });
 
       setOpen(false);
-      toast({ title: "Invoice marked as paid", variant: "success" });
+      toast({
+        title: isFullyPaid
+          ? "Invoice marked as paid"
+          : `Partial payment of ${paymentAmount.toFixed(2)} ${CURRENCY.code} recorded`,
+        variant: "success",
+      });
       router.refresh();
     } else if (error) {
       toast({
-        title: "Failed to mark invoice as paid",
+        title: "Failed to record payment",
         description: error.message,
         variant: "destructive",
       });
@@ -198,21 +222,77 @@ export function MarkPaidButton({
                 </div>
                 <div className="text-end">
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
-                    {t("amount")}
+                    {alreadyPaid > 0 ? t("remaining") : t("amount")}
                   </p>
                   <p className="text-lg font-bold font-mono tabular-nums text-accent">
-                    {Number(amount).toLocaleString("en-OM", {
+                    {remainingAmount.toLocaleString("en-OM", {
                       minimumFractionDigits: 2,
                     })}
                     <span className="text-xs font-sans font-normal text-text-secondary ml-1">
                       {CURRENCY.code}
                     </span>
                   </p>
+                  {alreadyPaid > 0 && (
+                    <p className="text-[10px] text-text-secondary mt-0.5">
+                      {t("paidAmount")}: {alreadyPaid.toLocaleString("en-OM", { minimumFractionDigits: 2 })} / {totalAmount.toLocaleString("en-OM", { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
             <form id="mark-paid-form" onSubmit={handleSubmit} className="space-y-4">
+              {/* Payment Type Toggle */}
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                  {t("paymentType")}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "full" as const, label: t("fullPayment") },
+                    { key: "partial" as const, label: t("partialPayment") },
+                  ].map((pt) => (
+                    <button
+                      key={pt.key}
+                      type="button"
+                      onClick={() => setPaymentType(pt.key)}
+                      className={`flex items-center justify-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-200 ${
+                        paymentType === pt.key
+                          ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
+                          : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                      }`}
+                    >
+                      {pt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Partial Amount Input */}
+              {paymentType === "partial" && (
+                <div className="animate-fade-in-up">
+                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                    {t("paidAmount")} ({CURRENCY.code})
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={remainingAmount}
+                    value={partialAmount}
+                    onChange={(e) => setPartialAmount(e.target.value)}
+                    required
+                    placeholder={`Max: ${remainingAmount.toFixed(2)}`}
+                    className="w-full h-10 bg-surface-elevated/50 border border-border/60 rounded-xl px-3 text-sm text-text-primary font-mono focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+                  />
+                  {partialAmount && Number(partialAmount) > 0 && (
+                    <p className="text-xs text-text-secondary mt-1.5">
+                      {t("remaining")}: {(remainingAmount - Number(partialAmount)).toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Payment Method Selector */}
               <div>
                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
@@ -349,7 +429,11 @@ export function MarkPaidButton({
             <button
               type="submit"
               form="mark-paid-form"
-              disabled={loading || (method === "cheque" && !selectedChequeId)}
+              disabled={
+                loading ||
+                (method === "cheque" && !selectedChequeId) ||
+                (paymentType === "partial" && (!partialAmount || Number(partialAmount) <= 0))
+              }
               className="h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 disabled:opacity-40 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] flex items-center gap-2"
             >
               {loading ? (

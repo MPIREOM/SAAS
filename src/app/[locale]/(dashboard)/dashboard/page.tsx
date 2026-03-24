@@ -208,7 +208,7 @@ async function getOverdueInvoices(): Promise<OverdueInvoice[]> {
       tenants!inner(full_name),
       units!inner(unit_number, properties!inner(name))
     `)
-    .in("status", ["pending", "overdue"])
+    .in("status", ["pending", "overdue", "partial"])
     .lt("due_date", today)
     .order("due_date", { ascending: true });
 

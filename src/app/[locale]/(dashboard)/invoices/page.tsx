@@ -12,6 +12,7 @@ import {
   Receipt,
   Building2,
   Printer,
+  CircleDot,
 } from "lucide-react";
 import { InvoicesTabs } from "@/components/invoices/invoices-tabs";
 import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
@@ -62,7 +63,7 @@ export default async function InvoicesPage({
     .order("due_date", { ascending: false });
 
   if (status === "pending") {
-    query = query.in("status", ["pending", "overdue"]);
+    query = query.in("status", ["pending", "overdue", "partial"]);
   } else if (status === "paid") {
     query = query.eq("status", "paid");
   }
@@ -93,7 +94,7 @@ export default async function InvoicesPage({
     .select("*", { count: "exact", head: true });
 
   if (status === "pending") {
-    countQuery = countQuery.in("status", ["pending", "overdue"]);
+    countQuery = countQuery.in("status", ["pending", "overdue", "partial"]);
   } else if (status === "paid") {
     countQuery = countQuery.eq("status", "paid");
   }
@@ -408,6 +409,7 @@ export default async function InvoicesPage({
                       (invoiceStatus === "pending" &&
                         new Date(invoice.due_date as string) < now);
                     const isPaid = invoiceStatus === "paid";
+                    const isPartial = invoiceStatus === "partial";
 
                     return (
                       <tr
@@ -456,6 +458,8 @@ export default async function InvoicesPage({
                                 ? "text-text-secondary"
                                 : isOverdue
                                 ? "text-destructive"
+                                : isPartial
+                                ? "text-info"
                                 : "text-text-primary"
                             }`}
                           >
@@ -464,6 +468,11 @@ export default async function InvoicesPage({
                               {CURRENCY.code}
                             </span>
                           </span>
+                          {isPartial && Number(invoice.paid_amount) > 0 && (
+                            <p className="text-[10px] text-info mt-0.5">
+                              {formatAmount(Number(invoice.paid_amount))} {t("paid").toLowerCase()}
+                            </p>
+                          )}
                         </td>
 
                         {/* Status */}
@@ -472,6 +481,11 @@ export default async function InvoicesPage({
                             <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-success/10 text-success border border-success/20">
                               <CheckCircle2 className="h-3 w-3" />
                               {t("paid")}
+                            </span>
+                          ) : isPartial ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-info/10 text-info border border-info/20">
+                              <CircleDot className="h-3 w-3" />
+                              {t("partial")}
                             </span>
                           ) : isOverdue ? (
                             <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-destructive/10 text-destructive border border-destructive/20 animate-pulse">
@@ -510,6 +524,7 @@ export default async function InvoicesPage({
                               <MarkPaidButton
                                 invoiceId={invoice.id as string}
                                 amount={String(invoice.amount)}
+                                paidAmount={String(invoice.paid_amount || 0)}
                                 tenantName={
                                   (tenant?.full_name as string) || "—"
                                 }

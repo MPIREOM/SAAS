@@ -63,7 +63,7 @@ async function getFinancialMetrics(selectedMonth?: string, selectedYear?: string
   let outstandingQuery = supabase
     .from("invoices")
     .select("amount")
-    .in("status", ["pending", "overdue"]);
+    .in("status", ["pending", "overdue", "partial"]);
 
   const [
     { count: propertyCount },

@@ -74,13 +74,14 @@ export async function GET(request: Request) {
     }
   }
 
-  // Auto-mark overdue invoices
+  // Auto-mark overdue invoices (don't override partial payments)
   const todayStr = new Date().toISOString().split("T")[0];
   const { error: overdueError } = await supabase
     .from("invoices")
     .update({ status: "overdue" })
     .eq("status", "pending")
     .lt("due_date", todayStr);
+  // Note: partial invoices keep their "partial" status, not overridden to "overdue"
 
   return NextResponse.json({ created, skipped, total: leases.length, overdueError: overdueError?.message || null });
 }
