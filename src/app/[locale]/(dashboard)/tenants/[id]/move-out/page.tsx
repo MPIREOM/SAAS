@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut, AlertTriangle } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 
 interface OutstandingInvoice {
@@ -15,9 +15,12 @@ interface OutstandingInvoice {
   status: string;
   period_start: string | null;
   period_end: string | null;
+  lease_id: string;
+  tenant_id: string;
+  unit_id: string;
 }
 
-type InvoiceAction = "leave_open" | "write_off" | "cancel";
+type InvoiceAction = "leave_open" | "write_off" | "cancel" | "settle";
 
 export default function MoveOutPage({
   params,
@@ -31,6 +34,7 @@ export default function MoveOutPage({
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState<OutstandingInvoice[]>([]);
   const [invoiceActions, setInvoiceActions] = useState<Record<string, InvoiceAction>>({});
+  const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({});
   const [loadingInvoices, setLoadingInvoices] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<{ locale: string; id: string } | null>(null);
 
@@ -54,7 +58,7 @@ export default function MoveOutPage({
         // Fetch outstanding invoices for this lease
         const { data: outstandingInvoices } = await supabase
           .from("invoices")
-          .select("id, amount, paid_amount, due_date, status, period_start, period_end")
+          .select("id, amount, paid_amount, due_date, status, period_start, period_end, lease_id, tenant_id, unit_id")
           .eq("lease_id", activeLease.id)
           .in("status", ["pending", "overdue", "partial"])
           .order("due_date", { ascending: true });
@@ -84,6 +88,10 @@ export default function MoveOutPage({
       updated[inv.id] = action;
     });
     setInvoiceActions(updated);
+  };
+
+  const outstanding = (inv: OutstandingInvoice) => {
+    return Number(inv.amount) - Number(inv.paid_amount || 0);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -163,6 +171,10 @@ export default function MoveOutPage({
         .filter(([, action]) => action === "cancel")
         .map(([id]) => id);
 
+      const settleIds = Object.entries(invoiceActions)
+        .filter(([, action]) => action === "settle")
+        .map(([id]) => id);
+
       if (writeOffIds.length > 0) {
         await supabase
           .from("invoices")
@@ -184,14 +196,45 @@ export default function MoveOutPage({
           })
           .in("id", cancelIds);
       }
+
+      // Process settlements: record the settlement payment and write off the remainder
+      for (const invId of settleIds) {
+        const inv = invoices.find((i) => i.id === invId);
+        if (!inv) continue;
+
+        const settleAmount = Number(settlementAmounts[invId] || 0);
+        if (settleAmount <= 0) continue;
+
+        const currentPaid = Number(inv.paid_amount || 0);
+        const newPaidAmount = currentPaid + settleAmount;
+
+        // Record settlement payment
+        await supabase.from("payments").insert({
+          lease_id: inv.lease_id,
+          tenant_id: inv.tenant_id,
+          amount: settleAmount,
+          payment_date: vacateDate,
+          method: "cash",
+          notes: `Settlement on move-out (${vacateDate})`,
+        });
+
+        // Mark invoice as written_off with the settlement amount recorded
+        const writeOffAmount = Number(inv.amount) - newPaidAmount;
+        await supabase
+          .from("invoices")
+          .update({
+            status: "written_off",
+            paid_amount: newPaidAmount,
+            paid_date: vacateDate,
+            notes: `Settled ${settleAmount.toFixed(2)} ${CURRENCY.code}, wrote off ${writeOffAmount.toFixed(2)} ${CURRENCY.code} on move-out (${vacateDate})`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", invId);
+      }
     }
 
     router.push(`/${locale}/tenants`);
     router.refresh();
-  };
-
-  const outstanding = (inv: OutstandingInvoice) => {
-    return Number(inv.amount) - Number(inv.paid_amount || 0);
   };
 
   const totalOutstanding = invoices.reduce((sum, inv) => sum + outstanding(inv), 0);
@@ -204,6 +247,19 @@ export default function MoveOutPage({
   const leaveOpenTotal = invoices
     .filter((inv) => invoiceActions[inv.id] === "leave_open")
     .reduce((sum, inv) => sum + outstanding(inv), 0);
+  const settleCollectTotal = invoices
+    .filter((inv) => invoiceActions[inv.id] === "settle")
+    .reduce((sum, inv) => sum + Number(settlementAmounts[inv.id] || 0), 0);
+  const settleWriteOffTotal = invoices
+    .filter((inv) => invoiceActions[inv.id] === "settle")
+    .reduce((sum, inv) => {
+      const bal = outstanding(inv);
+      const settle = Number(settlementAmounts[inv.id] || 0);
+      return sum + Math.max(bal - settle, 0);
+    }, 0);
+
+  const fmt = (n: number) =>
+    n.toLocaleString("en-OM", { minimumFractionDigits: 2 });
 
   return (
     <div className="max-w-2xl">
@@ -275,7 +331,7 @@ export default function MoveOutPage({
                 {t("outstandingInvoices")}
               </h3>
               <span className="text-xs bg-destructive/12 text-destructive px-2 py-0.5 rounded-md font-mono font-semibold border border-destructive/20">
-                {totalOutstanding.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                {fmt(totalOutstanding)} {CURRENCY.code}
               </span>
             </div>
 
@@ -322,13 +378,15 @@ export default function MoveOutPage({
                         ? "bg-warning/5 border-warning/20"
                         : action === "cancel"
                         ? "bg-surface-elevated/30 border-border/30 opacity-60"
+                        : action === "settle"
+                        ? "bg-success/5 border-success/20"
                         : "bg-surface-elevated/50 border-border/30"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2.5">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary font-mono ltr-nums">
-                          {bal.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                        <p className="text-sm font-medium text-text-primary font-mono tabular-nums">
+                          {fmt(bal)} {CURRENCY.code}
                         </p>
                         <p className="text-xs text-text-secondary mt-0.5">
                           {t("dueLabel")}: {new Date(inv.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
@@ -345,7 +403,7 @@ export default function MoveOutPage({
                         </p>
                         {Number(inv.paid_amount || 0) > 0 && (
                           <p className="text-[10px] text-success mt-0.5">
-                            {t("partiallyPaid")}: {Number(inv.paid_amount).toLocaleString("en-OM", { minimumFractionDigits: 2 })} / {Number(inv.amount).toLocaleString("en-OM", { minimumFractionDigits: 2 })}
+                            {t("partiallyPaid")}: {fmt(Number(inv.paid_amount))} / {fmt(Number(inv.amount))}
                           </p>
                         )}
                       </div>
@@ -363,7 +421,7 @@ export default function MoveOutPage({
                     </div>
 
                     {/* Action selector */}
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-4 gap-1.5">
                       <button
                         type="button"
                         onClick={() => setAction(inv.id, "leave_open")}
@@ -374,6 +432,17 @@ export default function MoveOutPage({
                         }`}
                       >
                         {t("invoiceActionLeaveOpen")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAction(inv.id, "settle")}
+                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all ${
+                          action === "settle"
+                            ? "bg-success/10 border-success/40 text-success"
+                            : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
+                        }`}
+                      >
+                        {t("invoiceActionSettle")}
                       </button>
                       <button
                         type="button"
@@ -398,6 +467,40 @@ export default function MoveOutPage({
                         {t("invoiceActionCancel")}
                       </button>
                     </div>
+
+                    {/* Settlement amount input */}
+                    {action === "settle" && (
+                      <div className="mt-2.5 p-3 rounded-lg bg-success/5 border border-success/15 space-y-2">
+                        <label className="block text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
+                          {t("settlementAmount")} ({CURRENCY.code})
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          max={bal}
+                          value={settlementAmounts[inv.id] || ""}
+                          onChange={(e) =>
+                            setSettlementAmounts((prev) => ({
+                              ...prev,
+                              [inv.id]: e.target.value,
+                            }))
+                          }
+                          placeholder={`${t("invoiceSettlePlaceholder")} ${fmt(bal)}`}
+                          className="w-full h-9 bg-surface border border-border/60 rounded-md px-3 text-sm text-text-primary font-mono focus:outline-none focus:border-success/50 focus:ring-1 focus:ring-success/20 transition-all"
+                        />
+                        {settlementAmounts[inv.id] && Number(settlementAmounts[inv.id]) > 0 && (
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-success font-medium">
+                              {t("settleCollect")}: {fmt(Number(settlementAmounts[inv.id]))} {CURRENCY.code}
+                            </span>
+                            <span className="text-warning font-medium">
+                              {t("settleWriteOff")}: {fmt(Math.max(bal - Number(settlementAmounts[inv.id]), 0))} {CURRENCY.code}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -411,24 +514,32 @@ export default function MoveOutPage({
               {leaveOpenTotal > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-text-secondary">{t("invoiceActionLeaveOpen")}</span>
-                  <span className="font-mono font-medium text-accent ltr-nums">
-                    {leaveOpenTotal.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                  <span className="font-mono font-medium text-accent tabular-nums">
+                    {fmt(leaveOpenTotal)} {CURRENCY.code}
                   </span>
                 </div>
               )}
-              {writeOffTotal > 0 && (
+              {settleCollectTotal > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-success">{t("settleCollect")}</span>
+                  <span className="font-mono font-medium text-success tabular-nums">
+                    {fmt(settleCollectTotal)} {CURRENCY.code}
+                  </span>
+                </div>
+              )}
+              {(writeOffTotal > 0 || settleWriteOffTotal > 0) && (
                 <div className="flex justify-between text-xs">
                   <span className="text-warning">{t("invoiceActionWriteOff")}</span>
-                  <span className="font-mono font-medium text-warning ltr-nums">
-                    {writeOffTotal.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                  <span className="font-mono font-medium text-warning tabular-nums">
+                    {fmt(writeOffTotal + settleWriteOffTotal)} {CURRENCY.code}
                   </span>
                 </div>
               )}
               {cancelTotal > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-text-secondary">{t("invoiceActionCancel")}</span>
-                  <span className="font-mono font-medium text-text-secondary ltr-nums line-through">
-                    {cancelTotal.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                  <span className="font-mono font-medium text-text-secondary tabular-nums line-through">
+                    {fmt(cancelTotal)} {CURRENCY.code}
                   </span>
                 </div>
               )}
