@@ -13,6 +13,8 @@ import {
   Building2,
   Printer,
   CircleDot,
+  Ban,
+  FileX,
 } from "lucide-react";
 import { InvoicesTabs } from "@/components/invoices/invoices-tabs";
 import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
@@ -66,6 +68,8 @@ export default async function InvoicesPage({
     query = query.in("status", ["pending", "overdue", "partial"]);
   } else if (status === "paid") {
     query = query.eq("status", "paid");
+  } else if (status === "resolved") {
+    query = query.in("status", ["written_off", "cancelled"]);
   }
 
   if (month) {
@@ -97,6 +101,8 @@ export default async function InvoicesPage({
     countQuery = countQuery.in("status", ["pending", "overdue", "partial"]);
   } else if (status === "paid") {
     countQuery = countQuery.eq("status", "paid");
+  } else if (status === "resolved") {
+    countQuery = countQuery.in("status", ["written_off", "cancelled"]);
   }
   if (month) {
     const [y, m] = month.split("-").map(Number);
@@ -410,6 +416,8 @@ export default async function InvoicesPage({
                         new Date(invoice.due_date as string) < now);
                     const isPaid = invoiceStatus === "paid";
                     const isPartial = invoiceStatus === "partial";
+                    const isWrittenOff = invoiceStatus === "written_off";
+                    const isCancelled = invoiceStatus === "cancelled";
 
                     return (
                       <tr
@@ -456,6 +464,10 @@ export default async function InvoicesPage({
                             className={`text-sm font-semibold font-mono tabular-nums ${
                               isPaid
                                 ? "text-text-secondary"
+                                : isWrittenOff
+                                ? "text-warning line-through"
+                                : isCancelled
+                                ? "text-text-secondary/50 line-through"
                                 : isOverdue
                                 ? "text-destructive"
                                 : isPartial
@@ -499,6 +511,16 @@ export default async function InvoicesPage({
                               <CheckCircle2 className="h-3 w-3" />
                               {t("paid")}
                             </span>
+                          ) : isWrittenOff ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-warning/10 text-warning border border-warning/20">
+                              <FileX className="h-3 w-3" />
+                              {t("writtenOff")}
+                            </span>
+                          ) : isCancelled ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-surface-elevated text-text-secondary border border-border/30">
+                              <Ban className="h-3 w-3" />
+                              {t("cancelled")}
+                            </span>
                           ) : isPartial ? (
                             <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-info/10 text-info border border-info/20">
                               <CircleDot className="h-3 w-3" />
@@ -537,7 +559,7 @@ export default async function InvoicesPage({
                             >
                               <Printer className="h-3 w-3" />
                             </Link>
-                            {!isPaid && (
+                            {!isPaid && !isWrittenOff && !isCancelled && (
                               <MarkPaidButton
                                 invoiceId={invoice.id as string}
                                 amount={String(invoice.amount)}

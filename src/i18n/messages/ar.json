@@ -301,6 +301,15 @@
       "refunded": "مسترد",
       "deducted": "مخصوم"
     },
+    "outstandingInvoices": "الفواتير المستحقة",
+    "invoiceResolutionDescription": "اختر كيفية التعامل مع كل فاتورة مستحقة قبل إتمام الخروج.",
+    "bulkAction": "تعيين الكل إلى",
+    "invoiceActionLeaveOpen": "إبقاء مفتوحة",
+    "invoiceActionWriteOff": "شطب",
+    "invoiceActionCancel": "إلغاء",
+    "dueLabel": "الاستحقاق",
+    "partiallyPaid": "مدفوع جزئياً",
+    "resolutionSummary": "ملخص التسوية",
     "confirmMoveOut": "تأكيد الخروج",
     "all": "الكل",
     "searchPlaceholder": "بحث بالاسم أو الهاتف أو رقم الهوية...",
@@ -397,7 +406,10 @@
     "total": "الإجمالي",
     "collected": "المحصّل",
     "collectionProgress": "تقدم التحصيل",
-    "allProperties": "جميع العقارات"
+    "allProperties": "جميع العقارات",
+    "writtenOff": "مشطوبة",
+    "cancelled": "ملغاة",
+    "resolved": "محلولة"
   },
   "cheques": {
     "title": "الشيكات",

@@ -36,11 +36,17 @@ export function InvoicesTabs({
   const paidCount = invoices.filter(
     (inv) => (inv.status as string) === "paid"
   ).length;
+  const resolvedCount = invoices.filter(
+    (inv) =>
+      (inv.status as string) === "written_off" ||
+      (inv.status as string) === "cancelled"
+  ).length;
 
   const tabs = [
     { key: "all", label: t("all"), count: allCount },
     { key: "pending", label: t("pending"), count: pendingCount },
     { key: "paid", label: t("paid"), count: paidCount },
+    { key: "resolved", label: t("resolved"), count: resolvedCount },
   ];
 
   function buildUrl(status: string, month: string) {

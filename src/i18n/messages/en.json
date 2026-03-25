@@ -301,6 +301,15 @@
       "refunded": "Refunded",
       "deducted": "Deducted"
     },
+    "outstandingInvoices": "Outstanding Invoices",
+    "invoiceResolutionDescription": "Choose how to handle each outstanding invoice before completing the move-out.",
+    "bulkAction": "Set all to",
+    "invoiceActionLeaveOpen": "Leave Open",
+    "invoiceActionWriteOff": "Write Off",
+    "invoiceActionCancel": "Cancel",
+    "dueLabel": "Due",
+    "partiallyPaid": "Partially paid",
+    "resolutionSummary": "Resolution Summary",
     "confirmMoveOut": "Confirm Move-out",
     "all": "All",
     "searchPlaceholder": "Search by name, phone, or ID...",
@@ -397,7 +406,10 @@
     "total": "Total",
     "collected": "Collected",
     "collectionProgress": "Collection Progress",
-    "allProperties": "All Properties"
+    "allProperties": "All Properties",
+    "writtenOff": "Written Off",
+    "cancelled": "Cancelled",
+    "resolved": "Resolved"
   },
   "cheques": {
     "title": "Cheques",
