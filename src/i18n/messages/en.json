@@ -706,7 +706,21 @@
     "pendingMaintenance": "Pending Maintenance",
     "rentCollection": "Rent Collection (12 Months)",
     "expensesThisMonth": "Expenses This Month",
-    "netIncome": "Net Income"
+    "netIncome": "Net Income",
+    "revenueThisMonth": "Revenue This Month",
+    "vacancyCost": "Vacancy Cost / Month",
+    "cashFlowTrend": "Cash Flow Trend (6 Months)",
+    "occupancyTrend": "Occupancy Trend (6 Months)",
+    "revenueByProperty": "Revenue by Property",
+    "paymentMethods": "Payment Methods (6 Months)",
+    "agedReceivables": "Aged Receivables",
+    "invoicesCount": "invoices",
+    "upcomingCheques": "Upcoming Cheques (30 Days)",
+    "noUpcomingCheques": "No upcoming cheques",
+    "dueToday": "Due today",
+    "expiringDocuments": "Expiring Documents",
+    "noExpiringDocuments": "No documents expiring soon",
+    "expired": "Expired"
   },
   "reports": {
     "title": "Reports",
