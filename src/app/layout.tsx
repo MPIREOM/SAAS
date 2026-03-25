@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { RegisterSW } from "@/components/pwa/register-sw";
 
 const syne = Syne({
   subsets: ["latin"],
@@ -28,12 +29,25 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  themeColor: "#C9A84C",
 };
 
 export const metadata: Metadata = {
   title: "MPIRE | Property Management System",
   description:
     "Professional property management system for MPIRE Property Management, Oman",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MPIRE",
+  },
+  icons: {
+    icon: [
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 export default function RootLayout({
@@ -47,6 +61,7 @@ export default function RootLayout({
         className={`${syne.variable} ${manrope.variable} ${jetbrainsMono.variable} antialiased font-sans`}
       >
         {children}
+        <RegisterSW />
       </body>
     </html>
   );
