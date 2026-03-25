@@ -56,6 +56,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Load properties with notifications disabled to skip them
+    const { data: disabledProperties } = await supabase
+      .from("properties")
+      .select("id")
+      .eq("notifications_enabled", false);
+    const disabledPropertyIds = new Set(
+      (disabledProperties || []).map((p) => p.id as string)
+    );
+
     // 1. Upcoming rent reminders (3 days before due date)
     const { data: activeLeases } = await supabase
       .from("leases")
@@ -73,6 +82,10 @@ export async function GET(request: NextRequest) {
           const unit = lease.units as Record<string, unknown>;
           const property = unit?.properties as Record<string, unknown>;
           if (!tenant || !unit) continue;
+
+          // Skip properties with notifications disabled
+          const propertyId = unit.property_id as string;
+          if (disabledPropertyIds.has(propertyId)) continue;
 
           const dueDay = lease.payment_due_day || 1;
           const currentMonth = today.getMonth();

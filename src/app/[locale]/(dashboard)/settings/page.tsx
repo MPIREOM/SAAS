@@ -13,6 +13,7 @@ import { NotificationPreferences } from "@/components/settings/notification-pref
 import { UserManagementTable } from "@/components/settings/user-management-table";
 import { ProfileEditForm } from "@/components/settings/profile-edit-form";
 import { AuditLogViewer } from "@/components/settings/audit-log-viewer";
+import { PropertyNotificationToggles } from "@/components/settings/property-notification-toggles";
 
 export default async function SettingsPage({
   params,
@@ -40,7 +41,7 @@ export default async function SettingsPage({
 
   const { data: allProperties } = await supabase
     .from("properties")
-    .select("id, name")
+    .select("id, name, notifications_enabled")
     .eq("is_archived", false)
     .order("name");
 
@@ -163,7 +164,7 @@ export default async function SettingsPage({
         )}
       </div>
 
-      {/* WhatsApp Configuration */}
+      {/* Property Notifications */}
       <div className="bg-surface border border-border rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 bg-accent/10 rounded-md">
@@ -171,18 +172,20 @@ export default async function SettingsPage({
           </div>
           <div>
             <h2 className="text-base font-medium text-text-primary font-display">
-              {t("whatsappConfig")}
+              {t("propertyNotifications")}
             </h2>
             <p className="text-xs text-text-secondary">
-              {t("whatsappConfigDescription")}
+              {t("propertyNotificationsDescription")}
             </p>
           </div>
         </div>
-        <div className="bg-surface-elevated border border-border rounded-md p-4">
-          <p className="text-sm text-text-secondary">
-            {t("whatsappComingSoon")}
-          </p>
-        </div>
+        <PropertyNotificationToggles
+          properties={(allProperties || []).map((p) => ({
+            id: p.id as string,
+            name: p.name as string,
+            notifications_enabled: p.notifications_enabled as boolean,
+          }))}
+        />
       </div>
 
       {/* Activity Log */}
