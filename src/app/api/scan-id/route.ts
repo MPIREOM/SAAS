@@ -97,7 +97,13 @@ Example: {"full_name": "John Smith", "nationality": "United Arab Emirates", "nat
 
     let parsed;
     try {
-      parsed = JSON.parse(textBlock.text);
+      // Strip markdown code fences and extra whitespace that the model may add
+      let raw = textBlock.text.trim();
+      const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) {
+        raw = fenceMatch[1].trim();
+      }
+      parsed = JSON.parse(raw);
     } catch {
       return NextResponse.json({ error: "Failed to parse AI response" }, { status: 500 });
     }
