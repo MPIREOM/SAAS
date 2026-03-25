@@ -657,6 +657,11 @@
       "manager": "Manager",
       "viewer": "Viewer"
     },
+    "propertyNotifications": "Property Notifications",
+    "propertyNotificationsDescription": "Enable or disable WhatsApp and email reminders per property",
+    "propertyNotificationsEnabled": "Notifications enabled for this property",
+    "propertyNotificationsDisabled": "Notifications disabled for this property",
+    "propertyNotificationsError": "Failed to update notification setting",
     "whatsappConfig": "WhatsApp Configuration",
     "whatsappConfigDescription": "Configure WhatsApp Business API for tenant notifications",
     "whatsappComingSoon": "WhatsApp integration configuration coming soon. Connect your WhatsApp Business account to send automated rent reminders and notifications.",
