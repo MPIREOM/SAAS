@@ -31,6 +31,8 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
   "paid",
   "overdue",
   "partial",
+  "written_off",
+  "cancelled",
 ]);
 
 // ── Invoices ──────────────────────────────────────────────────────────────
