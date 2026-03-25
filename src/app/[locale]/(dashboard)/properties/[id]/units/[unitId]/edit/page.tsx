@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Home, Layers, Ruler, DollarSign, ArrowLeft } from "lucide-react";
+import { Home, Layers, Ruler, DollarSign, ArrowLeft, BedDouble } from "lucide-react";
 
-const unitTypes = ["studio", "1br", "2br", "3br", "4br", "penthouse", "office", "shop", "warehouse"];
+const unitCategories = ["penthouse", "office", "shop", "warehouse"];
 const unitStatuses = ["vacant", "occupied", "maintenance"];
 
 export default function EditUnitPage() {
@@ -25,6 +25,7 @@ export default function EditUnitPage() {
   const [unitNumber, setUnitNumber] = useState("");
   const [floor, setFloor] = useState("");
   const [unitType, setUnitType] = useState("");
+  const [bedrooms, setBedrooms] = useState("");
   const [sizeSqm, setSizeSqm] = useState("");
   const [rentAmount, setRentAmount] = useState("");
   const [status, setStatus] = useState("vacant");
@@ -47,6 +48,7 @@ export default function EditUnitPage() {
       setUnitNumber(data.unit_number || "");
       setFloor(data.floor?.toString() || "");
       setUnitType(data.unit_type || "");
+      setBedrooms(data.bedrooms?.toString() ?? "");
       setSizeSqm(data.size_sqm?.toString() || "");
       setRentAmount(data.rent_amount?.toString() || "");
       setStatus(data.status || "vacant");
@@ -73,6 +75,7 @@ export default function EditUnitPage() {
     };
     if (floor) payload.floor = parseInt(floor);
     if (unitType) payload.unit_type = unitType;
+    payload.bedrooms = bedrooms !== "" ? parseInt(bedrooms) : null;
     if (sizeSqm) payload.size_sqm = parseFloat(sizeSqm);
 
     const { error: updateError } = await supabase
@@ -150,19 +153,38 @@ export default function EditUnitPage() {
           </div>
         </div>
 
-        {/* Unit Type */}
+        {/* Bedrooms */}
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("unitType")}</label>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("bedrooms")}</label>
+          <div className="relative">
+            <BedDouble className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={bedrooms}
+              onChange={(e) => setBedrooms(e.target.value)}
+              className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent font-mono tabular-nums"
+              placeholder={t("bedroomsPlaceholder")}
+            />
+          </div>
+          <p className="text-[10px] text-text-secondary mt-1">{t("bedroomsHint")}</p>
+        </div>
+
+        {/* Unit Category */}
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("unitCategory")}</label>
           <select
             value={unitType}
             onChange={(e) => setUnitType(e.target.value)}
             className="w-full px-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
           >
-            <option value="">{t("selectType")}</option>
-            {unitTypes.map((type) => (
+            <option value="">{t("noneResidential")}</option>
+            {unitCategories.map((type) => (
               <option key={type} value={type}>{t(`types.${type}`)}</option>
             ))}
           </select>
+          <p className="text-[10px] text-text-secondary mt-1">{t("unitCategoryHint")}</p>
         </div>
 
         {/* Size */}

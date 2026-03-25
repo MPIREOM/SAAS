@@ -93,6 +93,7 @@ export interface Unit {
   unit_number: string;
   floor: number;
   unit_type: string;
+  bedrooms: number | null;
   size_sqm: number;
   rent_amount: number;
   status: UnitStatus;

@@ -13,6 +13,7 @@ import {
   Ruler,
   Banknote,
   Loader2,
+  BedDouble,
 } from "lucide-react";
 
 export default function NewUnitPage({
@@ -26,19 +27,10 @@ export default function NewUnitPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const unitTypes = [
-    "studio",
-    "1br",
-    "2br",
-    "3br",
-    "4br",
-    "penthouse",
-    "office",
-    "shop",
-    "warehouse",
-  ];
+  const unitCategories = ["penthouse", "office", "shop", "warehouse"];
 
   const [selectedType, setSelectedType] = useState("");
+  const [bedrooms, setBedrooms] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -69,6 +61,7 @@ export default function NewUnitPage({
       unit_number: unitNumber,
       floor: parseInt(formData.get("floor") as string) || null,
       unit_type: selectedType || null,
+      bedrooms: bedrooms !== "" ? parseInt(bedrooms) : null,
       size_sqm: parseFloat(formData.get("size_sqm") as string) || null,
       rent_amount: rentAmount,
       status: "vacant",
@@ -181,36 +174,60 @@ export default function NewUnitPage({
           </div>
         </div>
 
-        {/* Unit Type Selector */}
-        <div className="bg-surface border border-border rounded-xl p-6">
-          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
-            {t("unitType")}
-          </label>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-            {unitTypes.map((type) => {
-              const isActive = selectedType === type;
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() =>
-                    setSelectedType(isActive ? "" : type)
-                  }
-                  className={`flex items-center justify-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
-                      : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
-                  }`}
-                >
-                  <Home
-                    className={`h-3.5 w-3.5 ${
-                      isActive ? "text-accent" : "text-text-secondary/60"
+        {/* Bedrooms & Category */}
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-5">
+          {/* Bedrooms */}
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+              {t("bedrooms")}
+            </label>
+            <div className="relative">
+              <BedDouble className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={bedrooms}
+                onChange={(e) => setBedrooms(e.target.value)}
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
+                placeholder={t("bedroomsPlaceholder")}
+              />
+            </div>
+            <p className="text-[10px] text-text-secondary mt-1.5">{t("bedroomsHint")}</p>
+          </div>
+
+          {/* Unit Category */}
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+              {t("unitCategory")}
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {unitCategories.map((type) => {
+                const isActive = selectedType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() =>
+                      setSelectedType(isActive ? "" : type)
+                    }
+                    className={`flex items-center justify-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-200 ${
+                      isActive
+                        ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
+                        : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
                     }`}
-                  />
-                  {t(`types.${type}`)}
-                </button>
-              );
-            })}
+                  >
+                    <Home
+                      className={`h-3.5 w-3.5 ${
+                        isActive ? "text-accent" : "text-text-secondary/60"
+                      }`}
+                    />
+                    {t(`types.${type}`)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-text-secondary mt-1.5">{t("unitCategoryHint")}</p>
           </div>
         </div>
 
