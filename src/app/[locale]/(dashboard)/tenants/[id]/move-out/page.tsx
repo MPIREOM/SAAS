@@ -65,10 +65,10 @@ export default function MoveOutPage({
 
         if (outstandingInvoices && outstandingInvoices.length > 0) {
           setInvoices(outstandingInvoices);
-          // Default all to "leave_open"
+          // Default all to "cancel" so pending invoices are resolved on move-out
           const defaults: Record<string, InvoiceAction> = {};
           outstandingInvoices.forEach((inv) => {
-            defaults[inv.id] = "leave_open";
+            defaults[inv.id] = "cancel";
           });
           setInvoiceActions(defaults);
         }
@@ -163,12 +163,13 @@ export default function MoveOutPage({
       }
 
       // Resolve outstanding invoices based on user's choices
+      // "leave_open" invoices are also cancelled since the lease is now inactive
       const writeOffIds = Object.entries(invoiceActions)
         .filter(([, action]) => action === "write_off")
         .map(([id]) => id);
 
       const cancelIds = Object.entries(invoiceActions)
-        .filter(([, action]) => action === "cancel")
+        .filter(([, action]) => action === "cancel" || action === "leave_open")
         .map(([id]) => id);
 
       const settleIds = Object.entries(invoiceActions)
@@ -243,9 +244,6 @@ export default function MoveOutPage({
     .reduce((sum, inv) => sum + outstanding(inv), 0);
   const cancelTotal = invoices
     .filter((inv) => invoiceActions[inv.id] === "cancel")
-    .reduce((sum, inv) => sum + outstanding(inv), 0);
-  const leaveOpenTotal = invoices
-    .filter((inv) => invoiceActions[inv.id] === "leave_open")
     .reduce((sum, inv) => sum + outstanding(inv), 0);
   const settleCollectTotal = invoices
     .filter((inv) => invoiceActions[inv.id] === "settle")
@@ -344,10 +342,10 @@ export default function MoveOutPage({
               <span className="text-xs text-text-secondary">{t("bulkAction")}:</span>
               <button
                 type="button"
-                onClick={() => setAllActions("leave_open")}
+                onClick={() => setAllActions("cancel")}
                 className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-text-secondary hover:text-text-primary hover:border-border transition-colors"
               >
-                {t("invoiceActionLeaveOpen")}
+                {t("invoiceActionCancel")}
               </button>
               <button
                 type="button"
@@ -355,13 +353,6 @@ export default function MoveOutPage({
                 className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-warning hover:bg-warning/10 hover:border-warning/30 transition-colors"
               >
                 {t("invoiceActionWriteOff")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setAllActions("cancel")}
-                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-text-secondary hover:text-text-primary hover:border-border transition-colors"
-              >
-                {t("invoiceActionCancel")}
               </button>
             </div>
 
@@ -421,18 +412,7 @@ export default function MoveOutPage({
                     </div>
 
                     {/* Action selector */}
-                    <div className="grid grid-cols-4 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setAction(inv.id, "leave_open")}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all ${
-                          action === "leave_open"
-                            ? "bg-accent/10 border-accent/40 text-accent"
-                            : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
-                        }`}
-                      >
-                        {t("invoiceActionLeaveOpen")}
-                      </button>
+                    <div className="grid grid-cols-3 gap-1.5">
                       <button
                         type="button"
                         onClick={() => setAction(inv.id, "settle")}
@@ -511,14 +491,6 @@ export default function MoveOutPage({
               <p className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
                 {t("resolutionSummary")}
               </p>
-              {leaveOpenTotal > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-text-secondary">{t("invoiceActionLeaveOpen")}</span>
-                  <span className="font-mono font-medium text-accent tabular-nums">
-                    {fmt(leaveOpenTotal)} {CURRENCY.code}
-                  </span>
-                </div>
-              )}
               {settleCollectTotal > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-success">{t("settleCollect")}</span>
