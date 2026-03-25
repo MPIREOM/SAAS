@@ -45,6 +45,7 @@ export const properties = pgTable("properties", {
   totalUnits: integer("total_units"),
   propertyType: text("property_type"),
   isArchived: boolean("is_archived").notNull().default(false),
+  notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
   createdBy: uuid("created_by").references(() => users.id, {
     onDelete: "set null",
   }),

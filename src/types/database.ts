@@ -74,6 +74,7 @@ export interface Property {
   total_units: number;
   property_type: string;
   is_archived: boolean;
+  notifications_enabled: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;

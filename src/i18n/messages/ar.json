@@ -657,6 +657,11 @@
       "manager": "مدير",
       "viewer": "مشاهد"
     },
+    "propertyNotifications": "إشعارات العقارات",
+    "propertyNotificationsDescription": "تفعيل أو تعطيل إشعارات واتساب والبريد الإلكتروني لكل عقار",
+    "propertyNotificationsEnabled": "تم تفعيل الإشعارات لهذا العقار",
+    "propertyNotificationsDisabled": "تم تعطيل الإشعارات لهذا العقار",
+    "propertyNotificationsError": "فشل في تحديث إعدادات الإشعارات",
     "whatsappConfig": "إعدادات واتساب",
     "whatsappConfigDescription": "إعداد واجهة واتساب للأعمال لإشعارات المستأجرين",
     "whatsappComingSoon": "إعدادات واتساب قادمة قريباً. اربط حساب واتساب للأعمال لإرسال تذكيرات الإيجار والإشعارات التلقائية.",
