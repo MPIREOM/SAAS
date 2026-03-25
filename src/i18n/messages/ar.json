@@ -706,7 +706,21 @@
     "pendingMaintenance": "صيانة معلّقة",
     "rentCollection": "تحصيل الإيجار (12 شهر)",
     "expensesThisMonth": "مصروفات هذا الشهر",
-    "netIncome": "صافي الدخل"
+    "netIncome": "صافي الدخل",
+    "revenueThisMonth": "إيرادات هذا الشهر",
+    "vacancyCost": "تكلفة الشواغر / شهر",
+    "cashFlowTrend": "اتجاه التدفق النقدي (6 أشهر)",
+    "occupancyTrend": "اتجاه الإشغال (6 أشهر)",
+    "revenueByProperty": "الإيرادات حسب العقار",
+    "paymentMethods": "طرق الدفع (6 أشهر)",
+    "agedReceivables": "المستحقات المتقادمة",
+    "invoicesCount": "فواتير",
+    "upcomingCheques": "الشيكات القادمة (30 يوم)",
+    "noUpcomingCheques": "لا توجد شيكات قادمة",
+    "dueToday": "مستحق اليوم",
+    "expiringDocuments": "المستندات المنتهية",
+    "noExpiringDocuments": "لا توجد مستندات قاربت على الانتهاء",
+    "expired": "منتهي"
   },
   "reports": {
     "title": "التقارير",
