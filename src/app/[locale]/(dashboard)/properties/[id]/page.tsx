@@ -281,6 +281,10 @@ export default async function PropertyDetailPage({
                     <p className="text-[11px] text-text-secondary mt-1.5 truncate">
                       {tenant.full_name as string}
                     </p>
+                  ) : (unit.bedrooms as number | null) != null ? (
+                    <p className="text-[11px] text-text-secondary/60 mt-1.5">
+                      {(unit.bedrooms as number) === 0 ? tu("types.studio") : `${unit.bedrooms as number} BR`}
+                    </p>
                   ) : (unit.unit_type as string) ? (
                     <p className="text-[11px] text-text-secondary/60 mt-1.5 capitalize">
                       {unit.unit_type as string}

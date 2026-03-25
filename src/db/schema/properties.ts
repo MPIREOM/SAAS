@@ -78,6 +78,7 @@ export const units = pgTable(
     unitNumber: text("unit_number").notNull(),
     floor: integer("floor"),
     unitType: unitTypeEnum("unit_type"),
+    bedrooms: integer("bedrooms"),
     sizeSqm: numeric("size_sqm"),
     rentAmount: numeric("rent_amount").notNull(),
     status: unitStatusEnum("status").notNull().default("vacant"),
