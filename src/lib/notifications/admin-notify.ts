@@ -18,8 +18,7 @@ interface Recipient {
 }
 
 function formatPhone(phone: string): string {
-  const cleaned = phone.replace(/[^\d+]/g, "");
-  return cleaned.startsWith("+") ? cleaned : "+" + cleaned;
+  return phone.replace(/[^\d]/g, "");
 }
 
 async function sendWhatsAppText(to: string, text: string): Promise<{ success: boolean; error?: string }> {

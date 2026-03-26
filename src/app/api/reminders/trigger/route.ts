@@ -278,7 +278,7 @@ async function sendReminder(
       : `${defaultWhatsAppTemplates[params.reminderType]}_${langCode}`;
 
     const whatsappResult = await sendWhatsAppTemplate({
-      to: (params.phone.replace(/[^\d+]/g, "").startsWith("+") ? params.phone.replace(/[^\d+]/g, "") : "+" + params.phone.replace(/[^\d+]/g, "")),
+      to: params.phone.replace(/[^\d]/g, ""),
       templateName: metaTemplateName,
       languageCode: langCode,
       components: buildRentReminderComponents({

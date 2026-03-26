@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await sendWhatsAppTemplate({
-    to: (tenant.phone.replace(/[^\d+]/g, "").startsWith("+") ? tenant.phone.replace(/[^\d+]/g, "") : "+" + tenant.phone.replace(/[^\d+]/g, "")),
+    to: tenant.phone.replace(/[^\d]/g, ""),
     templateName,
     languageCode: languageCode || tenant.language_preference || "en",
     components: parameters
