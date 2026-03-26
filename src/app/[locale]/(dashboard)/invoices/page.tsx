@@ -32,6 +32,25 @@ export default async function InvoicesPage({
   const t = await getTranslations("invoices");
   const supabase = await createClient();
 
+  // Auto-cancel pending invoices from inactive leases (moved-out tenants)
+  const { data: inactiveLeases } = await supabase
+    .from("leases")
+    .select("id")
+    .eq("is_active", false);
+
+  if (inactiveLeases && inactiveLeases.length > 0) {
+    const inactiveLeaseIds = inactiveLeases.map((l) => l.id);
+    await supabase
+      .from("invoices")
+      .update({
+        status: "cancelled",
+        notes: "Auto-cancelled: lease is no longer active",
+        updated_at: new Date().toISOString(),
+      })
+      .in("lease_id", inactiveLeaseIds)
+      .in("status", ["pending", "overdue", "partial"]);
+  }
+
   // Property-level access control
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
   let unitIds: string[] | null = null;
