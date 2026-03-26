@@ -9,14 +9,12 @@ import { createClient } from "@/lib/supabase/client";
 interface NotificationPrefs {
   rent_upcoming: { email: boolean; whatsapp: boolean };
   rent_overdue: { email: boolean; whatsapp: boolean };
-  cheque_due: { email: boolean; whatsapp: boolean };
   lease_expiry: { email: boolean; whatsapp: boolean };
 }
 
 const DEFAULT_PREFS: NotificationPrefs = {
   rent_upcoming: { email: true, whatsapp: true },
   rent_overdue: { email: true, whatsapp: true },
-  cheque_due: { email: true, whatsapp: false },
   lease_expiry: { email: true, whatsapp: false },
 };
 
@@ -26,14 +24,12 @@ type Channel = "email" | "whatsapp";
 const REMINDER_TYPES: ReminderType[] = [
   "rent_upcoming",
   "rent_overdue",
-  "cheque_due",
   "lease_expiry",
 ];
 
 const REMINDER_TYPE_LABELS: Record<ReminderType, string> = {
   rent_upcoming: "rentUpcoming",
   rent_overdue: "rentOverdue",
-  cheque_due: "chequeDue",
   lease_expiry: "leaseExpiry",
 };
 
