@@ -63,8 +63,9 @@ export function MarkPaidButton({
   const [method, setMethod] = useState<"cash" | "bank_transfer" | "cheque">(
     "cash"
   );
-  const [paymentType, setPaymentType] = useState<"full" | "partial">("full");
+  const [paymentType, setPaymentType] = useState<"full" | "partial" | "advance">("full");
   const [partialAmount, setPartialAmount] = useState("");
+  const [advanceMonths, setAdvanceMonths] = useState(3);
   const [paidDate, setPaidDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -115,15 +116,23 @@ export function MarkPaidButton({
 
     const { data: invoice } = await supabase
       .from("invoices")
-      .select("lease_id, tenant_id, amount, paid_amount")
+      .select("lease_id, tenant_id, unit_id, amount, paid_amount, due_date, period_start, period_end")
       .eq("id", invoiceId)
       .single();
 
-    const currentPaidAmount = Number(invoice?.paid_amount || 0);
-    const invoiceTotal = Number(invoice?.amount || 0);
+    if (!invoice) {
+      toast({ title: "Invoice not found", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+
+    const currentPaidAmount = Number(invoice.paid_amount || 0);
+    const invoiceTotal = Number(invoice.amount || 0);
     const actualRemaining = Math.max(invoiceTotal - currentPaidAmount, 0);
+
+    // For advance payments, pay full amount of current invoice + generate future ones
     const paymentAmount =
-      paymentType === "full"
+      paymentType === "full" || paymentType === "advance"
         ? actualRemaining
         : Math.min(Number(partialAmount), actualRemaining);
 
@@ -139,6 +148,7 @@ export function MarkPaidButton({
     const newPaidAmount = currentPaidAmount + paymentAmount;
     const isFullyPaid = newPaidAmount >= invoiceTotal;
 
+    // Mark current invoice as paid
     const { error } = await supabase
       .from("invoices")
       .update({
@@ -150,7 +160,7 @@ export function MarkPaidButton({
       })
       .eq("id", invoiceId);
 
-    if (!error && invoice) {
+    if (!error) {
       const selectedCheque = cheques.find((c) => c.id === selectedChequeId);
       const referenceNumber =
         method === "cheque" && selectedCheque
@@ -159,22 +169,28 @@ export function MarkPaidButton({
           ? newChequeNumber
           : null;
 
+      // Calculate total payment amount (current + advance months)
+      const totalPaymentAmount = paymentType === "advance"
+        ? paymentAmount + (invoiceTotal * (advanceMonths - 1))
+        : paymentAmount;
+
       const { data: paymentData } = await supabase
         .from("payments")
         .insert({
           lease_id: invoice.lease_id,
           tenant_id: invoice.tenant_id,
-          amount: paymentAmount,
+          amount: totalPaymentAmount,
           payment_date: paidDate,
           method,
           reference_number: referenceNumber,
-          notes: notes || null,
+          notes: paymentType === "advance"
+            ? `Advance payment for ${advanceMonths} months${notes ? ` — ${notes}` : ""}`
+            : notes || null,
         })
         .select("id")
         .single();
 
       if (method === "cheque" && selectedChequeId) {
-        // Link existing cheque to payment and mark as cleared
         await supabase
           .from("cheques")
           .update({
@@ -184,7 +200,6 @@ export function MarkPaidButton({
           })
           .eq("id", selectedChequeId);
       } else if (method === "cheque" && addNewCheque && newChequeNumber) {
-        // Create new cheque record and link to payment
         await supabase
           .from("cheques")
           .insert({
@@ -193,26 +208,84 @@ export function MarkPaidButton({
             cheque_number: newChequeNumber,
             bank_name: newChequeBankName,
             cheque_date: newChequeDate,
-            amount: paymentAmount,
+            amount: totalPaymentAmount,
             status: "cleared",
           });
       }
 
+      // Handle advance payment: generate and mark future invoices as paid
+      if (paymentType === "advance" && isFullyPaid) {
+        const baseDate = invoice.due_date
+          ? new Date(invoice.due_date)
+          : new Date();
+
+        for (let i = 1; i < advanceMonths; i++) {
+          const futureDate = new Date(baseDate);
+          futureDate.setMonth(futureDate.getMonth() + i);
+          const futureDueDate = futureDate.toISOString().split("T")[0];
+
+          const futurePeriodStart = new Date(futureDate.getFullYear(), futureDate.getMonth(), 1)
+            .toISOString().split("T")[0];
+          const futurePeriodEnd = new Date(futureDate.getFullYear(), futureDate.getMonth() + 1, 0)
+            .toISOString().split("T")[0];
+
+          // Check if invoice already exists for this period
+          const { data: existing } = await supabase
+            .from("invoices")
+            .select("id, status, paid_amount")
+            .eq("lease_id", invoice.lease_id)
+            .eq("period_start", futurePeriodStart)
+            .maybeSingle();
+
+          if (existing) {
+            // Mark existing invoice as paid
+            await supabase
+              .from("invoices")
+              .update({
+                status: "paid",
+                paid_amount: invoiceTotal,
+                paid_date: paidDate,
+                notes: `Paid in advance (${advanceMonths} months)`,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existing.id);
+          } else {
+            // Create future invoice and mark as paid
+            await supabase.from("invoices").insert({
+              lease_id: invoice.lease_id,
+              tenant_id: invoice.tenant_id,
+              unit_id: invoice.unit_id,
+              amount: invoiceTotal,
+              due_date: futureDueDate,
+              issued_date: paidDate,
+              period_start: futurePeriodStart,
+              period_end: futurePeriodEnd,
+              status: "paid",
+              paid_amount: invoiceTotal,
+              paid_date: paidDate,
+              notes: `Paid in advance (${advanceMonths} months)`,
+            });
+          }
+        }
+      }
+
       await logAudit(supabase, {
-        action: isFullyPaid ? "mark_paid" : "partial_payment",
+        action: paymentType === "advance" ? "advance_payment" : isFullyPaid ? "mark_paid" : "partial_payment",
         entity_type: "invoice",
         entity_id: invoiceId,
       });
 
       setOpen(false);
       toast({
-        title: isFullyPaid
+        title: paymentType === "advance"
+          ? `Advance payment for ${advanceMonths} months recorded`
+          : isFullyPaid
           ? "Invoice marked as paid"
           : `Partial payment of ${paymentAmount.toFixed(2)} ${CURRENCY.code} recorded`,
         variant: "success",
       });
       router.refresh();
-    } else if (error) {
+    } else {
       toast({
         title: "Failed to record payment",
         description: error.message,
@@ -287,10 +360,11 @@ export function MarkPaidButton({
                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                   {t("paymentType")}
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {[
                     { key: "full" as const, label: t("fullPayment") },
                     { key: "partial" as const, label: t("partialPayment") },
+                    { key: "advance" as const, label: t("advancePayment") },
                   ].map((pt) => (
                     <button
                       key={pt.key}
@@ -330,6 +404,42 @@ export function MarkPaidButton({
                       {t("remaining")}: {Math.max(remainingAmount - Number(partialAmount), 0).toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Advance Months Selector */}
+              {paymentType === "advance" && (
+                <div className="animate-fade-in-up">
+                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                    {t("numberOfMonths")}
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[2, 3, 6, 12].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setAdvanceMonths(m)}
+                        className={`flex items-center justify-center p-3 rounded-xl border text-sm font-semibold font-mono transition-all duration-200 ${
+                          advanceMonths === m
+                            ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
+                            : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 p-3 rounded-xl bg-accent/5 border border-accent/20">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-text-secondary">{t("totalAdvanceAmount")}</span>
+                      <span className="font-mono font-bold text-accent tabular-nums">
+                        {(remainingAmount + totalAmount * (advanceMonths - 1)).toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-text-secondary mt-1">
+                      {remainingAmount.toLocaleString("en-OM", { minimumFractionDigits: 2 })} ({t("currentMonth")}) + {(totalAmount * (advanceMonths - 1)).toLocaleString("en-OM", { minimumFractionDigits: 2 })} ({advanceMonths - 1} {t("futureMonths")})
+                    </p>
+                  </div>
                 </div>
               )}
 

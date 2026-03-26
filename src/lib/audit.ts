@@ -10,6 +10,7 @@ type AuditAction =
   | "move_out"
   | "mark_paid"
   | "partial_payment"
+  | "advance_payment"
   | "status_update"
   | "export_report";
 
