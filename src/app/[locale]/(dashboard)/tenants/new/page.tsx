@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Upload, Scan, X, FileText, Home, Building2 } from "lucide-react";
+import { Upload, Scan, X, FileText, Home, Building2, Search, Users } from "lucide-react";
 import { logAudit } from "@/lib/audit";
 import { ChequeFormRows, ChequeEntry } from "@/components/cheques/cheque-form-rows";
 
@@ -27,6 +27,11 @@ export default function NewTenantPage({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [cheques, setCheques] = useState<ChequeEntry[]>([]);
+  const [tenantMode, setTenantMode] = useState<"new" | "existing">("new");
+  const [tenantSearch, setTenantSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<{ id: string; full_name: string; phone: string }[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<{ id: string; full_name: string; phone: string } | null>(null);
+  const [searchingTenants, setSearchingTenants] = useState(false);
 
   // Unit context from query params (when assigning from a property/unit page)
   const unitId = searchParams.get("unitId");
@@ -40,6 +45,28 @@ export default function NewTenantPage({
     rent_amount: string;
     property_name: string;
   } | null>(null);
+
+  // Search existing tenants
+  useEffect(() => {
+    if (tenantMode !== "existing" || tenantSearch.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSearchingTenants(true);
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("tenants")
+        .select("id, full_name, phone")
+        .eq("status", "active")
+        .or(`full_name.ilike.%${tenantSearch}%,phone.ilike.%${tenantSearch}%`)
+        .order("full_name")
+        .limit(10);
+      setSearchResults(data || []);
+      setSearchingTenants(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [tenantSearch, tenantMode]);
 
   useEffect(() => {
     if (unitId) {
@@ -137,26 +164,7 @@ export default function NewTenantPage({
 
     const formData = new FormData(e.currentTarget);
 
-    // Client-side validation
-    const fullName = (formData.get("full_name") as string).trim();
-    const phone = (formData.get("phone") as string).trim();
-    const email = (formData.get("email") as string)?.trim() || "";
-
-    if (!fullName) {
-      setError(t("fullNameRequired") || "Full name is required");
-      return;
-    }
-
-    if (!phone) {
-      setError(t("phoneRequired") || "Phone number is required");
-      return;
-    }
-
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError(t("invalidEmail") || "Please enter a valid email address");
-      return;
-    }
-
+    // Validate lease fields if assigning to unit
     if (isAssigningToUnit) {
       const startDate = formData.get("lease_start_date") as string;
       const endDate = formData.get("lease_end_date") as string;
@@ -171,6 +179,33 @@ export default function NewTenantPage({
         setError(t("invalidRent") || "Monthly rent must be greater than 0");
         return;
       }
+
+      if (tenantMode === "existing" && !selectedTenant) {
+        setError(t("selectTenantRequired") || "Please select a tenant");
+        return;
+      }
+    }
+
+    // Validate tenant fields only for new tenant
+    if (tenantMode === "new") {
+      const fullName = (formData.get("full_name") as string).trim();
+      const phone = (formData.get("phone") as string).trim();
+      const email = (formData.get("email") as string)?.trim() || "";
+
+      if (!fullName) {
+        setError(t("fullNameRequired") || "Full name is required");
+        return;
+      }
+
+      if (!phone) {
+        setError(t("phoneRequired") || "Phone number is required");
+        return;
+      }
+
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setError(t("invalidEmail") || "Please enter a valid email address");
+        return;
+      }
     }
 
     setLoading(true);
@@ -180,35 +215,48 @@ export default function NewTenantPage({
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Create tenant
-    const { data: tenant, error: insertError } = await supabase
-      .from("tenants")
-      .insert({
-        full_name: fullName,
-        nationality: (formData.get("nationality") as string)?.trim() || null,
-        national_id: (formData.get("national_id") as string)?.trim() || null,
-        phone,
-        email: email || null,
-        emergency_contact: (formData.get("emergency_contact") as string)?.trim() || null,
-        language_preference: formData.get("language_preference") as string,
-        status: "active",
-        created_by: user?.id,
-      })
-      .select("id")
-      .single();
+    let tenantId: string;
 
-    if (insertError || !tenant) {
-      setError(insertError?.message || "Failed to create tenant");
-      setLoading(false);
-      return;
+    if (tenantMode === "existing" && selectedTenant) {
+      // Use existing tenant
+      tenantId = selectedTenant.id;
+    } else {
+      // Create new tenant
+      const fullName = (formData.get("full_name") as string).trim();
+      const phone = (formData.get("phone") as string).trim();
+      const email = (formData.get("email") as string)?.trim() || "";
+
+      const { data: tenant, error: insertError } = await supabase
+        .from("tenants")
+        .insert({
+          full_name: fullName,
+          nationality: (formData.get("nationality") as string)?.trim() || null,
+          national_id: (formData.get("national_id") as string)?.trim() || null,
+          phone,
+          email: email || null,
+          emergency_contact: (formData.get("emergency_contact") as string)?.trim() || null,
+          language_preference: formData.get("language_preference") as string,
+          status: "active",
+          created_by: user?.id,
+        })
+        .select("id")
+        .single();
+
+      if (insertError || !tenant) {
+        setError(insertError?.message || "Failed to create tenant");
+        setLoading(false);
+        return;
+      }
+
+      logAudit(supabase, {
+        action: "create",
+        entity_type: "tenant",
+        entity_id: tenant.id,
+        metadata: { full_name: fullName },
+      });
+
+      tenantId = tenant.id;
     }
-
-    logAudit(supabase, {
-      action: "create",
-      entity_type: "tenant",
-      entity_id: tenant.id,
-      metadata: { full_name: fullName },
-    });
 
     // If assigning to a unit, create lease and update unit status
     if (isAssigningToUnit) {
@@ -220,7 +268,7 @@ export default function NewTenantPage({
       const paymentDueDay = formData.get("payment_due_day") as string;
 
       const { error: leaseError } = await supabase.from("leases").insert({
-        tenant_id: tenant.id,
+        tenant_id: tenantId,
         unit_id: unitId,
         start_date: startDate,
         end_date: endDate,
@@ -256,7 +304,7 @@ export default function NewTenantPage({
       if (validCheques.length > 0) {
         const { error: chequesError } = await supabase.from("cheques").insert(
           validCheques.map((c) => ({
-            tenant_id: tenant.id,
+            tenant_id: tenantId,
             cheque_number: c.cheque_number,
             bank_name: c.bank_name,
             cheque_date: c.cheque_date,
@@ -312,8 +360,104 @@ export default function NewTenantPage({
         </div>
       )}
 
+      {/* New vs Existing Tenant Toggle - shown when assigning to a unit */}
+      {isAssigningToUnit && (
+        <div className="bg-surface border border-border rounded-lg p-4 mb-5">
+          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+            {t("tenantType") || "Tenant"}
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => { setTenantMode("new"); setSelectedTenant(null); }}
+              className={`flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+                tenantMode === "new"
+                  ? "bg-accent/10 border-accent/40 text-accent"
+                  : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              {t("newTenant") || "New Tenant"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTenantMode("existing")}
+              className={`flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+                tenantMode === "existing"
+                  ? "bg-accent/10 border-accent/40 text-accent"
+                  : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+              }`}
+            >
+              <Search className="h-4 w-4" />
+              {t("existingTenant") || "Existing Tenant"}
+            </button>
+          </div>
+
+          {/* Existing tenant search */}
+          {tenantMode === "existing" && (
+            <div className="mt-4 space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
+                <input
+                  type="text"
+                  value={tenantSearch}
+                  onChange={(e) => { setTenantSearch(e.target.value); setSelectedTenant(null); }}
+                  placeholder={t("searchTenantPlaceholder") || "Search by name or phone..."}
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                />
+                {searchingTenants && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+
+              {/* Selected tenant */}
+              {selectedTenant && (
+                <div className="p-3 rounded-lg bg-success/5 border border-success/20 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{selectedTenant.full_name}</p>
+                    <p className="text-xs text-text-secondary font-mono">{selectedTenant.phone}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedTenant(null); setTenantSearch(""); }}
+                    className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:bg-surface-elevated transition-colors"
+                  >
+                    <X className="h-3 w-3 text-text-secondary" />
+                  </button>
+                </div>
+              )}
+
+              {/* Search results */}
+              {!selectedTenant && searchResults.length > 0 && (
+                <div className="border border-border rounded-lg overflow-hidden divide-y divide-border/50">
+                  {searchResults.map((tenant) => (
+                    <button
+                      key={tenant.id}
+                      type="button"
+                      onClick={() => { setSelectedTenant(tenant); setTenantSearch(tenant.full_name); setSearchResults([]); }}
+                      className="w-full text-start px-4 py-3 hover:bg-surface-elevated/50 transition-colors"
+                    >
+                      <p className="text-sm font-medium text-text-primary">{tenant.full_name}</p>
+                      <p className="text-xs text-text-secondary font-mono">{tenant.phone}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!selectedTenant && tenantSearch.length >= 2 && !searchingTenants && searchResults.length === 0 && (
+                <p className="text-xs text-text-secondary text-center py-2">
+                  {t("noTenantsFound") || "No tenants found"}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ID Scan Section */}
-      <div className="bg-surface border border-border rounded-lg p-6 mb-5">
+      {tenantMode === "new" && <div className="bg-surface border border-border rounded-lg p-6 mb-5">
         <div className="flex items-center gap-2 mb-3">
           <Scan className="h-4 w-4 text-accent" />
           <h2 className="text-sm font-medium text-text-primary">
@@ -384,11 +528,11 @@ export default function NewTenantPage({
           onChange={handleFileChange}
           className="hidden"
         />
-      </div>
+      </div>}
 
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-        {/* Tenant Info */}
-        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+        {/* Tenant Info - only for new tenant mode */}
+        {tenantMode === "new" && <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
           <div>
             <label className="block text-sm text-text-secondary mb-1.5">
               {t("fullName")} <span className="text-destructive">*</span>
@@ -475,7 +619,7 @@ export default function NewTenantPage({
               <option value="ar">{t("languages.ar")}</option>
             </select>
           </div>
-        </div>
+        </div>}
 
         {/* Lease Details - only shown when assigning to a unit */}
         {isAssigningToUnit && (

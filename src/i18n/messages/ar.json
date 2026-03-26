@@ -208,6 +208,11 @@
   "tenants": {
     "title": "المستأجرين",
     "createTenant": "إضافة مستأجر",
+    "newTenant": "مستأجر جديد",
+    "existingTenant": "مستأجر حالي",
+    "searchTenantPlaceholder": "ابحث بالاسم أو رقم الهاتف...",
+    "selectTenantRequired": "يرجى اختيار مستأجر",
+    "noTenantsFound": "لم يتم العثور على مستأجرين",
     "editTenant": "تعديل المستأجر",
     "deleteTenant": "حذف المستأجر",
     "fullName": "الاسم الكامل",

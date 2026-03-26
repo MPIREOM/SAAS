@@ -208,6 +208,11 @@
   "tenants": {
     "title": "Tenants",
     "createTenant": "Add Tenant",
+    "newTenant": "New Tenant",
+    "existingTenant": "Existing Tenant",
+    "searchTenantPlaceholder": "Search by name or phone...",
+    "selectTenantRequired": "Please select a tenant",
+    "noTenantsFound": "No tenants found",
     "editTenant": "Edit Tenant",
     "deleteTenant": "Delete Tenant",
     "fullName": "Full Name",
