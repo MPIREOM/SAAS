@@ -83,7 +83,6 @@ export default function NewTemplatePage({
               >
                 <option value="rent_upcoming">Rent Upcoming</option>
                 <option value="rent_overdue">Rent Overdue</option>
-                <option value="cheque_due">Cheque Due</option>
                 <option value="lease_expiry">Lease Expiry</option>
               </select>
             </div>

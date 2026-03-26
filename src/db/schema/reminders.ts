@@ -15,7 +15,6 @@ import { languageEnum } from "./users";
 export const reminderTypeEnum = pgEnum("reminder_type", [
   "rent_upcoming",
   "rent_overdue",
-  "cheque_due",
   "lease_expiry",
 ]);
 

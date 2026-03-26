@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { sendWhatsAppTemplate, buildRentReminderComponents } from "@/lib/whatsapp/client";
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
-import { addDays, format, differenceInDays, parseISO } from "date-fns";
+import { format, differenceInDays, parseISO } from "date-fns";
 
 export const maxDuration = 60;
 
@@ -36,7 +36,6 @@ export async function POST() {
   const results = {
     rentUpcoming: 0,
     rentOverdue: 0,
-    chequeDue: 0,
     leaseExpiry: 0,
     errors: 0,
     details: [] as string[],
@@ -168,45 +167,11 @@ export async function POST() {
       }
     }
 
-    // 2. Cheque due reminders (3 days before cheque date)
-    const threeDaysFromNow = format(addDays(today, 3), "yyyy-MM-dd");
-    const { data: dueCheques } = await supabase
-      .from("cheques")
-      .select(`*, tenants(id, full_name, phone, email, language_preference)`)
-      .eq("status", "pending")
-      .eq("cheque_date", threeDaysFromNow);
-
-    if (dueCheques) {
-      for (const cheque of dueCheques) {
-        try {
-          const tenant = cheque.tenants as Record<string, unknown>;
-          if (!tenant) continue;
-
-          await sendReminder(supabase, templateIndex, {
-            tenantId: tenant.id as string,
-            tenantName: tenant.full_name as string,
-            phone: tenant.phone as string,
-            email: tenant.email as string,
-            language: (tenant.language_preference as string) || "en",
-            unitNumber: "",
-            propertyName: "",
-            amount: String(cheque.amount),
-            dueDate: cheque.cheque_date as string,
-            reminderType: "cheque_due",
-            chequeNumber: cheque.cheque_number as string,
-          });
-          results.chequeDue++;
-          results.details.push(`Cheque due: ${tenant.full_name} (#${cheque.cheque_number})`);
-        } catch {
-          results.errors++;
-        }
-      }
-    }
   } catch {
     results.errors++;
   }
 
-  const total = results.rentUpcoming + results.rentOverdue + results.chequeDue + results.leaseExpiry;
+  const total = results.rentUpcoming + results.rentOverdue + results.leaseExpiry;
 
   return NextResponse.json({
     success: true,
@@ -239,8 +204,7 @@ interface ReminderParams {
   propertyName: string;
   amount: string;
   dueDate: string;
-  reminderType: "rent_upcoming" | "rent_overdue" | "cheque_due" | "lease_expiry";
-  chequeNumber?: string;
+  reminderType: "rent_upcoming" | "rent_overdue" | "lease_expiry";
 }
 
 function renderTemplate(template: string, params: ReminderParams): string {
@@ -250,7 +214,6 @@ function renderTemplate(template: string, params: ReminderParams): string {
     .replace(/\{\{due_date\}\}/g, params.dueDate)
     .replace(/\{\{property\}\}/g, params.propertyName)
     .replace(/\{\{unit\}\}/g, params.unitNumber)
-    .replace(/\{\{cheque_number\}\}/g, params.chequeNumber || "");
 }
 
 async function sendReminder(
@@ -261,7 +224,6 @@ async function sendReminder(
   const defaultWhatsAppTemplates: Record<string, string> = {
     rent_upcoming: "mpire_rent_upcoming",
     rent_overdue: "mpire_rent_overdue",
-    cheque_due: "mpire_cheque_due",
     lease_expiry: "mpire_lease_expiry",
   };
 
@@ -351,10 +313,6 @@ function getDefaultEmailSubject(type: string, lang: string): string {
       en: "Overdue Rent Notice - MPIRE",
       ar: "\u0625\u0634\u0639\u0627\u0631 \u062A\u0623\u062E\u0631 \u0627\u0644\u0625\u064A\u062C\u0627\u0631 - MPIRE",
     },
-    cheque_due: {
-      en: "Cheque Due Reminder - MPIRE",
-      ar: "\u062A\u0630\u0643\u064A\u0631 \u0628\u0627\u0633\u062A\u062D\u0642\u0627\u0642 \u0627\u0644\u0634\u064A\u0643 - MPIRE",
-    },
     lease_expiry: {
       en: "Lease Expiry Notice - MPIRE",
       ar: "\u0625\u0634\u0639\u0627\u0631 \u0627\u0646\u062A\u0647\u0627\u0621 \u0639\u0642\u062F \u0627\u0644\u0625\u064A\u062C\u0627\u0631 - MPIRE",
@@ -370,8 +328,6 @@ function getDefaultEmailBody(params: ReminderParams, lang: string): string {
         return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0647\u0630\u0627 \u062A\u0630\u0643\u064A\u0631 \u0628\u0623\u0646 \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u064A\u0633\u062A\u062D\u0642 \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u062F\u0641\u0639 \u0641\u064A \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u0645\u062D\u062F\u062F.`;
       case "rent_overdue":
         return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0646\u0648\u062F \u0625\u0628\u0644\u0627\u063A\u0643\u0645 \u0628\u0623\u0646 \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u0645\u062A\u0623\u062E\u0631. \u0643\u0627\u0646 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642 ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u062A\u0633\u0648\u064A\u0629 \u0627\u0644\u0645\u0628\u0644\u063A \u0641\u064A \u0623\u0642\u0631\u0628 \u0648\u0642\u062A \u0645\u0645\u0643\u0646.`;
-      case "cheque_due":
-        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0647\u0630\u0627 \u062A\u0630\u0643\u064A\u0631 \u0628\u0623\u0646 \u0627\u0644\u0634\u064A\u0643 \u0631\u0642\u0645 ${params.chequeNumber || ""} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u064A\u0633\u062A\u062D\u0642 \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0648\u0641\u0631 \u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0643\u0627\u0641\u064A.`;
       case "lease_expiry":
         return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0646\u0648\u062F \u0625\u0628\u0644\u0627\u063A\u0643\u0645 \u0628\u0623\u0646 \u0639\u0642\u062F \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u064A\u0646\u062A\u0647\u064A \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627 \u0644\u0645\u0646\u0627\u0642\u0634\u0629 \u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0639\u0642\u062F.`;
       default:
@@ -384,8 +340,6 @@ function getDefaultEmailBody(params: ReminderParams, lang: string): string {
       return `Dear ${params.tenantName},<br><br>This is a reminder that your rent of ${params.amount} ${CURRENCY.code} for unit ${params.unitNumber} at ${params.propertyName} is due on ${params.dueDate}.<br><br>Please ensure timely payment.`;
     case "rent_overdue":
       return `Dear ${params.tenantName},<br><br>Your rent of ${params.amount} ${CURRENCY.code} for unit ${params.unitNumber} at ${params.propertyName} is overdue. The due date was ${params.dueDate}.<br><br>Please settle the amount at your earliest convenience.`;
-    case "cheque_due":
-      return `Dear ${params.tenantName},<br><br>This is a reminder that cheque #${params.chequeNumber || ""} for ${params.amount} ${CURRENCY.code} is due on ${params.dueDate}.<br><br>Please ensure sufficient funds are available.`;
     case "lease_expiry":
       return `Dear ${params.tenantName},<br><br>Your lease for unit ${params.unitNumber} at ${params.propertyName} is expiring on ${params.dueDate}.<br><br>Please contact us to discuss renewal options.`;
     default:

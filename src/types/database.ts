@@ -32,7 +32,6 @@ export type MaintenanceCategory =
 export type ReminderType =
   | "rent_upcoming"
   | "rent_overdue"
-  | "cheque_due"
   | "lease_expiry";
 
 export type ReminderChannel = "whatsapp" | "email";
