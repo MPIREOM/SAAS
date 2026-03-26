@@ -88,10 +88,32 @@ export async function GET(request: Request) {
     .lt("due_date", todayStr);
   // Note: partial invoices keep their "partial" status, not overridden to "overdue"
 
+  // Auto-cancel pending invoices from inactive leases (moved-out tenants)
+  const { data: inactiveLeases } = await supabase
+    .from("leases")
+    .select("id")
+    .eq("is_active", false);
+
+  let cancelledCount = 0;
+  if (inactiveLeases && inactiveLeases.length > 0) {
+    const inactiveLeaseIds = inactiveLeases.map((l) => l.id);
+    const { count } = await supabase
+      .from("invoices")
+      .update({
+        status: "cancelled",
+        notes: "Auto-cancelled: lease is no longer active",
+        updated_at: new Date().toISOString(),
+      })
+      .in("lease_id", inactiveLeaseIds)
+      .in("status", ["pending", "overdue", "partial"]);
+    cancelledCount = count || 0;
+  }
+
   return NextResponse.json({
     created,
     skipped,
     total: leases.length,
+    cancelledFromInactiveLeases: cancelledCount,
     overdueUpdated: !overdueError,
     overdueError: overdueError?.message || null,
   });
