@@ -195,6 +195,21 @@ export async function GET(request: NextRequest) {
       footer: "This summary is sent every morning at 8:00 AM. Manage recipients in Settings.",
     }),
     whatsappText: whatsappLines.join("\n"),
+    whatsappTemplate: {
+      name: "mpire_daily_summary_en",
+      languageCode: "en",
+      parameters: [
+        todayDisplay,
+        String(invoicesDue.length),
+        totalDueToday.toFixed(2),
+        String(invoicesOverdue.length),
+        totalOverdue.toFixed(2),
+        String(chequesDue.length),
+        totalCheques.toFixed(2),
+        String(newMaintenance.length),
+        String(openMaintenance.length),
+      ],
+    },
   });
 
   return NextResponse.json({

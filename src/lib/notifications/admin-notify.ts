@@ -7,6 +7,12 @@ interface AdminNotifyOptions {
   subject: string;
   emailHtml: string;
   whatsappText: string;
+  /** If provided, sends via Meta template instead of free-form text */
+  whatsappTemplate?: {
+    name: string;
+    languageCode: string;
+    parameters: string[];
+  };
 }
 
 interface Recipient {
@@ -48,6 +54,49 @@ async function sendWhatsAppText(to: string, text: string): Promise<{ success: bo
   }
 }
 
+async function sendWhatsAppTemplateMessage(
+  to: string,
+  templateName: string,
+  languageCode: string,
+  parameters: string[]
+): Promise<{ success: boolean; error?: string }> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  if (!phoneNumberId || !accessToken) return { success: false, error: "WhatsApp not configured" };
+
+  try {
+    const res = await fetch(`${WHATSAPP_API_URL}/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: to.replace(/\+/g, ""),
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: languageCode },
+          components: [
+            {
+              type: "body",
+              parameters: parameters.map((p) => ({ type: "text", text: p })),
+            },
+          ],
+        },
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.error?.message || `WhatsApp API ${res.status}` };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unknown" };
+  }
+}
+
 export async function notifyAdmins(
   recipients: Recipient[],
   options: AdminNotifyOptions
@@ -68,7 +117,15 @@ export async function notifyAdmins(
     }
 
     if (r.notify_whatsapp && r.phone) {
-      const result = await sendWhatsAppText(formatPhone(r.phone), options.whatsappText);
+      const phone = formatPhone(r.phone);
+      const result = options.whatsappTemplate
+        ? await sendWhatsAppTemplateMessage(
+            phone,
+            options.whatsappTemplate.name,
+            options.whatsappTemplate.languageCode,
+            options.whatsappTemplate.parameters
+          )
+        : await sendWhatsAppText(phone, options.whatsappText);
       if (result.success) whatsappSent++;
       else errors++;
     }
