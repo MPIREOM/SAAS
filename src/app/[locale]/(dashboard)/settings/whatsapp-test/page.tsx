@@ -11,18 +11,17 @@ const templateLanguageMap: Record<string, string> = {
   mpire_rent_overdue_ar: "ar",
   mpire_lease_expiry_en: "en",
   mpire_lease_expiry_ar: "ar",
+  mpire_daily_summary_en: "en",
 };
 
-const templatesWithParams = new Set([
-  "mpire_rent_upcoming_en",
-  "mpire_rent_upcoming_ar",
-  "mpire_rent_overdue_en",
-  "mpire_rent_overdue_ar",
-  "mpire_lease_expiry_en",
-  "mpire_lease_expiry_ar",
-]);
+interface ParamFieldConfig {
+  key: string;
+  label: string;
+  placeholder: string;
+  defaultValue: string;
+}
 
-const paramFields = [
+const rentParamFields: ParamFieldConfig[] = [
   { key: "tenantName", label: "Tenant Name", placeholder: "John Doe", defaultValue: "Test Tenant" },
   { key: "unitNumber", label: "Unit Number", placeholder: "101", defaultValue: "101" },
   { key: "propertyName", label: "Property Name", placeholder: "Al Khuwair Tower", defaultValue: "Test Property" },
@@ -30,17 +29,33 @@ const paramFields = [
   { key: "dueDate", label: "Due Date", placeholder: "2026-04-01", defaultValue: "2026-04-01" },
 ];
 
+const summaryParamFields: ParamFieldConfig[] = [
+  { key: "date", label: "Date", placeholder: "Thursday, 27 March 2026", defaultValue: "Thursday, 27 March 2026" },
+  { key: "invoicesDue", label: "Invoices Due Count", placeholder: "3", defaultValue: "3" },
+  { key: "invoicesDueAmount", label: "Invoices Due Amount", placeholder: "1500.00", defaultValue: "1500.00" },
+  { key: "overdueCount", label: "Overdue Count", placeholder: "2", defaultValue: "2" },
+  { key: "overdueAmount", label: "Overdue Amount", placeholder: "800.00", defaultValue: "800.00" },
+  { key: "chequesCount", label: "Cheques Due Count", placeholder: "1", defaultValue: "1" },
+  { key: "chequesAmount", label: "Cheques Amount", placeholder: "500.00", defaultValue: "500.00" },
+  { key: "newMaintenance", label: "New Maintenance Count", placeholder: "1", defaultValue: "1" },
+  { key: "openMaintenance", label: "Open Maintenance Count", placeholder: "4", defaultValue: "4" },
+];
+
+const templateParamConfig: Record<string, { fields: ParamFieldConfig[]; defaults: Record<string, string> }> = {
+  mpire_rent_upcoming_en: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
+  mpire_rent_upcoming_ar: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
+  mpire_rent_overdue_en: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
+  mpire_rent_overdue_ar: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
+  mpire_lease_expiry_en: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
+  mpire_lease_expiry_ar: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
+  mpire_daily_summary_en: { fields: summaryParamFields, defaults: { date: "Thursday, 27 March 2026", invoicesDue: "3", invoicesDueAmount: "1500.00", overdueCount: "2", overdueAmount: "800.00", chequesCount: "1", chequesAmount: "500.00", newMaintenance: "1", openMaintenance: "4" } },
+};
+
 export default function WhatsAppTestPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [templateName, setTemplateName] = useState("hello_world");
   const [languageCode, setLanguageCode] = useState("en_US");
-  const [params, setParams] = useState<Record<string, string>>({
-    tenantName: "Test Tenant",
-    unitNumber: "101",
-    propertyName: "Test Property",
-    amount: "500",
-    dueDate: "2026-04-01",
-  });
+  const [params, setParams] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     success: boolean;
@@ -52,12 +67,16 @@ export default function WhatsAppTestPage() {
     details?: Record<string, unknown>;
   } | null>(null);
 
-  const needsParams = templatesWithParams.has(templateName);
+  const templateConfig = templateParamConfig[templateName];
+  const paramFields = templateConfig?.fields || [];
 
   const handleTemplateChange = (template: string) => {
     setTemplateName(template);
     const lang = templateLanguageMap[template];
     if (lang) setLanguageCode(lang);
+    // Reset params to defaults for new template
+    const config = templateParamConfig[template];
+    setParams(config?.defaults || {});
   };
 
   const handleSend = async () => {
@@ -72,14 +91,8 @@ export default function WhatsAppTestPage() {
           phoneNumber,
           templateName: templateName || "hello_world",
           languageCode: languageCode || "en_US",
-          ...(needsParams && {
-            parameters: [
-              params.tenantName,
-              params.unitNumber,
-              params.propertyName,
-              params.amount,
-              params.dueDate,
-            ],
+          ...(paramFields.length > 0 && {
+            parameters: paramFields.map((f) => params[f.key] || f.defaultValue),
           }),
         }),
       });
@@ -167,6 +180,7 @@ export default function WhatsAppTestPage() {
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
             >
               <option value="hello_world">hello_world (Meta default)</option>
+              <option value="mpire_daily_summary_en">mpire_daily_summary_en (Daily Summary)</option>
               <option value="mpire_rent_upcoming_en">mpire_rent_upcoming_en (English)</option>
               <option value="mpire_rent_upcoming_ar">mpire_rent_upcoming_ar (Arabic)</option>
               <option value="mpire_rent_overdue_en">mpire_rent_overdue_en (English)</option>
@@ -196,7 +210,7 @@ export default function WhatsAppTestPage() {
           </div>
 
           {/* Template Parameters */}
-          {needsParams && (
+          {paramFields.length > 0 && (
             <div className="border border-border/50 rounded-md p-4 space-y-3 bg-surface-elevated/50">
               <p className="text-sm font-medium text-text-primary">
                 Template Parameters
