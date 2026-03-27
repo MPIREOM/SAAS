@@ -14,6 +14,7 @@ import { UserManagementTable } from "@/components/settings/user-management-table
 import { ProfileEditForm } from "@/components/settings/profile-edit-form";
 import { AuditLogViewer } from "@/components/settings/audit-log-viewer";
 import { PropertyNotificationToggles } from "@/components/settings/property-notification-toggles";
+import { TenantNotificationToggles } from "@/components/settings/tenant-notification-toggles";
 
 export default async function SettingsPage({
   params,
@@ -45,11 +46,37 @@ export default async function SettingsPage({
     .eq("is_archived", false)
     .order("name");
 
+  // Fetch active tenants with their current lease info for notification toggles
+  const { data: activeTenants } = await supabase
+    .from("tenants")
+    .select(
+      "id, full_name, phone, notifications_enabled, leases(unit_id, is_active, units(unit_number, properties(name)))"
+    )
+    .eq("status", "active")
+    .order("full_name");
+
   const isSuperAdmin = profile?.role === "super_admin";
   const propertiesList = (allProperties || []).map((p) => ({
     id: p.id as string,
     name: p.name as string,
   }));
+
+  const tenantsList = (activeTenants || []).map((t) => {
+    const activeLease = (
+      t.leases as Array<{
+        is_active: boolean;
+        units: { unit_number: string; properties: { name: string } | null } | null;
+      }>
+    )?.find((l) => l.is_active);
+    return {
+      id: t.id as string,
+      full_name: t.full_name as string,
+      phone: t.phone as string,
+      notifications_enabled: (t.notifications_enabled ?? true) as boolean,
+      property_name: (activeLease?.units?.properties?.name as string) || undefined,
+      unit_number: (activeLease?.units?.unit_number as string) || undefined,
+    };
+  });
 
   return (
     <div className="space-y-8 max-w-4xl stagger-children">
@@ -186,6 +213,24 @@ export default async function SettingsPage({
             notifications_enabled: p.notifications_enabled as boolean,
           }))}
         />
+      </div>
+
+      {/* Tenant Notifications */}
+      <div className="bg-surface border border-border rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-accent/10 rounded-md">
+            <Users className="h-5 w-5 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-base font-medium text-text-primary font-display">
+              {t("tenantNotifications")}
+            </h2>
+            <p className="text-xs text-text-secondary">
+              {t("tenantNotificationsDescription")}
+            </p>
+          </div>
+        </div>
+        <TenantNotificationToggles tenants={tenantsList} />
       </div>
 
       {/* Activity Log */}

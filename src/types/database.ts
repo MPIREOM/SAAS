@@ -112,6 +112,7 @@ export interface Tenant {
   emergency_contact: string;
   language_preference: LanguagePreference;
   status: TenantStatus;
+  notifications_enabled: boolean;
   created_at: string;
   updated_at: string;
   created_by: string;

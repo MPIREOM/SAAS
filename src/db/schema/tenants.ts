@@ -39,6 +39,7 @@ export const tenants = pgTable("tenants", {
     .notNull()
     .default("en"),
   status: tenantStatusEnum("status").notNull().default("active"),
+  notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

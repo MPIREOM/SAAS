@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       .from("leases")
       .select(`
         *,
-        tenants(id, full_name, phone, email, language_preference),
+        tenants(id, full_name, phone, email, language_preference, notifications_enabled),
         units(unit_number, property_id, properties(name))
       `)
       .eq("is_active", true);
@@ -86,6 +86,9 @@ export async function GET(request: NextRequest) {
           // Skip properties with notifications disabled
           const propertyId = unit.property_id as string;
           if (disabledPropertyIds.has(propertyId)) continue;
+
+          // Skip tenants with notifications disabled
+          if (tenant.notifications_enabled === false) continue;
 
           const dueDay = lease.payment_due_day || 1;
           const currentMonth = today.getMonth();
@@ -170,7 +173,7 @@ export async function GET(request: NextRequest) {
     const threeDaysFromNow = format(addDays(today, 3), "yyyy-MM-dd");
     const { data: dueCheques } = await supabase
       .from("cheques")
-      .select(`*, tenants(id, full_name, phone, email, language_preference)`)
+      .select(`*, tenants(id, full_name, phone, email, language_preference, notifications_enabled)`)
       .eq("status", "pending")
       .eq("cheque_date", threeDaysFromNow);
 
@@ -179,6 +182,9 @@ export async function GET(request: NextRequest) {
         try {
           const tenant = cheque.tenants as Record<string, unknown>;
           if (!tenant) continue;
+
+          // Skip tenants with notifications disabled
+          if (tenant.notifications_enabled === false) continue;
 
           await sendReminder(supabase, templateIndex, {
             tenantId: tenant.id as string,
