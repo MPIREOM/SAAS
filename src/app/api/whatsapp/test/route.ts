@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { phoneNumber, templateName, languageCode } = await request.json();
+  const { phoneNumber, templateName, languageCode, parameters } = await request.json();
 
   if (!phoneNumber) {
     return NextResponse.json(
@@ -46,14 +46,29 @@ export async function POST(request: NextRequest) {
   const template = templateName || "hello_world";
   const language = languageCode || "en_US";
 
+  const templatePayload: Record<string, unknown> = {
+    name: template,
+    language: { code: language },
+  };
+
+  // Add template components if parameters are provided
+  if (parameters && Array.isArray(parameters) && parameters.length > 0) {
+    templatePayload.components = [
+      {
+        type: "body",
+        parameters: parameters.map((p: string) => ({
+          type: "text",
+          text: p,
+        })),
+      },
+    ];
+  }
+
   const body = {
     messaging_product: "whatsapp",
     to: formattedPhone,
     type: "template",
-    template: {
-      name: template,
-      language: { code: language },
-    },
+    template: templatePayload,
   };
 
   try {

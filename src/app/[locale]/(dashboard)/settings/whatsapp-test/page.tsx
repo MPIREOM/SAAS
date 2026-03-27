@@ -3,29 +3,45 @@
 import { useState } from "react";
 import { MessageSquare, Send, CheckCircle2, XCircle, Loader2, Info } from "lucide-react";
 
+const templateLanguageMap: Record<string, string> = {
+  hello_world: "en_US",
+  mpire_rent_upcoming_en: "en",
+  mpire_rent_upcoming_ar: "ar",
+  mpire_rent_overdue_en: "en",
+  mpire_rent_overdue_ar: "ar",
+  mpire_lease_expiry_en: "en",
+  mpire_lease_expiry_ar: "ar",
+};
+
+const templatesWithParams = new Set([
+  "mpire_rent_upcoming_en",
+  "mpire_rent_upcoming_ar",
+  "mpire_rent_overdue_en",
+  "mpire_rent_overdue_ar",
+  "mpire_lease_expiry_en",
+  "mpire_lease_expiry_ar",
+]);
+
+const paramFields = [
+  { key: "tenantName", label: "Tenant Name", placeholder: "John Doe", defaultValue: "Test Tenant" },
+  { key: "unitNumber", label: "Unit Number", placeholder: "101", defaultValue: "101" },
+  { key: "propertyName", label: "Property Name", placeholder: "Al Khuwair Tower", defaultValue: "Test Property" },
+  { key: "amount", label: "Amount", placeholder: "500", defaultValue: "500" },
+  { key: "dueDate", label: "Due Date", placeholder: "2026-04-01", defaultValue: "2026-04-01" },
+];
+
 export default function WhatsAppTestPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [templateName, setTemplateName] = useState("hello_world");
   const [languageCode, setLanguageCode] = useState("en_US");
+  const [params, setParams] = useState<Record<string, string>>({
+    tenantName: "Test Tenant",
+    unitNumber: "101",
+    propertyName: "Test Property",
+    amount: "500",
+    dueDate: "2026-04-01",
+  });
   const [loading, setLoading] = useState(false);
-
-  const templateLanguageMap: Record<string, string> = {
-    hello_world: "en_US",
-    mpire_rent_upcoming_en: "en",
-    mpire_rent_upcoming_ar: "ar",
-    mpire_rent_overdue_en: "en",
-    mpire_rent_overdue_ar: "ar",
-    mpire_cheque_due_en: "en",
-    mpire_cheque_due_ar: "ar",
-    mpire_lease_expiry_en: "en",
-    mpire_lease_expiry_ar: "ar",
-  };
-
-  const handleTemplateChange = (template: string) => {
-    setTemplateName(template);
-    const lang = templateLanguageMap[template];
-    if (lang) setLanguageCode(lang);
-  };
   const [result, setResult] = useState<{
     success: boolean;
     messageId?: string;
@@ -35,6 +51,14 @@ export default function WhatsAppTestPage() {
     errorType?: string;
     details?: Record<string, unknown>;
   } | null>(null);
+
+  const needsParams = templatesWithParams.has(templateName);
+
+  const handleTemplateChange = (template: string) => {
+    setTemplateName(template);
+    const lang = templateLanguageMap[template];
+    if (lang) setLanguageCode(lang);
+  };
 
   const handleSend = async () => {
     setLoading(true);
@@ -48,6 +72,15 @@ export default function WhatsAppTestPage() {
           phoneNumber,
           templateName: templateName || "hello_world",
           languageCode: languageCode || "en_US",
+          ...(needsParams && {
+            parameters: [
+              params.tenantName,
+              params.unitNumber,
+              params.propertyName,
+              params.amount,
+              params.dueDate,
+            ],
+          }),
         }),
       });
 
@@ -156,11 +189,39 @@ export default function WhatsAppTestPage() {
               onChange={(e) => setLanguageCode(e.target.value)}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
             >
-              <option value="en_US">en_US (English)</option>
+              <option value="en_US">en_US (English US)</option>
               <option value="en">en (English)</option>
               <option value="ar">ar (Arabic)</option>
             </select>
           </div>
+
+          {/* Template Parameters */}
+          {needsParams && (
+            <div className="border border-border/50 rounded-md p-4 space-y-3 bg-surface-elevated/50">
+              <p className="text-sm font-medium text-text-primary">
+                Template Parameters
+              </p>
+              <p className="text-xs text-text-secondary -mt-1">
+                These values will be inserted into the template placeholders
+              </p>
+              {paramFields.map((field) => (
+                <div key={field.key}>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">
+                    {field.label}
+                  </label>
+                  <input
+                    type="text"
+                    value={params[field.key] || ""}
+                    onChange={(e) =>
+                      setParams((prev) => ({ ...prev, [field.key]: e.target.value }))
+                    }
+                    placeholder={field.placeholder}
+                    className="w-full px-3 py-1.5 rounded-md border border-border bg-background text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Send Button */}
           <button
