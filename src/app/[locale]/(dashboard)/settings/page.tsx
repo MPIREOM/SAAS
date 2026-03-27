@@ -62,12 +62,11 @@ export default async function SettingsPage({
   }));
 
   const tenantsList = (activeTenants || []).map((t) => {
-    const activeLease = (
-      t.leases as Array<{
-        is_active: boolean;
-        units: { unit_number: string; properties: { name: string } | null } | null;
-      }>
-    )?.find((l) => l.is_active);
+    const leases = t.leases as unknown as Array<{
+      is_active: boolean;
+      units: { unit_number: string; properties: { name: string } | null } | null;
+    }>;
+    const activeLease = leases?.find((l) => l.is_active);
     return {
       id: t.id as string,
       full_name: t.full_name as string,
