@@ -208,6 +208,35 @@ export default async function SettingsPage({
         </div>
       )}
 
+      {/* WhatsApp Test */}
+      <div className="bg-surface border border-border rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-accent/10 rounded-md">
+              <MessageSquare className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <h2 className="text-base font-medium text-text-primary font-display">
+                {t("whatsappConfig")}
+              </h2>
+              <p className="text-xs text-text-secondary">
+                {t("whatsappConfigDescription")}
+              </p>
+            </div>
+          </div>
+          <a
+            href={`/${locale}/settings/whatsapp-test`}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Test WhatsApp
+          </a>
+        </div>
+        <p className="text-sm text-text-secondary">
+          Send a test message via Meta WhatsApp Cloud API to verify your credentials are working.
+        </p>
+      </div>
+
       {/* Email Configuration */}
       <div className="bg-surface border border-border rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
