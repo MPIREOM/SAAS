@@ -11,7 +11,7 @@ const templateLanguageMap: Record<string, string> = {
   mpire_rent_overdue_ar: "ar",
   mpire_lease_expiry_en: "en",
   mpire_lease_expiry_ar: "ar",
-  mpire_daily_summary_en: "en",
+  daily_briefs: "en",
 };
 
 interface ParamFieldConfig {
@@ -48,7 +48,7 @@ const templateParamConfig: Record<string, { fields: ParamFieldConfig[]; defaults
   mpire_rent_overdue_ar: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
   mpire_lease_expiry_en: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
   mpire_lease_expiry_ar: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
-  mpire_daily_summary_en: { fields: summaryParamFields, defaults: { date: "Thursday, 27 March 2026", invoicesDue: "3", invoicesDueAmount: "1500.00", overdueCount: "2", overdueAmount: "800.00", chequesCount: "1", chequesAmount: "500.00", newMaintenance: "1", openMaintenance: "4" } },
+  daily_briefs: { fields: summaryParamFields, defaults: { date: "Thursday, 27 March 2026", invoicesDue: "3", invoicesDueAmount: "1500.00", overdueCount: "2", overdueAmount: "800.00", chequesCount: "1", chequesAmount: "500.00", newMaintenance: "1", openMaintenance: "4" } },
 };
 
 export default function WhatsAppTestPage() {
@@ -180,7 +180,7 @@ export default function WhatsAppTestPage() {
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
             >
               <option value="hello_world">hello_world (Meta default)</option>
-              <option value="mpire_daily_summary_en">mpire_daily_summary_en (Daily Summary)</option>
+              <option value="daily_briefs">daily_briefs (Daily Summary)</option>
               <option value="mpire_rent_upcoming_en">mpire_rent_upcoming_en (English)</option>
               <option value="mpire_rent_upcoming_ar">mpire_rent_upcoming_ar (Arabic)</option>
               <option value="mpire_rent_overdue_en">mpire_rent_overdue_en (English)</option>
