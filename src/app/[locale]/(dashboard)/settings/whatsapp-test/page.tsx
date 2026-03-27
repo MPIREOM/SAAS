@@ -8,6 +8,24 @@ export default function WhatsAppTestPage() {
   const [templateName, setTemplateName] = useState("hello_world");
   const [languageCode, setLanguageCode] = useState("en_US");
   const [loading, setLoading] = useState(false);
+
+  const templateLanguageMap: Record<string, string> = {
+    hello_world: "en_US",
+    mpire_rent_upcoming_en: "en",
+    mpire_rent_upcoming_ar: "ar",
+    mpire_rent_overdue_en: "en",
+    mpire_rent_overdue_ar: "ar",
+    mpire_cheque_due_en: "en",
+    mpire_cheque_due_ar: "ar",
+    mpire_lease_expiry_en: "en",
+    mpire_lease_expiry_ar: "ar",
+  };
+
+  const handleTemplateChange = (template: string) => {
+    setTemplateName(template);
+    const lang = templateLanguageMap[template];
+    if (lang) setLanguageCode(lang);
+  };
   const [result, setResult] = useState<{
     success: boolean;
     messageId?: string;
@@ -112,18 +130,16 @@ export default function WhatsAppTestPage() {
             </label>
             <select
               value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
+              onChange={(e) => handleTemplateChange(e.target.value)}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
             >
               <option value="hello_world">hello_world (Meta default)</option>
-              <option value="mpire_rent_upcoming_en">mpire_rent_upcoming_en</option>
-              <option value="mpire_rent_upcoming_ar">mpire_rent_upcoming_ar</option>
-              <option value="mpire_rent_overdue_en">mpire_rent_overdue_en</option>
-              <option value="mpire_rent_overdue_ar">mpire_rent_overdue_ar</option>
-              <option value="mpire_cheque_due_en">mpire_cheque_due_en</option>
-              <option value="mpire_cheque_due_ar">mpire_cheque_due_ar</option>
-              <option value="mpire_lease_expiry_en">mpire_lease_expiry_en</option>
-              <option value="mpire_lease_expiry_ar">mpire_lease_expiry_ar</option>
+              <option value="mpire_rent_upcoming_en">mpire_rent_upcoming_en (English)</option>
+              <option value="mpire_rent_upcoming_ar">mpire_rent_upcoming_ar (Arabic)</option>
+              <option value="mpire_rent_overdue_en">mpire_rent_overdue_en (English)</option>
+              <option value="mpire_rent_overdue_ar">mpire_rent_overdue_ar (Arabic)</option>
+              <option value="mpire_lease_expiry_en">mpire_lease_expiry_en (English)</option>
+              <option value="mpire_lease_expiry_ar">mpire_lease_expiry_ar (Arabic)</option>
             </select>
             <p className="text-xs text-text-secondary mt-1">
               Use hello_world to test API connectivity first
