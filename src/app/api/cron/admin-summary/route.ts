@@ -196,7 +196,7 @@ export async function GET(request: NextRequest) {
     }),
     whatsappText: whatsappLines.join("\n"),
     whatsappTemplate: {
-      name: "mpire_daily_summary_en",
+      name: "daily_briefs",
       languageCode: "en",
       parameters: [
         todayDisplay,
