@@ -24,6 +24,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+interface OverdueInvoice {
+  amount: string;
+  dueDate: string;
+  periodLabel: string;
+}
+
 interface PreviewItem {
   tenantName: string;
   phone: string;
@@ -33,6 +39,8 @@ interface PreviewItem {
   propertyName: string;
   amount: string;
   dueDate: string;
+  overdueInvoices?: OverdueInvoice[];
+  totalOverdue?: string;
   whatsappMessage: string;
   emailMessage: string;
   whatsappTemplateName: string;
@@ -259,6 +267,29 @@ export function ReminderTriggerButton() {
                 {/* Expanded message preview */}
                 {expandedIndex === i && (
                   <div className="border-t border-border px-4 py-3 space-y-3 bg-surface-elevated/30">
+                    {/* Overdue breakdown */}
+                    {item.overdueInvoices && item.overdueInvoices.length > 0 && (
+                      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                        <p className="text-xs font-medium text-destructive mb-2">
+                          Outstanding Invoices ({item.overdueInvoices.length})
+                        </p>
+                        <div className="space-y-1">
+                          {item.overdueInvoices.map((inv, j) => (
+                            <div
+                              key={j}
+                              className="flex items-center justify-between text-xs text-text-secondary"
+                            >
+                              <span>{inv.periodLabel}</span>
+                              <span className="font-mono">{inv.amount} OMR</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-semibold text-destructive mt-2 pt-2 border-t border-destructive/20">
+                          <span>Total</span>
+                          <span className="font-mono">{item.totalOverdue} OMR</span>
+                        </div>
+                      </div>
+                    )}
                     {item.phone && (
                       <div>
                         <div className="flex items-center gap-1.5 mb-1.5">
