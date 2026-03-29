@@ -311,7 +311,7 @@ export function MarkPaidButton({
         {alreadyPaid > 0
           ? `${t("markAsPaid")} (${remainingAmount.toFixed(2)})`
           : t("markAsPaid")}
-        <ChevronRight className="h-3 w-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all duration-200" />
+        <ChevronRight className="h-3 w-3 opacity-0 -ms-1 group-hover:opacity-100 group-hover:ms-0 transition-all duration-200" />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -341,7 +341,7 @@ export function MarkPaidButton({
                     {remainingAmount.toLocaleString("en-OM", {
                       minimumFractionDigits: 2,
                     })}
-                    <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+                    <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                       {CURRENCY.code}
                     </span>
                   </p>

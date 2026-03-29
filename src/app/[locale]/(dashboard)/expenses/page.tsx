@@ -232,7 +232,7 @@ export default async function ExpensesPage({
                         <td className="px-5 py-3.5 text-end">
                           <span className="text-sm font-semibold font-mono tabular-nums text-text-primary">
                             {formatAmount(expense.amount as number)}
-                            <span className="text-[10px] font-normal text-text-secondary ml-0.5">
+                            <span className="text-[10px] font-normal text-text-secondary ms-0.5">
                               {CURRENCY.code}
                             </span>
                           </span>

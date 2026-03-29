@@ -418,7 +418,7 @@ export default async function ReportsPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 pe-4">
+                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 pe-4">
                     {t("propertyName")}
                   </th>
                   <th className="text-center text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
@@ -427,16 +427,16 @@ export default async function ReportsPage({
                   <th className="text-center text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
                     {t("occupancy")}
                   </th>
-                  <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
+                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
                     {t("monthlyRevenueLabel")}
                   </th>
-                  <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
+                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
                     {t("collectedLabel")}
                   </th>
-                  <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
+                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
                     {t("expenses")}
                   </th>
-                  <th className="text-right text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 ps-4">
+                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 ps-4">
                     {t("net")}
                   </th>
                 </tr>
@@ -471,16 +471,16 @@ export default async function ReportsPage({
                         {prop.occupancyPct}%
                       </span>
                     </td>
-                    <td className="text-right py-3.5 px-4 font-mono ltr-nums text-text-primary font-medium">
+                    <td className="text-end py-3.5 px-4 font-mono ltr-nums text-text-primary font-medium">
                       {prop.monthlyRevenue.toLocaleString()} {CURRENCY.code}
                     </td>
-                    <td className="text-right py-3.5 px-4 font-mono ltr-nums text-accent font-medium">
+                    <td className="text-end py-3.5 px-4 font-mono ltr-nums text-accent font-medium">
                       {prop.collectedThisMonth.toLocaleString()} {CURRENCY.code}
                     </td>
-                    <td className="text-right py-3.5 px-4 font-mono ltr-nums text-destructive font-medium">
+                    <td className="text-end py-3.5 px-4 font-mono ltr-nums text-destructive font-medium">
                       {prop.expensesThisMonth.toLocaleString()} {CURRENCY.code}
                     </td>
-                    <td className={`text-right py-3.5 ps-4 font-mono ltr-nums font-medium ${
+                    <td className={`text-end py-3.5 ps-4 font-mono ltr-nums font-medium ${
                       prop.net >= 0 ? "text-success" : "text-destructive"
                     }`}>
                       {prop.net.toLocaleString()} {CURRENCY.code}

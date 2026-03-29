@@ -175,7 +175,7 @@ export default async function PropertiesPage({
             </p>
             <p className="text-2xl font-bold font-mono tabular-nums text-text-primary">
               {totalRevenue.toLocaleString("en-OM", { minimumFractionDigits: 2 })}
-              <span className="text-sm font-sans font-normal text-text-secondary ml-1.5">
+              <span className="text-sm font-sans font-normal text-text-secondary ms-1.5">
                 {CURRENCY.code}
               </span>
             </p>

@@ -190,7 +190,7 @@ export default async function UnitDetailPage({
               <UnitStatusToggle unitId={unitId} currentStatus={unitStatus} />
             </div>
           </div>
-          <div className="flex items-center gap-1.5 ml-10">
+          <div className="flex items-center gap-1.5 ms-10">
             <MapPin className="h-3.5 w-3.5 text-text-secondary/60" />
             <span className="text-sm text-text-secondary">
               {(property?.name as string) || ""}
@@ -340,7 +340,7 @@ export default async function UnitDetailPage({
                           "en-OM",
                           { minimumFractionDigits: 2 }
                         )}
-                        <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+                        <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                           {CURRENCY.code}
                         </span>
                       </p>
@@ -607,7 +607,7 @@ export default async function UnitDetailPage({
                         {Number(payment.amount).toLocaleString("en-OM", {
                           minimumFractionDigits: 2,
                         })}
-                        <span className="text-[10px] font-normal text-text-secondary ml-1">
+                        <span className="text-[10px] font-normal text-text-secondary ms-1">
                           {CURRENCY.code}
                         </span>
                       </span>
@@ -720,7 +720,7 @@ export default async function UnitDetailPage({
                         {Number(cheque.amount).toLocaleString("en-OM", {
                           minimumFractionDigits: 2,
                         })}
-                        <span className="text-[10px] font-normal text-text-secondary ml-1">
+                        <span className="text-[10px] font-normal text-text-secondary ms-1">
                           {CURRENCY.code}
                         </span>
                       </span>

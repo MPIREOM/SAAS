@@ -155,7 +155,7 @@ export default function WhatsAppTestPage() {
           {/* Phone Number */}
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1.5">
-              Phone Number <span className="text-red-500">*</span>
+              Phone Number <span className="text-destructive">*</span>
             </label>
             <input
               type="tel"
@@ -263,19 +263,19 @@ export default function WhatsAppTestPage() {
         <div
           className={`border rounded-lg p-6 ${
             result.success
-              ? "bg-green-500/5 border-green-500/20"
-              : "bg-red-500/5 border-red-500/20"
+              ? "bg-success/5 border-success/20"
+              : "bg-destructive/5 border-destructive/20"
           }`}
         >
           <div className="flex items-center gap-3 mb-4">
             {result.success ? (
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-destructive" />
             )}
             <h3
               className={`text-base font-medium ${
-                result.success ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+                result.success ? "text-success" : "text-destructive"
               }`}
             >
               {result.success ? "Message Sent Successfully" : "Failed to Send"}
@@ -299,7 +299,7 @@ export default function WhatsAppTestPage() {
               <>
                 <div className="flex gap-2">
                   <span className="text-text-secondary">Error:</span>
-                  <span className="text-red-600 dark:text-red-400">{result.error}</span>
+                  <span className="text-destructive">{result.error}</span>
                 </div>
                 {result.errorCode && (
                   <div className="flex gap-2">

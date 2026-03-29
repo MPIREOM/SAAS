@@ -262,7 +262,7 @@ export default async function MaintenanceDetailPage({
       {/* Notes / Activity Log */}
       <div className="bg-surface border border-border rounded-lg p-6">
         <h3 className="text-sm font-medium text-text-primary mb-4">
-          <MessageSquare className="h-4 w-4 inline-block mr-2 text-text-secondary" />
+          <MessageSquare className="h-4 w-4 inline-block me-2 text-text-secondary" />
           {t("activityLog")}
         </h3>
 
@@ -271,7 +271,7 @@ export default async function MaintenanceDetailPage({
             {notes.map((note: Record<string, unknown>) => (
               <div
                 key={note.id as string}
-                className="border-l-2 border-border pl-4 py-2"
+                className="border-l-2 border-border ps-4 py-2"
               >
                 <p className="text-sm text-text-primary">
                   {note.content as string}

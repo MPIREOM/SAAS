@@ -73,7 +73,7 @@ export function ChequeActions({ chequeId, currentStatus }: ChequeActionsProps) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" role="presentation" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-8 z-50 bg-surface border border-border rounded-lg shadow-xl py-1 min-w-[180px] animate-scale-in" role="menu">
+          <div className="absolute end-0 top-8 z-50 bg-surface border border-border rounded-lg shadow-xl py-1 min-w-[180px] animate-scale-in" role="menu">
             {currentStatus === "pending" && (
               <>
                 <button
