@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -54,6 +55,21 @@ export const reminderLogsRelations = relations(reminderLogs, ({ one }) => ({
     references: [tenants.id],
   }),
 }));
+
+// ── Reminder Settings ─────────────────────────────────────────────────────
+
+export const reminderSettings = pgTable("reminder_settings", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  reminderType: reminderTypeEnum("reminder_type").notNull().unique(),
+  daysBefore: integer("days_before").array().notNull().default(sql`'{}'`),
+  repeatIntervalDays: integer("repeat_interval_days"),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
 
 // ── Notification Templates ─────────────────────────────────────────────────
 

@@ -4,6 +4,7 @@ import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Bell, FileText, Plus } from "lucide-react";
 import { ReminderTriggerButton } from "@/components/reminders/trigger-button";
+import { ReminderRules } from "@/components/reminders/reminder-rules";
 
 export default async function RemindersPage({
   params,
@@ -168,6 +169,9 @@ export default async function RemindersPage({
           </div>
         )}
       </div>
+
+      {/* Reminder Rules Section */}
+      <ReminderRules />
 
       {/* Templates Section */}
       <div className="space-y-4">

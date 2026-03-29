@@ -264,7 +264,7 @@ export default function EditTemplatePage({
               className="w-full bg-surface-elevated border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors resize-none"
             />
             <p className="text-xs text-text-secondary mt-1.5">
-              Available variables: {"{{tenant_name}}"}, {"{{amount}}"}, {"{{due_date}}"}, {"{{property}}"}, {"{{unit}}"}
+              Available variables: {"{{tenant_name}}"}, {"{{amount}}"}, {"{{due_date}}"}, {"{{property}}"}, {"{{unit}}"}, {"{{total_overdue}}"}, {"{{overdue_details}}"}
             </p>
           </div>
         </div>

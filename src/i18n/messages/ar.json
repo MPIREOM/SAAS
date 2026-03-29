@@ -632,7 +632,14 @@
     "cancel": "إلغاء",
     "previewTitle": "معاينة التذكيرات",
     "previewDescription": "سيتم إرسال {count} تذكير. راجع الرسائل أدناه قبل التأكيد.",
-    "confirmSend": "إرسال {count} تذكير"
+    "confirmSend": "إرسال {count} تذكير",
+    "rules": "قواعد التذكيرات",
+    "rulesSaved": "تم الحفظ",
+    "rulesDaysBefore": "إرسال تذكير قبل (أيام)",
+    "rulesStartAfterDays": "بدء الإرسال بعد (أيام)",
+    "rulesRepeatEvery": "ثم التكرار كل",
+    "rulesDay": "يوم",
+    "rulesDays": "أيام"
   },
   "settings": {
     "title": "الإعدادات",
