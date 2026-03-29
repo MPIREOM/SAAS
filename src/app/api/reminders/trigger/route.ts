@@ -322,7 +322,9 @@ function renderTemplate(template: string, params: ReminderParams): string {
     .replace(/\{\{amount\}\}/g, params.amount)
     .replace(/\{\{due_date\}\}/g, params.dueDate)
     .replace(/\{\{property\}\}/g, params.propertyName)
+    .replace(/\{\{property_name\}\}/g, params.propertyName)
     .replace(/\{\{unit\}\}/g, params.unitNumber)
+    .replace(/\{\{unit_number\}\}/g, params.unitNumber)
     .replace(/\{\{cheque_number\}\}/g, params.chequeNumber || "")
     .replace(/\{\{total_overdue\}\}/g, params.totalOverdue || params.amount)
     .replace(/\{\{overdue_details\}\}/g, buildOverdueDetails(params.overdueInvoices, langCode));
