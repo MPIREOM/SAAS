@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
-import { sendWhatsAppTemplate, buildRentReminderComponents } from "@/lib/whatsapp/client";
+import { sendWhatsAppTemplate, buildRentReminderComponents, buildOverdueReminderComponents } from "@/lib/whatsapp/client";
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, parseISO } from "date-fns";
@@ -548,23 +548,35 @@ async function sendReminder(
       to: (params.phone.replace(/[^\d+]/g, "").startsWith("+") ? params.phone.replace(/[^\d+]/g, "") : "+" + params.phone.replace(/[^\d+]/g, "")),
       templateName: metaTemplateName,
       languageCode: langCode,
-      components: buildRentReminderComponents({
-        tenantName: params.tenantName,
-        unitNumber: params.unitNumber,
-        propertyName: params.propertyName,
-        amount: params.amount,
-        dueDate: params.dueDate,
-      }),
+      components: params.reminderType === "rent_overdue" && params.overdueInvoices?.length
+        ? buildOverdueReminderComponents({
+            tenantName: params.tenantName,
+            unitNumber: params.unitNumber,
+            propertyName: params.propertyName,
+            totalOverdue: params.totalOverdue || params.amount,
+            overdueDetails: buildOverdueDetails(params.overdueInvoices, langCode),
+          })
+        : buildRentReminderComponents({
+            tenantName: params.tenantName,
+            unitNumber: params.unitNumber,
+            propertyName: params.propertyName,
+            amount: params.amount,
+            dueDate: params.dueDate,
+          }),
     });
+
+    const renderedMessage = waTemplate
+      ? renderTemplate(waTemplate.body_template, params)
+      : params.reminderType === "rent_overdue"
+        ? getDefaultEmailBody(params, langCode)
+        : `${params.reminderType} reminder to ${params.tenantName}`;
 
     await supabase.from("reminder_logs").insert({
       tenant_id: params.tenantId,
       reminder_type: params.reminderType,
       channel: "whatsapp",
       template_name: metaTemplateName,
-      message_content: waTemplate
-        ? renderTemplate(waTemplate.body_template, params)
-        : `${params.reminderType} reminder to ${params.tenantName}`,
+      message_content: renderedMessage,
       status: whatsappResult.success ? "sent" : "failed",
       sent_at: new Date().toISOString(),
       error_message: whatsappResult.error || null,

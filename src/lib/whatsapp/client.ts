@@ -98,3 +98,24 @@ export function buildRentReminderComponents(params: {
     },
   ];
 }
+
+export function buildOverdueReminderComponents(params: {
+  tenantName: string;
+  unitNumber: string;
+  propertyName: string;
+  totalOverdue: string;
+  overdueDetails: string;
+}): TemplateComponent[] {
+  return [
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: params.tenantName },
+        { type: "text", text: params.unitNumber },
+        { type: "text", text: params.propertyName },
+        { type: "text", text: params.totalOverdue },
+        { type: "text", text: params.overdueDetails },
+      ],
+    },
+  ];
+}
