@@ -32,6 +32,7 @@ export const users = pgTable("users", {
     .notNull()
     .default("en"),
   avatarUrl: text("avatar_url"),
+  whatsappPhone: text("whatsapp_phone").unique(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
