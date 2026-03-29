@@ -226,6 +226,7 @@ interface NotificationTemplate {
   language: string;
   subject: string | null;
   body_template: string;
+  whatsapp_template_name: string | null;
   is_active: boolean;
 }
 
@@ -278,11 +279,9 @@ async function sendReminder(
       `${params.reminderType}:whatsapp:${langCode}`
     );
 
-    // For WhatsApp, the `name` field in notification_templates stores the
-    // Meta-registered template name. If a custom template exists, use its name.
-    const metaTemplateName = waTemplate
-      ? waTemplate.name
-      : `${defaultWhatsAppTemplates[params.reminderType]}_${langCode}`;
+    // Use whatsapp_template_name if set, otherwise fall back to default slug
+    const metaTemplateName = waTemplate?.whatsapp_template_name
+      || `${defaultWhatsAppTemplates[params.reminderType]}_${langCode}`;
 
     const whatsappResult = await sendWhatsAppTemplate({
       to: (params.phone.replace(/[^\d+]/g, "").startsWith("+") ? params.phone.replace(/[^\d+]/g, "") : "+" + params.phone.replace(/[^\d+]/g, "")),

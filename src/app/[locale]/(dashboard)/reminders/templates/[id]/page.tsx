@@ -23,6 +23,7 @@ interface Template {
   language: string;
   subject: string | null;
   body_template: string;
+  whatsapp_template_name: string | null;
   is_active: boolean;
 }
 
@@ -72,6 +73,7 @@ export default function EditTemplatePage({
         language: formData.get("language") as string,
         subject: (formData.get("subject") as string) || null,
         body_template: formData.get("body_template") as string,
+        whatsapp_template_name: (formData.get("whatsapp_template_name") as string) || null,
       })
       .eq("id", template.id);
 
@@ -232,6 +234,21 @@ export default function EditTemplatePage({
               defaultValue={template.subject || ""}
               className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm text-text-secondary mb-1.5">
+              {t("whatsappTemplateName")} (WhatsApp only)
+            </label>
+            <input
+              name="whatsapp_template_name"
+              defaultValue={template.whatsapp_template_name || ""}
+              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+              placeholder="e.g. mpire_rent_upcoming_en"
+            />
+            <p className="text-xs text-text-secondary mt-1.5">
+              {t("whatsappTemplateNameHint")}
+            </p>
           </div>
 
           <div>

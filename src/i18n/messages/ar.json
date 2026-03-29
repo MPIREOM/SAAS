@@ -618,6 +618,8 @@
     "createTemplate": "إنشاء قالب",
     "editTemplate": "تعديل القالب",
     "templateName": "اسم القالب",
+    "whatsappTemplateName": "معرّف قالب واتساب",
+    "whatsappTemplateNameHint": "اسم القالب المسجل في Meta Business Manager (مثال: mpire_rent_upcoming_ar)",
     "messageBody": "نص الرسالة",
     "recipient": "المستلم",
     "scheduledDate": "تاريخ الإرسال المجدول",
