@@ -618,6 +618,8 @@
     "createTemplate": "Create Template",
     "editTemplate": "Edit Template",
     "templateName": "Template Name",
+    "whatsappTemplateName": "WhatsApp Template ID",
+    "whatsappTemplateNameHint": "The exact template name registered in Meta Business Manager (e.g. mpire_rent_upcoming_en)",
     "messageBody": "Message Body",
     "recipient": "Recipient",
     "scheduledDate": "Scheduled Date",

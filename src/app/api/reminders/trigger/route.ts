@@ -226,6 +226,7 @@ interface NotificationTemplate {
   language: string;
   subject: string | null;
   body_template: string;
+  whatsapp_template_name: string | null;
   is_active: boolean;
 }
 
@@ -273,9 +274,8 @@ async function sendReminder(
       `${params.reminderType}:whatsapp:${langCode}`
     );
 
-    const metaTemplateName = waTemplate
-      ? waTemplate.name
-      : `${defaultWhatsAppTemplates[params.reminderType]}_${langCode}`;
+    const metaTemplateName = waTemplate?.whatsapp_template_name
+      || `${defaultWhatsAppTemplates[params.reminderType]}_${langCode}`;
 
     const whatsappResult = await sendWhatsAppTemplate({
       to: (params.phone.replace(/[^\d+]/g, "").startsWith("+") ? params.phone.replace(/[^\d+]/g, "") : "+" + params.phone.replace(/[^\d+]/g, "")),

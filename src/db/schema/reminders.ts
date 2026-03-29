@@ -67,6 +67,7 @@ export const notificationTemplates = pgTable("notification_templates", {
   language: languageEnum("language").notNull().default("en"),
   subject: text("subject"),
   bodyTemplate: text("body_template").notNull(),
+  whatsappTemplateName: text("whatsapp_template_name"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
