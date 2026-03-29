@@ -155,7 +155,7 @@ export default function NewTemplatePage({
               placeholder={`Dear {{tenant_name}},\n\nThis is a reminder that your rent of {{amount}} ${CURRENCY.code} is due on {{due_date}}.\n\nThank you.`}
             />
             <p className="text-xs text-text-secondary mt-1.5">
-              Available variables: {"{{tenant_name}}"}, {"{{amount}}"}, {"{{due_date}}"}, {"{{property}}"}, {"{{unit}}"}, {"{{total_overdue}}"}, {"{{overdue_details}}"}
+              Available variables: {"{{tenant_name}}"}, {"{{amount}}"}, {"{{due_date}}"}, {"{{property_name}}"}, {"{{unit_number}}"}, {"{{total_overdue}}"}, {"{{overdue_details}}"}
             </p>
           </div>
         </div>
