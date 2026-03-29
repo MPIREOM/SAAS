@@ -73,6 +73,57 @@ export interface PreviewItem {
   totalOverdue?: string;
 }
 
+// ── Reminder settings helpers ──
+
+interface ReminderSettingRow {
+  reminder_type: string;
+  days_before: number[];
+  repeat_interval_days: number | null;
+  is_enabled: boolean;
+}
+
+// Defaults used when no DB settings exist
+const defaultSettings: Record<string, ReminderSettingRow> = {
+  rent_upcoming: { reminder_type: "rent_upcoming", days_before: [3], repeat_interval_days: null, is_enabled: true },
+  rent_overdue: { reminder_type: "rent_overdue", days_before: [1], repeat_interval_days: 3, is_enabled: true },
+  lease_expiry: { reminder_type: "lease_expiry", days_before: [60, 30, 7], repeat_interval_days: null, is_enabled: true },
+  cheque_due: { reminder_type: "cheque_due", days_before: [3], repeat_interval_days: null, is_enabled: true },
+};
+
+async function loadReminderSettings(
+  supabase: ReturnType<typeof createSupabaseAdmin>
+): Promise<Map<string, ReminderSettingRow>> {
+  const { data } = await supabase.from("reminder_settings").select("*");
+  const map = new Map<string, ReminderSettingRow>();
+  // Start with defaults
+  for (const [key, val] of Object.entries(defaultSettings)) {
+    map.set(key, val);
+  }
+  // Override with DB values
+  if (data) {
+    for (const row of data) {
+      map.set(row.reminder_type, row as ReminderSettingRow);
+    }
+  }
+  return map;
+}
+
+function shouldSendOverdue(
+  daysOverdue: number,
+  setting: ReminderSettingRow
+): boolean {
+  // Check if the exact day matches one of the configured start days
+  if (setting.days_before.includes(daysOverdue)) return true;
+  // Check repeat interval: after the last configured start day
+  if (setting.repeat_interval_days && setting.repeat_interval_days > 0) {
+    const maxStartDay = Math.max(...setting.days_before, 0);
+    if (daysOverdue > maxStartDay) {
+      return (daysOverdue - maxStartDay) % setting.repeat_interval_days === 0;
+    }
+  }
+  return false;
+}
+
 // ── Gather reminders that match today's schedule ──
 
 async function gatherReminders(
@@ -81,6 +132,9 @@ async function gatherReminders(
 ): Promise<ReminderParams[]> {
   const today = new Date();
   const gathered: ReminderParams[] = [];
+
+  // Load configurable settings
+  const settings = await loadReminderSettings(supabase);
 
   // Load properties with notifications disabled
   const { data: disabledProperties } = await supabase
@@ -102,6 +156,10 @@ async function gatherReminders(
     .eq("is_active", true);
 
   if (activeLeases) {
+    const upcomingSetting = settings.get("rent_upcoming")!;
+    const overdueSetting = settings.get("rent_overdue")!;
+    const expirySetting = settings.get("lease_expiry")!;
+
     for (const lease of activeLeases) {
       const tenant = lease.tenants as Record<string, unknown>;
       const unit = lease.units as Record<string, unknown>;
@@ -129,77 +187,88 @@ async function gatherReminders(
         dueDate: format(dueDate, "yyyy-MM-dd"),
       };
 
-      // Upcoming: 3 days before
-      if (daysUntilDue === 3) {
+      // Upcoming rent reminder (configurable days before)
+      if (upcomingSetting.is_enabled && daysUntilDue > 0 && upcomingSetting.days_before.includes(daysUntilDue)) {
         gathered.push({ ...baseParams, reminderType: "rent_upcoming" });
       }
 
-      // Overdue: 1 day after, then every 3 days
-      if (daysUntilDue < 0 && (Math.abs(daysUntilDue) === 1 || Math.abs(daysUntilDue) % 3 === 0)) {
-        const monthStart = format(new Date(currentYear, currentMonth, 1), "yyyy-MM-dd");
-        const monthEnd = format(new Date(currentYear, currentMonth + 1, 0), "yyyy-MM-dd");
+      // Overdue rent reminder (configurable start days + repeat interval)
+      if (overdueSetting.is_enabled && daysUntilDue < 0) {
+        const daysOverdue = Math.abs(daysUntilDue);
+        if (shouldSendOverdue(daysOverdue, overdueSetting)) {
+          const monthStart = format(new Date(currentYear, currentMonth, 1), "yyyy-MM-dd");
+          const monthEnd = format(new Date(currentYear, currentMonth + 1, 0), "yyyy-MM-dd");
 
-        const { count } = await supabase
-          .from("invoices")
-          .select("*", { count: "exact", head: true })
-          .eq("lease_id", lease.id)
-          .eq("status", "paid")
-          .gte("due_date", monthStart)
-          .lte("due_date", monthEnd);
-
-        if (!count || count === 0) {
-          // Fetch all overdue/unpaid invoices for this lease
-          const { data: overdueInvs } = await supabase
+          const { count } = await supabase
             .from("invoices")
-            .select("amount, due_date, period_start, period_end")
+            .select("*", { count: "exact", head: true })
             .eq("lease_id", lease.id)
-            .in("status", ["overdue", "partial", "pending"])
-            .lt("due_date", format(today, "yyyy-MM-dd"))
-            .order("due_date", { ascending: true });
+            .eq("status", "paid")
+            .gte("due_date", monthStart)
+            .lte("due_date", monthEnd);
 
-          const overdueInvoices: OverdueInvoice[] = (overdueInvs || []).map(
-            (inv: Record<string, unknown>) => ({
-              amount: String(inv.amount),
-              dueDate: inv.due_date as string,
-              periodLabel: inv.period_start
-                ? `${format(parseISO(inv.period_start as string), "MMM yyyy")}`
-                : format(parseISO(inv.due_date as string), "MMM yyyy"),
-            })
-          );
+          if (!count || count === 0) {
+            // Fetch all overdue/unpaid invoices for this lease
+            const { data: overdueInvs } = await supabase
+              .from("invoices")
+              .select("amount, due_date, period_start, period_end")
+              .eq("lease_id", lease.id)
+              .in("status", ["overdue", "partial", "pending"])
+              .lt("due_date", format(today, "yyyy-MM-dd"))
+              .order("due_date", { ascending: true });
 
-          const totalOverdue = overdueInvoices
-            .reduce((sum, inv) => sum + Number(inv.amount), 0)
-            .toFixed(2);
+            const overdueInvoices: OverdueInvoice[] = (overdueInvs || []).map(
+              (inv: Record<string, unknown>) => ({
+                amount: String(inv.amount),
+                dueDate: inv.due_date as string,
+                periodLabel: inv.period_start
+                  ? `${format(parseISO(inv.period_start as string), "MMM yyyy")}`
+                  : format(parseISO(inv.due_date as string), "MMM yyyy"),
+              })
+            );
 
-          gathered.push({
-            ...baseParams,
-            reminderType: "rent_overdue",
-            overdueInvoices,
-            totalOverdue,
-          });
+            const totalOverdue = overdueInvoices
+              .reduce((sum, inv) => sum + Number(inv.amount), 0)
+              .toFixed(2);
+
+            gathered.push({
+              ...baseParams,
+              reminderType: "rent_overdue",
+              overdueInvoices,
+              totalOverdue,
+            });
+          }
         }
       }
 
-      // Lease expiry: 60, 30, 7 days before
-      const leaseEnd = parseISO(lease.end_date);
-      const daysUntilExpiry = differenceInDays(leaseEnd, today);
-      if ([60, 30, 7].includes(daysUntilExpiry)) {
-        gathered.push({
-          ...baseParams,
-          dueDate: lease.end_date,
-          reminderType: "lease_expiry",
-        });
+      // Lease expiry (configurable days before)
+      if (expirySetting.is_enabled) {
+        const leaseEnd = parseISO(lease.end_date);
+        const daysUntilExpiry = differenceInDays(leaseEnd, today);
+        if (daysUntilExpiry > 0 && expirySetting.days_before.includes(daysUntilExpiry)) {
+          gathered.push({
+            ...baseParams,
+            dueDate: lease.end_date,
+            reminderType: "lease_expiry",
+          });
+        }
       }
     }
   }
 
-  // Cheque due reminders (3 days before cheque date)
-  const threeDaysFromNow = format(addDays(today, 3), "yyyy-MM-dd");
-  const { data: dueCheques } = await supabase
-    .from("cheques")
-    .select(`*, tenants(id, full_name, phone, email, language_preference)`)
-    .eq("status", "pending")
-    .eq("cheque_date", threeDaysFromNow);
+  // Cheque due reminders (configurable days before)
+  const chequeSetting = settings.get("cheque_due")!;
+  if (chequeSetting.is_enabled) {
+    // Query cheques matching any of the configured days
+    const chequeDates = chequeSetting.days_before.map((d) =>
+      format(addDays(today, d), "yyyy-MM-dd")
+    );
+
+    const { data: dueCheques } = await supabase
+      .from("cheques")
+      .select(`*, tenants(id, full_name, phone, email, language_preference)`)
+      .eq("status", "pending")
+      .in("cheque_date", chequeDates);
 
   if (dueCheques) {
     for (const cheque of dueCheques) {

@@ -56,6 +56,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Load configurable reminder settings
+    const { data: settingsRows } = await supabase.from("reminder_settings").select("*");
+    const settingsMap = new Map<string, { days_before: number[]; repeat_interval_days: number | null; is_enabled: boolean }>();
+    // Defaults
+    settingsMap.set("rent_upcoming", { days_before: [3], repeat_interval_days: null, is_enabled: true });
+    settingsMap.set("rent_overdue", { days_before: [1], repeat_interval_days: 3, is_enabled: true });
+    settingsMap.set("lease_expiry", { days_before: [60, 30, 7], repeat_interval_days: null, is_enabled: true });
+    settingsMap.set("cheque_due", { days_before: [3], repeat_interval_days: null, is_enabled: true });
+    if (settingsRows) {
+      for (const row of settingsRows) {
+        settingsMap.set(row.reminder_type, row as { days_before: number[]; repeat_interval_days: number | null; is_enabled: boolean });
+      }
+    }
+
     // Load properties with notifications disabled to skip them
     const { data: disabledProperties } = await supabase
       .from("properties")
@@ -65,7 +79,11 @@ export async function GET(request: NextRequest) {
       (disabledProperties || []).map((p) => p.id as string)
     );
 
-    // 1. Upcoming rent reminders (3 days before due date)
+    const upcomingSetting = settingsMap.get("rent_upcoming")!;
+    const overdueSetting = settingsMap.get("rent_overdue")!;
+    const expirySetting = settingsMap.get("lease_expiry")!;
+
+    // 1. Lease-based reminders
     const { data: activeLeases } = await supabase
       .from("leases")
       .select(`
@@ -96,8 +114,8 @@ export async function GET(request: NextRequest) {
           const dueDate = new Date(currentYear, currentMonth, dueDay);
           const daysUntilDue = differenceInDays(dueDate, today);
 
-          // Upcoming: 3 days before
-          if (daysUntilDue === 3) {
+          // Upcoming rent reminder (configurable days before)
+          if (upcomingSetting.is_enabled && daysUntilDue > 0 && upcomingSetting.days_before.includes(daysUntilDue)) {
             await sendReminder(supabase, templateIndex, {
               tenantId: tenant.id as string,
               tenantName: tenant.full_name as string,
@@ -113,44 +131,75 @@ export async function GET(request: NextRequest) {
             results.rentUpcoming++;
           }
 
-          // Overdue: 1 day after, then every 3 days
-          if (daysUntilDue < 0 && (Math.abs(daysUntilDue) === 1 || Math.abs(daysUntilDue) % 3 === 0)) {
-            // Check if payment exists for this month
-            const monthStart = format(new Date(currentYear, currentMonth, 1), "yyyy-MM-dd");
-            const monthEnd = format(new Date(currentYear, currentMonth + 1, 0), "yyyy-MM-dd");
+          // Overdue rent reminder (configurable start days + repeat interval)
+          if (overdueSetting.is_enabled && daysUntilDue < 0) {
+            const daysOverdue = Math.abs(daysUntilDue);
+            const shouldSend = overdueSetting.days_before.includes(daysOverdue) ||
+              (overdueSetting.repeat_interval_days && overdueSetting.repeat_interval_days > 0 &&
+                daysOverdue > Math.max(...overdueSetting.days_before, 0) &&
+                (daysOverdue - Math.max(...overdueSetting.days_before, 0)) % overdueSetting.repeat_interval_days === 0);
 
-            const { count } = await supabase
-              .from("invoices")
-              .select("*", { count: "exact", head: true })
-              .eq("lease_id", lease.id)
-              .eq("status", "paid")
-              .gte("due_date", monthStart)
-              .lte("due_date", monthEnd);
+            if (shouldSend) {
+              // Check if payment exists for this month
+              const monthStart = format(new Date(currentYear, currentMonth, 1), "yyyy-MM-dd");
+              const monthEnd = format(new Date(currentYear, currentMonth + 1, 0), "yyyy-MM-dd");
 
-            if (!count || count === 0) {
-              // Fetch all overdue/unpaid invoices for this lease
-              const { data: overdueInvs } = await supabase
+              const { count } = await supabase
                 .from("invoices")
-                .select("amount, due_date, period_start, period_end")
+                .select("*", { count: "exact", head: true })
                 .eq("lease_id", lease.id)
-                .in("status", ["overdue", "partial", "pending"])
-                .lt("due_date", format(today, "yyyy-MM-dd"))
-                .order("due_date", { ascending: true });
+                .eq("status", "paid")
+                .gte("due_date", monthStart)
+                .lte("due_date", monthEnd);
 
-              const overdueInvoices: OverdueInvoice[] = (overdueInvs || []).map(
-                (inv: Record<string, unknown>) => ({
-                  amount: String(inv.amount),
-                  dueDate: inv.due_date as string,
-                  periodLabel: inv.period_start
-                    ? `${format(parseISO(inv.period_start as string), "MMM yyyy")}`
-                    : format(parseISO(inv.due_date as string), "MMM yyyy"),
-                })
-              );
+              if (!count || count === 0) {
+                // Fetch all overdue/unpaid invoices for this lease
+                const { data: overdueInvs } = await supabase
+                  .from("invoices")
+                  .select("amount, due_date, period_start, period_end")
+                  .eq("lease_id", lease.id)
+                  .in("status", ["overdue", "partial", "pending"])
+                  .lt("due_date", format(today, "yyyy-MM-dd"))
+                  .order("due_date", { ascending: true });
 
-              const totalOverdue = overdueInvoices
-                .reduce((sum, inv) => sum + Number(inv.amount), 0)
-                .toFixed(2);
+                const overdueInvoices: OverdueInvoice[] = (overdueInvs || []).map(
+                  (inv: Record<string, unknown>) => ({
+                    amount: String(inv.amount),
+                    dueDate: inv.due_date as string,
+                    periodLabel: inv.period_start
+                      ? `${format(parseISO(inv.period_start as string), "MMM yyyy")}`
+                      : format(parseISO(inv.due_date as string), "MMM yyyy"),
+                  })
+                );
 
+                const totalOverdue = overdueInvoices
+                  .reduce((sum, inv) => sum + Number(inv.amount), 0)
+                  .toFixed(2);
+
+                await sendReminder(supabase, templateIndex, {
+                  tenantId: tenant.id as string,
+                  tenantName: tenant.full_name as string,
+                  phone: tenant.phone as string,
+                  email: tenant.email as string,
+                  language: (tenant.language_preference as string) || "en",
+                  unitNumber: unit.unit_number as string,
+                  propertyName: (property?.name as string) || "",
+                  amount: String(lease.monthly_rent),
+                  dueDate: format(dueDate, "yyyy-MM-dd"),
+                  reminderType: "rent_overdue",
+                  overdueInvoices,
+                  totalOverdue,
+                });
+                results.rentOverdue++;
+              }
+            }
+          }
+
+          // Lease expiry (configurable days before)
+          if (expirySetting.is_enabled) {
+            const leaseEnd = parseISO(lease.end_date);
+            const daysUntilExpiry = differenceInDays(leaseEnd, today);
+            if (daysUntilExpiry > 0 && expirySetting.days_before.includes(daysUntilExpiry)) {
               await sendReminder(supabase, templateIndex, {
                 tenantId: tenant.id as string,
                 tenantName: tenant.full_name as string,
@@ -160,32 +209,11 @@ export async function GET(request: NextRequest) {
                 unitNumber: unit.unit_number as string,
                 propertyName: (property?.name as string) || "",
                 amount: String(lease.monthly_rent),
-                dueDate: format(dueDate, "yyyy-MM-dd"),
-                reminderType: "rent_overdue",
-                overdueInvoices,
-                totalOverdue,
+                dueDate: lease.end_date,
+                reminderType: "lease_expiry",
               });
-              results.rentOverdue++;
+              results.leaseExpiry++;
             }
-          }
-
-          // Lease expiry: 60, 30, 7 days before
-          const leaseEnd = parseISO(lease.end_date);
-          const daysUntilExpiry = differenceInDays(leaseEnd, today);
-          if ([60, 30, 7].includes(daysUntilExpiry)) {
-            await sendReminder(supabase, templateIndex, {
-              tenantId: tenant.id as string,
-              tenantName: tenant.full_name as string,
-              phone: tenant.phone as string,
-              email: tenant.email as string,
-              language: (tenant.language_preference as string) || "en",
-              unitNumber: unit.unit_number as string,
-              propertyName: (property?.name as string) || "",
-              amount: String(lease.monthly_rent),
-              dueDate: lease.end_date,
-              reminderType: "lease_expiry",
-            });
-            results.leaseExpiry++;
           }
         } catch (error) {
           console.error("Reminder failed for lease tenant:", error instanceof Error ? error.message : error);
@@ -194,40 +222,45 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. Cheque due reminders (3 days before cheque date)
-    const threeDaysFromNow = format(addDays(today, 3), "yyyy-MM-dd");
-    const { data: dueCheques } = await supabase
-      .from("cheques")
-      .select(`*, tenants(id, full_name, phone, email, language_preference, notifications_enabled)`)
-      .eq("status", "pending")
-      .eq("cheque_date", threeDaysFromNow);
+    // 2. Cheque due reminders (configurable days before)
+    const chequeSetting = settingsMap.get("cheque_due")!;
+    if (chequeSetting.is_enabled) {
+      const chequeDates = chequeSetting.days_before.map((d) =>
+        format(addDays(today, d), "yyyy-MM-dd")
+      );
+      const { data: dueCheques } = await supabase
+        .from("cheques")
+        .select(`*, tenants(id, full_name, phone, email, language_preference, notifications_enabled)`)
+        .eq("status", "pending")
+        .in("cheque_date", chequeDates);
 
-    if (dueCheques) {
-      for (const cheque of dueCheques) {
-        try {
-          const tenant = cheque.tenants as Record<string, unknown>;
-          if (!tenant) continue;
+      if (dueCheques) {
+        for (const cheque of dueCheques) {
+          try {
+            const tenant = cheque.tenants as Record<string, unknown>;
+            if (!tenant) continue;
 
-          // Skip tenants with notifications disabled
-          if (tenant.notifications_enabled === false) continue;
+            // Skip tenants with notifications disabled
+            if (tenant.notifications_enabled === false) continue;
 
-          await sendReminder(supabase, templateIndex, {
-            tenantId: tenant.id as string,
-            tenantName: tenant.full_name as string,
-            phone: tenant.phone as string,
-            email: tenant.email as string,
-            language: (tenant.language_preference as string) || "en",
-            unitNumber: "",
-            propertyName: "",
-            amount: String(cheque.amount),
-            dueDate: cheque.cheque_date as string,
-            reminderType: "cheque_due",
-            chequeNumber: cheque.cheque_number as string,
-          });
-          results.chequeDue++;
-        } catch (error) {
-          console.error("Cheque reminder failed:", error instanceof Error ? error.message : error);
-          results.errors++;
+            await sendReminder(supabase, templateIndex, {
+              tenantId: tenant.id as string,
+              tenantName: tenant.full_name as string,
+              phone: tenant.phone as string,
+              email: tenant.email as string,
+              language: (tenant.language_preference as string) || "en",
+              unitNumber: "",
+              propertyName: "",
+              amount: String(cheque.amount),
+              dueDate: cheque.cheque_date as string,
+              reminderType: "cheque_due",
+              chequeNumber: cheque.cheque_number as string,
+            });
+            results.chequeDue++;
+          } catch (error) {
+            console.error("Cheque reminder failed:", error instanceof Error ? error.message : error);
+            results.errors++;
+          }
         }
       }
     }

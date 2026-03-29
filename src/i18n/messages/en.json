@@ -632,7 +632,14 @@
     "cancel": "Cancel",
     "previewTitle": "Preview Reminders",
     "previewDescription": "{count} reminders will be sent. Review the messages below before confirming.",
-    "confirmSend": "Send {count} Reminders"
+    "confirmSend": "Send {count} Reminders",
+    "rules": "Reminder Rules",
+    "rulesSaved": "Saved",
+    "rulesDaysBefore": "Send reminder before (days)",
+    "rulesStartAfterDays": "Start sending after (days)",
+    "rulesRepeatEvery": "Then repeat every",
+    "rulesDay": "day",
+    "rulesDays": "days"
   },
   "settings": {
     "title": "Settings",
