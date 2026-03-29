@@ -270,24 +270,25 @@ async function gatherReminders(
       .eq("status", "pending")
       .in("cheque_date", chequeDates);
 
-  if (dueCheques) {
-    for (const cheque of dueCheques) {
-      const tenant = cheque.tenants as Record<string, unknown>;
-      if (!tenant) continue;
+    if (dueCheques) {
+      for (const cheque of dueCheques) {
+        const tenant = cheque.tenants as Record<string, unknown>;
+        if (!tenant) continue;
 
-      gathered.push({
-        tenantId: tenant.id as string,
-        tenantName: tenant.full_name as string,
-        phone: tenant.phone as string,
-        email: tenant.email as string,
-        language: (tenant.language_preference as string) || "en",
-        unitNumber: "",
-        propertyName: "",
-        amount: String(cheque.amount),
-        dueDate: cheque.cheque_date as string,
-        reminderType: "cheque_due",
-        chequeNumber: cheque.cheque_number as string,
-      });
+        gathered.push({
+          tenantId: tenant.id as string,
+          tenantName: tenant.full_name as string,
+          phone: tenant.phone as string,
+          email: tenant.email as string,
+          language: (tenant.language_preference as string) || "en",
+          unitNumber: "",
+          propertyName: "",
+          amount: String(cheque.amount),
+          dueDate: cheque.cheque_date as string,
+          reminderType: "cheque_due",
+          chequeNumber: cheque.cheque_number as string,
+        });
+      }
     }
   }
 
