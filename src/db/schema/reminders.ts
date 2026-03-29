@@ -63,7 +63,7 @@ export const reminderSettings = pgTable("reminder_settings", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   reminderType: reminderTypeEnum("reminder_type").notNull().unique(),
-  daysBefore: sql<number[]>`integer[]`.notNull().default(sql`'{}'`),
+  daysBefore: integer("days_before").array().notNull().default(sql`'{}'`),
   repeatIntervalDays: integer("repeat_interval_days"),
   isEnabled: boolean("is_enabled").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true })
