@@ -633,7 +633,7 @@ export default async function TenantDetailPage({
                         {Number(cheque.amount).toLocaleString("en-OM", {
                           minimumFractionDigits: 2,
                         })}
-                        <span className="text-[10px] font-normal text-text-secondary ml-1">
+                        <span className="text-[10px] font-normal text-text-secondary ms-1">
                           {CURRENCY.code}
                         </span>
                       </span>

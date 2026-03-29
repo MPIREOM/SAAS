@@ -106,11 +106,11 @@ export default function NewUnitPage({
               {t("unitNumber")} <span className="text-destructive">*</span>
             </label>
             <div className="relative">
-              <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+              <Hash className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
               <input
                 name="unit_number"
                 required
-                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono placeholder:text-text-secondary/40"
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl ps-10 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono placeholder:text-text-secondary/40"
                 placeholder={t("unitNumberPlaceholder")}
               />
             </div>
@@ -123,11 +123,11 @@ export default function NewUnitPage({
                 {t("floor")}
               </label>
               <div className="relative">
-                <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+                <Layers className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
                 <input
                   name="floor"
                   type="number"
-                  className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
+                  className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl ps-10 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
                   placeholder={t("floorPlaceholder")}
                 />
               </div>
@@ -138,13 +138,13 @@ export default function NewUnitPage({
                 {t("sizeSqm")}
               </label>
               <div className="relative">
-                <Ruler className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+                <Ruler className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
                 <input
                   name="size_sqm"
                   type="number"
                   step="0.01"
                   min="0"
-                  className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
+                  className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl ps-10 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
                   placeholder={t("sizePlaceholder")}
                 />
               </div>
@@ -157,17 +157,17 @@ export default function NewUnitPage({
               {t("rentAmount")} <span className="text-destructive">*</span>
             </label>
             <div className="relative">
-              <Banknote className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+              <Banknote className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
               <input
                 name="rent_amount"
                 type="number"
                 step="0.01"
                 min="0.01"
                 required
-                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl pl-10 pr-16 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl ps-10 pe-16 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
                 placeholder={t("rentPlaceholder")}
               />
-              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-text-secondary">
+              <span className="absolute end-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-text-secondary">
                 {CURRENCY.code}
               </span>
             </div>
@@ -182,14 +182,14 @@ export default function NewUnitPage({
               {t("bedrooms")}
             </label>
             <div className="relative">
-              <BedDouble className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+              <BedDouble className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
               <input
                 type="number"
                 min="0"
                 step="1"
                 value={bedrooms}
                 onChange={(e) => setBedrooms(e.target.value)}
-                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl ps-10 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
                 placeholder={t("bedroomsPlaceholder")}
               />
             </div>

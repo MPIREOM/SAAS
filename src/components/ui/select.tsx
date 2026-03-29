@@ -39,7 +39,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                 : undefined
           }
           className={cn(
-            "flex h-10 w-full appearance-none rounded-lg border bg-surface-elevated/50 px-3 py-2 pr-8",
+            "flex h-10 w-full appearance-none rounded-lg border bg-surface-elevated/50 px-3 py-2 pe-8",
             "text-sm text-foreground",
             "transition-all duration-200",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/50 focus-visible:bg-surface-elevated",

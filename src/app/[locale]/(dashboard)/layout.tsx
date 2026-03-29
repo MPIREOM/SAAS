@@ -34,11 +34,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-background noise-overlay" dir={isRtl ? "rtl" : "ltr"}>
       <Sidebar locale={locale} />
-      <div
-        className={`transition-all duration-300 ease-out ${
-          isRtl ? "md:mr-64" : "md:ml-64"
-        }`}
-      >
+      <div className="transition-all duration-300 ease-out md:ms-64">
         <Topbar
           locale={locale}
           userEmail={user.email}

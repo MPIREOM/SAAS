@@ -111,13 +111,13 @@ export function ChequeFormRows({
                   {t("chequeNumber")}
                 </label>
                 <div className="relative">
-                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />
+                  <Hash className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />
                   <input
                     value={cheque.cheque_number}
                     onChange={(e) => updateRow(index, "cheque_number", e.target.value)}
                     disabled={isExisting}
                     required={!isExisting}
-                    className="w-full h-9 bg-surface-elevated/50 border border-border/60 rounded-lg pl-8 pr-3 text-sm text-text-primary font-mono focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed placeholder:text-text-secondary/40"
+                    className="w-full h-9 bg-surface-elevated/50 border border-border/60 rounded-lg ps-8 pe-3 text-sm text-text-primary font-mono focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed placeholder:text-text-secondary/40"
                     placeholder="000000"
                   />
                 </div>
@@ -128,13 +128,13 @@ export function ChequeFormRows({
                   {t("bankName")}
                 </label>
                 <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />
+                  <Building2 className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />
                   <input
                     value={cheque.bank_name}
                     onChange={(e) => updateRow(index, "bank_name", e.target.value)}
                     disabled={isExisting}
                     required={!isExisting}
-                    className="w-full h-9 bg-surface-elevated/50 border border-border/60 rounded-lg pl-8 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed placeholder:text-text-secondary/40"
+                    className="w-full h-9 bg-surface-elevated/50 border border-border/60 rounded-lg ps-8 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed placeholder:text-text-secondary/40"
                     placeholder="Bank name"
                   />
                 </div>
@@ -145,14 +145,14 @@ export function ChequeFormRows({
                   {t("chequeDate")}
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />
+                  <Calendar className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />
                   <input
                     type="date"
                     value={cheque.cheque_date}
                     onChange={(e) => updateRow(index, "cheque_date", e.target.value)}
                     disabled={isExisting}
                     required={!isExisting}
-                    className="w-full h-9 bg-surface-elevated/50 border border-border/60 rounded-lg pl-8 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full h-9 bg-surface-elevated/50 border border-border/60 rounded-lg ps-8 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -162,7 +162,7 @@ export function ChequeFormRows({
                   {t("amount")} ({CURRENCY.code})
                 </label>
                 <div className="relative">
-                  <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />
+                  <Banknote className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary/40" />
                   <input
                     type="number"
                     step="0.01"
@@ -171,7 +171,7 @@ export function ChequeFormRows({
                     onChange={(e) => updateRow(index, "amount", e.target.value)}
                     disabled={isExisting}
                     required={!isExisting}
-                    className="w-full h-9 bg-surface-elevated/50 border border-border/60 rounded-lg pl-8 pr-3 text-sm text-text-primary font-mono tabular-nums focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed placeholder:text-text-secondary/40"
+                    className="w-full h-9 bg-surface-elevated/50 border border-border/60 rounded-lg ps-8 pe-3 text-sm text-text-primary font-mono tabular-nums focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed placeholder:text-text-secondary/40"
                     placeholder="0.00"
                   />
                 </div>

@@ -233,7 +233,7 @@ export function ReminderRules() {
                             onClick={() =>
                               removeDay(setting.reminder_type, i)
                             }
-                            className="hover:text-destructive transition-colors ml-0.5"
+                            className="hover:text-destructive transition-colors ms-0.5"
                           >
                             <X className="h-3 w-3" />
                           </button>

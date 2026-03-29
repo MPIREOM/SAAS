@@ -397,16 +397,16 @@ export default function NewTenantPage({
           {tenantMode === "existing" && (
             <div className="mt-4 space-y-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
                 <input
                   type="text"
                   value={tenantSearch}
                   onChange={(e) => { setTenantSearch(e.target.value); setSelectedTenant(null); }}
                   placeholder={t("searchTenantPlaceholder") || "Search by name or phone..."}
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md ps-10 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
                 />
                 {searchingTenants && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="absolute end-3 top-1/2 -translate-y-1/2">
                     <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
@@ -487,7 +487,7 @@ export default function NewTenantPage({
             <button
               type="button"
               onClick={clearPreview}
-              className="absolute top-2 right-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
+              className="absolute top-2 end-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
             >
               <X className="h-3 w-3 text-text-secondary" />
             </button>
@@ -500,7 +500,7 @@ export default function NewTenantPage({
               </div>
             )}
             {scanSuccess && (
-              <div className="mt-2 text-xs text-green-600 dark:text-green-400">
+              <div className="mt-2 text-xs text-success">
                 {t("scanSuccess")}
               </div>
             )}

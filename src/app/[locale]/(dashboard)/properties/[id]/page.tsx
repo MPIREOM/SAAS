@@ -225,7 +225,7 @@ export default async function PropertyDetailPage({
               {monthlyRevenue.toLocaleString("en-OM", {
                 minimumFractionDigits: 2,
               })}
-              <span className="text-xs font-sans font-normal text-text-secondary ml-1.5">
+              <span className="text-xs font-sans font-normal text-text-secondary ms-1.5">
                 {CURRENCY.code}
               </span>
             </p>
@@ -238,7 +238,7 @@ export default async function PropertyDetailPage({
         <h2 className="text-lg font-semibold text-text-primary mb-4 font-display tracking-tight">
           {tu("title")}
           {allUnits.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-text-secondary">
+            <span className="ms-2 text-sm font-normal text-text-secondary">
               ({allUnits.length})
             </span>
           )}

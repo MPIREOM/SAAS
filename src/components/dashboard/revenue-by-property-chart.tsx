@@ -22,11 +22,10 @@ const COLORS = [
   "var(--color-accent)",
   "var(--color-success)",
   "var(--color-warning)",
-  "#8b5cf6",
-  "#06b6d4",
-  "#f43f5e",
-  "#d97706",
-  "#10b981",
+  "var(--color-info)",
+  "var(--color-destructive)",
+  "var(--color-warning)",
+  "var(--color-success)",
 ];
 
 interface RevenueByPropertyChartProps {
@@ -149,7 +148,7 @@ export function RevenueByPropertyChart({ propertyIds }: RevenueByPropertyChartPr
               borderRadius: "10px",
               fontSize: "12px",
               fontWeight: 500,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+              boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
             }}
             formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}
           />

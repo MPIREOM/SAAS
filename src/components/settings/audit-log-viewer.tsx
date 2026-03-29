@@ -99,7 +99,7 @@ export function AuditLogViewer() {
                 <p className="text-xs text-text-secondary">
                   {new Date(log.created_at).toLocaleString()}
                   {log.entity_type && (
-                    <span className="ml-2 text-accent/70">{log.entity_type}</span>
+                    <span className="ms-2 text-accent/70">{log.entity_type}</span>
                   )}
                 </p>
               </div>

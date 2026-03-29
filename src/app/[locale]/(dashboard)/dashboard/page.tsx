@@ -308,17 +308,17 @@ async function getAgedReceivables(): Promise<AgedBucket[]> {
   if (!invoices || invoices.length === 0) {
     return [
       { label: "0-30 days", count: 0, total: 0, color: "bg-warning/20 text-warning" },
-      { label: "31-60 days", count: 0, total: 0, color: "bg-orange-500/20 text-orange-400" },
+      { label: "31-60 days", count: 0, total: 0, color: "bg-warning/30 text-warning" },
       { label: "61-90 days", count: 0, total: 0, color: "bg-destructive/20 text-destructive" },
-      { label: "90+ days", count: 0, total: 0, color: "bg-red-900/30 text-red-400" },
+      { label: "90+ days", count: 0, total: 0, color: "bg-destructive/30 text-destructive" },
     ];
   }
 
   const buckets = [
     { label: "0-30 days", min: 0, max: 30, count: 0, total: 0, color: "bg-warning/20 text-warning" },
-    { label: "31-60 days", min: 31, max: 60, count: 0, total: 0, color: "bg-orange-500/20 text-orange-400" },
+    { label: "31-60 days", min: 31, max: 60, count: 0, total: 0, color: "bg-warning/30 text-warning" },
     { label: "61-90 days", min: 61, max: 90, count: 0, total: 0, color: "bg-destructive/20 text-destructive" },
-    { label: "90+ days", min: 91, max: Infinity, count: 0, total: 0, color: "bg-red-900/30 text-red-400" },
+    { label: "90+ days", min: 91, max: Infinity, count: 0, total: 0, color: "bg-destructive/30 text-destructive" },
   ];
 
   invoices.forEach((inv) => {
@@ -474,8 +474,8 @@ export default async function DashboardPage({
       label: t("totalUnits"),
       value: stats.unitCount,
       icon: Home,
-      gradient: "from-blue-500/20 to-blue-500/5",
-      iconColor: "text-blue-400",
+      gradient: "from-info/20 to-info/5",
+      iconColor: "text-info",
       href: `/${locale}/properties`,
     },
     {
@@ -490,8 +490,8 @@ export default async function DashboardPage({
       label: t("activeTenants"),
       value: stats.tenantCount,
       icon: Users,
-      gradient: "from-purple-500/20 to-purple-500/5",
-      iconColor: "text-purple-400",
+      gradient: "from-info/20 to-info/5",
+      iconColor: "text-info",
       href: `/${locale}/tenants`,
     },
     {
@@ -732,7 +732,7 @@ export default async function DashboardPage({
                       {new Date(inv.dueDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-3 flex items-center gap-2.5">
+                  <div className="text-end shrink-0 ms-3 flex items-center gap-2.5">
                     <span className="text-sm font-bold font-mono text-text-primary ltr-nums">
                       {inv.amount} {CURRENCY.code}
                     </span>
@@ -788,7 +788,7 @@ export default async function DashboardPage({
                       {item.propertyName} &middot; {t("unit")} {item.unitNumber}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-3">
+                  <div className="text-end shrink-0 ms-3">
                     <p className="text-sm font-bold font-mono text-destructive">
                       {item.amount} {CURRENCY.code}
                     </p>
@@ -840,7 +840,7 @@ export default async function DashboardPage({
                       #{cheque.chequeNumber} &middot; {cheque.bankName}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-3">
+                  <div className="text-end shrink-0 ms-3">
                     <p className="text-sm font-bold font-mono text-text-primary ltr-nums">
                       {cheque.amount} {CURRENCY.code}
                     </p>
@@ -894,7 +894,7 @@ export default async function DashboardPage({
                       {doc.documentType}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-3">
+                  <div className="text-end shrink-0 ms-3">
                     <p className="text-sm font-mono text-text-primary ltr-nums">
                       {new Date(doc.expiryDate).toLocaleDateString()}
                     </p>
@@ -941,7 +941,7 @@ export default async function DashboardPage({
                       {lease.propertyName} &middot; {t("unit")} {lease.unitNumber}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-3">
+                  <div className="text-end shrink-0 ms-3">
                     <p className="text-sm font-mono text-text-primary ltr-nums">
                       {new Date(lease.endDate).toLocaleDateString()}
                     </p>

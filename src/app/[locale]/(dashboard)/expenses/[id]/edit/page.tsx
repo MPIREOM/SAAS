@@ -367,7 +367,7 @@ export default function EditExpensePage({
               loading={deleting}
               className="text-destructive border-destructive/30 hover:bg-destructive/10"
             >
-              <Trash2 className="h-4 w-4 mr-1.5" />
+              <Trash2 className="h-4 w-4 me-1.5" />
               {t("deleteExpense")}
             </Button>
           </div>

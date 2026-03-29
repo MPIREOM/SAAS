@@ -234,7 +234,7 @@ export default async function InvoicesPage({
             </div>
             <p className="text-xl font-bold text-text-primary font-mono tabular-nums">
               {formatAmount(totalAmount)}
-              <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+              <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
               </span>
             </p>
@@ -258,7 +258,7 @@ export default async function InvoicesPage({
             </div>
             <p className="text-xl font-bold text-success font-mono tabular-nums">
               {formatAmount(paidAmount)}
-              <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+              <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
               </span>
             </p>
@@ -286,7 +286,7 @@ export default async function InvoicesPage({
             </div>
             <p className="text-xl font-bold text-warning font-mono tabular-nums">
               {formatAmount(pendingAmount)}
-              <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+              <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
               </span>
             </p>
@@ -310,7 +310,7 @@ export default async function InvoicesPage({
             </div>
             <p className="text-xl font-bold text-destructive font-mono tabular-nums">
               {formatAmount(overdueAmount)}
-              <span className="text-xs font-sans font-normal text-text-secondary ml-1">
+              <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
               </span>
             </p>
@@ -495,7 +495,7 @@ export default async function InvoicesPage({
                             }`}
                           >
                             {formatAmount(invoice.amount as number)}
-                            <span className="text-[10px] font-normal text-text-secondary ml-0.5">
+                            <span className="text-[10px] font-normal text-text-secondary ms-0.5">
                               {CURRENCY.code}
                             </span>
                           </span>

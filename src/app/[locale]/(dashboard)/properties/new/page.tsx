@@ -102,11 +102,11 @@ export default function NewPropertyPage({
               {t("name")} <span className="text-destructive">*</span>
             </label>
             <div className="relative">
-              <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+              <Building2 className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
               <input
                 name="name"
                 required
-                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 placeholder:text-text-secondary/40"
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl ps-10 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 placeholder:text-text-secondary/40"
                 placeholder={t("namePlaceholder")}
               />
             </div>
@@ -117,10 +117,10 @@ export default function NewPropertyPage({
               {t("location")}
             </label>
             <div className="relative">
-              <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+              <MapPin className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
               <input
                 name="location"
-                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl pl-10 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 placeholder:text-text-secondary/40"
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl ps-10 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 placeholder:text-text-secondary/40"
                 placeholder={t("locationPlaceholder")}
               />
             </div>

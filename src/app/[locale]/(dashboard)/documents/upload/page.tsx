@@ -222,7 +222,7 @@ export default function UploadDocumentPage() {
                 type="button"
                 onClick={clearFile}
                 aria-label={tc("close")}
-                className="absolute top-2 right-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
+                className="absolute top-2 end-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
               >
                 <X className="h-3 w-3 text-text-secondary" aria-hidden="true" />
               </button>

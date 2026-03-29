@@ -60,7 +60,7 @@ export function CollectionChart({ data }: CollectionChartProps) {
               borderRadius: "10px",
               fontSize: "12px",
               fontWeight: 500,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+              boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
             formatter={(value) => [`${Number(value).toFixed(2)} ${CURRENCY.code}`]}
