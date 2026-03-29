@@ -628,7 +628,11 @@
     "triggerError": "Failed to trigger reminders. Please try again.",
     "triggerComplete": "Done — {count} reminders sent",
     "noRemindersToSend": "No reminders matched today's schedule. Reminders trigger 3 days before due dates, 1+ days after overdue, and at 60/30/7 days before lease expiry.",
-    "errors": "Errors"
+    "errors": "Errors",
+    "cancel": "Cancel",
+    "previewTitle": "Preview Reminders",
+    "previewDescription": "{count} reminders will be sent. Review the messages below before confirming.",
+    "confirmSend": "Send {count} Reminders"
   },
   "settings": {
     "title": "Settings",
