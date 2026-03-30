@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Mail,
   Activity,
+  Bot,
 } from "lucide-react";
 import { InviteUserForm } from "@/components/settings/invite-user-form";
 import { NotificationPreferences } from "@/components/settings/notification-preferences";
@@ -15,6 +16,7 @@ import { ProfileEditForm } from "@/components/settings/profile-edit-form";
 import { AuditLogViewer } from "@/components/settings/audit-log-viewer";
 import { PropertyNotificationToggles } from "@/components/settings/property-notification-toggles";
 import { TenantNotificationToggles } from "@/components/settings/tenant-notification-toggles";
+import { WhatsAppAgentSetup } from "@/components/settings/whatsapp-agent-setup";
 
 export default async function SettingsPage({
   params,
@@ -251,6 +253,27 @@ export default async function SettingsPage({
           <AuditLogViewer />
         </div>
       )}
+
+      {/* WhatsApp AI Agent */}
+      <div className="bg-surface border border-border rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-accent/10 rounded-md">
+            <Bot className="h-5 w-5 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-base font-medium text-text-primary font-display">
+              WhatsApp AI Agent
+            </h2>
+            <p className="text-xs text-text-secondary">
+              Register your WhatsApp number to manage invoices and expenses via chat
+            </p>
+          </div>
+        </div>
+        <WhatsAppAgentSetup
+          userId={user?.id || ""}
+          currentPhone={(profile?.whatsapp_phone as string) || null}
+        />
+      </div>
 
       {/* WhatsApp Test */}
       <div className="bg-surface border border-border rounded-lg p-6">

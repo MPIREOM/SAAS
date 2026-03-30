@@ -99,6 +99,62 @@ export function buildRentReminderComponents(params: {
   ];
 }
 
+/**
+ * Send a free-form text message via WhatsApp Cloud API.
+ * Used by the AI agent to reply to admin messages.
+ */
+export async function sendWhatsAppTextMessage(
+  to: string,
+  text: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (!phoneNumberId || !accessToken) {
+    return { success: false, error: "WhatsApp credentials not configured" };
+  }
+
+  const body = {
+    messaging_product: "whatsapp",
+    to,
+    type: "text",
+    text: { body: text },
+  };
+
+  try {
+    const response = await fetch(
+      `${WHATSAPP_API_URL}/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      return {
+        success: false,
+        error: errorData.error?.message || `HTTP ${response.status}`,
+      };
+    }
+
+    const data = (await response.json()) as WhatsAppResponse;
+    return {
+      success: true,
+      messageId: data.messages?.[0]?.id,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 export function buildOverdueReminderComponents(params: {
   tenantName: string;
   unitNumber: string;
