@@ -459,8 +459,8 @@ async function executeTool(
         const propName = (input.property_name as string).toLowerCase();
         const filtered = result.filter((t) =>
           t.active_leases.some((l: Record<string, unknown>) => {
-            const unit = l.units as Record<string, unknown> | null;
-            const prop = unit?.properties as Record<string, unknown> | null;
+            const unit = l.units as unknown as Record<string, unknown> | null;
+            const prop = unit?.properties as unknown as Record<string, unknown> | null;
             return (prop?.name as string)?.toLowerCase().includes(propName);
           })
         );
@@ -889,9 +889,9 @@ async function executeTool(
         const paid = Number(inv.paid_amount || 0);
         const owing = amount - paid;
         totalOverdue += owing;
-        const tenant = inv.tenants as Record<string, unknown> | null;
-        const unit = inv.units as Record<string, unknown> | null;
-        const prop = (unit as Record<string, unknown> | null)?.properties as Record<string, unknown> | null;
+        const tenant = inv.tenants as unknown as Record<string, unknown> | null;
+        const unit = inv.units as unknown as Record<string, unknown> | null;
+        const prop = (unit as unknown as Record<string, unknown> | null)?.properties as unknown as Record<string, unknown> | null;
         return {
           tenant: tenant?.full_name,
           property: prop?.name,
@@ -1083,7 +1083,7 @@ async function executeTool(
         },
       });
 
-      const tenant = invoice.tenants as Record<string, unknown> | null;
+      const tenant = invoice.tenants as unknown as Record<string, unknown> | null;
 
       return JSON.stringify({
         success: true,
@@ -1144,8 +1144,8 @@ async function executeTool(
         },
       });
 
-      const tenant = invoice.tenants as Record<string, unknown> | null;
-      const unit = invoice.units as Record<string, unknown> | null;
+      const tenant = invoice.tenants as unknown as Record<string, unknown> | null;
+      const unit = invoice.units as unknown as Record<string, unknown> | null;
 
       return JSON.stringify({
         success: true,
