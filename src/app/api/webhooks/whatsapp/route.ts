@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { processWhatsAppMessage } from "@/lib/whatsapp/agent";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp/client";
 
@@ -16,6 +17,29 @@ function verifySignature(body: string, signature: string | null): boolean {
     Buffer.from(signature),
     Buffer.from(expectedSig)
   );
+}
+
+// Deduplicate messages using a database table to persist across serverless invocations
+async function isMessageProcessed(messageId: string): Promise<boolean> {
+  const supabase = createSupabaseAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // Try to insert — if it already exists (unique constraint), the message was already processed
+  const { error } = await supabase
+    .from("whatsapp_processed_messages")
+    .insert({ message_id: messageId });
+
+  if (error) {
+    // Unique violation = already processed
+    if (error.code === "23505") return true;
+    // Other errors — log but allow processing (better to double-reply than not reply)
+    console.warn("[WhatsApp Webhook] Dedup check failed:", error.message);
+    return false;
+  }
+
+  return false; // Successfully inserted = new message
 }
 
 // WhatsApp webhook verification (GET)
@@ -50,7 +74,6 @@ export async function POST(request: NextRequest) {
   }
 
   const body = JSON.parse(rawBody);
-  console.log("[WhatsApp Webhook] Received payload:", JSON.stringify(body, null, 2));
 
   // Process entries
   const entries = body.entry || [];
@@ -62,29 +85,31 @@ export async function POST(request: NextRequest) {
       // Handle incoming messages
       const messages = value?.messages || [];
       for (const msg of messages) {
-        console.log("[WhatsApp Webhook] Message type:", msg.type, "from:", msg.from);
-
         // Only process text messages
         if (msg.type !== "text") continue;
 
+        const messageId = msg.id;
         const senderPhone = msg.from;
         const messageText = msg.text?.body;
 
-        if (!messageText) continue;
+        if (!messageText || !messageId) continue;
 
-        console.log("[WhatsApp Webhook] Processing message:", messageText, "from:", senderPhone);
+        // Deduplicate — skip if we've already processed this message
+        const alreadyProcessed = await isMessageProcessed(messageId);
+        if (alreadyProcessed) {
+          console.log("[WhatsApp Webhook] Skipping duplicate message:", messageId);
+          continue;
+        }
 
-        // Process synchronously — wait for the reply before returning
-        // This avoids Vercel serverless function killing the async task
+        console.log("[WhatsApp Webhook] Processing message:", messageText, "from:", senderPhone, "id:", messageId);
+
         try {
           const reply = await processWhatsAppMessage(messageText, senderPhone);
-          console.log("[WhatsApp Webhook] Agent reply:", reply);
+          console.log("[WhatsApp Webhook] Agent reply:", reply.substring(0, 200));
 
           const result = await sendWhatsAppTextMessage(senderPhone, reply);
           if (!result.success) {
             console.error("[WhatsApp Webhook] Failed to send reply:", result.error);
-          } else {
-            console.log("[WhatsApp Webhook] Reply sent successfully, messageId:", result.messageId);
           }
         } catch (error) {
           console.error("[WhatsApp Webhook] Agent processing failed:", error);
