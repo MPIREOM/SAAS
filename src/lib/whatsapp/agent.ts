@@ -17,7 +17,7 @@ function getAdminSupabase() {
 
 // Retry wrapper for Claude API calls with exponential backoff
 async function callClaude(
-  params: Anthropic.MessageCreateParams
+  params: Anthropic.MessageCreateParamsNonStreaming
 ): Promise<Anthropic.Message> {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
