@@ -49,6 +49,17 @@ export async function PUT(request: NextRequest) {
     );
   }
 
+  // Get the existing settings row ID first
+  const { data: existing } = await supabase
+    .from("invoice_settings")
+    .select("id")
+    .limit(1)
+    .single();
+
+  if (!existing) {
+    return NextResponse.json({ error: "Invoice settings not found. Please run migration 015." }, { status: 404 });
+  }
+
   // Update the single settings row
   const { data, error } = await supabase
     .from("invoice_settings")
@@ -58,8 +69,8 @@ export async function PUT(request: NextRequest) {
       updated_at: new Date().toISOString(),
       updated_by: user.id,
     })
+    .eq("id", existing.id)
     .select()
-    .limit(1)
     .single();
 
   if (error) {
