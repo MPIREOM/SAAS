@@ -74,13 +74,14 @@ export function AutoInvoiceSettings() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
 
       setEnabled(newEnabled);
       setDaysBefore(newDays);
       toast({ title: "Invoice settings saved", variant: "success" });
-    } catch {
-      toast({ title: "Failed to save invoice settings", variant: "destructive" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast({ title: `Failed to save invoice settings: ${msg}`, variant: "destructive" });
     } finally {
       setSaving(false);
     }
