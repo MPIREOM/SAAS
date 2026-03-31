@@ -8,6 +8,7 @@ import {
   Mail,
   Activity,
   Bot,
+  FileText,
 } from "lucide-react";
 import { InviteUserForm } from "@/components/settings/invite-user-form";
 import { NotificationPreferences } from "@/components/settings/notification-preferences";
@@ -17,6 +18,7 @@ import { AuditLogViewer } from "@/components/settings/audit-log-viewer";
 import { PropertyNotificationToggles } from "@/components/settings/property-notification-toggles";
 import { TenantNotificationToggles } from "@/components/settings/tenant-notification-toggles";
 import { WhatsAppAgentSetup } from "@/components/settings/whatsapp-agent-setup";
+import { AutoInvoiceSettings } from "@/components/settings/auto-invoice-settings";
 
 export default async function SettingsPage({
   params,
@@ -253,6 +255,24 @@ export default async function SettingsPage({
           <AuditLogViewer />
         </div>
       )}
+
+      {/* Auto Invoice Settings */}
+      <div className="bg-surface border border-border rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-accent/10 rounded-md">
+            <FileText className="h-5 w-5 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-base font-medium text-text-primary font-display">
+              Auto Invoice Generation
+            </h2>
+            <p className="text-xs text-text-secondary">
+              Control when invoices are automatically created for active leases
+            </p>
+          </div>
+        </div>
+        <AutoInvoiceSettings />
+      </div>
 
       {/* WhatsApp AI Agent */}
       <div className="bg-surface border border-border rounded-lg p-6">

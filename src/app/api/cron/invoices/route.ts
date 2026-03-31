@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { format, lastDayOfMonth, startOfMonth } from "date-fns";
+import { format, lastDayOfMonth, startOfMonth, addDays } from "date-fns";
 
 // Vercel Cron: runs daily at 00:05 AM
 export const maxDuration = 60;
@@ -26,23 +26,37 @@ export async function GET(request: Request) {
   }
 
   const supabase = createSupabaseAdmin();
+
+  // Load invoice settings
+  const { data: settings } = await supabase
+    .from("invoice_settings")
+    .select("auto_generate_enabled, days_before_due")
+    .limit(1)
+    .single();
+
+  const autoEnabled = settings?.auto_generate_enabled ?? true;
+  const daysBefore = settings?.days_before_due ?? 0;
+
+  if (!autoEnabled) {
+    return NextResponse.json({
+      created: 0,
+      message: "Auto-invoice generation is disabled",
+    });
+  }
+
   const today = new Date();
   const currentDay = today.getDate();
 
-  // Get ALL active leases whose payment_due_day has passed this month
-  // This ensures we catch up on any missed days (resilient to cron failures)
-  const { data: leases, error } = await supabase
+  // --- Generate invoices for the CURRENT month ---
+  // Get active leases whose payment_due_day has already passed this month
+  const { data: currentMonthLeases, error: currentError } = await supabase
     .from("leases")
     .select("id, tenant_id, unit_id, monthly_rent, payment_due_day")
     .eq("is_active", true)
     .lte("payment_due_day", currentDay);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  if (!leases || leases.length === 0) {
-    return NextResponse.json({ created: 0, message: "No leases due yet this month" });
+  if (currentError) {
+    return NextResponse.json({ error: currentError.message }, { status: 500 });
   }
 
   const periodStart = format(startOfMonth(today), "yyyy-MM-dd");
@@ -50,13 +64,10 @@ export async function GET(request: Request) {
   let created = 0;
   let skipped = 0;
 
-  for (const lease of leases) {
-    // Build the due date using the lease's payment_due_day in the current month
+  for (const lease of currentMonthLeases || []) {
     const dueDay = Math.min(lease.payment_due_day, lastDayOfMonth(today).getDate());
     const dueDate = format(new Date(today.getFullYear(), today.getMonth(), dueDay), "yyyy-MM-dd");
 
-    // Upsert to prevent duplicates (unique index on lease_id + period_start)
-    // ignoreDuplicates: true means existing invoices won't be overwritten
     const { error: insertError } = await supabase.from("invoices").upsert(
       {
         lease_id: lease.id,
@@ -79,6 +90,58 @@ export async function GET(request: Request) {
     }
   }
 
+  // --- Generate ADVANCE invoices for NEXT month if days_before > 0 ---
+  let advanceCreated = 0;
+  let advanceSkipped = 0;
+
+  if (daysBefore > 0) {
+    // For each active lease, check if we're within the advance window for next month
+    const { data: allLeases, error: allError } = await supabase
+      .from("leases")
+      .select("id, tenant_id, unit_id, monthly_rent, payment_due_day")
+      .eq("is_active", true);
+
+    if (!allError && allLeases) {
+      // Calculate next month's dates
+      const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      const nextPeriodStart = format(startOfMonth(nextMonth), "yyyy-MM-dd");
+      const nextPeriodEnd = format(lastDayOfMonth(nextMonth), "yyyy-MM-dd");
+
+      for (const lease of allLeases) {
+        // Calculate the actual due date in next month
+        const nextDueDay = Math.min(lease.payment_due_day, lastDayOfMonth(nextMonth).getDate());
+        const nextDueDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), nextDueDay);
+
+        // Check if today is within the advance window
+        const advanceDate = addDays(nextDueDate, -daysBefore);
+        if (today >= advanceDate) {
+          const dueDateStr = format(nextDueDate, "yyyy-MM-dd");
+
+          const { error: insertError } = await supabase.from("invoices").upsert(
+            {
+              lease_id: lease.id,
+              tenant_id: lease.tenant_id,
+              unit_id: lease.unit_id,
+              amount: lease.monthly_rent,
+              due_date: dueDateStr,
+              issued_date: format(today, "yyyy-MM-dd"),
+              period_start: nextPeriodStart,
+              period_end: nextPeriodEnd,
+              status: "pending",
+            },
+            { onConflict: "lease_id,period_start", ignoreDuplicates: true }
+          );
+
+          if (insertError) {
+            advanceSkipped++;
+          } else {
+            advanceCreated++;
+          }
+        }
+      }
+    }
+  }
+
   // Auto-mark overdue invoices (don't override partial payments)
   const todayStr = today.toISOString().split("T")[0];
   const { error: overdueError } = await supabase
@@ -86,7 +149,6 @@ export async function GET(request: Request) {
     .update({ status: "overdue" })
     .eq("status", "pending")
     .lt("due_date", todayStr);
-  // Note: partial invoices keep their "partial" status, not overridden to "overdue"
 
   // Auto-cancel pending invoices from inactive leases (moved-out tenants)
   const { data: inactiveLeases } = await supabase
@@ -112,7 +174,12 @@ export async function GET(request: Request) {
   return NextResponse.json({
     created,
     skipped,
-    total: leases.length,
+    total: (currentMonthLeases || []).length,
+    advance: {
+      created: advanceCreated,
+      skipped: advanceSkipped,
+      days_before: daysBefore,
+    },
     cancelledFromInactiveLeases: cancelledCount,
     overdueUpdated: !overdueError,
     overdueError: overdueError?.message || null,
