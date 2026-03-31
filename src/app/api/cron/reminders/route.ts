@@ -131,40 +131,31 @@ export async function GET(request: NextRequest) {
             results.rentUpcoming++;
           }
 
-          // Overdue rent reminder (configurable start days + repeat interval)
-          if (overdueSetting.is_enabled && daysUntilDue < 0) {
-            const daysOverdue = Math.abs(daysUntilDue);
-            const shouldSend = overdueSetting.days_before.includes(daysOverdue) ||
-              (overdueSetting.repeat_interval_days && overdueSetting.repeat_interval_days > 0 &&
-                daysOverdue > Math.max(...overdueSetting.days_before, 0) &&
-                (daysOverdue - Math.max(...overdueSetting.days_before, 0)) % overdueSetting.repeat_interval_days === 0);
+          // Overdue rent reminder — invoice-driven (checks ALL overdue invoices, not just current month)
+          if (overdueSetting.is_enabled) {
+            // Fetch all overdue/unpaid invoices for this lease where due_date has passed
+            const { data: overdueInvs } = await supabase
+              .from("invoices")
+              .select("amount, paid_amount, due_date, period_start, period_end")
+              .eq("lease_id", lease.id)
+              .in("status", ["overdue", "partial", "pending"])
+              .lt("due_date", todayStr)
+              .order("due_date", { ascending: true });
 
-            if (shouldSend) {
-              // Check if payment exists for this month
-              const monthStart = format(new Date(currentYear, currentMonth, 1), "yyyy-MM-dd");
-              const monthEnd = format(new Date(currentYear, currentMonth + 1, 0), "yyyy-MM-dd");
+            if (overdueInvs && overdueInvs.length > 0) {
+              // Calculate days since the OLDEST overdue invoice to determine send schedule
+              const oldestDueDate = parseISO(overdueInvs[0].due_date as string);
+              const daysOverdue = differenceInDays(today, oldestDueDate);
 
-              const { count } = await supabase
-                .from("invoices")
-                .select("*", { count: "exact", head: true })
-                .eq("lease_id", lease.id)
-                .eq("status", "paid")
-                .gte("due_date", monthStart)
-                .lte("due_date", monthEnd);
+              const shouldSend = overdueSetting.days_before.includes(daysOverdue) ||
+                (overdueSetting.repeat_interval_days && overdueSetting.repeat_interval_days > 0 &&
+                  daysOverdue > Math.max(...overdueSetting.days_before, 0) &&
+                  (daysOverdue - Math.max(...overdueSetting.days_before, 0)) % overdueSetting.repeat_interval_days === 0);
 
-              if (!count || count === 0) {
-                // Fetch all overdue/unpaid invoices for this lease
-                const { data: overdueInvs } = await supabase
-                  .from("invoices")
-                  .select("amount, due_date, period_start, period_end")
-                  .eq("lease_id", lease.id)
-                  .in("status", ["overdue", "partial", "pending"])
-                  .lt("due_date", format(today, "yyyy-MM-dd"))
-                  .order("due_date", { ascending: true });
-
-                const overdueInvoices: OverdueInvoice[] = (overdueInvs || []).map(
+              if (shouldSend) {
+                const overdueInvoices: OverdueInvoice[] = overdueInvs.map(
                   (inv: Record<string, unknown>) => ({
-                    amount: String(inv.amount),
+                    amount: String(Number(inv.amount || 0) - Number(inv.paid_amount || 0)),
                     dueDate: inv.due_date as string,
                     periodLabel: inv.period_start
                       ? `${format(parseISO(inv.period_start as string), "MMM yyyy")}`
@@ -184,8 +175,8 @@ export async function GET(request: NextRequest) {
                   language: (tenant.language_preference as string) || "en",
                   unitNumber: unit.unit_number as string,
                   propertyName: (property?.name as string) || "",
-                  amount: String(lease.monthly_rent),
-                  dueDate: format(dueDate, "yyyy-MM-dd"),
+                  amount: totalOverdue,
+                  dueDate: overdueInvs[0].due_date as string,
                   reminderType: "rent_overdue",
                   overdueInvoices,
                   totalOverdue,
