@@ -45,10 +45,12 @@ export async function POST(request: NextRequest) {
     !process.env.WHATSAPP_APP_SECRET ||
     !verifySignature(rawBody, signature)
   ) {
+    console.error("[WhatsApp Webhook] Signature verification failed");
     return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
   }
 
   const body = JSON.parse(rawBody);
+  console.log("[WhatsApp Webhook] Received payload:", JSON.stringify(body, null, 2));
 
   // Process entries
   const entries = body.entry || [];
@@ -60,50 +62,40 @@ export async function POST(request: NextRequest) {
       // Handle incoming messages
       const messages = value?.messages || [];
       for (const msg of messages) {
+        console.log("[WhatsApp Webhook] Message type:", msg.type, "from:", msg.from);
+
         // Only process text messages
         if (msg.type !== "text") continue;
 
-        const senderPhone = msg.from; // e.g. "96812345678"
+        const senderPhone = msg.from;
         const messageText = msg.text?.body;
 
         if (!messageText) continue;
 
-        // Process asynchronously — respond to Meta immediately, reply to user later
-        handleIncomingMessage(senderPhone, messageText).catch((err) => {
-          console.error("WhatsApp agent error:", err);
-        });
-      }
+        console.log("[WhatsApp Webhook] Processing message:", messageText, "from:", senderPhone);
 
-      // Delivery status updates (sent, delivered, read, failed) — silently acknowledged
+        // Process synchronously — wait for the reply before returning
+        // This avoids Vercel serverless function killing the async task
+        try {
+          const reply = await processWhatsAppMessage(messageText, senderPhone);
+          console.log("[WhatsApp Webhook] Agent reply:", reply);
+
+          const result = await sendWhatsAppTextMessage(senderPhone, reply);
+          if (!result.success) {
+            console.error("[WhatsApp Webhook] Failed to send reply:", result.error);
+          } else {
+            console.log("[WhatsApp Webhook] Reply sent successfully, messageId:", result.messageId);
+          }
+        } catch (error) {
+          console.error("[WhatsApp Webhook] Agent processing failed:", error);
+          await sendWhatsAppTextMessage(
+            senderPhone,
+            "Sorry, something went wrong processing your request. Please try again."
+          ).catch(() => {});
+        }
+      }
     }
   }
 
   return NextResponse.json({ success: true });
-}
-
-async function handleIncomingMessage(
-  senderPhone: string,
-  messageText: string
-): Promise<void> {
-  try {
-    // Run the AI agent to process the message
-    const reply = await processWhatsAppMessage(messageText, senderPhone);
-
-    // Send the reply back via WhatsApp
-    const result = await sendWhatsAppTextMessage(senderPhone, reply);
-
-    if (!result.success) {
-      console.error("Failed to send WhatsApp reply:", result.error);
-    }
-  } catch (error) {
-    console.error("Agent processing failed:", error);
-
-    // Try to send an error message to the user
-    await sendWhatsAppTextMessage(
-      senderPhone,
-      "Sorry, something went wrong processing your request. Please try again."
-    ).catch(() => {
-      // Silently ignore if error message also fails
-    });
-  }
 }
