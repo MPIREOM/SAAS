@@ -76,7 +76,7 @@ const tools: Anthropic.Tool[] = [
   {
     name: "get_tenant_invoices",
     description:
-      "Get invoices for a tenant. Can filter by status. Returns invoice id, amount, due date, status, paid amount, period, and unit/property info.",
+      "Get invoices for a tenant. Can filter by status and/or month. Returns invoice id, amount, due date, status, paid amount, period, and unit/property info.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -89,6 +89,11 @@ const tools: Anthropic.Tool[] = [
           enum: ["unpaid", "paid", "all"],
           description:
             "Filter: 'unpaid' = pending/overdue/partial (default), 'paid' = paid only, 'all' = everything",
+        },
+        month: {
+          type: "string",
+          description:
+            "Optional: filter by month in YYYY-MM format (e.g. '2026-04' for April 2026). Filters on period_start.",
         },
         limit: {
           type: "number",
@@ -283,10 +288,16 @@ const tools: Anthropic.Tool[] = [
   {
     name: "get_overdue_summary",
     description:
-      "Get a summary of all overdue invoices across all properties. Shows which tenants owe money and how much.",
+      "Get a summary of all unpaid invoices (pending, overdue, partial) across all properties. Can filter by month. Shows which tenants owe money and how much.",
     input_schema: {
       type: "object" as const,
-      properties: {},
+      properties: {
+        month: {
+          type: "string",
+          description:
+            "Optional: filter by month in YYYY-MM format (e.g. '2026-04' for April). If omitted, shows all unpaid invoices.",
+        },
+      },
       required: [],
     },
   },
@@ -473,13 +484,14 @@ async function executeTool(
     case "get_tenant_invoices": {
       const tenantId = input.tenant_id as string;
       const statusFilter = (input.status_filter as string) || "unpaid";
+      const monthFilter = input.month as string | undefined;
       const limit = (input.limit as number) || 10;
 
       let query = supabase
         .from("invoices")
         .select(
           `
-          id, amount, paid_amount, due_date, status, period_start, period_end, lease_id, notes,
+          id, amount, paid_amount, due_date, status, period_start, period_end, lease_id, notes, paid_date,
           units(unit_number, properties(name))
         `
         )
@@ -491,6 +503,15 @@ async function executeTool(
         query = query.in("status", ["pending", "overdue", "partial"]);
       } else if (statusFilter === "paid") {
         query = query.eq("status", "paid");
+      }
+
+      // Filter by month (YYYY-MM) using period_start
+      if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
+        const monthStart = `${monthFilter}-01`;
+        const [y, m] = monthFilter.split("-").map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        const monthEnd = `${monthFilter}-${String(lastDay).padStart(2, "0")}`;
+        query = query.gte("period_start", monthStart).lte("period_start", monthEnd);
       }
 
       const { data: invoices, error } = await query;
@@ -867,21 +888,34 @@ async function executeTool(
     }
 
     case "get_overdue_summary": {
-      const { data: overdueInvoices, error } = await supabase
+      const monthFilter = input.month as string | undefined;
+
+      let query = supabase
         .from("invoices")
         .select(
           `
-          id, amount, paid_amount, due_date, status,
+          id, amount, paid_amount, due_date, status, period_start,
           tenants(full_name, phone),
           units(unit_number, properties(name))
         `
         )
-        .in("status", ["overdue", "partial"])
+        .in("status", ["pending", "overdue", "partial"])
         .order("due_date", { ascending: true });
+
+      // Filter by month if provided
+      if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
+        const monthStart = `${monthFilter}-01`;
+        const [y, m] = monthFilter.split("-").map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        const monthEnd = `${monthFilter}-${String(lastDay).padStart(2, "0")}`;
+        query = query.gte("period_start", monthStart).lte("period_start", monthEnd);
+      }
+
+      const { data: overdueInvoices, error } = await query;
 
       if (error) return JSON.stringify({ error: error.message });
       if (!overdueInvoices || overdueInvoices.length === 0)
-        return JSON.stringify({ message: "No overdue invoices! Everything is up to date." });
+        return JSON.stringify({ message: monthFilter ? `No unpaid invoices for ${monthFilter}.` : "No unpaid invoices! Everything is up to date." });
 
       let totalOverdue = 0;
       const summary = overdueInvoices.map((inv: Record<string, unknown>) => {
@@ -1255,7 +1289,7 @@ YOU CAN:
 2. Add expenses — "add expense 50 OMR plumbing at Sunset Tower", "electricity bill 30 OMR"
 3. Create invoices — "create invoice for Ahmad for April", "generate rent invoice"
 4. Check balances — "how much does Ahmad owe?", "check balance for unit 101"
-5. View overdue — "who hasn't paid?", "show overdue invoices"
+5. View unpaid/overdue — "who hasn't paid?", "show overdue invoices", "pending invoices for April", "show me April invoices"
 6. Today's summary — "what's happening today?", "daily summary"
 7. List tenants — "show all tenants", "who lives in Sunset Tower?"
 8. View property info — "show units in Tower A", "list properties"
@@ -1277,6 +1311,8 @@ BEHAVIOR RULES:
 - When updating rent, search for the tenant first, get their lease ID, then use update_lease_rent.
 - When cancelling an invoice, search for the tenant and their invoices first, then cancel the right one.
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
+- NEVER say "there are no invoices" without first calling the tool with the right filters. If the user asks about a specific month (e.g. "April"), use the month parameter (e.g. "2026-04") in get_overdue_summary or get_tenant_invoices.
+- When the user asks about invoices for a specific month, ALWAYS pass the month parameter in YYYY-MM format to filter results. Do NOT just scan through all results — use the filter.
 - If genuinely unsure what the user wants, ask a SHORT clarifying question.
 - You have CONVERSATION HISTORY. When the user says "yes", "ok", "do it", "go ahead", etc., refer back to what you previously offered or discussed and take that action.
 - CRITICAL: NEVER guess or assume invoice statuses, amounts, or dates from conversation history. ALWAYS call the appropriate tool to get LIVE data from the database for ANY query about invoices, balances, or statuses. Conversation history is for understanding context only — actual data MUST come from tool calls.
