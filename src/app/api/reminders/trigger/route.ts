@@ -192,52 +192,40 @@ async function gatherReminders(
         gathered.push({ ...baseParams, reminderType: "rent_upcoming" });
       }
 
-      // Overdue rent reminder (configurable start days + repeat interval)
+      // Overdue rent reminder — invoice-driven (checks ALL overdue invoices)
       if (overdueSetting.is_enabled && daysUntilDue < 0) {
-        const daysOverdue = Math.abs(daysUntilDue);
-        if (shouldSendOverdue(daysOverdue, overdueSetting)) {
-          const monthStart = format(new Date(currentYear, currentMonth, 1), "yyyy-MM-dd");
-          const monthEnd = format(new Date(currentYear, currentMonth + 1, 0), "yyyy-MM-dd");
+        // Fetch all overdue/unpaid invoices for this lease where due_date has passed
+        const { data: overdueInvs } = await supabase
+          .from("invoices")
+          .select("amount, paid_amount, due_date, period_start, period_end")
+          .eq("lease_id", lease.id)
+          .in("status", ["overdue", "partial", "pending"])
+          .lt("due_date", format(today, "yyyy-MM-dd"))
+          .order("due_date", { ascending: true });
 
-          const { count } = await supabase
-            .from("invoices")
-            .select("*", { count: "exact", head: true })
-            .eq("lease_id", lease.id)
-            .eq("status", "paid")
-            .gte("due_date", monthStart)
-            .lte("due_date", monthEnd);
+        if (overdueInvs && overdueInvs.length > 0) {
+          const overdueInvoices: OverdueInvoice[] = overdueInvs.map(
+            (inv: Record<string, unknown>) => ({
+              amount: String(Number(inv.amount || 0) - Number(inv.paid_amount || 0)),
+              dueDate: inv.due_date as string,
+              periodLabel: inv.period_start
+                ? `${format(parseISO(inv.period_start as string), "MMM yyyy")}`
+                : format(parseISO(inv.due_date as string), "MMM yyyy"),
+            })
+          );
 
-          if (!count || count === 0) {
-            // Fetch all overdue/unpaid invoices for this lease
-            const { data: overdueInvs } = await supabase
-              .from("invoices")
-              .select("amount, due_date, period_start, period_end")
-              .eq("lease_id", lease.id)
-              .in("status", ["overdue", "partial", "pending"])
-              .lt("due_date", format(today, "yyyy-MM-dd"))
-              .order("due_date", { ascending: true });
+          const totalOverdue = overdueInvoices
+            .reduce((sum, inv) => sum + Number(inv.amount), 0)
+            .toFixed(2);
 
-            const overdueInvoices: OverdueInvoice[] = (overdueInvs || []).map(
-              (inv: Record<string, unknown>) => ({
-                amount: String(inv.amount),
-                dueDate: inv.due_date as string,
-                periodLabel: inv.period_start
-                  ? `${format(parseISO(inv.period_start as string), "MMM yyyy")}`
-                  : format(parseISO(inv.due_date as string), "MMM yyyy"),
-              })
-            );
-
-            const totalOverdue = overdueInvoices
-              .reduce((sum, inv) => sum + Number(inv.amount), 0)
-              .toFixed(2);
-
-            gathered.push({
-              ...baseParams,
-              reminderType: "rent_overdue",
-              overdueInvoices,
-              totalOverdue,
-            });
-          }
+          gathered.push({
+            ...baseParams,
+            amount: totalOverdue,
+            dueDate: overdueInvs[0].due_date as string,
+            reminderType: "rent_overdue",
+            overdueInvoices,
+            totalOverdue,
+          });
         }
       }
 
