@@ -3,12 +3,41 @@ import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 
 const anthropic = new Anthropic();
 
+const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
+const MAX_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 2000;
+
 // Use service role key for webhook context (no cookie-based auth)
 function getAdminSupabase() {
   return createSupabaseAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+}
+
+// Retry wrapper for Claude API calls with exponential backoff
+async function callClaude(
+  params: Anthropic.MessageCreateParams
+): Promise<Anthropic.Message> {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      return await anthropic.messages.create(params);
+    } catch (error: unknown) {
+      const isRateLimit =
+        error instanceof Error &&
+        (error.message.includes("429") || error.message.includes("rate_limit"));
+      if (isRateLimit && attempt < MAX_RETRIES - 1) {
+        const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.log(
+          `[WhatsApp Agent] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error("Max retries exceeded");
 }
 
 // ── Tool definitions for Claude ───────────────────────────────────────────
@@ -934,8 +963,8 @@ BEHAVIOR RULES:
     { role: "user", content: message },
   ];
 
-  let response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+  let response = await callClaude({
+    model: CLAUDE_MODEL,
     max_tokens: 1024,
     system: systemPrompt,
     tools,
@@ -971,8 +1000,8 @@ BEHAVIOR RULES:
 
     messages.push({ role: "user", content: toolResults });
 
-    response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+    response = await callClaude({
+      model: CLAUDE_MODEL,
       max_tokens: 1024,
       system: systemPrompt,
       tools,
