@@ -76,7 +76,7 @@ const tools: Anthropic.Tool[] = [
   {
     name: "get_tenant_invoices",
     description:
-      "Get invoices for a tenant. Can filter by status. Returns invoice id, amount, due date, status, paid amount, period, and unit/property info.",
+      "Get invoices for a tenant. Can filter by status and/or month. Returns invoice id, amount, due date, status, paid amount, period, and unit/property info.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -89,6 +89,11 @@ const tools: Anthropic.Tool[] = [
           enum: ["unpaid", "paid", "all"],
           description:
             "Filter: 'unpaid' = pending/overdue/partial (default), 'paid' = paid only, 'all' = everything",
+        },
+        month: {
+          type: "string",
+          description:
+            "Optional: filter by month in YYYY-MM format (e.g. '2026-04' for April 2026). Filters on period_start.",
         },
         limit: {
           type: "number",
@@ -283,10 +288,16 @@ const tools: Anthropic.Tool[] = [
   {
     name: "get_overdue_summary",
     description:
-      "Get a summary of all overdue invoices across all properties. Shows which tenants owe money and how much.",
+      "Get a summary of all unpaid invoices (pending, overdue, partial) across all properties. Can filter by month. Shows which tenants owe money and how much.",
     input_schema: {
       type: "object" as const,
-      properties: {},
+      properties: {
+        month: {
+          type: "string",
+          description:
+            "Optional: filter by month in YYYY-MM format (e.g. '2026-04' for April). If omitted, shows all unpaid invoices.",
+        },
+      },
       required: [],
     },
   },
@@ -473,13 +484,14 @@ async function executeTool(
     case "get_tenant_invoices": {
       const tenantId = input.tenant_id as string;
       const statusFilter = (input.status_filter as string) || "unpaid";
+      const monthFilter = input.month as string | undefined;
       const limit = (input.limit as number) || 10;
 
       let query = supabase
         .from("invoices")
         .select(
           `
-          id, amount, paid_amount, due_date, status, period_start, period_end, lease_id, notes,
+          id, amount, paid_amount, due_date, status, period_start, period_end, lease_id, notes, paid_date,
           units(unit_number, properties(name))
         `
         )
@@ -491,6 +503,15 @@ async function executeTool(
         query = query.in("status", ["pending", "overdue", "partial"]);
       } else if (statusFilter === "paid") {
         query = query.eq("status", "paid");
+      }
+
+      // Filter by month (YYYY-MM) using period_start
+      if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
+        const monthStart = `${monthFilter}-01`;
+        const [y, m] = monthFilter.split("-").map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        const monthEnd = `${monthFilter}-${String(lastDay).padStart(2, "0")}`;
+        query = query.gte("period_start", monthStart).lte("period_start", monthEnd);
       }
 
       const { data: invoices, error } = await query;
@@ -867,21 +888,34 @@ async function executeTool(
     }
 
     case "get_overdue_summary": {
-      const { data: overdueInvoices, error } = await supabase
+      const monthFilter = input.month as string | undefined;
+
+      let query = supabase
         .from("invoices")
         .select(
           `
-          id, amount, paid_amount, due_date, status,
+          id, amount, paid_amount, due_date, status, period_start,
           tenants(full_name, phone),
           units(unit_number, properties(name))
         `
         )
-        .in("status", ["overdue", "partial"])
+        .in("status", ["pending", "overdue", "partial"])
         .order("due_date", { ascending: true });
+
+      // Filter by month if provided
+      if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
+        const monthStart = `${monthFilter}-01`;
+        const [y, m] = monthFilter.split("-").map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        const monthEnd = `${monthFilter}-${String(lastDay).padStart(2, "0")}`;
+        query = query.gte("period_start", monthStart).lte("period_start", monthEnd);
+      }
+
+      const { data: overdueInvoices, error } = await query;
 
       if (error) return JSON.stringify({ error: error.message });
       if (!overdueInvoices || overdueInvoices.length === 0)
-        return JSON.stringify({ message: "No overdue invoices! Everything is up to date." });
+        return JSON.stringify({ message: monthFilter ? `No unpaid invoices for ${monthFilter}.` : "No unpaid invoices! Everything is up to date." });
 
       let totalOverdue = 0;
       const summary = overdueInvoices.map((inv: Record<string, unknown>) => {
