@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
             results.rentUpcoming++;
           }
 
-          // Overdue rent reminder — invoice-driven (checks ALL overdue invoices, not just current month)
+          // Overdue rent reminder — invoice-driven (checks ALL overdue invoices)
           if (overdueSetting.is_enabled) {
             // Fetch all overdue/unpaid invoices for this lease where due_date has passed
             const { data: overdueInvs } = await supabase
@@ -143,14 +143,20 @@ export async function GET(request: NextRequest) {
               .order("due_date", { ascending: true });
 
             if (overdueInvs && overdueInvs.length > 0) {
-              // Calculate days since the OLDEST overdue invoice to determine send schedule
-              const oldestDueDate = parseISO(overdueInvs[0].due_date as string);
-              const daysOverdue = differenceInDays(today, oldestDueDate);
+              // Check when the last overdue reminder was sent for this tenant
+              const repeatDays = overdueSetting.repeat_interval_days || 3;
+              const { data: lastReminder } = await supabase
+                .from("reminder_logs")
+                .select("sent_at")
+                .eq("tenant_id", tenant.id as string)
+                .eq("reminder_type", "rent_overdue")
+                .eq("status", "sent")
+                .order("sent_at", { ascending: false })
+                .limit(1)
+                .single();
 
-              const shouldSend = overdueSetting.days_before.includes(daysOverdue) ||
-                (overdueSetting.repeat_interval_days && overdueSetting.repeat_interval_days > 0 &&
-                  daysOverdue > Math.max(...overdueSetting.days_before, 0) &&
-                  (daysOverdue - Math.max(...overdueSetting.days_before, 0)) % overdueSetting.repeat_interval_days === 0);
+              const shouldSend = !lastReminder ||
+                differenceInDays(today, parseISO(lastReminder.sent_at as string)) >= repeatDays;
 
               if (shouldSend) {
                 const overdueInvoices: OverdueInvoice[] = overdueInvs.map(
