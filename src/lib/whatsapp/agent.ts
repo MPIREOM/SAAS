@@ -1025,8 +1025,8 @@ async function executeTool(
         },
       });
 
-      const tenant = lease.tenants as Record<string, unknown> | null;
-      const unit = lease.units as Record<string, unknown> | null;
+      const tenant = lease.tenants as unknown as Record<string, unknown> | null;
+      const unit = lease.units as unknown as Record<string, unknown> | null;
 
       return JSON.stringify({
         success: true,
