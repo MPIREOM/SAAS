@@ -1163,6 +1163,59 @@ async function executeTool(
   }
 }
 
+// ── Conversation history ──────────────────────────────────────────────────
+
+const MAX_HISTORY_MESSAGES = 20; // Last 20 messages (10 exchanges)
+const HISTORY_WINDOW_MINUTES = 60; // Only load messages from last hour
+
+async function loadConversationHistory(
+  phone: string
+): Promise<Anthropic.MessageParam[]> {
+  const supabase = getAdminSupabase();
+  const cutoff = new Date(Date.now() - HISTORY_WINDOW_MINUTES * 60 * 1000).toISOString();
+
+  const { data: history } = await supabase
+    .from("whatsapp_conversations")
+    .select("role, message")
+    .eq("user_phone", phone)
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(MAX_HISTORY_MESSAGES);
+
+  if (!history || history.length === 0) return [];
+
+  // Convert to Claude message format, ensuring alternating user/assistant
+  const messages: Anthropic.MessageParam[] = [];
+  for (const entry of history) {
+    const role = entry.role as "user" | "assistant";
+    // Ensure messages alternate properly
+    if (messages.length > 0 && messages[messages.length - 1].role === role) {
+      // Same role twice — skip to maintain alternation
+      continue;
+    }
+    messages.push({ role, content: entry.message });
+  }
+
+  // Ensure first message is from user (Claude requirement)
+  while (messages.length > 0 && messages[0].role !== "user") {
+    messages.shift();
+  }
+
+  return messages;
+}
+
+async function saveConversationMessage(
+  phone: string,
+  role: "user" | "assistant",
+  message: string
+): Promise<void> {
+  const supabase = getAdminSupabase();
+  await supabase
+    .from("whatsapp_conversations")
+    .insert({ user_phone: phone, role, message })
+    .then(() => {}); // fire and forget
+}
+
 // ── Main agent function ───────────────────────────────────────────────────
 
 export async function processWhatsAppMessage(
@@ -1184,7 +1237,13 @@ export async function processWhatsAppMessage(
     return "Sorry, your phone number is not registered as an admin. Please register your WhatsApp number in the system settings first.";
   }
 
-  // 2. Run the Claude agent loop
+  // 2. Save incoming message to conversation history
+  await saveConversationMessage(cleanPhone, "user", message);
+
+  // 3. Load conversation history for context
+  const conversationHistory = await loadConversationHistory(cleanPhone);
+
+  // 4. Run the Claude agent loop
   const today = new Date().toISOString().split("T")[0];
   const systemPrompt = `You are MPIRE Assistant, an intelligent WhatsApp property management agent for ${user.full_name}. You are helpful, proactive, and take action.
 
@@ -1218,11 +1277,17 @@ BEHAVIOR RULES:
 - When updating rent, search for the tenant first, get their lease ID, then use update_lease_rent.
 - When cancelling an invoice, search for the tenant and their invoices first, then cancel the right one.
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
-- If genuinely unsure what the user wants, ask a SHORT clarifying question.`;
+- If genuinely unsure what the user wants, ask a SHORT clarifying question.
+- You have CONVERSATION HISTORY. When the user says "yes", "ok", "do it", "go ahead", etc., refer back to what you previously offered or discussed and take that action.`;
 
-  const messages: Anthropic.MessageParam[] = [
-    { role: "user", content: message },
-  ];
+  // Build messages: conversation history + current message
+  // The current message is already the last entry in history, so use history directly
+  const messages: Anthropic.MessageParam[] = [...conversationHistory];
+
+  // If history is empty or doesn't end with current message, add it
+  if (messages.length === 0) {
+    messages.push({ role: "user", content: message });
+  }
 
   let response = await callClaude({
     model: CLAUDE_MODEL,
@@ -1274,5 +1339,10 @@ BEHAVIOR RULES:
   const textBlocks = response.content.filter(
     (block): block is Anthropic.TextBlock => block.type === "text"
   );
-  return textBlocks.map((block) => block.text).join("\n") || "Done!";
+  const reply = textBlocks.map((block) => block.text).join("\n") || "Done!";
+
+  // 5. Save agent reply to conversation history
+  await saveConversationMessage(cleanPhone, "assistant", reply);
+
+  return reply;
 }
