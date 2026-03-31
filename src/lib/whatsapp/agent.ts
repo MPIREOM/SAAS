@@ -300,6 +300,76 @@ const tools: Anthropic.Tool[] = [
       required: [],
     },
   },
+  {
+    name: "update_lease_rent",
+    description:
+      "Update the monthly rent amount on a tenant's lease. Also updates the unit's rent_amount. Use when the user says rent changed, increased, decreased, or needs to be updated.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        lease_id: {
+          type: "string",
+          description: "The lease UUID (get from tenant search results)",
+        },
+        new_rent: {
+          type: "number",
+          description: "New monthly rent amount in OMR",
+        },
+      },
+      required: ["lease_id", "new_rent"],
+    },
+  },
+  {
+    name: "update_invoice",
+    description:
+      "Update an existing invoice's amount, due date, or notes. Use when the user wants to adjust/correct an invoice.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        invoice_id: {
+          type: "string",
+          description: "The invoice UUID",
+        },
+        amount: {
+          type: "number",
+          description: "New invoice amount in OMR",
+        },
+        due_date: {
+          type: "string",
+          description: "New due date in YYYY-MM-DD format",
+        },
+        notes: {
+          type: "string",
+          description: "Updated notes",
+        },
+      },
+      required: ["invoice_id"],
+    },
+  },
+  {
+    name: "cancel_invoice",
+    description:
+      "Cancel or write off an invoice. Use 'cancelled' when the invoice was created by mistake or is no longer needed. Use 'written_off' when the debt is uncollectable.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        invoice_id: {
+          type: "string",
+          description: "The invoice UUID to cancel",
+        },
+        action: {
+          type: "string",
+          enum: ["cancelled", "written_off"],
+          description: "Whether to cancel or write off the invoice",
+        },
+        reason: {
+          type: "string",
+          description: "Reason for cancellation/write-off",
+        },
+      },
+      required: ["invoice_id", "action"],
+    },
+  },
 ];
 
 // ── Tool execution ────────────────────────────────────────────────────────
@@ -902,6 +972,192 @@ async function executeTool(
       });
     }
 
+    case "update_lease_rent": {
+      const leaseId = input.lease_id as string;
+      const newRent = Number(input.new_rent);
+
+      if (!newRent || newRent <= 0)
+        return JSON.stringify({ error: "Invalid rent amount" });
+
+      // Get current lease info
+      const { data: lease, error: fetchError } = await supabase
+        .from("leases")
+        .select("id, monthly_rent, tenant_id, unit_id, tenants(full_name), units(unit_number)")
+        .eq("id", leaseId)
+        .single();
+
+      if (fetchError || !lease)
+        return JSON.stringify({ error: "Lease not found" });
+
+      const oldRent = Number(lease.monthly_rent);
+
+      // Update lease rent
+      const { error: leaseError } = await supabase
+        .from("leases")
+        .update({
+          monthly_rent: newRent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", leaseId);
+
+      if (leaseError)
+        return JSON.stringify({ error: leaseError.message });
+
+      // Also update the unit's rent_amount
+      await supabase
+        .from("units")
+        .update({
+          rent_amount: newRent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", lease.unit_id);
+
+      // Audit log
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "update",
+        entity_type: "lease",
+        entity_id: leaseId,
+        metadata: {
+          old_rent: oldRent,
+          new_rent: newRent,
+          source: "whatsapp_agent",
+        },
+      });
+
+      const tenant = lease.tenants as Record<string, unknown> | null;
+      const unit = lease.units as Record<string, unknown> | null;
+
+      return JSON.stringify({
+        success: true,
+        tenant_name: tenant?.full_name,
+        unit_number: unit?.unit_number,
+        old_rent: oldRent,
+        new_rent: newRent,
+      });
+    }
+
+    case "update_invoice": {
+      const invoiceId = input.invoice_id as string;
+
+      // Fetch current invoice
+      const { data: invoice, error: fetchError } = await supabase
+        .from("invoices")
+        .select("id, amount, due_date, status, notes, tenant_id, tenants(full_name)")
+        .eq("id", invoiceId)
+        .single();
+
+      if (fetchError || !invoice)
+        return JSON.stringify({ error: "Invoice not found" });
+
+      if (invoice.status === "paid")
+        return JSON.stringify({
+          error: "Cannot update a paid invoice. Cancel it first and create a new one if needed.",
+        });
+
+      const updates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (input.amount !== undefined) updates.amount = Number(input.amount);
+      if (input.due_date) updates.due_date = input.due_date;
+      if (input.notes !== undefined) updates.notes = input.notes;
+
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update(updates)
+        .eq("id", invoiceId);
+
+      if (updateError)
+        return JSON.stringify({ error: updateError.message });
+
+      // Audit log
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "update",
+        entity_type: "invoice",
+        entity_id: invoiceId,
+        metadata: {
+          changes: updates,
+          source: "whatsapp_agent",
+        },
+      });
+
+      const tenant = invoice.tenants as Record<string, unknown> | null;
+
+      return JSON.stringify({
+        success: true,
+        invoice_id: invoiceId,
+        tenant_name: tenant?.full_name,
+        new_amount: updates.amount || invoice.amount,
+        new_due_date: updates.due_date || invoice.due_date,
+      });
+    }
+
+    case "cancel_invoice": {
+      const invoiceId = input.invoice_id as string;
+      const action = input.action as string;
+      const reason = (input.reason as string) || `${action} via WhatsApp agent`;
+
+      // Fetch invoice
+      const { data: invoice, error: fetchError } = await supabase
+        .from("invoices")
+        .select("id, amount, status, tenant_id, tenants(full_name), units(unit_number)")
+        .eq("id", invoiceId)
+        .single();
+
+      if (fetchError || !invoice)
+        return JSON.stringify({ error: "Invoice not found" });
+
+      if (invoice.status === "paid")
+        return JSON.stringify({
+          error: "Cannot cancel a paid invoice. It has already been settled.",
+        });
+
+      if (invoice.status === "cancelled" || invoice.status === "written_off")
+        return JSON.stringify({
+          error: `Invoice is already ${invoice.status}`,
+        });
+
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update({
+          status: action,
+          notes: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", invoiceId);
+
+      if (updateError)
+        return JSON.stringify({ error: updateError.message });
+
+      // Audit log
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "status_update",
+        entity_type: "invoice",
+        entity_id: invoiceId,
+        metadata: {
+          new_status: action,
+          reason,
+          source: "whatsapp_agent",
+        },
+      });
+
+      const tenant = invoice.tenants as Record<string, unknown> | null;
+      const unit = invoice.units as Record<string, unknown> | null;
+
+      return JSON.stringify({
+        success: true,
+        invoice_id: invoiceId,
+        tenant_name: tenant?.full_name,
+        unit_number: unit?.unit_number,
+        amount: invoice.amount,
+        new_status: action,
+        reason,
+      });
+    }
+
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
@@ -944,6 +1200,9 @@ YOU CAN:
 6. Today's summary — "what's happening today?", "daily summary"
 7. List tenants — "show all tenants", "who lives in Sunset Tower?"
 8. View property info — "show units in Tower A", "list properties"
+9. Update rent — "change rent for unit 17 to 230 OMR", "increase Ahmad's rent to 300"
+10. Update invoices — "change invoice amount to 230 OMR", "update due date"
+11. Cancel invoices — "cancel invoice for Ahmad", "write off unit 5 invoice"
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
@@ -956,6 +1215,8 @@ BEHAVIOR RULES:
 - Be concise — this is WhatsApp. Use short confirmations with key details.
 - Use bullet points and line breaks for readability.
 - Include amounts with "OMR" suffix.
+- When updating rent, search for the tenant first, get their lease ID, then use update_lease_rent.
+- When cancelling an invoice, search for the tenant and their invoices first, then cancel the right one.
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
 - If genuinely unsure what the user wants, ask a SHORT clarifying question.`;
 
