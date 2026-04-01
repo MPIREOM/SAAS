@@ -60,8 +60,10 @@ export default function PublicMaintenanceRequestPage({
     setSubmitting(true);
     setError("");
 
+    // Capture form element before any await (React nullifies synthetic events)
+    const form = e.currentTarget;
     const { locale, token } = await params;
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     formData.set("token", token);
 
     // Append media files
@@ -75,15 +77,15 @@ export default function PublicMaintenanceRequestPage({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Failed to submit");
+        const data = await res.json().catch(() => ({}));
+        setError((data as Record<string, string>).error || "Failed to submit request");
         setSubmitting(false);
         return;
       }
 
       router.push(`/${locale}/maintenance-request/${token}/success`);
     } catch {
-      setError("Something went wrong");
+      setError("Something went wrong. Please try again.");
       setSubmitting(false);
     }
   };
