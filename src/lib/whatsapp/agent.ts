@@ -1268,7 +1268,7 @@ export async function processWhatsAppMessage(
     .single();
 
   if (!user) {
-    return "Sorry, your phone number is not registered as an admin. Please register your WhatsApp number in the system settings first.";
+    return "This is an automated number and does not receive messages. For inquiries, please contact us on WhatsApp at +968 7733 2220.\n\nهذا رقم آلي ولا يستقبل رسائل. للاستفسار، يرجى التواصل معنا عبر واتساب على الرقم 2220 7733 968+";
   }
 
   // 2. Save incoming message to conversation history
