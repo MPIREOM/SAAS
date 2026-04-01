@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const submitSchema = z.object({
   token: z.string().min(1),
   category: z.enum(["plumbing", "electrical", "ac", "structural", "painting", "cleaning", "pest", "other"]),
@@ -70,51 +72,53 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Send instant alert for high/emergency maintenance
+  // Send instant alert for high/emergency maintenance (non-blocking)
   if (urgency === "high" || urgency === "emergency") {
-    // Fetch unit and tenant info for the alert
-    const [unitRes, tenantRes] = await Promise.all([
-      supabase.from("units").select("unit_number, properties:property_id(name)").eq("id", tokenData.unit_id).single(),
-      tokenData.tenant_id
-        ? supabase.from("tenants").select("full_name").eq("id", tokenData.tenant_id).single()
-        : Promise.resolve({ data: null }),
-    ]);
+    try {
+      const [unitRes, tenantRes] = await Promise.all([
+        supabase.from("units").select("unit_number, properties:property_id(name)").eq("id", tokenData.unit_id).single(),
+        tokenData.tenant_id
+          ? supabase.from("tenants").select("full_name").eq("id", tokenData.tenant_id).single()
+          : Promise.resolve({ data: null }),
+      ]);
 
-    const unitInfo = unitRes.data;
-    const tenantName = tenantRes.data?.full_name || "Unknown";
-    const propertyName = (unitInfo?.properties as unknown as Record<string, unknown>)?.name || "Unknown";
-    const unitNumber = unitInfo?.unit_number || "Unknown";
+      const unitInfo = unitRes.data;
+      const tenantName = tenantRes.data?.full_name || "Unknown";
+      const propertyName = (unitInfo?.properties as unknown as Record<string, unknown>)?.name || "Unknown";
+      const unitNumber = unitInfo?.unit_number || "Unknown";
 
-    // Fetch admin recipients
-    const { data: recipients } = await supabase
-      .from("admin_notification_recipients")
-      .select("name, email, phone, notify_email, notify_whatsapp")
-      .eq("is_active", true);
+      const { data: recipients } = await supabase
+        .from("admin_notification_recipients")
+        .select("name, email, phone, notify_email, notify_whatsapp")
+        .eq("is_active", true);
 
-    if (recipients && recipients.length > 0) {
-      const { notifyAdmins, buildAdminEmailHtml } = await import("@/lib/notifications/admin-notify");
+      if (recipients && recipients.length > 0) {
+        const { notifyAdmins, buildAdminEmailHtml } = await import("@/lib/notifications/admin-notify");
 
-      const alertTitle = `🔴 ${urgency.toUpperCase()} Maintenance Request`;
-      const details = `${tenantName} reported a ${category} issue in ${propertyName} - Unit ${unitNumber}: "${description.slice(0, 100)}${description.length > 100 ? "..." : ""}"`;
+        const alertTitle = `🔴 ${urgency.toUpperCase()} Maintenance Request`;
 
-      await notifyAdmins(recipients, {
-        subject: `${alertTitle} - ${propertyName} Unit ${unitNumber}`,
-        emailHtml: buildAdminEmailHtml({
-          title: alertTitle,
-          sections: [{
-            heading: "Request Details",
-            items: [
-              `<strong>Property:</strong> ${propertyName} — Unit ${unitNumber}`,
-              `<strong>Tenant:</strong> ${tenantName}`,
-              `<strong>Category:</strong> ${category}`,
-              `<strong>Urgency:</strong> ${urgency.toUpperCase()}`,
-              `<strong>Description:</strong> ${description.slice(0, 200)}`,
-            ],
-          }],
-          footer: "This is an automatic alert from MPIRE Property Management.",
-        }),
-        whatsappText: `⚠️ *${alertTitle}*\n\n📍 ${propertyName} — Unit ${unitNumber}\n👤 ${tenantName}\n🔧 ${category}\n📝 ${description.slice(0, 150)}\n\nPlease review this request in the dashboard.`,
-      });
+        await notifyAdmins(recipients, {
+          subject: `${alertTitle} - ${propertyName} Unit ${unitNumber}`,
+          emailHtml: buildAdminEmailHtml({
+            title: alertTitle,
+            sections: [{
+              heading: "Request Details",
+              items: [
+                `<strong>Property:</strong> ${propertyName} — Unit ${unitNumber}`,
+                `<strong>Tenant:</strong> ${tenantName}`,
+                `<strong>Category:</strong> ${category}`,
+                `<strong>Urgency:</strong> ${urgency.toUpperCase()}`,
+                `<strong>Description:</strong> ${description.slice(0, 200)}`,
+              ],
+            }],
+            footer: "This is an automatic alert from MPIRE Property Management.",
+          }),
+          whatsappText: `⚠️ *${alertTitle}*\n\n📍 ${propertyName} — Unit ${unitNumber}\n👤 ${tenantName}\n🔧 ${category}\n📝 ${description.slice(0, 150)}\n\nPlease review this request in the dashboard.`,
+        });
+      }
+    } catch (err) {
+      console.error("Admin notification failed:", err instanceof Error ? err.message : err);
+      // Don't block the request — maintenance was already created
     }
   }
 
