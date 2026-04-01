@@ -131,6 +131,7 @@ async function gatherReminders(
   templateIndex: Map<string, NotificationTemplate>
 ): Promise<ReminderParams[]> {
   const today = new Date();
+  const todayStr = format(today, "yyyy-MM-dd");
   const gathered: ReminderParams[] = [];
 
   // Load configurable settings
@@ -150,7 +151,7 @@ async function gatherReminders(
     .from("leases")
     .select(`
       *,
-      tenants(id, full_name, phone, email, language_preference),
+      tenants(id, full_name, phone, email, language_preference, notifications_enabled),
       units(unit_number, property_id, properties(name))
     `)
     .eq("is_active", true);
@@ -169,11 +170,8 @@ async function gatherReminders(
       const propertyId = unit.property_id as string;
       if (disabledPropertyIds.has(propertyId)) continue;
 
-      const dueDay = lease.payment_due_day || 1;
-      const currentMonth = today.getMonth();
-      const currentYear = today.getFullYear();
-      const dueDate = new Date(currentYear, currentMonth, dueDay);
-      const daysUntilDue = differenceInDays(dueDate, today);
+      // Skip tenants with notifications disabled
+      if (tenant.notifications_enabled === false) continue;
 
       const baseParams: Omit<ReminderParams, "reminderType"> = {
         tenantId: tenant.id as string,
@@ -184,23 +182,39 @@ async function gatherReminders(
         unitNumber: unit.unit_number as string,
         propertyName: (property?.name as string) || "",
         amount: String(lease.monthly_rent),
-        dueDate: format(dueDate, "yyyy-MM-dd"),
+        dueDate: todayStr,
       };
 
-      // Upcoming rent reminder (configurable days before)
-      if (upcomingSetting.is_enabled && daysUntilDue > 0 && upcomingSetting.days_before.includes(daysUntilDue)) {
-        gathered.push({ ...baseParams, reminderType: "rent_upcoming" });
+      // Upcoming rent — find pending invoices with due_date >= today
+      if (upcomingSetting.is_enabled) {
+        const { data: upcomingInvs } = await supabase
+          .from("invoices")
+          .select("amount, due_date, period_start")
+          .eq("lease_id", lease.id)
+          .eq("status", "pending")
+          .gte("due_date", todayStr)
+          .order("due_date", { ascending: true })
+          .limit(1);
+
+        if (upcomingInvs && upcomingInvs.length > 0) {
+          const inv = upcomingInvs[0];
+          gathered.push({
+            ...baseParams,
+            amount: String(inv.amount),
+            dueDate: inv.due_date as string,
+            reminderType: "rent_upcoming",
+          });
+        }
       }
 
-      // Overdue rent reminder — invoice-driven (checks ALL overdue invoices)
-      if (overdueSetting.is_enabled && daysUntilDue < 0) {
-        // Fetch all overdue/unpaid invoices for this lease where due_date has passed
+      // Overdue rent — find all overdue/unpaid invoices with due_date < today
+      if (overdueSetting.is_enabled) {
         const { data: overdueInvs } = await supabase
           .from("invoices")
           .select("amount, paid_amount, due_date, period_start, period_end")
           .eq("lease_id", lease.id)
           .in("status", ["overdue", "partial", "pending"])
-          .lt("due_date", format(today, "yyyy-MM-dd"))
+          .lt("due_date", todayStr)
           .order("due_date", { ascending: true });
 
         if (overdueInvs && overdueInvs.length > 0) {
