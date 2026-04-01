@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       tenant_id,
       unit_id,
       created_by: user.id,
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: null,
     })
     .select("id, token")
     .single();
