@@ -6,7 +6,7 @@ import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, parseISO } from "date-fns";
 
 // Vercel Cron: runs daily at 8:00 AM (configured in vercel.json)
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function createSupabaseAdmin() {
   return createServerClient(
@@ -29,11 +29,10 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
-  // Use Oman timezone (UTC+4) for consistent date calculations
-  const nowUtc = new Date();
-  const omanOffset = 4 * 60 * 60 * 1000;
-  const today = new Date(nowUtc.getTime() + omanOffset);
-  const todayStr = today.toISOString().split("T")[0];
+  // Use Oman timezone (UTC+4) for date string, but keep `today` as real UTC for differenceInDays
+  const today = new Date();
+  const omanNow = new Date(today.getTime() + 4 * 60 * 60 * 1000);
+  const todayStr = omanNow.toISOString().split("T")[0];
 
   const results = {
     rentUpcoming: 0,
@@ -64,7 +63,7 @@ export async function GET(request: NextRequest) {
     const settingsMap = new Map<string, { days_before: number[]; repeat_interval_days: number | null; is_enabled: boolean }>();
     // Defaults
     settingsMap.set("rent_upcoming", { days_before: [3], repeat_interval_days: null, is_enabled: true });
-    settingsMap.set("rent_overdue", { days_before: [1], repeat_interval_days: 3, is_enabled: true });
+    settingsMap.set("rent_overdue", { days_before: [1], repeat_interval_days: 1, is_enabled: true });
     settingsMap.set("lease_expiry", { days_before: [60, 30, 7], repeat_interval_days: null, is_enabled: true });
     settingsMap.set("cheque_due", { days_before: [3], repeat_interval_days: null, is_enabled: true });
     if (settingsRows) {
@@ -112,8 +111,8 @@ export async function GET(request: NextRequest) {
           if (tenant.notifications_enabled === false) continue;
 
           const dueDay = lease.payment_due_day || 1;
-          const currentMonth = today.getMonth();
-          const currentYear = today.getFullYear();
+          const currentMonth = omanNow.getMonth();
+          const currentYear = omanNow.getFullYear();
           const dueDate = new Date(currentYear, currentMonth, dueDay);
           const daysUntilDue = differenceInDays(dueDate, today);
 
