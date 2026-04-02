@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -185,7 +186,7 @@ export function CreateInvoiceButton() {
         {t("createInvoice")}
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/50"
@@ -384,7 +385,8 @@ export function CreateInvoiceButton() {
               )}
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
