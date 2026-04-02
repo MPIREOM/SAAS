@@ -430,7 +430,10 @@
     "allProperties": "جميع العقارات",
     "writtenOff": "مشطوبة",
     "cancelled": "ملغاة",
-    "resolved": "محلولة"
+    "resolved": "محلولة",
+    "createInvoice": "إنشاء فاتورة",
+    "periodStart": "بداية الفترة",
+    "periodEnd": "نهاية الفترة"
   },
   "cheques": {
     "title": "الشيكات",
