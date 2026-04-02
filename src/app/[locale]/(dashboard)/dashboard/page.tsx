@@ -132,6 +132,13 @@ async function getDashboardStats(selectedMonth?: string, selectedYear?: string) 
     .lte("expense_date", monthEnd);
   expensesQuery = filterByProperties(expensesQuery, propertyIds);
 
+  // Pre-fetch accessible unit IDs for filtering maintenance requests
+  let accessibleUnitIds: string[] = [];
+  if (propertyIds !== null) {
+    const { data: accUnits } = await supabase.from("units").select("id").in("property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
+    accessibleUnitIds = (accUnits || []).map((u) => u.id);
+  }
+
   // Units for filtering invoices
   let unitsForInvoicesQuery = supabase
     .from("units")
@@ -152,7 +159,13 @@ async function getDashboardStats(selectedMonth?: string, selectedYear?: string) 
     unitsQuery,
     occupiedQuery,
     supabase.from("tenants").select("*", { count: "exact", head: true }).eq("status", "active"),
-    supabase.from("maintenance_requests").select("*", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+    (() => {
+      let mq = supabase.from("maintenance_requests").select("*", { count: "exact", head: true }).in("status", ["open", "in_progress"]);
+      if (propertyIds !== null) {
+        mq = mq.in("unit_id", accessibleUnitIds.length > 0 ? accessibleUnitIds : ["__no_access__"]);
+      }
+      return mq;
+    })(),
     expensesQuery,
     unitsForInvoicesQuery,
     vacantUnitsQuery,

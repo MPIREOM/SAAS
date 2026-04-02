@@ -29,8 +29,11 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
-  const today = new Date();
-  const todayStr = format(today, "yyyy-MM-dd");
+  // Use Oman timezone (UTC+4) for consistent date calculations
+  const nowUtc = new Date();
+  const omanOffset = 4 * 60 * 60 * 1000;
+  const today = new Date(nowUtc.getTime() + omanOffset);
+  const todayStr = today.toISOString().split("T")[0];
 
   const results = {
     rentUpcoming: 0,
@@ -145,16 +148,16 @@ export async function GET(request: NextRequest) {
             if (overdueInvs && overdueInvs.length > 0) {
               // Check when the last overdue reminder was sent for this tenant
               const repeatDays = overdueSetting.repeat_interval_days || 3;
-              const { data: lastReminder } = await supabase
+              const { data: lastReminderRows } = await supabase
                 .from("reminder_logs")
                 .select("sent_at")
                 .eq("tenant_id", tenant.id as string)
                 .eq("reminder_type", "rent_overdue")
                 .eq("status", "sent")
                 .order("sent_at", { ascending: false })
-                .limit(1)
-                .single();
+                .limit(1);
 
+              const lastReminder = lastReminderRows?.[0] || null;
               const shouldSend = !lastReminder ||
                 differenceInDays(today, parseISO(lastReminder.sent_at as string)) >= repeatDays;
 

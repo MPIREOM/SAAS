@@ -33,10 +33,13 @@ export default function EditUnitPage() {
   useEffect(() => {
     async function fetchUnit() {
       const supabase = createClient();
+
+      // Verify the unit belongs to the expected property
       const { data, error } = await supabase
         .from("units")
         .select("*")
         .eq("id", unitId)
+        .eq("property_id", propertyId)
         .single();
 
       if (error || !data) {
@@ -63,6 +66,10 @@ export default function EditUnitPage() {
       setError(tc("required"));
       return;
     }
+    if (parseFloat(rentAmount) <= 0) {
+      setError("Rent amount must be greater than 0");
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -73,7 +80,7 @@ export default function EditUnitPage() {
       rent_amount: parseFloat(rentAmount),
       status,
     };
-    if (floor) payload.floor = parseInt(floor);
+    if (floor !== "") payload.floor = parseInt(floor);
     if (unitType) payload.unit_type = unitType;
     payload.bedrooms = bedrooms !== "" ? parseInt(bedrooms) : null;
     if (sizeSqm) payload.size_sqm = parseFloat(sizeSqm);
@@ -211,6 +218,7 @@ export default function EditUnitPage() {
             <input
               type="number"
               step="0.01"
+              min="0.01"
               value={rentAmount}
               onChange={(e) => setRentAmount(e.target.value)}
               className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
