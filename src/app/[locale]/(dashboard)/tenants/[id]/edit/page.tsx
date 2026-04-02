@@ -23,6 +23,18 @@ interface Tenant {
   status: string;
 }
 
+interface Lease {
+  id: string;
+  start_date: string;
+  end_date: string;
+  monthly_rent: number;
+  security_deposit: number | null;
+  payment_due_day: number;
+  is_active: boolean;
+  unit_number: string;
+  property_name: string;
+}
+
 export default function EditTenantPage({
   params,
 }: {
@@ -37,6 +49,7 @@ export default function EditTenantPage({
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [cheques, setCheques] = useState<ChequeEntry[]>([]);
   const [chequesLoaded, setChequesLoaded] = useState(false);
+  const [leases, setLeases] = useState<Lease[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -72,6 +85,34 @@ export default function EditTenantPage({
             return;
           }
         }
+      }
+
+      // Load leases
+      const { data: leaseData } = await supabase
+        .from("leases")
+        .select("id, start_date, end_date, monthly_rent, security_deposit, payment_due_day, is_active, units(unit_number, properties:property_id(name))")
+        .eq("tenant_id", id)
+        .order("is_active", { ascending: false })
+        .order("start_date", { ascending: false });
+
+      if (leaseData) {
+        setLeases(
+          leaseData.map((l) => {
+            const unit = l.units as unknown as Record<string, unknown> | null;
+            const prop = unit?.properties as unknown as Record<string, unknown> | null;
+            return {
+              id: l.id,
+              start_date: l.start_date,
+              end_date: l.end_date,
+              monthly_rent: l.monthly_rent,
+              security_deposit: l.security_deposit,
+              payment_due_day: l.payment_due_day || 1,
+              is_active: l.is_active,
+              unit_number: (unit?.unit_number as string) || "",
+              property_name: (prop?.name as string) || "",
+            };
+          })
+        );
       }
 
       // Load existing cheques
@@ -134,6 +175,27 @@ export default function EditTenantPage({
       entity_id: tenant.id,
       metadata: { full_name: formData.get("full_name") as string },
     });
+
+    // Update leases
+    for (const lease of leases) {
+      const { error: leaseError } = await supabase
+        .from("leases")
+        .update({
+          start_date: lease.start_date,
+          end_date: lease.end_date,
+          monthly_rent: lease.monthly_rent,
+          security_deposit: lease.security_deposit,
+          payment_due_day: lease.payment_due_day,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", lease.id);
+
+      if (leaseError) {
+        setError(leaseError.message);
+        setLoading(false);
+        return;
+      }
+    }
 
     // Insert only new cheques (ones without an id)
     const newCheques = cheques.filter(
@@ -286,6 +348,118 @@ export default function EditTenantPage({
             </div>
           </div>
         </div>
+
+        {/* Lease Section */}
+        {leases.length > 0 && (
+          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+            <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
+              <FileText className="h-4 w-4 text-accent" />
+              {t("leaseInfo")}
+            </h2>
+            {leases.map((lease, idx) => (
+              <div
+                key={lease.id}
+                className="border border-border rounded-md p-4 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-text-secondary">
+                    {lease.property_name} — {t("unit")} {lease.unit_number}
+                  </span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      lease.is_active
+                        ? "bg-success/10 text-success"
+                        : "bg-text-secondary/10 text-text-secondary"
+                    }`}
+                  >
+                    {lease.is_active ? t("leaseActive") : t("leaseExpired")}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1.5">
+                      {t("startDate")}
+                    </label>
+                    <input
+                      type="date"
+                      value={lease.start_date}
+                      onChange={(e) => {
+                        const updated = [...leases];
+                        updated[idx] = { ...updated[idx], start_date: e.target.value };
+                        setLeases(updated);
+                      }}
+                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1.5">
+                      {t("endDate")}
+                    </label>
+                    <input
+                      type="date"
+                      value={lease.end_date}
+                      onChange={(e) => {
+                        const updated = [...leases];
+                        updated[idx] = { ...updated[idx], end_date: e.target.value };
+                        setLeases(updated);
+                      }}
+                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1.5">
+                      {t("monthlyRent")}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={lease.monthly_rent}
+                      onChange={(e) => {
+                        const updated = [...leases];
+                        updated[idx] = { ...updated[idx], monthly_rent: Number(e.target.value) };
+                        setLeases(updated);
+                      }}
+                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1.5">
+                      {t("securityDeposit")}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={lease.security_deposit || ""}
+                      onChange={(e) => {
+                        const updated = [...leases];
+                        updated[idx] = { ...updated[idx], security_deposit: e.target.value ? Number(e.target.value) : null };
+                        setLeases(updated);
+                      }}
+                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1.5">
+                      {t("paymentDueDay")}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="28"
+                      value={lease.payment_due_day}
+                      onChange={(e) => {
+                        const updated = [...leases];
+                        updated[idx] = { ...updated[idx], payment_due_day: Number(e.target.value) };
+                        setLeases(updated);
+                      }}
+                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Cheques Section */}
         {chequesLoaded && (
