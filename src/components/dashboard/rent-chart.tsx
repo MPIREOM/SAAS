@@ -60,7 +60,7 @@ export function RentChart({ propertyIds }: RentChartProps) {
       // Fetch invoices within the last 12 months, filtered by unit if needed
       let query = supabase
         .from("invoices")
-        .select("amount, due_date, status")
+        .select("amount, due_date, status, paid_amount")
         .gte("due_date", startDate)
         .order("due_date", { ascending: true });
 
