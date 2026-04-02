@@ -86,7 +86,7 @@ export default async function MaintenancePage({
     closed: "bg-text-secondary/10 text-text-secondary",
   };
 
-  const tabs = ["all", "open", "in_progress", "resolved"] as const;
+  const tabs = ["all", "open", "in_progress", "resolved", "closed"] as const;
 
   return (
     <div className="space-y-6">

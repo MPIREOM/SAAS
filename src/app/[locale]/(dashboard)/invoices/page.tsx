@@ -33,25 +33,6 @@ export default async function InvoicesPage({
   const t = await getTranslations("invoices");
   const supabase = await createClient();
 
-  // Auto-cancel pending invoices from inactive leases (moved-out tenants)
-  const { data: inactiveLeases } = await supabase
-    .from("leases")
-    .select("id")
-    .eq("is_active", false);
-
-  if (inactiveLeases && inactiveLeases.length > 0) {
-    const inactiveLeaseIds = inactiveLeases.map((l) => l.id);
-    await supabase
-      .from("invoices")
-      .update({
-        status: "cancelled",
-        notes: "Auto-cancelled: lease is no longer active",
-        updated_at: new Date().toISOString(),
-      })
-      .in("lease_id", inactiveLeaseIds)
-      .in("status", ["pending", "overdue", "partial"]);
-  }
-
   // Property-level access control
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
   let unitIds: string[] | null = null;
@@ -105,7 +86,7 @@ export default async function InvoicesPage({
   }
 
   if (propertyUnitIds !== null) {
-    query = query.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__none__"]);
+    query = query.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__no_access__"]);
   }
 
   // Pagination
@@ -135,7 +116,7 @@ export default async function InvoicesPage({
     countQuery = countQuery.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
   }
   if (propertyUnitIds !== null) {
-    countQuery = countQuery.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__none__"]);
+    countQuery = countQuery.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__no_access__"]);
   }
   const { count: totalCount } = await countQuery;
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
@@ -143,10 +124,39 @@ export default async function InvoicesPage({
   const { data: invoices } = await query
     .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
-  // Get available months for filter
+  // Build a summary query with the same filters (but no pagination) to get accurate totals
+  let summaryQuery = supabase
+    .from("invoices")
+    .select("amount, status, due_date, paid_amount");
+
+  if (status === "pending") {
+    summaryQuery = summaryQuery.in("status", ["pending", "overdue", "partial"]);
+  } else if (status === "paid") {
+    summaryQuery = summaryQuery.eq("status", "paid");
+  } else if (status === "resolved") {
+    summaryQuery = summaryQuery.in("status", ["written_off", "cancelled"]);
+  }
+  if (month) {
+    const [sy, sm] = month.split("-").map(Number);
+    const sms = `${sy}-${String(sm).padStart(2, "0")}-01`;
+    const sld = new Date(sy, sm, 0).getDate();
+    const sme = `${sy}-${String(sm).padStart(2, "0")}-${sld}`;
+    summaryQuery = summaryQuery.gte("due_date", sms).lte("due_date", sme);
+  }
+  if (unitIds !== null) {
+    summaryQuery = summaryQuery.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  }
+  if (propertyUnitIds !== null) {
+    summaryQuery = summaryQuery.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__no_access__"]);
+  }
+  const { data: summaryInvoices } = await summaryQuery;
+
+  // Get available months for filter — only show up to current month
+  const todayStr = new Date().toISOString().substring(0, 7);
   const { data: monthsRaw } = await supabase
     .from("invoices")
     .select("due_date")
+    .lte("due_date", new Date().toISOString().split("T")[0])
     .order("due_date", { ascending: false });
 
   const availableMonths = Array.from(
@@ -155,37 +165,34 @@ export default async function InvoicesPage({
         inv.due_date.substring(0, 7)
       )
     )
-  );
+  ).filter((m) => m <= todayStr);
 
-  // Compute summary stats
+  // Compute summary stats from ALL filtered invoices (not just current page)
   const allInvoices = invoices || [];
+  const allSummary = summaryInvoices || [];
   const now = new Date();
-  const totalAmount = allInvoices.reduce(
+  const totalAmount = allSummary.reduce(
     (sum, inv) => sum + Number(inv.amount || 0),
     0
   );
-  const paidInvoices = allInvoices.filter(
-    (inv) => (inv.status as string) === "paid"
-  );
-  const paidAmount = paidInvoices.reduce(
-    (sum, inv) => sum + Number(inv.amount || 0),
-    0
-  );
-  const pendingInvoices = allInvoices.filter(
+  const paidAmount = allSummary
+    .filter((inv) => (inv.status as string) === "paid")
+    .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+  const pendingCount = allSummary.filter(
     (inv) => (inv.status as string) === "pending"
-  );
-  const pendingAmount = pendingInvoices.reduce(
-    (sum, inv) => sum + Number(inv.amount || 0),
-    0
-  );
-  const overdueInvoices = allInvoices.filter(
+  ).length;
+  const pendingAmount = allSummary
+    .filter((inv) => (inv.status as string) === "pending")
+    .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+  const overdueList = allSummary.filter(
     (inv) =>
       (inv.status as string) === "overdue" ||
+      (inv.status as string) === "partial" ||
       ((inv.status as string) === "pending" &&
         new Date(inv.due_date as string) < now)
   );
-  const overdueAmount = overdueInvoices.reduce(
-    (sum, inv) => sum + Number(inv.amount || 0),
+  const overdueAmount = overdueList.reduce(
+    (sum, inv) => sum + Number(inv.amount || 0) - Number(inv.paid_amount || 0),
     0
   );
   const collectionRate =
@@ -241,7 +248,7 @@ export default async function InvoicesPage({
               </span>
             </p>
             <p className="text-xs text-text-secondary mt-1">
-              {allInvoices.length} {t("title").toLowerCase()}
+              {allSummary.length} {t("title").toLowerCase()}
             </p>
           </div>
         </div>
@@ -293,7 +300,7 @@ export default async function InvoicesPage({
               </span>
             </p>
             <p className="text-xs text-text-secondary mt-1">
-              {pendingInvoices.length} {t("pending").toLowerCase()}
+              {pendingCount} {t("pending").toLowerCase()}
             </p>
           </div>
         </div>
@@ -317,7 +324,7 @@ export default async function InvoicesPage({
               </span>
             </p>
             <p className="text-xs text-text-secondary mt-1">
-              {overdueInvoices.length} {t("overdue").toLowerCase()}
+              {overdueList.length} {t("overdue").toLowerCase()}
             </p>
           </div>
         </div>
@@ -604,7 +611,7 @@ export default async function InvoicesPage({
           {/* Footer */}
           <div className="px-5 py-3 border-t border-border flex items-center justify-between">
             <span className="text-xs text-text-secondary">
-              {allInvoices.length} {t("title").toLowerCase()}
+              {allSummary.length} {t("title").toLowerCase()}
             </span>
             <span className="text-xs font-mono font-medium text-text-secondary tabular-nums">
               {t("total")}: {formatAmount(totalAmount)} {CURRENCY.code}

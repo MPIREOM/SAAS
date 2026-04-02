@@ -92,6 +92,14 @@ export default function RenewLeasePage() {
       setError(tc("required"));
       return;
     }
+    if (endDate <= startDate) {
+      setError("End date must be after start date");
+      return;
+    }
+    if (Number(monthlyRent) <= 0) {
+      setError("Monthly rent must be greater than 0");
+      return;
+    }
 
     setSaving(true);
     setError("");

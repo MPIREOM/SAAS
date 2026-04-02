@@ -44,7 +44,10 @@ export async function GET(request: Request) {
     });
   }
 
-  const today = new Date();
+  // Use Oman timezone (UTC+4) for consistent date calculations
+  const nowUtc = new Date();
+  const omanOffset = 4 * 60 * 60 * 1000;
+  const today = new Date(nowUtc.getTime() + omanOffset);
   const currentDay = today.getDate();
 
   // --- Generate invoices for the CURRENT month ---

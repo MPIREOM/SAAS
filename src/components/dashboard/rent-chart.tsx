@@ -91,8 +91,8 @@ export function RentChart({ propertyIds }: RentChartProps) {
           .reduce((sum, inv) => sum + parseFloat(inv.amount as string), 0);
 
         const pending = monthInvoices
-          .filter((inv) => inv.status === "pending" || inv.status === "overdue")
-          .reduce((sum, inv) => sum + parseFloat(inv.amount as string), 0);
+          .filter((inv) => inv.status === "pending" || inv.status === "overdue" || inv.status === "partial")
+          .reduce((sum, inv) => sum + parseFloat(inv.amount as string) - parseFloat((inv.paid_amount as string) || "0"), 0);
 
         months.push({
           month: monthLabel,

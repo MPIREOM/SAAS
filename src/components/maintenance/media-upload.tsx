@@ -45,6 +45,7 @@ export function MediaUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
     const url = URL.createObjectURL(file);
     setVideoPreview(url);
     onVideoChange(file);
@@ -89,6 +90,7 @@ export function MediaUpload({
       f.type.startsWith("video/")
     );
     if (!file) return;
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
     const url = URL.createObjectURL(file);
     setVideoPreview(url);
     onVideoChange(file);

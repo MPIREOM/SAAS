@@ -176,6 +176,20 @@ export default function EditTenantPage({
       metadata: { full_name: formData.get("full_name") as string },
     });
 
+    // Validate leases
+    for (const lease of leases) {
+      if (lease.start_date && lease.end_date && lease.end_date <= lease.start_date) {
+        setError(`Lease for ${lease.unit_number}: end date must be after start date`);
+        setLoading(false);
+        return;
+      }
+      if (lease.monthly_rent !== undefined && lease.monthly_rent <= 0) {
+        setError(`Lease for ${lease.unit_number}: monthly rent must be greater than 0`);
+        setLoading(false);
+        return;
+      }
+    }
+
     // Update leases
     for (const lease of leases) {
       const { error: leaseError } = await supabase
@@ -337,14 +351,14 @@ export default function EditTenantPage({
               <label className="block text-sm text-text-secondary mb-1.5">
                 {t("status")}
               </label>
-              <select
+              <input
+                type="text"
                 name="status"
-                defaultValue={tenant.status}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="active">{t("active")}</option>
-                <option value="archived">{t("archived")}</option>
-              </select>
+                value={tenant.status}
+                readOnly
+                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-secondary focus:outline-none cursor-not-allowed capitalize"
+              />
+              <p className="text-xs text-text-secondary mt-1">Use the move-out flow to archive a tenant</p>
             </div>
           </div>
         </div>
@@ -413,6 +427,7 @@ export default function EditTenantPage({
                     <input
                       type="number"
                       step="0.01"
+                      min="0.01"
                       value={lease.monthly_rent}
                       onChange={(e) => {
                         const updated = [...leases];

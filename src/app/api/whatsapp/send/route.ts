@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendWhatsAppTemplate, buildRentReminderComponents } from "@/lib/whatsapp/client";
 
+function formatPhone(phone: string): string {
+  const digits = phone.replace(/[^\d]/g, "");
+  if (digits.length === 8) return `+968${digits}`;
+  if (digits.startsWith("968")) return `+${digits}`;
+  return `+${digits}`;
+}
+
 // Manual WhatsApp send endpoint - for on-demand reminders
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await sendWhatsAppTemplate({
-    to: (tenant.phone.replace(/[^\d+]/g, "").startsWith("+") ? tenant.phone.replace(/[^\d+]/g, "") : "+" + tenant.phone.replace(/[^\d+]/g, "")),
+    to: formatPhone(tenant.phone),
     templateName,
     languageCode: languageCode || tenant.language_preference || "en",
     components: parameters
