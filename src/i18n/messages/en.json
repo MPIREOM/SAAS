@@ -430,7 +430,10 @@
     "allProperties": "All Properties",
     "writtenOff": "Written Off",
     "cancelled": "Cancelled",
-    "resolved": "Resolved"
+    "resolved": "Resolved",
+    "createInvoice": "Create Invoice",
+    "periodStart": "Period Start",
+    "periodEnd": "Period End"
   },
   "cheques": {
     "title": "Cheques",

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { InvoicesTabs } from "@/components/invoices/invoices-tabs";
 import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
+import { CreateInvoiceButton } from "@/components/invoices/create-invoice-button";
 import { CURRENCY } from "@/lib/currency";
 
 export default async function InvoicesPage({
@@ -216,6 +217,7 @@ export default async function InvoicesPage({
           </h1>
           <p className="text-sm text-text-secondary mt-1">{t("subtitle")}</p>
         </div>
+        <CreateInvoiceButton />
       </div>
 
       {/* Summary Cards */}
