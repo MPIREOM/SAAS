@@ -40,7 +40,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.includes("/tenant-portal/");
 
   if (!user && !isAuthPage && !isApiRoute && !isPublicPage) {
-    const locale = request.nextUrl.pathname.split("/")[1] || "en";
+    const pathLocale = request.nextUrl.pathname.split("/")[1] || "en";
+    const locale = (pathLocale === "en" || pathLocale === "ar") ? pathLocale : "en";
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/auth/login`;
     return NextResponse.redirect(url);
