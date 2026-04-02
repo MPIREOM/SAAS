@@ -537,6 +537,14 @@ async function sendReminder(
 ) {
   const langCode = params.language === "ar" ? "ar" : "en";
 
+  // Format phone number for WhatsApp API (must be international format with country code)
+  const formatPhone = (phone: string): string => {
+    const digits = phone.replace(/[^\d]/g, "");
+    if (digits.length === 8) return `+968${digits}`;
+    if (digits.startsWith("968")) return `+${digits}`;
+    return `+${digits}`;
+  };
+
   // Send WhatsApp
   if (params.phone) {
     const waTemplate = templateIndex.get(
@@ -546,10 +554,13 @@ async function sendReminder(
     const metaTemplateName = waTemplate?.whatsapp_template_name
       || `${defaultWhatsAppTemplates[params.reminderType]}_${langCode}`;
 
+    // All templates are registered as English in Meta, so always use "en"
+    const metaLanguageCode = "en";
+
     const whatsappResult = await sendWhatsAppTemplate({
-      to: (params.phone.replace(/[^\d+]/g, "").startsWith("+") ? params.phone.replace(/[^\d+]/g, "") : "+" + params.phone.replace(/[^\d+]/g, "")),
+      to: formatPhone(params.phone),
       templateName: metaTemplateName,
-      languageCode: langCode,
+      languageCode: metaLanguageCode,
       components: params.reminderType === "rent_overdue" && params.overdueInvoices?.length
         ? buildOverdueReminderComponents({
             tenantName: params.tenantName,
