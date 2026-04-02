@@ -44,11 +44,10 @@ export async function GET(request: Request) {
     });
   }
 
-  // Use Oman timezone (UTC+4) for consistent date calculations
-  const nowUtc = new Date();
-  const omanOffset = 4 * 60 * 60 * 1000;
-  const today = new Date(nowUtc.getTime() + omanOffset);
-  const currentDay = today.getDate();
+  // Use Oman timezone (UTC+4) for date calculations
+  const today = new Date();
+  const omanToday = new Date(today.getTime() + 4 * 60 * 60 * 1000);
+  const currentDay = omanToday.getDate();
 
   // --- Generate invoices for the CURRENT month ---
   // Get active leases whose payment_due_day has already passed this month
@@ -62,14 +61,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: currentError.message }, { status: 500 });
   }
 
-  const periodStart = format(startOfMonth(today), "yyyy-MM-dd");
-  const periodEnd = format(lastDayOfMonth(today), "yyyy-MM-dd");
+  const periodStart = format(startOfMonth(omanToday), "yyyy-MM-dd");
+  const periodEnd = format(lastDayOfMonth(omanToday), "yyyy-MM-dd");
   let created = 0;
   let skipped = 0;
 
   for (const lease of currentMonthLeases || []) {
-    const dueDay = Math.min(lease.payment_due_day, lastDayOfMonth(today).getDate());
-    const dueDate = format(new Date(today.getFullYear(), today.getMonth(), dueDay), "yyyy-MM-dd");
+    const dueDay = Math.min(lease.payment_due_day, lastDayOfMonth(omanToday).getDate());
+    const dueDate = format(new Date(omanToday.getFullYear(), omanToday.getMonth(), dueDay), "yyyy-MM-dd");
 
     const { error: insertError } = await supabase.from("invoices").upsert(
       {
@@ -106,7 +105,7 @@ export async function GET(request: Request) {
 
     if (!allError && allLeases) {
       // Calculate next month's dates
-      const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      const nextMonth = new Date(omanToday.getFullYear(), omanToday.getMonth() + 1, 1);
       const nextPeriodStart = format(startOfMonth(nextMonth), "yyyy-MM-dd");
       const nextPeriodEnd = format(lastDayOfMonth(nextMonth), "yyyy-MM-dd");
 
@@ -146,7 +145,7 @@ export async function GET(request: Request) {
   }
 
   // Auto-mark overdue invoices (don't override partial payments)
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = omanToday.toISOString().split("T")[0];
   const { error: overdueError } = await supabase
     .from("invoices")
     .update({ status: "overdue" })

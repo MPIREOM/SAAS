@@ -130,11 +130,9 @@ async function gatherReminders(
   supabase: ReturnType<typeof createSupabaseAdmin>,
   templateIndex: Map<string, NotificationTemplate>
 ): Promise<ReminderParams[]> {
-  // Use Oman timezone (UTC+4) for consistent date calculations
-  const nowUtc = new Date();
-  const omanOffset = 4 * 60 * 60 * 1000;
-  const today = new Date(nowUtc.getTime() + omanOffset);
-  const todayStr = today.toISOString().split("T")[0];
+  // Use Oman timezone (UTC+4) for date string, but keep `today` as real UTC for differenceInDays
+  const today = new Date();
+  const todayStr = new Date(today.getTime() + 4 * 60 * 60 * 1000).toISOString().split("T")[0];
   const gathered: ReminderParams[] = [];
 
   // Load configurable settings
