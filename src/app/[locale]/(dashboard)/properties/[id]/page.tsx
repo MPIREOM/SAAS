@@ -32,6 +32,7 @@ export default async function PropertyDetailPage({
     .from("properties")
     .select("*")
     .eq("id", id)
+    .eq("is_archived", false)
     .single();
 
   if (!property) {
