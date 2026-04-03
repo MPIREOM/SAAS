@@ -286,6 +286,37 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "get_property_invoices",
+    description:
+      "Get all invoices for a specific property in ONE call. Can filter by status and date range. Returns tenant name, unit, amount, status, due date for each invoice. ALWAYS use this instead of looping through tenants individually.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        property_id: {
+          type: "string",
+          description: "The property UUID",
+        },
+        status_filter: {
+          type: "string",
+          enum: ["unpaid", "paid", "all"],
+          description:
+            "Filter: 'unpaid' = pending/overdue/partial (default), 'paid' = paid only, 'all' = everything",
+        },
+        start_date: {
+          type: "string",
+          description:
+            "Optional: start date in YYYY-MM-DD format (e.g. '2026-01-01'). Filters due_date >= start_date.",
+        },
+        end_date: {
+          type: "string",
+          description:
+            "Optional: end date in YYYY-MM-DD format (e.g. '2026-04-30'). Filters due_date <= end_date.",
+        },
+      },
+      required: ["property_id"],
+    },
+  },
+  {
     name: "get_overdue_summary",
     description:
       "Get a summary of all unpaid invoices (pending, overdue, partial) across all properties. Can filter by month. Shows which tenants owe money and how much.",
@@ -887,6 +918,79 @@ async function executeTool(
       });
     }
 
+    case "get_property_invoices": {
+      const propertyId = input.property_id as string;
+      const statusFilter = (input.status_filter as string) || "unpaid";
+      const startDate = input.start_date as string | undefined;
+      const endDate = input.end_date as string | undefined;
+
+      // Get units for this property
+      const { data: propUnits } = await supabase
+        .from("units")
+        .select("id")
+        .eq("property_id", propertyId);
+
+      if (!propUnits || propUnits.length === 0) {
+        return JSON.stringify({ invoices: [], message: "No units found for this property" });
+      }
+
+      const unitIds = propUnits.map((u) => u.id);
+
+      let query = supabase
+        .from("invoices")
+        .select("id, amount, paid_amount, due_date, status, period_start, tenants(full_name), units(unit_number)")
+        .in("unit_id", unitIds)
+        .order("due_date", { ascending: true })
+        .limit(200);
+
+      if (statusFilter === "unpaid") {
+        query = query.in("status", ["pending", "overdue", "partial"]);
+      } else if (statusFilter === "paid") {
+        query = query.eq("status", "paid");
+      }
+
+      if (startDate) {
+        query = query.gte("due_date", startDate);
+      }
+      if (endDate) {
+        query = query.lte("due_date", endDate);
+      }
+
+      const { data: invoices, error } = await query;
+      if (error) return JSON.stringify({ error: error.message });
+
+      const results = (invoices || []).map((inv: Record<string, unknown>) => {
+        const tenant = inv.tenants as Record<string, unknown> | null;
+        const unit = inv.units as Record<string, unknown> | null;
+        return {
+          id: inv.id,
+          tenant_name: tenant?.full_name || "Unknown",
+          unit_number: unit?.unit_number || "?",
+          amount: inv.amount,
+          paid_amount: inv.paid_amount || 0,
+          remaining: Number(inv.amount || 0) - Number(inv.paid_amount || 0),
+          due_date: inv.due_date,
+          status: inv.status,
+        };
+      });
+
+      const totalAmount = results.reduce((s, r) => s + Number(r.amount), 0);
+      const totalRemaining = results.reduce((s, r) => s + r.remaining, 0);
+
+      const totalPaid = results.reduce((s, r) => s + Number(r.paid_amount), 0);
+
+      return JSON.stringify({
+        property_id: propertyId,
+        filter: statusFilter,
+        date_range: startDate || endDate ? `${startDate || "start"} to ${endDate || "now"}` : "all",
+        invoice_count: results.length,
+        total_amount: totalAmount.toFixed(2),
+        total_paid: totalPaid.toFixed(2),
+        total_remaining: totalRemaining.toFixed(2),
+        invoices: results,
+      });
+    }
+
     case "get_overdue_summary": {
       const monthFilter = input.month as string | undefined;
 
@@ -1313,6 +1417,7 @@ BEHAVIOR RULES:
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
 - NEVER say "there are no invoices" without first calling the tool with the right filters. If the user asks about a specific month (e.g. "April"), use the month parameter (e.g. "2026-04") in get_overdue_summary or get_tenant_invoices.
 - When the user asks about invoices for a specific month, ALWAYS pass the month parameter in YYYY-MM format to filter results. Do NOT just scan through all results — use the filter.
+- CRITICAL: When the user asks about invoices for a PROPERTY or BUILDING (e.g. "invoices for Bousher Ameen Mosque"), first use search_tenants to find the property_id, then call get_property_invoices ONCE with that property_id. NEVER loop through tenants individually with get_tenant_invoices — that will time out. get_property_invoices returns ALL invoices for the property in one call. For date ranges like "Jan to April", use start_date="2026-01-01" and end_date="2026-04-30".
 - If genuinely unsure what the user wants, ask a SHORT clarifying question.
 - You have CONVERSATION HISTORY. When the user says "yes", "ok", "do it", "go ahead", etc., refer back to what you previously offered or discussed and take that action.
 - CRITICAL: NEVER guess or assume invoice statuses, amounts, or dates from conversation history. ALWAYS call the appropriate tool to get LIVE data from the database for ANY query about invoices, balances, or statuses. Conversation history is for understanding context only — actual data MUST come from tool calls.
@@ -1329,7 +1434,7 @@ BEHAVIOR RULES:
 
   let response = await callClaude({
     model: CLAUDE_MODEL,
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: systemPrompt,
     tools,
     messages,
@@ -1337,7 +1442,7 @@ BEHAVIOR RULES:
 
   // Agent loop — keep processing tool calls until we get a final text response
   let iterations = 0;
-  const maxIterations = 10;
+  const maxIterations = 15;
   while (response.stop_reason === "tool_use" && iterations < maxIterations) {
     iterations++;
     const assistantContent = response.content;
@@ -1366,7 +1471,7 @@ BEHAVIOR RULES:
 
     response = await callClaude({
       model: CLAUDE_MODEL,
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       tools,
       messages,
