@@ -959,25 +959,39 @@ async function executeTool(
       const { data: invoices, error } = await query;
       if (error) return JSON.stringify({ error: error.message });
 
+      // Supabase join can return either an object or a single-element array
+      // depending on the FK relationship, so normalise both shapes.
+      const pickJoined = (val: unknown): Record<string, unknown> | null => {
+        if (!val) return null;
+        if (Array.isArray(val)) return (val[0] as Record<string, unknown>) || null;
+        return val as Record<string, unknown>;
+      };
+
       const results = (invoices || []).map((inv: Record<string, unknown>) => {
-        const tenant = inv.tenants as Record<string, unknown> | null;
-        const unit = inv.units as Record<string, unknown> | null;
+        const tenant = pickJoined(inv.tenants);
+        const unit = pickJoined(inv.units);
         return {
           id: inv.id,
-          tenant_name: tenant?.full_name || "Unknown",
-          unit_number: unit?.unit_number || "?",
-          amount: inv.amount,
-          paid_amount: inv.paid_amount || 0,
+          tenant_name: (tenant?.full_name as string) || "Unknown",
+          unit_number: (unit?.unit_number as string) || "N/A",
+          amount: Number(inv.amount || 0),
+          paid_amount: Number(inv.paid_amount || 0),
           remaining: Number(inv.amount || 0) - Number(inv.paid_amount || 0),
-          due_date: inv.due_date,
-          status: inv.status,
+          due_date: inv.due_date as string,
+          status: inv.status as string,
         };
       });
 
-      const totalAmount = results.reduce((s, r) => s + Number(r.amount), 0);
+      const totalAmount = results.reduce((s, r) => s + r.amount, 0);
+      const totalPaid = results.reduce((s, r) => s + r.paid_amount, 0);
       const totalRemaining = results.reduce((s, r) => s + r.remaining, 0);
 
-      const totalPaid = results.reduce((s, r) => s + Number(r.paid_amount), 0);
+      // Pre-format a compact text list so the model echoes exact unit numbers
+      // instead of hallucinating patterns from a large JSON payload.
+      const formattedLines = results.map(
+        (r) =>
+          `- Unit ${r.unit_number} | ${r.tenant_name} | due ${r.due_date} | ${r.amount.toFixed(2)} OMR | paid ${r.paid_amount.toFixed(2)} | remaining ${r.remaining.toFixed(2)} | ${r.status}`
+      );
 
       return JSON.stringify({
         property_id: propertyId,
@@ -987,7 +1001,9 @@ async function executeTool(
         total_amount: totalAmount.toFixed(2),
         total_paid: totalPaid.toFixed(2),
         total_remaining: totalRemaining.toFixed(2),
-        invoices: results,
+        instructions:
+          "Use ONLY the unit numbers and tenant names shown in formatted_list below. Do NOT invent or extrapolate unit numbers. Quote them exactly as written.",
+        formatted_list: formattedLines.join("\n"),
       });
     }
 
@@ -1421,6 +1437,7 @@ BEHAVIOR RULES:
 - If genuinely unsure what the user wants, ask a SHORT clarifying question.
 - You have CONVERSATION HISTORY. When the user says "yes", "ok", "do it", "go ahead", etc., refer back to what you previously offered or discussed and take that action.
 - CRITICAL: NEVER guess or assume invoice statuses, amounts, or dates from conversation history. ALWAYS call the appropriate tool to get LIVE data from the database for ANY query about invoices, balances, or statuses. Conversation history is for understanding context only — actual data MUST come from tool calls.
+- CRITICAL — NO HALLUCINATION: When listing invoices, tenants, or units from a tool result, you MUST copy unit numbers, tenant names, amounts and dates EXACTLY as they appear in the tool response. NEVER invent, guess, or extrapolate unit numbers (e.g. do not assume a sequence like 39, 49, 59). If a tool returns a "formatted_list" field, quote lines from it verbatim. If a value is missing in the tool response, say "N/A" — do NOT fill it in with a plausible number.
 - When checking a status, balance, or summary: ALWAYS call the tool first, then report what the tool returned. NEVER rely on what was said earlier in the conversation.`;
 
   // Build messages: conversation history + current message
