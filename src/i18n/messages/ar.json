@@ -433,7 +433,15 @@
     "resolved": "محلولة",
     "createInvoice": "إنشاء فاتورة",
     "periodStart": "بداية الفترة",
-    "periodEnd": "نهاية الفترة"
+    "periodEnd": "نهاية الفترة",
+    "cancelInvoice": "إلغاء الفاتورة",
+    "cancelInvoiceDescription": "سيتم إلغاء الفاتورة وتحديدها كملغاة.",
+    "cancelWarning": "لا يمكن التراجع عن هذا الإجراء. سيتم تحديد الفاتورة كملغاة بشكل دائم.",
+    "cancelReason": "السبب (اختياري)",
+    "cancelReasonPlaceholder": "مثال: فاتورة مكررة، مبلغ غير صحيح...",
+    "confirmCancel": "إلغاء الفاتورة",
+    "invoiceCancelled": "تم إلغاء الفاتورة بنجاح",
+    "cancelFailed": "فشل إلغاء الفاتورة"
   },
   "cheques": {
     "title": "الشيكات",

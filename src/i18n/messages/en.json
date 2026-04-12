@@ -433,7 +433,15 @@
     "resolved": "Resolved",
     "createInvoice": "Create Invoice",
     "periodStart": "Period Start",
-    "periodEnd": "Period End"
+    "periodEnd": "Period End",
+    "cancelInvoice": "Cancel Invoice",
+    "cancelInvoiceDescription": "This will void the invoice and mark it as cancelled.",
+    "cancelWarning": "This action cannot be undone. The invoice will be permanently marked as cancelled.",
+    "cancelReason": "Reason (optional)",
+    "cancelReasonPlaceholder": "e.g. Duplicate invoice, incorrect amount...",
+    "confirmCancel": "Cancel Invoice",
+    "invoiceCancelled": "Invoice cancelled successfully",
+    "cancelFailed": "Failed to cancel invoice"
   },
   "cheques": {
     "title": "Cheques",
