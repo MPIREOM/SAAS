@@ -12,7 +12,8 @@ type AuditAction =
   | "partial_payment"
   | "advance_payment"
   | "status_update"
-  | "export_report";
+  | "export_report"
+  | "cancel_invoice";
 
 type EntityType =
   | "tenant"

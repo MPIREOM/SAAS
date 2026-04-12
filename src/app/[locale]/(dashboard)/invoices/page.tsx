@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { InvoicesTabs } from "@/components/invoices/invoices-tabs";
 import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
+import { CancelInvoiceButton } from "@/components/invoices/cancel-invoice-button";
 import { CreateInvoiceButton } from "@/components/invoices/create-invoice-button";
 import { CURRENCY } from "@/lib/currency";
 
@@ -588,15 +589,25 @@ export default async function InvoicesPage({
                               <Printer className="h-3 w-3" />
                             </Link>
                             {!isPaid && !isWrittenOff && !isCancelled && (
-                              <MarkPaidButton
-                                invoiceId={invoice.id as string}
-                                amount={String(invoice.amount)}
-                                paidAmount={String(invoice.paid_amount || 0)}
-                                tenantName={
-                                  (tenant?.full_name as string) || "—"
-                                }
-                                tenantId={invoice.tenant_id as string}
-                              />
+                              <>
+                                <CancelInvoiceButton
+                                  invoiceId={invoice.id as string}
+                                  amount={String(invoice.amount)}
+                                  paidAmount={String(invoice.paid_amount || 0)}
+                                  tenantName={
+                                    (tenant?.full_name as string) || "—"
+                                  }
+                                />
+                                <MarkPaidButton
+                                  invoiceId={invoice.id as string}
+                                  amount={String(invoice.amount)}
+                                  paidAmount={String(invoice.paid_amount || 0)}
+                                  tenantName={
+                                    (tenant?.full_name as string) || "—"
+                                  }
+                                  tenantId={invoice.tenant_id as string}
+                                />
+                              </>
                             )}
                           </div>
                         </td>
