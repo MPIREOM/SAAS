@@ -19,54 +19,6 @@ function verifySignature(body: string, signature: string | null): boolean {
   );
 }
 
-// Forward the agent exchange to any additional notification numbers the
-// sender (the registered admin) has configured — e.g. the property owner.
-async function forwardToNotificationPhones(
-  senderPhone: string,
-  incoming: string,
-  reply: string
-): Promise<void> {
-  try {
-    const supabase = createSupabaseAdmin(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-    const cleanSender = senderPhone.replace(/[^\d]/g, "");
-    const { data: sender } = await supabase
-      .from("users")
-      .select("full_name, notification_phones")
-      .eq("whatsapp_phone", cleanSender)
-      .eq("is_active", true)
-      .single();
-
-    const targets = (sender?.notification_phones as string[] | null) || [];
-    if (targets.length === 0) return;
-
-    const senderName = (sender?.full_name as string) || "Admin";
-    const forwarded =
-      `[Forwarded from ${senderName}'s WhatsApp agent]\n\n` +
-      `${senderName}: ${incoming}\n\n` +
-      `Agent: ${reply}`;
-
-    await Promise.all(
-      targets
-        .map((p) => p.replace(/[^\d]/g, ""))
-        .filter((p) => p && p !== cleanSender)
-        .map((p) =>
-          sendWhatsAppTextMessage(p, forwarded).catch((err) => {
-            console.error(
-              "[WhatsApp Webhook] Failed to forward to",
-              p,
-              err
-            );
-          })
-        )
-    );
-  } catch (err) {
-    console.error("[WhatsApp Webhook] Forwarding lookup failed:", err);
-  }
-}
-
 // Deduplicate messages using a database table to persist across serverless invocations
 async function isMessageProcessed(messageId: string): Promise<boolean> {
   const supabase = createSupabaseAdmin(
@@ -159,10 +111,6 @@ export async function POST(request: NextRequest) {
           if (!result.success) {
             console.error("[WhatsApp Webhook] Failed to send reply:", result.error);
           }
-
-          // Forward a copy of the exchange to any additional notification
-          // numbers the sender has configured (e.g. the property owner).
-          await forwardToNotificationPhones(senderPhone, messageText, reply);
         } catch (error) {
           console.error("[WhatsApp Webhook] Agent processing failed:", error);
           await sendWhatsAppTextMessage(
