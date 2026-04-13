@@ -11,6 +11,8 @@ import {
   Calendar,
   DollarSign,
   MessageSquare,
+  Paperclip,
+  Video,
 } from "lucide-react";
 import MaintenanceActions from "./maintenance-actions";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
@@ -62,6 +64,12 @@ export default async function MaintenanceDetailPage({
     .from("maintenance_notes")
     .select("*")
     .eq("maintenance_request_id", id)
+    .order("created_at", { ascending: true });
+
+  const { data: attachments } = await supabase
+    .from("maintenance_attachments")
+    .select("id, file_url, file_name, file_type, file_size")
+    .eq("request_id", id)
     .order("created_at", { ascending: true });
 
   const unit = request.units as Record<string, unknown> | null;
@@ -223,6 +231,62 @@ export default async function MaintenanceDetailPage({
         <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">
           {request.description as string}
         </p>
+      </div>
+
+      {/* Attachments — always render so it's obvious whether photos were
+          received (helps diagnose "I uploaded a photo but it isn't showing"). */}
+      <div className="bg-surface border border-border rounded-lg p-6">
+        <h3 className="text-sm font-medium text-text-primary mb-4 flex items-center gap-2">
+          <Paperclip className="h-4 w-4 text-text-secondary" />
+          Attachments ({attachments?.length || 0})
+        </h3>
+        {!attachments || attachments.length === 0 ? (
+          <p className="text-sm text-text-secondary">
+            No files were attached to this request.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {attachments.map((a) => {
+              const url = a.file_url as string;
+              const name = (a.file_name as string) || "file";
+              const isVideo = a.file_type === "video";
+              return (
+                <a
+                  key={a.id as string}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block bg-surface-elevated border border-border rounded-lg overflow-hidden hover:border-accent/40 transition-colors"
+                  title={name}
+                >
+                  {isVideo ? (
+                    <div className="relative aspect-square bg-background flex items-center justify-center">
+                      <video
+                        src={url}
+                        className="w-full h-full object-cover"
+                        preload="metadata"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                        <Video className="h-8 w-8 text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={url}
+                      alt={name}
+                      className="w-full aspect-square object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="px-2 py-1.5 text-[10px] text-text-secondary truncate">
+                    {name}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Status Flow */}
