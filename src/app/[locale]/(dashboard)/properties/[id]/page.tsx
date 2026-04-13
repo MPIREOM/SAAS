@@ -13,6 +13,7 @@ import {
   Wrench,
   ChevronRight,
   Pencil,
+  AlertCircle,
 } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
@@ -26,6 +27,7 @@ export default async function PropertyDetailPage({
   const t = await getTranslations("properties");
   const tc = await getTranslations("common");
   const tu = await getTranslations("units");
+  const tch = await getTranslations("cheques");
   const supabase = await createClient();
 
   const { data: property } = await supabase
@@ -51,6 +53,31 @@ export default async function PropertyDetailPage({
     .order("unit_number");
 
   const allUnits = units || [];
+
+  // Identify which active tenants in this property have cheques on file,
+  // so we can flag occupied units whose tenant has none.
+  const activeTenantIds = Array.from(
+    new Set(
+      allUnits
+        .flatMap((u: Record<string, unknown>) =>
+          ((u.leases as Record<string, unknown>[]) || []).filter(
+            (l) => l.is_active === true
+          )
+        )
+        .map((l: Record<string, unknown>) => l.tenant_id as string)
+        .filter(Boolean)
+    )
+  );
+  const tenantsWithCheques = new Set<string>();
+  if (activeTenantIds.length > 0) {
+    const { data: chequeRows } = await supabase
+      .from("cheques")
+      .select("tenant_id")
+      .in("tenant_id", activeTenantIds);
+    (chequeRows || []).forEach((c: { tenant_id: string }) => {
+      if (c.tenant_id) tenantsWithCheques.add(c.tenant_id);
+    });
+  }
   const occupied = allUnits.filter(
     (u: Record<string, unknown>) => u.status === "occupied"
   );
@@ -255,6 +282,11 @@ export default async function PropertyDetailPage({
                 (l) => l.is_active === true
               );
               const tenant = activeLease?.tenants as Record<string, unknown> | null;
+              const activeTenantId = activeLease?.tenant_id as string | undefined;
+              const missingCheques =
+                status === "occupied" &&
+                !!activeTenantId &&
+                !tenantsWithCheques.has(activeTenantId);
 
               return (
                 <Link
@@ -267,7 +299,18 @@ export default async function PropertyDetailPage({
                     <p className="text-sm font-bold text-text-primary group-hover:text-accent font-mono transition-colors">
                       {unit.unit_number as string}
                     </p>
-                    <div className={`h-2.5 w-2.5 rounded-full ${config.dot}`} />
+                    <div className="flex items-center gap-1.5">
+                      {missingCheques && (
+                        <span
+                          title={tch("missingCheques")}
+                          aria-label={tch("missingCheques")}
+                          className="inline-flex"
+                        >
+                          <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                        </span>
+                      )}
+                      <div className={`h-2.5 w-2.5 rounded-full ${config.dot}`} />
+                    </div>
                   </div>
 
                   {/* Status badge */}
