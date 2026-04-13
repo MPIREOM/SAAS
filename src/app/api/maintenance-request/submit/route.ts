@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
   // may be null for vacant-unit submissions).
   const files = formData.getAll("files") as File[];
   const attachments: { file_url: string; file_name: string; file_type: string; file_size: number }[] = [];
+  const uploadErrors: string[] = [];
 
   for (const file of files) {
     if (!file || file.size === 0) continue;
@@ -126,18 +127,26 @@ export async function POST(request: NextRequest) {
         upsert: false,
       });
 
-    if (!uploadError) {
-      const { data: urlData } = supabase.storage
-        .from("maintenance-media")
-        .getPublicUrl(filePath);
-
-      attachments.push({
-        file_url: urlData.publicUrl,
-        file_name: file.name,
-        file_type: isVideo ? "video" : "photo",
-        file_size: file.size,
-      });
+    if (uploadError) {
+      // Most common cause: bucket "maintenance-media" doesn't exist or is
+      // private with no anon write. Log clearly so it shows up in Vercel.
+      console.error(
+        `[maintenance-submit] Upload failed for ${file.name} (${file.type}, ${file.size}b) → ${uploadError.message}`
+      );
+      uploadErrors.push(`${file.name}: ${uploadError.message}`);
+      continue;
     }
+
+    const { data: urlData } = supabase.storage
+      .from("maintenance-media")
+      .getPublicUrl(filePath);
+
+    attachments.push({
+      file_url: urlData.publicUrl,
+      file_name: file.name,
+      file_type: isVideo ? "video" : "photo",
+      file_size: file.size,
+    });
   }
 
   // Insert attachments
@@ -150,8 +159,12 @@ export async function POST(request: NextRequest) {
       }))
     );
     if (attachError) {
+      console.error(`[maintenance-submit] Attachment insert failed: ${attachError.message}`);
       attachmentWarning = "Request created but some attachments failed to save";
     }
+  }
+  if (uploadErrors.length > 0 && !attachmentWarning) {
+    attachmentWarning = `Request created but ${uploadErrors.length} file${uploadErrors.length !== 1 ? "s" : ""} failed to upload`;
   }
 
   // Notify admin recipients on every submission (non-blocking — the

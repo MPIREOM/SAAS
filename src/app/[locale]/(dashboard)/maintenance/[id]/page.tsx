@@ -233,13 +233,18 @@ export default async function MaintenanceDetailPage({
         </p>
       </div>
 
-      {/* Attachments */}
-      {attachments && attachments.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-6">
-          <h3 className="text-sm font-medium text-text-primary mb-4 flex items-center gap-2">
-            <Paperclip className="h-4 w-4 text-text-secondary" />
-            Attachments ({attachments.length})
-          </h3>
+      {/* Attachments — always render so it's obvious whether photos were
+          received (helps diagnose "I uploaded a photo but it isn't showing"). */}
+      <div className="bg-surface border border-border rounded-lg p-6">
+        <h3 className="text-sm font-medium text-text-primary mb-4 flex items-center gap-2">
+          <Paperclip className="h-4 w-4 text-text-secondary" />
+          Attachments ({attachments?.length || 0})
+        </h3>
+        {!attachments || attachments.length === 0 ? (
+          <p className="text-sm text-text-secondary">
+            No files were attached to this request.
+          </p>
+        ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {attachments.map((a) => {
               const url = a.file_url as string;
@@ -281,8 +286,8 @@ export default async function MaintenanceDetailPage({
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Status Flow */}
       <div className="bg-surface border border-border rounded-lg p-6">
