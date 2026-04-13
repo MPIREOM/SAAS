@@ -33,6 +33,10 @@ export const users = pgTable("users", {
     .default("en"),
   avatarUrl: text("avatar_url"),
   whatsappPhone: text("whatsapp_phone").unique(),
+  notificationPhones: text("notification_phones")
+    .array()
+    .notNull()
+    .default(sql`ARRAY[]::TEXT[]`),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
