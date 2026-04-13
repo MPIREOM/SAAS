@@ -214,11 +214,12 @@ export function WhatsAppAgentSetup({
       <div className="pt-4 border-t border-border/40 space-y-3">
         <div>
           <label className="block text-sm font-medium text-text-primary">
-            Also notify these numbers
+            Also send daily summary to
           </label>
           <p className="text-xs text-text-secondary mt-0.5">
-            Every reply the AI agent sends will be forwarded to these numbers
-            too. Useful for keeping the owner in the loop.
+            These numbers receive the morning daily summary on WhatsApp.
+            Useful for keeping the owner in the loop. They cannot send
+            commands to the agent.
           </p>
         </div>
 

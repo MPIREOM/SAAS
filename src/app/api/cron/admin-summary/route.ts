@@ -73,6 +73,36 @@ export async function GET(request: NextRequest) {
       .eq("is_active", true),
   ]);
 
+  // Extra WhatsApp-only recipients configured per user (e.g. the owner) —
+  // anyone listed in users.notification_phones gets the daily summary too.
+  const { data: extraUsers } = await supabase
+    .from("users")
+    .select("full_name, notification_phones")
+    .eq("is_active", true)
+    .not("notification_phones", "is", null);
+  const extraRecipients = (extraUsers || [])
+    .flatMap((u: Record<string, unknown>) => {
+      const phones = (u.notification_phones as string[] | null) || [];
+      const ownerName = (u.full_name as string) || "Owner";
+      return phones
+        .map((p) => (p || "").replace(/[^\d]/g, ""))
+        .filter((p) => p.length >= 8)
+        .map((phone) => ({
+          name: `${ownerName} (CC)`,
+          email: null,
+          phone,
+          notify_email: false,
+          notify_whatsapp: true,
+        }));
+    });
+  // Dedupe by phone in case the same number appears in multiple users
+  const seenPhones = new Set<string>();
+  const dedupedExtras = extraRecipients.filter((r) => {
+    if (!r.phone || seenPhones.has(r.phone)) return false;
+    seenPhones.add(r.phone);
+    return true;
+  });
+
   const invoicesDue = invoicesDueRes.data || [];
   const invoicesOverdue = invoicesOverdueRes.data || [];
   const chequesDue = (chequesDueRes.data || []).filter((c: Record<string, unknown>) => {
@@ -83,7 +113,18 @@ export async function GET(request: NextRequest) {
   });
   const newMaintenance = newMaintenanceRes.data || [];
   const openMaintenance = openMaintenanceRes.data || [];
-  const recipients = recipientsRes.data || [];
+  const primaryRecipients = recipientsRes.data || [];
+
+  // Skip any extra (CC) phone that is already a primary recipient.
+  const primaryPhones = new Set(
+    primaryRecipients
+      .map((r: Record<string, unknown>) => ((r.phone as string) || "").replace(/[^\d]/g, ""))
+      .filter(Boolean)
+  );
+  const recipients = [
+    ...primaryRecipients,
+    ...dedupedExtras.filter((r) => !primaryPhones.has(r.phone)),
+  ];
 
   if (recipients.length === 0) {
     return NextResponse.json({ message: "No recipients configured" });
