@@ -4,7 +4,6 @@ import { CURRENCY } from "@/lib/currency";
 import { getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { ShareLinkButton } from "@/components/maintenance/share-link-button";
 import { SharePortalButton } from "@/components/tenants/share-portal-button";
 import {
   ArrowLeft,
@@ -199,20 +198,6 @@ export default async function TenantDetailPage({
                 <RefreshCw className="h-4 w-4" />
                 Renew Lease
               </Link>
-              <ShareLinkButton
-                tenantId={id}
-                tenantName={tenant.full_name}
-                tenantPhone={tenant.phone}
-                leases={(leases || []).map((l: Record<string, unknown>) => ({
-                  id: l.id as string,
-                  unit_id: l.unit_id as string,
-                  is_active: l.is_active as boolean,
-                  units: {
-                    unit_number: ((l.units as Record<string, unknown>)?.unit_number as string) || "",
-                  },
-                }))}
-                locale={locale}
-              />
               <Link
                 href={`/${locale}/tenants/${id}/move-out`}
                 className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"

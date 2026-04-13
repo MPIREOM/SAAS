@@ -896,11 +896,19 @@
     "shareViaWhatsApp": "مشاركة عبر واتساب",
     "whatsappMessage": "مرحباً! يمكنك استخدام هذا الرابط لتقديم طلب صيانة لوحدتك:",
     "unit": "الوحدة",
+    "unitNumber": "رقم الوحدة",
+    "unitNumberPlaceholder": "مثال: 205",
+    "enterUnitPrompt": "أدخل رقم وحدتك أدناه لتقديم طلب",
     "property": "العقار",
     "tenant": "المستأجر",
     "noActiveLeases": "لا توجد عقود إيجار نشطة لهذا المستأجر لإنشاء رابط.",
     "revokeLink": "إلغاء",
-    "activeLinks": "الروابط النشطة"
+    "activeLinks": "الروابط النشطة",
+    "propertyLinks": "روابط صيانة العقارات",
+    "propertyLinksDescription": "شارك رابطاً واحداً لكل عقار مع المستأجرين. سيقومون بإدخال رقم وحدتهم في النموذج.",
+    "regenerateLink": "إعادة إنشاء",
+    "regenerateConfirm": "إعادة إنشاء الرابط؟ سيتوقف الرابط الحالي عن العمل فوراً.",
+    "noProperties": "لا توجد عقارات. أضف عقاراً أولاً."
   },
   "tenantPortal": {
     "title": "بوابة المستأجر",

@@ -6,6 +6,7 @@ export const maxDuration = 60;
 
 const submitSchema = z.object({
   token: z.string().min(1),
+  unit_number: z.string().min(1, "Unit number is required"),
   category: z.enum(["plumbing", "electrical", "ac", "structural", "painting", "cleaning", "pest", "other"]),
   description: z.string().min(10, "Description must be at least 10 characters"),
   urgency: z.enum(["low", "medium", "high", "emergency"]),
@@ -16,6 +17,7 @@ export async function POST(request: NextRequest) {
 
   const parsed = submitSchema.safeParse({
     token: formData.get("token"),
+    unit_number: formData.get("unit_number"),
     category: formData.get("category"),
     description: formData.get("description"),
     urgency: formData.get("urgency"),
@@ -28,22 +30,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { token, category, description, urgency } = parsed.data;
+  const { token, unit_number, category, description, urgency } = parsed.data;
+  const trimmedUnitNumber = unit_number.trim();
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Validate token
+  // Validate token — must be active, property-scoped, not expired.
   const { data: tokenData, error: tokenError } = await supabase
     .from("maintenance_tokens")
-    .select("tenant_id, unit_id, expires_at, is_active")
+    .select("property_id, expires_at, is_active")
     .eq("token", token)
     .eq("is_active", true)
+    .not("property_id", "is", null)
     .single();
 
-  if (tokenError || !tokenData) {
+  if (tokenError || !tokenData || !tokenData.property_id) {
     return NextResponse.json({ error: "Invalid or expired link" }, { status: 403 });
   }
 
@@ -51,12 +55,43 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "This link has expired" }, { status: 410 });
   }
 
+  // Resolve the unit by (property_id, unit_number). Unit numbers are unique
+  // per property, so this is deterministic. Unit must exist — we reject
+  // the request with a clear error if not.
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, unit_number, properties:property_id(name)")
+    .eq("property_id", tokenData.property_id)
+    .ilike("unit_number", trimmedUnitNumber)
+    .maybeSingle();
+
+  if (!unit) {
+    return NextResponse.json(
+      { error: `Unit "${trimmedUnitNumber}" not found in this property. Please double-check the unit number.` },
+      { status: 404 }
+    );
+  }
+
+  // Look up the current active lease to attribute the request to a tenant.
+  // If the unit is vacant, tenant_id stays null — the request is still
+  // created so maintenance staff can act on it.
+  const { data: activeLease } = await supabase
+    .from("leases")
+    .select("tenant_id")
+    .eq("unit_id", unit.id)
+    .eq("is_active", true)
+    .order("lease_start", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const tenantId = (activeLease?.tenant_id as string | undefined) || null;
+
   // Create maintenance request
   const { data: maintenanceRequest, error: insertError } = await supabase
     .from("maintenance_requests")
     .insert({
-      tenant_id: tokenData.tenant_id,
-      unit_id: tokenData.unit_id,
+      tenant_id: tenantId,
+      unit_id: unit.id,
       category,
       description,
       urgency,
@@ -75,17 +110,13 @@ export async function POST(request: NextRequest) {
   // Send instant alert for high/emergency maintenance (non-blocking)
   if (urgency === "high" || urgency === "emergency") {
     try {
-      const [unitRes, tenantRes] = await Promise.all([
-        supabase.from("units").select("unit_number, properties:property_id(name)").eq("id", tokenData.unit_id).single(),
-        tokenData.tenant_id
-          ? supabase.from("tenants").select("full_name").eq("id", tokenData.tenant_id).single()
-          : Promise.resolve({ data: null }),
-      ]);
+      const tenantRes = tenantId
+        ? await supabase.from("tenants").select("full_name").eq("id", tenantId).single()
+        : { data: null };
 
-      const unitInfo = unitRes.data;
-      const tenantName = tenantRes.data?.full_name || "Unknown";
-      const propertyName = (unitInfo?.properties as unknown as Record<string, unknown>)?.name || "Unknown";
-      const unitNumber = unitInfo?.unit_number || "Unknown";
+      const tenantName = tenantRes.data?.full_name || "Unknown (vacant unit)";
+      const propertyName = (unit.properties as unknown as Record<string, unknown>)?.name || "Unknown";
+      const unitNumber = unit.unit_number || trimmedUnitNumber;
 
       const { data: recipients } = await supabase
         .from("admin_notification_recipients")
@@ -122,7 +153,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Upload files
+  // Upload files. Paths are namespaced by property now (since tenant_id
+  // may be null for vacant-unit submissions).
   const files = formData.getAll("files") as File[];
   const attachments: { file_url: string; file_name: string; file_type: string; file_size: number }[] = [];
 
@@ -131,7 +163,7 @@ export async function POST(request: NextRequest) {
 
     const ext = file.name.split(".").pop() || "bin";
     const isVideo = file.type.startsWith("video/");
-    const filePath = `${tokenData.tenant_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const filePath = `${tokenData.property_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("maintenance-media")

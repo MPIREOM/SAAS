@@ -896,11 +896,19 @@
     "shareViaWhatsApp": "Share via WhatsApp",
     "whatsappMessage": "Hi! You can use this link to submit a maintenance request for your unit:",
     "unit": "Unit",
+    "unitNumber": "Unit Number",
+    "unitNumberPlaceholder": "e.g. 205",
+    "enterUnitPrompt": "Enter your unit number below to submit a request",
     "property": "Property",
     "tenant": "Tenant",
     "noActiveLeases": "This tenant has no active leases to generate a link for.",
     "revokeLink": "Revoke",
-    "activeLinks": "Active Links"
+    "activeLinks": "Active Links",
+    "propertyLinks": "Property Maintenance Links",
+    "propertyLinksDescription": "Share one link per property with tenants. They enter their unit number on the form.",
+    "regenerateLink": "Regenerate",
+    "regenerateConfirm": "Regenerate the link? The existing link will stop working immediately.",
+    "noProperties": "No properties found. Add a property first."
   },
   "tenantPortal": {
     "title": "Tenant Portal",

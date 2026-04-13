@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { randomBytes } from "crypto";
 
+// Property-scoped maintenance link generator.
+//
+// Tokens are idempotent per property: if an active token already exists,
+// it's returned instead of creating a new one. The DB has a partial unique
+// index enforcing this at the data layer as well.
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
@@ -13,24 +19,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { tenant_id, unit_id } = await request.json();
+  const { property_id } = await request.json();
 
-  if (!tenant_id || !unit_id) {
+  if (!property_id) {
     return NextResponse.json(
-      { error: "tenant_id and unit_id are required" },
+      { error: "property_id is required" },
       { status: 400 }
     );
   }
 
-  // Generate a short URL-safe token
+  // Return existing active token if there is one
+  const { data: existing } = await supabase
+    .from("maintenance_tokens")
+    .select("id, token")
+    .eq("property_id", property_id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json({ token: existing.token, id: existing.id });
+  }
+
   const token = randomBytes(16).toString("base64url");
 
   const { data, error } = await supabase
     .from("maintenance_tokens")
     .insert({
       token,
-      tenant_id,
-      unit_id,
+      property_id,
+      tenant_id: null,
+      unit_id: null,
       created_by: user.id,
       expires_at: null,
     })
@@ -47,7 +65,7 @@ export async function POST(request: NextRequest) {
   });
 }
 
-// GET: List active tokens for a tenant
+// GET: List active property tokens (optionally filtered by property_id).
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
@@ -59,22 +77,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenantId = request.nextUrl.searchParams.get("tenant_id");
-  if (!tenantId) {
-    return NextResponse.json({ error: "tenant_id required" }, { status: 400 });
+  const propertyId = request.nextUrl.searchParams.get("property_id");
+
+  let query = supabase
+    .from("maintenance_tokens")
+    .select("id, token, property_id, is_active, created_at, properties:property_id(name)")
+    .eq("is_active", true)
+    .not("property_id", "is", null)
+    .order("created_at", { ascending: false });
+
+  if (propertyId) {
+    query = query.eq("property_id", propertyId);
   }
 
-  const { data: tokens } = await supabase
-    .from("maintenance_tokens")
-    .select("id, token, unit_id, is_active, expires_at, created_at, units:unit_id(unit_number)")
-    .eq("tenant_id", tenantId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
+  const { data: tokens } = await query;
 
   return NextResponse.json({ tokens: tokens || [] });
 }
 
-// DELETE: Revoke a token
+// DELETE: Revoke a token (same as before).
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
 
