@@ -196,6 +196,7 @@ export function MarkPaidButton({
           .update({
             status: "cleared",
             payment_id: paymentData?.id || null,
+            invoice_id: invoiceId,
             updated_at: new Date().toISOString(),
           })
           .eq("id", selectedChequeId);
@@ -205,12 +206,41 @@ export function MarkPaidButton({
           .insert({
             tenant_id: invoice.tenant_id,
             payment_id: paymentData?.id || null,
+            invoice_id: invoiceId,
             cheque_number: newChequeNumber,
             bank_name: newChequeBankName,
             cheque_date: newChequeDate,
             amount: totalPaymentAmount,
             status: "cleared",
           });
+      }
+
+      // When the invoice is fully paid by any method, retire any pending
+      // cheques tied to it so they stop showing up on the daily briefing.
+      if (isFullyPaid) {
+        // Already-linked pending cheques → cancel.
+        await supabase
+          .from("cheques")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("invoice_id", invoiceId)
+          .eq("status", "pending");
+
+        // Unlinked pending cheques sitting in this invoice's period for this
+        // tenant → link to this invoice and cancel.
+        if (invoice.period_start && invoice.period_end) {
+          await supabase
+            .from("cheques")
+            .update({
+              invoice_id: invoiceId,
+              status: "cancelled",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("tenant_id", invoice.tenant_id)
+            .eq("status", "pending")
+            .is("invoice_id", null)
+            .gte("cheque_date", invoice.period_start)
+            .lte("cheque_date", invoice.period_end);
+        }
       }
 
       // Handle advance payment: generate and mark future invoices as paid
@@ -237,7 +267,9 @@ export function MarkPaidButton({
             .eq("period_start", futurePeriodStart)
             .maybeSingle();
 
+          let advanceInvoiceId: string | null = null;
           if (existing) {
+            advanceInvoiceId = existing.id;
             // Mark existing invoice as paid
             await supabase
               .from("invoices")
@@ -251,7 +283,7 @@ export function MarkPaidButton({
               .eq("id", existing.id);
           } else {
             // Create future invoice and mark as paid
-            await supabase.from("invoices").insert({
+            const { data: inserted } = await supabase.from("invoices").insert({
               lease_id: invoice.lease_id,
               tenant_id: invoice.tenant_id,
               unit_id: invoice.unit_id,
@@ -264,7 +296,30 @@ export function MarkPaidButton({
               paid_amount: invoiceTotal,
               paid_date: paidDate,
               notes: `Paid in advance (${advanceMonths} months)`,
-            });
+            }).select("id").single();
+            advanceInvoiceId = inserted?.id || null;
+          }
+
+          // Retire pending cheques that sit in this advance-paid period.
+          if (advanceInvoiceId) {
+            await supabase
+              .from("cheques")
+              .update({ status: "cancelled", updated_at: new Date().toISOString() })
+              .eq("invoice_id", advanceInvoiceId)
+              .eq("status", "pending");
+
+            await supabase
+              .from("cheques")
+              .update({
+                invoice_id: advanceInvoiceId,
+                status: "cancelled",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("tenant_id", invoice.tenant_id)
+              .eq("status", "pending")
+              .is("invoice_id", null)
+              .gte("cheque_date", futurePeriodStart)
+              .lte("cheque_date", futurePeriodEnd);
           }
         }
       }
