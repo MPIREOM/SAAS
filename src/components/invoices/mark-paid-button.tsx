@@ -39,6 +39,9 @@ interface MarkPaidButtonProps {
   paidAmount?: string;
   tenantName: string;
   tenantId: string;
+  periodStart?: string;
+  periodEnd?: string;
+  dueDate?: string;
 }
 
 const METHOD_ICONS = {
@@ -53,6 +56,9 @@ export function MarkPaidButton({
   paidAmount: existingPaidAmount,
   tenantName,
   tenantId,
+  periodStart,
+  periodEnd,
+  dueDate,
 }: MarkPaidButtonProps) {
   const t = useTranslations("invoices");
   const tc = useTranslations("common");
@@ -74,6 +80,7 @@ export function MarkPaidButton({
   const [selectedChequeId, setSelectedChequeId] = useState("");
   const [loadingCheques, setLoadingCheques] = useState(false);
   const [addNewCheque, setAddNewCheque] = useState(false);
+  const [showAllCheques, setShowAllCheques] = useState(false);
   const [newChequeNumber, setNewChequeNumber] = useState("");
   const [newChequeBankName, setNewChequeBankName] = useState("");
   const [newChequeDate, setNewChequeDate] = useState(
@@ -85,10 +92,32 @@ export function MarkPaidButton({
   const alreadyPaid = Number(existingPaidAmount || 0);
   const remainingAmount = totalAmount - alreadyPaid;
 
+  // Cheques are considered "relevant" to this invoice when their date falls
+  // inside the invoice period (preferred) or within ±15 days of the due date.
+  // This stops a tenant's 12-month batch of post-dated cheques from flooding
+  // the picker when paying a single month.
+  function shiftDays(dateStr: string, days: number): string {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split("T")[0];
+  }
+  const windowStart =
+    periodStart || (dueDate ? shiftDays(dueDate, -15) : null);
+  const windowEnd =
+    periodEnd || (dueDate ? shiftDays(dueDate, 15) : null);
+  const isRelevantCheque = (chequeDate: string) => {
+    if (!windowStart || !windowEnd) return true;
+    return chequeDate >= windowStart && chequeDate <= windowEnd;
+  };
+  const relevantCheques = cheques.filter((c) => isRelevantCheque(c.cheque_date));
+  const displayedCheques = showAllCheques ? cheques : relevantCheques;
+  const hiddenChequeCount = cheques.length - relevantCheques.length;
+
   useEffect(() => {
     if (method === "cheque" && open) {
       setLoadingCheques(true);
       setAddNewCheque(false);
+      setShowAllCheques(false);
       const supabase = createClient();
       supabase
         .from("cheques")
@@ -97,16 +126,20 @@ export function MarkPaidButton({
         .eq("status", "pending")
         .order("cheque_date", { ascending: true })
         .then(({ data }) => {
-          setCheques(data || []);
-          setSelectedChequeId("");
-          // Auto-show new cheque form if none exist
-          if (!data || data.length === 0) {
+          const all = data || [];
+          setCheques(all);
+          // Auto-select the single in-window match if there's exactly one.
+          const inWindow = all.filter((c) => isRelevantCheque(c.cheque_date));
+          setSelectedChequeId(inWindow.length === 1 ? inWindow[0].id : "");
+          // If no pending cheques at all, jump straight to the "add new" form.
+          if (all.length === 0) {
             setAddNewCheque(true);
           }
           setLoadingCheques(false);
         });
     }
-  }, [method, open, tenantId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [method, open, tenantId, periodStart, periodEnd, dueDate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -540,13 +573,13 @@ export function MarkPaidButton({
                   ) : (
                     <>
                       {/* Existing cheques list */}
-                      {cheques.length > 0 && !addNewCheque && (
+                      {displayedCheques.length > 0 && !addNewCheque && (
                         <div>
                           <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                             {t("selectCheque")}
                           </label>
                           <div className="space-y-2">
-                            {cheques.map((ch) => {
+                            {displayedCheques.map((ch) => {
                               const isSelected = selectedChequeId === ch.id;
                               return (
                                 <button
@@ -590,6 +623,29 @@ export function MarkPaidButton({
                             })}
                           </div>
                         </div>
+                      )}
+
+                      {/* No in-window matches, but tenant has other pending cheques */}
+                      {!addNewCheque && displayedCheques.length === 0 && cheques.length > 0 && (
+                        <div className="p-3 rounded-xl bg-surface-elevated/50 border border-border/40 text-xs text-text-secondary">
+                          No cheques match this invoice&apos;s period.
+                        </div>
+                      )}
+
+                      {/* Show all / only-matching toggle when some cheques were hidden */}
+                      {!addNewCheque && hiddenChequeCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAllCheques(!showAllCheques);
+                            setSelectedChequeId("");
+                          }}
+                          className="w-full mt-2 text-xs text-text-secondary hover:text-text-primary font-medium py-2 border border-dashed border-border/60 rounded-xl hover:border-border hover:bg-surface-elevated/50 transition-all duration-200"
+                        >
+                          {showAllCheques
+                            ? `Show only cheques for this period`
+                            : `Show all ${cheques.length} pending cheques (${hiddenChequeCount} outside this period)`}
+                        </button>
                       )}
 
                       {/* Toggle between existing cheques and new cheque form */}
