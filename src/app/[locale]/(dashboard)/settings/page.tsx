@@ -292,6 +292,9 @@ export default async function SettingsPage({
         <WhatsAppAgentSetup
           userId={user?.id || ""}
           currentPhone={(profile?.whatsapp_phone as string) || null}
+          notificationPhones={
+            (profile?.notification_phones as string[] | null) || []
+          }
         />
       </div>
 

@@ -4,24 +4,32 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
-import { Check, Loader2, Smartphone, X } from "lucide-react";
+import { Check, Loader2, Plus, Smartphone, Trash2, X } from "lucide-react";
 
 interface WhatsAppAgentSetupProps {
   userId: string;
   currentPhone: string | null;
+  notificationPhones: string[];
 }
+
+const cleanPhone = (raw: string) => raw.replace(/[^\d]/g, "");
 
 export function WhatsAppAgentSetup({
   userId,
   currentPhone,
+  notificationPhones,
 }: WhatsAppAgentSetupProps) {
   const [phone, setPhone] = useState(currentPhone || "");
   const [loading, setLoading] = useState(false);
   const [removing, setRemoving] = useState(false);
+
+  const [extraPhones, setExtraPhones] = useState<string[]>(notificationPhones);
+  const [newExtraPhone, setNewExtraPhone] = useState("");
+  const [savingExtra, setSavingExtra] = useState(false);
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null);
+
   const router = useRouter();
   const { toast } = useToast();
-
-  const cleanPhone = (raw: string) => raw.replace(/[^\d]/g, "");
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -73,6 +81,70 @@ export function WhatsAppAgentSetup({
       router.refresh();
     }
     setRemoving(false);
+  }
+
+  async function persistExtraPhones(next: string[]) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("users")
+      .update({
+        notification_phones: next,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+    if (error) {
+      toast({
+        title: "Failed to update notification numbers",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  }
+
+  async function handleAddExtra(e: React.FormEvent) {
+    e.preventDefault();
+    const cleaned = cleanPhone(newExtraPhone);
+    if (!cleaned || cleaned.length < 8) {
+      toast({
+        title: "Please enter a valid phone number with country code",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (cleaned === cleanPhone(currentPhone || "")) {
+      toast({
+        title: "This is already your primary number",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (extraPhones.includes(cleaned)) {
+      toast({ title: "This number is already added", variant: "destructive" });
+      return;
+    }
+    setSavingExtra(true);
+    const next = [...extraPhones, cleaned];
+    const ok = await persistExtraPhones(next);
+    if (ok) {
+      setExtraPhones(next);
+      setNewExtraPhone("");
+      toast({ title: "Notification number added", variant: "success" });
+      router.refresh();
+    }
+    setSavingExtra(false);
+  }
+
+  async function handleRemoveExtra(index: number) {
+    setRemovingIndex(index);
+    const next = extraPhones.filter((_, i) => i !== index);
+    const ok = await persistExtraPhones(next);
+    if (ok) {
+      setExtraPhones(next);
+      toast({ title: "Notification number removed", variant: "success" });
+      router.refresh();
+    }
+    setRemovingIndex(null);
   }
 
   return (
@@ -137,6 +209,75 @@ export function WhatsAppAgentSetup({
           </p>
         </div>
       </form>
+
+      {/* Additional notification numbers (e.g. owner) */}
+      <div className="pt-4 border-t border-border/40 space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-text-primary">
+            Also notify these numbers
+          </label>
+          <p className="text-xs text-text-secondary mt-0.5">
+            Every reply the AI agent sends will be forwarded to these numbers
+            too. Useful for keeping the owner in the loop.
+          </p>
+        </div>
+
+        {extraPhones.length > 0 && (
+          <ul className="space-y-2">
+            {extraPhones.map((p, i) => (
+              <li
+                key={`${p}-${i}`}
+                className="flex items-center gap-3 p-2.5 bg-surface-elevated/50 border border-border/40 rounded-lg"
+              >
+                <Smartphone className="h-4 w-4 text-text-secondary/60 ms-1" />
+                <span className="flex-1 text-sm text-text-primary font-mono">
+                  +{p}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveExtra(i)}
+                  disabled={removingIndex === i}
+                  className="text-xs text-text-secondary hover:text-destructive transition-colors p-1.5 rounded-md hover:bg-destructive/10"
+                  aria-label="Remove number"
+                >
+                  {removingIndex === i ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form onSubmit={handleAddExtra} className="flex gap-2">
+          <div className="relative flex-1">
+            <Smartphone className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+            <input
+              type="tel"
+              value={newExtraPhone}
+              onChange={(e) => setNewExtraPhone(e.target.value)}
+              placeholder="968XXXXXXXX"
+              className="w-full h-10 ps-9 pe-3 bg-surface-elevated/50 border border-border/60 rounded-lg text-sm text-text-primary font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={savingExtra || !newExtraPhone}
+            className="h-10 px-4 bg-surface-elevated border border-border/60 hover:border-accent/50 hover:text-accent text-text-primary text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-40 flex items-center gap-2"
+          >
+            {savingExtra ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Add
+              </>
+            )}
+          </button>
+        </form>
+      </div>
 
       <div className="p-3 bg-surface-elevated/50 border border-border/40 rounded-lg space-y-2">
         <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
