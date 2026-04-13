@@ -214,7 +214,10 @@ export async function POST(request: NextRequest) {
           ? `${attachments.length} file${attachments.length !== 1 ? "s" : ""} (${attachments.filter((a) => a.file_type === "photo").length} photo, ${attachments.filter((a) => a.file_type === "video").length} video)`
           : "None";
 
-      // Email: full, untruncated description + attachments list.
+      // Email: full, untruncated description + inline photo previews so the
+      // admin can see the issue without leaving their inbox. Videos are
+      // linked (most email clients won't render <video>) with a thumbnail
+      // placeholder.
       const emailItems = [
         `<strong>Property:</strong> ${propertyName} — Unit ${unitNumber}`,
         `<strong>Tenant:</strong> ${tenantName}${tenantPhone ? ` (${tenantPhone})` : ""}`,
@@ -225,11 +228,22 @@ export async function POST(request: NextRequest) {
         `<strong>Description:</strong><br>${description.replace(/\n/g, "<br>")}`,
       ];
       if (attachments.length > 0) {
-        emailItems.push(
-          `<strong>Files:</strong><br>${attachments
-            .map((a) => `<a href="${a.file_url}" style="color:#C9A84C;">${a.file_name}</a>`)
-            .join("<br>")}`
-        );
+        const photoThumbs = attachments
+          .filter((a) => a.file_type === "photo")
+          .map(
+            (a) =>
+              `<a href="${a.file_url}" style="display:inline-block;margin:4px;"><img src="${a.file_url}" alt="${a.file_name}" style="max-width:180px;max-height:180px;border-radius:8px;border:1px solid #2A293A;display:block;" /></a>`
+          )
+          .join("");
+        const videoLinks = attachments
+          .filter((a) => a.file_type === "video")
+          .map(
+            (a) =>
+              `<div style="margin:4px 0;"><a href="${a.file_url}" style="color:#C9A84C;">▶ ${a.file_name}</a></div>`
+          )
+          .join("");
+        if (photoThumbs) emailItems.push(`<strong>Photos:</strong><br>${photoThumbs}`);
+        if (videoLinks) emailItems.push(`<strong>Videos:</strong>${videoLinks}`);
       }
       emailItems.push(
         `<a href="${dashboardLink}" style="color:#C9A84C;">Open in dashboard →</a>`
