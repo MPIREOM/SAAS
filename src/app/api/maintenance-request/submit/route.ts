@@ -107,52 +107,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Send instant alert for high/emergency maintenance (non-blocking)
-  if (urgency === "high" || urgency === "emergency") {
-    try {
-      const tenantRes = tenantId
-        ? await supabase.from("tenants").select("full_name").eq("id", tenantId).single()
-        : { data: null };
-
-      const tenantName = tenantRes.data?.full_name || "Unknown (vacant unit)";
-      const propertyName = (unit.properties as unknown as Record<string, unknown>)?.name || "Unknown";
-      const unitNumber = unit.unit_number || trimmedUnitNumber;
-
-      const { data: recipients } = await supabase
-        .from("admin_notification_recipients")
-        .select("name, email, phone, notify_email, notify_whatsapp")
-        .eq("is_active", true);
-
-      if (recipients && recipients.length > 0) {
-        const { notifyAdmins, buildAdminEmailHtml } = await import("@/lib/notifications/admin-notify");
-
-        const alertTitle = `🔴 ${urgency.toUpperCase()} Maintenance Request`;
-
-        await notifyAdmins(recipients, {
-          subject: `${alertTitle} - ${propertyName} Unit ${unitNumber}`,
-          emailHtml: buildAdminEmailHtml({
-            title: alertTitle,
-            sections: [{
-              heading: "Request Details",
-              items: [
-                `<strong>Property:</strong> ${propertyName} — Unit ${unitNumber}`,
-                `<strong>Tenant:</strong> ${tenantName}`,
-                `<strong>Category:</strong> ${category}`,
-                `<strong>Urgency:</strong> ${urgency.toUpperCase()}`,
-                `<strong>Description:</strong> ${description.slice(0, 200)}`,
-              ],
-            }],
-            footer: "This is an automatic alert from MPIRE Property Management.",
-          }),
-          whatsappText: `⚠️ *${alertTitle}*\n\n📍 ${propertyName} — Unit ${unitNumber}\n👤 ${tenantName}\n🔧 ${category}\n📝 ${description.slice(0, 150)}\n\nPlease review this request in the dashboard.`,
-        });
-      }
-    } catch (err) {
-      console.error("Admin notification failed:", err instanceof Error ? err.message : err);
-      // Don't block the request — maintenance was already created
-    }
-  }
-
   // Upload files. Paths are namespaced by property now (since tenant_id
   // may be null for vacant-unit submissions).
   const files = formData.getAll("files") as File[];
@@ -198,6 +152,129 @@ export async function POST(request: NextRequest) {
     if (attachError) {
       attachmentWarning = "Request created but some attachments failed to save";
     }
+  }
+
+  // Notify admin recipients on every submission (non-blocking — the
+  // request row is already created, so any failure here is logged and
+  // ignored rather than failing the tenant's submit). Urgency drives the
+  // emoji in the subject/WhatsApp so high/emergency alerts still stand
+  // out in a crowded inbox.
+  try {
+    const tenantRes = tenantId
+      ? await supabase
+          .from("tenants")
+          .select("full_name, phone")
+          .eq("id", tenantId)
+          .single()
+      : { data: null };
+
+    const tenantName = tenantRes.data?.full_name || "Unknown (vacant unit)";
+    const tenantPhone = tenantRes.data?.phone || null;
+    const propertyName =
+      (unit.properties as unknown as Record<string, unknown>)?.name || "Unknown";
+    const unitNumber = unit.unit_number || trimmedUnitNumber;
+
+    const { data: recipients } = await supabase
+      .from("admin_notification_recipients")
+      .select("name, email, phone, notify_email, notify_whatsapp")
+      .eq("is_active", true);
+
+    if (recipients && recipients.length > 0) {
+      const { notifyAdmins, buildAdminEmailHtml } = await import(
+        "@/lib/notifications/admin-notify"
+      );
+
+      const urgencyEmoji =
+        urgency === "emergency"
+          ? "🚨"
+          : urgency === "high"
+          ? "🔴"
+          : urgency === "medium"
+          ? "🟡"
+          : "🟢";
+      const subjectPrefix =
+        urgency === "high" || urgency === "emergency"
+          ? `${urgencyEmoji} ${urgency.toUpperCase()} Maintenance`
+          : "🔧 New Maintenance Request";
+      const alertTitle = `${urgencyEmoji} New Maintenance Request`;
+
+      const origin = request.headers.get("origin") || request.nextUrl.origin;
+      const dashboardLink = `${origin}/en/maintenance/${maintenanceRequest.id}`;
+
+      const submittedAt = new Date().toLocaleString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const attachmentSummary =
+        attachments.length > 0
+          ? `${attachments.length} file${attachments.length !== 1 ? "s" : ""} (${attachments.filter((a) => a.file_type === "photo").length} photo, ${attachments.filter((a) => a.file_type === "video").length} video)`
+          : "None";
+
+      // Email: full, untruncated description + attachments list.
+      const emailItems = [
+        `<strong>Property:</strong> ${propertyName} — Unit ${unitNumber}`,
+        `<strong>Tenant:</strong> ${tenantName}${tenantPhone ? ` (${tenantPhone})` : ""}`,
+        `<strong>Category:</strong> ${category}`,
+        `<strong>Urgency:</strong> ${urgency.toUpperCase()}`,
+        `<strong>Submitted:</strong> ${submittedAt}`,
+        `<strong>Attachments:</strong> ${attachmentSummary}`,
+        `<strong>Description:</strong><br>${description.replace(/\n/g, "<br>")}`,
+      ];
+      if (attachments.length > 0) {
+        emailItems.push(
+          `<strong>Files:</strong><br>${attachments
+            .map((a) => `<a href="${a.file_url}" style="color:#C9A84C;">${a.file_name}</a>`)
+            .join("<br>")}`
+        );
+      }
+      emailItems.push(
+        `<a href="${dashboardLink}" style="color:#C9A84C;">Open in dashboard →</a>`
+      );
+
+      // WhatsApp: trim description to keep the message compact but
+      // readable; full text + attachments are on the dashboard.
+      const waDescription =
+        description.length > 400
+          ? `${description.slice(0, 400)}…`
+          : description;
+
+      const whatsappText = [
+        `${urgencyEmoji} *New Maintenance Request*`,
+        ``,
+        `📍 *Property:* ${propertyName}`,
+        `🏠 *Unit:* ${unitNumber}`,
+        `👤 *Tenant:* ${tenantName}${tenantPhone ? ` (${tenantPhone})` : ""}`,
+        `🔧 *Category:* ${category}`,
+        `⚡ *Urgency:* ${urgency.toUpperCase()}`,
+        `📎 *Attachments:* ${attachmentSummary}`,
+        `🕒 *Submitted:* ${submittedAt}`,
+        ``,
+        `📝 *Description:*`,
+        waDescription,
+        ``,
+        `🔗 ${dashboardLink}`,
+      ].join("\n");
+
+      await notifyAdmins(recipients, {
+        subject: `${subjectPrefix} — ${propertyName} Unit ${unitNumber}`,
+        emailHtml: buildAdminEmailHtml({
+          title: alertTitle,
+          sections: [{ heading: "Request Details", items: emailItems }],
+          footer: "This is an automatic alert from MPIRE Property Management.",
+        }),
+        whatsappText,
+      });
+    }
+  } catch (err) {
+    console.error(
+      "Admin notification failed:",
+      err instanceof Error ? err.message : err
+    );
+    // Don't block the request — maintenance was already created
   }
 
   return NextResponse.json({
