@@ -137,11 +137,29 @@ export async function GET(request: NextRequest) {
 
   // Helper to safely get nested names
   const getTenant = (row: Record<string, unknown>) => ((row.tenants as Record<string, unknown>)?.full_name as string) || "Unknown";
+  const getPropertyName = (row: Record<string, unknown>) => {
+    const units = row.units as Record<string, unknown> | null;
+    const props = units?.properties as Record<string, unknown> | null;
+    return (props?.name as string) || "Unknown";
+  };
   const getProperty = (row: Record<string, unknown>) => {
     const units = row.units as Record<string, unknown> | null;
     const props = units?.properties as Record<string, unknown> | null;
     return `${props?.name || "?"} — ${units?.unit_number || "?"}`;
   };
+
+  // Aggregate overdue invoices by property (name -> count + total amount).
+  // Used by both the email section and the WhatsApp template parameter {{10}}.
+  const overdueByProperty = new Map<string, { count: number; total: number }>();
+  invoicesOverdue.forEach((i: Record<string, unknown>) => {
+    const name = getPropertyName(i);
+    const entry = overdueByProperty.get(name) || { count: 0, total: 0 };
+    entry.count += 1;
+    entry.total += Number(i.amount || 0);
+    overdueByProperty.set(name, entry);
+  });
+  const overdueByPropertySorted = Array.from(overdueByProperty.entries())
+    .sort((a, b) => b[1].total - a[1].total);
 
   // Build email sections
   const emailSections = [];
@@ -165,6 +183,11 @@ export async function GET(request: NextRequest) {
     heading: `🔴 Overdue Invoices (${invoicesOverdue.length})`,
     items: invoicesOverdue.length > 0
       ? [
+          `<em>By property:</em>`,
+          ...overdueByPropertySorted.map(([name, { count, total }]) =>
+            `&nbsp;&nbsp;• ${name}: ${count} invoice${count !== 1 ? "s" : ""} — <strong>${total.toFixed(2)} ${CURRENCY.code}</strong>`
+          ),
+          `<em>Details:</em>`,
           ...invoicesOverdue.slice(0, 10).map((i: Record<string, unknown>) => {
             const days = Math.floor((Date.now() - new Date(i.due_date as string).getTime()) / (1000 * 60 * 60 * 24));
             return `${getTenant(i)} — ${getProperty(i)} — <strong>${Number(i.amount).toFixed(2)} ${CURRENCY.code}</strong> (${days}d overdue)`;
@@ -207,6 +230,14 @@ export async function GET(request: NextRequest) {
     items: [`${openMaintenance.length} request${openMaintenance.length !== 1 ? "s" : ""} currently open or in progress`],
   });
 
+  // Per-property overdue breakdown — rendered into WhatsApp template
+  // parameter {{10}} and the plaintext fallback. Empty string when no
+  // overdue invoices so the template still has 10 params populated.
+  const overdueBreakdownLines = overdueByPropertySorted.map(([name, { count, total }]) =>
+    `   • ${name}: ${count} invoice${count !== 1 ? "s" : ""} (${total.toFixed(2)} ${CURRENCY.code})`
+  );
+  const overdueBreakdownText = overdueBreakdownLines.join("\n");
+
   // Build WhatsApp text
   const whatsappLines = [
     `📊 *MPIRE Daily Summary*`,
@@ -214,6 +245,7 @@ export async function GET(request: NextRequest) {
     ``,
     `📋 *Invoices Due Today:* ${invoicesDue.length} (${totalDueToday.toFixed(2)} ${CURRENCY.code})`,
     `🔴 *Overdue:* ${invoicesOverdue.length} (${totalOverdue.toFixed(2)} ${CURRENCY.code})`,
+    ...overdueBreakdownLines,
     `🏦 *Cheques Due:* ${chequesDue.length} (${totalCheques.toFixed(2)} ${CURRENCY.code})`,
     `🔧 *New Maintenance (24h):* ${newMaintenance.length}`,
     `📊 *Open Maintenance:* ${openMaintenance.length}`,
@@ -257,6 +289,10 @@ export async function GET(request: NextRequest) {
         totalCheques.toFixed(2),
         String(newMaintenance.length),
         String(openMaintenance.length),
+        // {{10}} — per-property overdue breakdown. Meta rejects empty
+        // template parameters, so fall back to a single space when there
+        // are no overdue invoices.
+        overdueBreakdownText || " ",
       ],
     },
   });
