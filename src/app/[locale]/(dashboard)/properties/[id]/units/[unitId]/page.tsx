@@ -30,6 +30,7 @@ import {
   Clock,
   XCircle,
   LogOut,
+  FileDown,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
@@ -347,6 +348,15 @@ export default async function UnitDetailPage({
                     </div>
                   )}
                   <Link
+                    href={`/api/tenants/${currentTenant.id}/unpaid-invoices/pdf`}
+                    target="_blank"
+                    className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border text-text-secondary text-xs rounded-md hover:border-accent/30 hover:text-accent transition-colors"
+                    title={ti("downloadUnpaidPDFDescription")}
+                  >
+                    <FileDown className="h-3.5 w-3.5" />
+                    {ti("downloadUnpaidPDF")}
+                  </Link>
+                  <Link
                     href={`/${locale}/tenants/${currentTenant.id}/move-out`}
                     className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border text-text-secondary text-xs rounded-md hover:bg-border/30 hover:text-text-primary transition-colors"
                   >
@@ -505,6 +515,7 @@ export default async function UnitDetailPage({
                   <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3">
                     {t("vacateReason")}
                   </th>
+                  <th className="text-end text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -541,6 +552,18 @@ export default async function UnitDetailPage({
                         <span className="text-sm text-text-secondary">
                           {lease.vacate_reason ? tt(`reasons.${lease.vacate_reason}`) : "—"}
                         </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-end">
+                        {pastTenant ? (
+                          <Link
+                            href={`/api/tenants/${pastTenant.id}/unpaid-invoices/pdf`}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-accent text-xs rounded-md border border-border/50 hover:border-accent/30 transition-colors"
+                            title={ti("downloadUnpaidPDFDescription")}
+                          >
+                            <FileDown className="h-3 w-3" />
+                          </Link>
+                        ) : null}
                       </td>
                     </tr>
                   );
