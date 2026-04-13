@@ -30,6 +30,7 @@ import {
   Shield,
   RefreshCw,
   ScrollText,
+  FileDown,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 
@@ -179,6 +180,15 @@ export default async function TenantDetailPage({
           >
             <ScrollText className="h-4 w-4" />
             Statement
+          </Link>
+          <Link
+            href={`/api/tenants/${id}/unpaid-invoices/pdf`}
+            target="_blank"
+            className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors"
+            title={ti("downloadUnpaidPDFDescription")}
+          >
+            <FileDown className="h-4 w-4" />
+            {ti("downloadUnpaidPDF")}
           </Link>
           {tenant.status === "active" && (
             <>
