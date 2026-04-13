@@ -45,10 +45,13 @@ export async function GET(request: NextRequest) {
       .select("amount, due_date, tenants(full_name), units(unit_number, properties:property_id(name))")
       .eq("status", "overdue")
       .order("due_date", { ascending: true }),
-    // Cheques due today or overdue
+    // Cheques due today or overdue. We pull the linked invoice status so we
+    // can skip cheques whose invoice was already settled by another method
+    // (e.g. bank transfer) — mark-paid auto-cancels these, but this filter
+    // is a safety net for edge cases or in-flight data.
     supabase
       .from("cheques")
-      .select("amount, cheque_number, bank_name, cheque_date, tenants(full_name)")
+      .select("amount, cheque_number, bank_name, cheque_date, tenants(full_name), invoice_id, invoices(status)")
       .eq("status", "pending")
       .lte("cheque_date", today)
       .order("cheque_date", { ascending: true }),
@@ -72,7 +75,12 @@ export async function GET(request: NextRequest) {
 
   const invoicesDue = invoicesDueRes.data || [];
   const invoicesOverdue = invoicesOverdueRes.data || [];
-  const chequesDue = chequesDueRes.data || [];
+  const chequesDue = (chequesDueRes.data || []).filter((c: Record<string, unknown>) => {
+    const inv = c.invoices as { status?: string } | null;
+    // Skip any cheque whose invoice has already been settled — the cheque
+    // record is stale and shouldn't be listed as "to deposit".
+    return !inv?.status || !["paid", "cancelled"].includes(inv.status);
+  });
   const newMaintenance = newMaintenanceRes.data || [];
   const openMaintenance = openMaintenanceRes.data || [];
   const recipients = recipientsRes.data || [];
