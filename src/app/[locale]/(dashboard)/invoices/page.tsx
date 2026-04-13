@@ -606,6 +606,15 @@ export default async function InvoicesPage({
                                     (tenant?.full_name as string) || "—"
                                   }
                                   tenantId={invoice.tenant_id as string}
+                                  periodStart={
+                                    (invoice.period_start as string) || undefined
+                                  }
+                                  periodEnd={
+                                    (invoice.period_end as string) || undefined
+                                  }
+                                  dueDate={
+                                    (invoice.due_date as string) || undefined
+                                  }
                                 />
                               </>
                             )}
