@@ -9,6 +9,7 @@ import {
   Activity,
   Bot,
   FileText,
+  Wrench,
 } from "lucide-react";
 import { InviteUserForm } from "@/components/settings/invite-user-form";
 import { NotificationPreferences } from "@/components/settings/notification-preferences";
@@ -19,6 +20,7 @@ import { PropertyNotificationToggles } from "@/components/settings/property-noti
 import { TenantNotificationToggles } from "@/components/settings/tenant-notification-toggles";
 import { WhatsAppAgentSetup } from "@/components/settings/whatsapp-agent-setup";
 import { AutoInvoiceSettings } from "@/components/settings/auto-invoice-settings";
+import { PropertyMaintenanceLinks } from "@/components/settings/property-maintenance-links";
 
 export default async function SettingsPage({
   params,
@@ -27,6 +29,7 @@ export default async function SettingsPage({
 }) {
   const { locale } = await params;
   const t = await getTranslations("settings");
+  const tMaint = await getTranslations("maintenanceRequest");
   const supabase = await createClient();
 
   const {
@@ -234,6 +237,24 @@ export default async function SettingsPage({
           </div>
         </div>
         <TenantNotificationToggles tenants={tenantsList} />
+      </div>
+
+      {/* Property Maintenance Links */}
+      <div className="bg-surface border border-border rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-accent/10 rounded-md">
+            <Wrench className="h-5 w-5 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-base font-medium text-text-primary font-display">
+              {tMaint("propertyLinks")}
+            </h2>
+            <p className="text-xs text-text-secondary">
+              {tMaint("propertyLinksDescription")}
+            </p>
+          </div>
+        </div>
+        <PropertyMaintenanceLinks properties={propertiesList} locale={locale} />
       </div>
 
       {/* Activity Log */}

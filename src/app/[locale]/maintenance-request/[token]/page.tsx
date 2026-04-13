@@ -7,10 +7,7 @@ import { Wrench, Send, AlertTriangle, Building2 } from "lucide-react";
 import { MediaUpload } from "@/components/maintenance/media-upload";
 
 interface TokenInfo {
-  tenant_id: string;
-  unit_id: string;
-  tenant_name: string;
-  unit_number: string;
+  property_id: string;
   property_name: string;
 }
 
@@ -147,25 +144,41 @@ export default function PublicMaintenanceRequestPage({
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-        {/* Tenant/Unit info banner */}
+        {/* Property banner */}
         <div className="bg-surface border border-border rounded-xl p-4 flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
             <Building2 className="h-5 w-5 text-accent" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-text-primary truncate">
-              {tokenInfo?.tenant_name}
+              {tokenInfo?.property_name}
             </p>
             <p className="text-xs text-text-secondary">
-              {tokenInfo?.property_name} &middot; {t("unit")} {tokenInfo?.unit_number}
+              {t("enterUnitPrompt")}
             </p>
           </div>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Category */}
+          {/* Unit number + Category + Description + Urgency */}
           <div className="bg-surface border border-border rounded-xl p-5 space-y-4">
+            {/* Unit Number */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                {t("unitNumber")} <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                name="unit_number"
+                required
+                autoComplete="off"
+                placeholder={t("unitNumberPlaceholder")}
+                className="w-full h-10 bg-surface-elevated border border-border rounded-lg px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+
+            {/* Category */}
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
                 {t("selectCategory")} <span className="text-destructive">*</span>
