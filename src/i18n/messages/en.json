@@ -441,7 +441,9 @@
     "cancelReasonPlaceholder": "e.g. Duplicate invoice, incorrect amount...",
     "confirmCancel": "Cancel Invoice",
     "invoiceCancelled": "Invoice cancelled successfully",
-    "cancelFailed": "Failed to cancel invoice"
+    "cancelFailed": "Failed to cancel invoice",
+    "downloadUnpaidPDF": "Remaining Invoices PDF",
+    "downloadUnpaidPDFDescription": "Download a PDF of all unpaid invoices for this tenant"
   },
   "cheques": {
     "title": "Cheques",

@@ -441,7 +441,9 @@
     "cancelReasonPlaceholder": "مثال: فاتورة مكررة، مبلغ غير صحيح...",
     "confirmCancel": "إلغاء الفاتورة",
     "invoiceCancelled": "تم إلغاء الفاتورة بنجاح",
-    "cancelFailed": "فشل إلغاء الفاتورة"
+    "cancelFailed": "فشل إلغاء الفاتورة",
+    "downloadUnpaidPDF": "كشف الفواتير المتبقية",
+    "downloadUnpaidPDFDescription": "تنزيل ملف PDF بجميع الفواتير غير المسددة لهذا المستأجر"
   },
   "cheques": {
     "title": "الشيكات",
