@@ -149,7 +149,8 @@
     "subtitle": "محفظة عقاراتك",
     "noLocation": "لم يتم تحديد الموقع",
     "namePlaceholder": "أدخل اسم العقار",
-    "locationPlaceholder": "أدخل الموقع"
+    "locationPlaceholder": "أدخل الموقع",
+    "nameRequired": "اسم العقار مطلوب"
   },
   "units": {
     "title": "الوحدات",
@@ -259,6 +260,9 @@
     "securityDeposit": "مبلغ التأمين",
     "leaseActive": "ساري",
     "leaseExpired": "منتهي",
+    "useMoveOutHint": "استخدم تدفق المغادرة لأرشفة المستأجر",
+    "leaseEndAfterStart": "عقد الوحدة {unit}: تاريخ الانتهاء يجب أن يكون بعد تاريخ البداية",
+    "leaseRentPositive": "عقد الوحدة {unit}: الإيجار الشهري يجب أن يكون أكبر من 0",
     "daysRemaining": "الأيام المتبقية",
     "payments": "المدفوعات",
     "paymentDate": "تاريخ الدفع",
@@ -490,6 +494,14 @@
     "newRequest": "طلب جديد",
     "createRequest": "إنشاء طلب صيانة",
     "editRequest": "تعديل الطلب",
+    "selectUnit": "اختر الوحدة…",
+    "selectTenantOptional": "اختر المستأجر (اختياري)…",
+    "unitRequired": "يرجى اختيار وحدة.",
+    "authError": "خطأ في المصادقة. يرجى تحديث الصفحة والمحاولة مرة أخرى.",
+    "unexpectedError": "حدث خطأ غير متوقع.",
+    "vendorPhone": "الهاتف",
+    "vendorPhonePlaceholder": "+968 XXXX XXXX",
+    "technicianName": "اسم الفنّي",
     "category": "الفئة",
     "description": "الوصف",
     "urgency": "درجة الاستعجال",
@@ -879,7 +891,16 @@
       "taxes": "ضرائب",
       "management_fees": "رسوم إدارة",
       "other": "أخرى"
-    }
+    },
+    "selectProperty": "اختر العقار…",
+    "selectUnit": "اختر الوحدة…",
+    "propertyRequired": "العقار مطلوب",
+    "authError": "خطأ في المصادقة. يرجى تحديث الصفحة والمحاولة مرة أخرى.",
+    "unexpectedError": "حدث خطأ غير متوقع.",
+    "receiptUploadCta": "رفع إيصال (PDF أو صورة)",
+    "receiptUploadHint": "الحد الأقصى 10 ميجابايت",
+    "receiptRemove": "إزالة",
+    "receiptLabel": "إيصال / فاتورة"
   },
   "maintenanceRequest": {
     "title": "تقديم طلب صيانة",
