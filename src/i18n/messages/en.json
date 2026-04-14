@@ -149,7 +149,8 @@
     "subtitle": "Your property portfolio",
     "noLocation": "No location specified",
     "namePlaceholder": "Enter property name",
-    "locationPlaceholder": "Enter location"
+    "locationPlaceholder": "Enter location",
+    "nameRequired": "Property name is required"
   },
   "units": {
     "title": "Units",
@@ -490,6 +491,14 @@
     "newRequest": "New Request",
     "createRequest": "Create Request",
     "editRequest": "Edit Request",
+    "selectUnit": "Select unit…",
+    "selectTenantOptional": "Select tenant (optional)…",
+    "unitRequired": "Please select a unit.",
+    "authError": "Authentication error. Please refresh and try again.",
+    "unexpectedError": "An unexpected error occurred.",
+    "vendorPhone": "Phone",
+    "vendorPhonePlaceholder": "+968 XXXX XXXX",
+    "technicianName": "Technician name",
     "category": "Category",
     "description": "Description",
     "urgency": "Urgency",
@@ -879,7 +888,16 @@
       "taxes": "Taxes",
       "management_fees": "Management Fees",
       "other": "Other"
-    }
+    },
+    "selectProperty": "Select property…",
+    "selectUnit": "Select unit…",
+    "propertyRequired": "Property is required",
+    "authError": "Authentication error. Please refresh and try again.",
+    "unexpectedError": "An unexpected error occurred.",
+    "receiptUploadCta": "Upload receipt (PDF, image)",
+    "receiptUploadHint": "Max 10MB",
+    "receiptRemove": "Remove",
+    "receiptLabel": "Receipt / Invoice"
   },
   "maintenanceRequest": {
     "title": "Submit Maintenance Request",
