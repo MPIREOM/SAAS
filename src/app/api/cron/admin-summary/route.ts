@@ -260,10 +260,22 @@ export async function runAdminSummary(
       items: [`${openMaintenance.length} request${openMaintenance.length !== 1 ? "s" : ""} currently open or in progress`],
     });
 
+    // Per-property overdue breakdown — rendered into the plaintext
+    // WhatsApp fallback and email. Multi-line form.
     const overdueBreakdownLines = overdueByPropertySorted.map(([name, { count, total }]) =>
       `   • ${name}: ${count} invoice${count !== 1 ? "s" : ""} (${total.toFixed(2)} ${CURRENCY.code})`
     );
-    const overdueBreakdownText = overdueBreakdownLines.join("\n");
+    // Single-line variant for WhatsApp template parameter {{10}}. Meta
+    // rejects template parameters that contain newlines, tabs, or more
+    // than 4 consecutive spaces, so the breakdown is collapsed to inline
+    // bullets separated by a single space. Falls back to a lone space
+    // when there are no overdue invoices so the template still has 10
+    // params populated (Meta also rejects empty params).
+    const overdueBreakdownInline = overdueByPropertySorted
+      .map(([name, { count, total }]) =>
+        `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
+      )
+      .join(" ") || " ";
 
     const whatsappLines = [
       `📊 *MPIRE Daily Summary*`,
@@ -313,10 +325,9 @@ export async function runAdminSummary(
           totalCheques.toFixed(2),
           String(newMaintenance.length),
           String(openMaintenance.length),
-          // {{10}} — per-property overdue breakdown. Meta rejects empty
-          // template parameters, so fall back to a single space when there
-          // are no overdue invoices.
-          overdueBreakdownText || " ",
+          // {{10}} — per-property overdue breakdown, single-line form
+          // (Meta rejects newlines/tabs/>4 spaces in template params).
+          overdueBreakdownInline,
         ],
       },
     });
