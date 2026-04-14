@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils/cn";
 import { Globe, Moon, Sun, Search, LogOut, X } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CURRENCY } from "@/lib/currency";
 import Link from "next/link";
 
 interface TopbarProps {
@@ -15,11 +14,17 @@ interface TopbarProps {
   userName?: string;
 }
 
-interface SearchResult {
-  type: "tenant" | "property" | "unit" | "invoice" | "maintenance";
+type SearchType = "tenant" | "property" | "unit" | "invoice" | "maintenance";
+
+interface SearchResultRaw {
+  type: SearchType;
   id: string;
   title: string;
   subtitle?: string;
+  payload: { id?: string; property_id?: string };
+}
+
+interface SearchResult extends SearchResultRaw {
   href: string;
 }
 
@@ -29,20 +34,41 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searching, setSearching] = useState(false);
+  // Keyboard navigation index into searchResults; -1 means nothing focused.
+  const [activeIdx, setActiveIdx] = useState(-1);
+  // Mac vs PC affects the visible "⌘K" hint.
+  const [isMac, setIsMac] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations("common");
   const tn = useTranslations("nav");
 
-  // Persist theme from localStorage
+  // Persist theme from localStorage + detect platform for keyboard hint.
   useEffect(() => {
     const saved = localStorage.getItem("theme") as "dark" | "light" | null;
     if (saved) {
       setTheme(saved);
       document.documentElement.setAttribute("data-theme", saved);
     }
+    setIsMac(/Mac|iPhone|iPad/.test(navigator.platform));
+  }, []);
+
+  // Global Cmd+K / Ctrl+K shortcut: jumps to the search input from
+  // anywhere in the app. Skips when the user is already typing in
+  // another input so we don't steal characters.
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
   // Close search on outside click
@@ -75,104 +101,51 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
     router.push(`/${locale}/auth/login`);
   };
 
+  // Hits the access-scoped /api/search endpoint instead of querying
+  // Supabase from the client. Keeps tenants/properties/units the user
+  // has no access to from leaking into the dropdown.
   const handleSearch = useCallback(
     async (query: string) => {
       if (!query || query.length < 2) {
         setSearchResults([]);
         setSearchOpen(false);
+        setActiveIdx(-1);
         return;
       }
 
       setSearching(true);
       setSearchOpen(true);
-      const supabase = createClient();
-      const results: SearchResult[] = [];
 
       try {
-      const [{ data: tenants }, { data: properties }, { data: units }, { data: invoices }, { data: maintenanceRequests }] =
-        await Promise.all([
-          supabase
-            .from("tenants")
-            .select("id, full_name, phone")
-            .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%`)
-            .limit(5),
-          supabase
-            .from("properties")
-            .select("id, name, location")
-            .or(`name.ilike.%${query}%,location.ilike.%${query}%`)
-            .limit(5),
-          supabase
-            .from("units")
-            .select("id, unit_number, property_id, properties(name)")
-            .ilike("unit_number", `%${query}%`)
-            .limit(5),
-          supabase
-            .from("invoices")
-            .select("id, amount, status, due_date, tenants!inner(full_name)")
-            .or(`status.eq.pending,status.eq.overdue`)
-            .limit(3),
-          supabase
-            .from("maintenance_requests")
-            .select("id, category, status, description")
-            .ilike("description", `%${query}%`)
-            .limit(3),
-        ]);
-
-      tenants?.forEach((t) =>
-        results.push({
-          type: "tenant",
-          id: t.id,
-          title: t.full_name,
-          subtitle: t.phone,
-          href: `/${locale}/tenants/${t.id}`,
-        })
-      );
-
-      properties?.forEach((p) =>
-        results.push({
-          type: "property",
-          id: p.id,
-          title: p.name,
-          subtitle: p.location,
-          href: `/${locale}/properties/${p.id}`,
-        })
-      );
-
-      units?.forEach((u) => {
-        const prop = u.properties as unknown as Record<string, string> | null;
-        results.push({
-          type: "unit",
-          id: u.id,
-          title: `Unit ${u.unit_number}`,
-          subtitle: prop?.name,
-          href: `/${locale}/properties/${u.property_id}`,
-        });
-      });
-
-      invoices?.forEach((inv) => {
-        const tenant = inv.tenants as unknown as { full_name: string };
-        results.push({
-          type: "invoice",
-          id: inv.id,
-          title: `${tenant.full_name} - ${inv.amount} ${CURRENCY.code}`,
-          subtitle: `${inv.status} · ${new Date(inv.due_date).toLocaleDateString()}`,
-          href: `/${locale}/invoices`,
-        });
-      });
-
-      maintenanceRequests?.forEach((m) => {
-        results.push({
-          type: "maintenance",
-          id: m.id,
-          title: m.category.charAt(0).toUpperCase() + m.category.slice(1),
-          subtitle: m.description?.slice(0, 50) + (m.description?.length > 50 ? "..." : ""),
-          href: `/${locale}/maintenance/${m.id}`,
-        });
-      });
-
-      setSearchResults(results);
+        const res = await fetch(
+          `/api/search?q=${encodeURIComponent(query)}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) throw new Error("search failed");
+        const data: { results: SearchResultRaw[] } = await res.json();
+        const hrefFor = (r: SearchResultRaw): string => {
+          switch (r.type) {
+            case "tenant":
+              return `/${locale}/tenants/${r.id}`;
+            case "property":
+              return `/${locale}/properties/${r.id}`;
+            case "unit":
+              return `/${locale}/properties/${r.payload.property_id}/units/${r.id}`;
+            case "invoice":
+              return `/${locale}/invoices`;
+            case "maintenance":
+              return `/${locale}/maintenance/${r.id}`;
+          }
+        };
+        const enriched: SearchResult[] = (data.results || []).map((r) => ({
+          ...r,
+          href: hrefFor(r),
+        }));
+        setSearchResults(enriched);
+        setActiveIdx(enriched.length > 0 ? 0 : -1);
       } catch {
         setSearchResults([]);
+        setActiveIdx(-1);
       } finally {
         setSearching(false);
       }
@@ -184,6 +157,36 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
     setSearchQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => handleSearch(value), 300);
+  };
+
+  // Arrow nav + Enter to navigate, Esc to dismiss. Active result is
+  // tracked separately from focus so the input stays focused while
+  // the user moves through results.
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setSearchOpen(false);
+      setActiveIdx(-1);
+      inputRef.current?.blur();
+      return;
+    }
+    if (!searchOpen || searchResults.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIdx((i) => (i + 1) % searchResults.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIdx((i) =>
+        i <= 0 ? searchResults.length - 1 : i - 1
+      );
+    } else if (e.key === "Enter") {
+      const target = searchResults[activeIdx];
+      if (target) {
+        e.preventDefault();
+        setSearchOpen(false);
+        setSearchQuery("");
+        router.push(target.href);
+      }
+    }
   };
 
   const typeLabels: Record<string, string> = {
@@ -203,65 +206,128 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
       {/* Search */}
       <div ref={searchRef} className="relative flex-1 max-w-xs md:max-w-md">
         <div className="relative group">
-          <Search className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary start-3 transition-colors group-focus-within:text-accent" aria-hidden="true" />
+          <Search
+            className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary start-3 transition-colors group-focus-within:text-accent"
+            aria-hidden="true"
+          />
           <input
+            ref={inputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             onFocus={() => searchQuery.length >= 2 && setSearchOpen(true)}
+            onKeyDown={onSearchKeyDown}
             placeholder={t("search")}
             aria-label={t("search")}
-            className="w-full h-9 bg-surface-elevated/50 border border-border/50 rounded-lg ps-9 pe-8 text-sm text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:border-accent/50 focus:bg-surface-elevated transition-all duration-200"
+            role="combobox"
+            aria-expanded={searchOpen}
+            aria-controls="topbar-search-listbox"
+            aria-activedescendant={
+              activeIdx >= 0
+                ? `topbar-search-result-${activeIdx}`
+                : undefined
+            }
+            autoComplete="off"
+            className="w-full h-9 bg-surface-elevated/50 border border-border/50 rounded-lg ps-9 pe-16 text-sm text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:border-accent/50 focus:bg-surface-elevated transition-all duration-200"
           />
-          {searchQuery && (
+          {searchQuery ? (
             <button
               onClick={() => {
                 setSearchQuery("");
                 setSearchResults([]);
                 setSearchOpen(false);
+                setActiveIdx(-1);
+                inputRef.current?.focus();
               }}
               aria-label={t("close")}
-              className="absolute top-1/2 -translate-y-1/2 end-2 p-0.5 rounded text-text-secondary hover:text-text-primary"
+              className="absolute top-1/2 -translate-y-1/2 end-2 p-0.5 rounded text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
+          ) : (
+            <kbd
+              aria-hidden="true"
+              className="hidden sm:inline-flex absolute top-1/2 -translate-y-1/2 end-2 items-center gap-0.5 h-5 px-1.5 rounded border border-border/60 bg-surface text-[10px] font-mono font-semibold text-text-secondary pointer-events-none"
+              title={isMac ? "⌘K" : "Ctrl+K"}
+            >
+              <span>{isMac ? "⌘" : "Ctrl"}</span>
+              <span>K</span>
+            </kbd>
           )}
         </div>
 
         {/* Search dropdown */}
         {searchOpen && (
-          <div className="absolute top-full mt-1.5 w-full bg-surface border border-border rounded-xl shadow-xl overflow-hidden z-50">
+          <div
+            id="topbar-search-listbox"
+            role="listbox"
+            className="absolute top-full mt-1.5 w-full bg-surface border border-border rounded-xl shadow-xl overflow-hidden z-50"
+          >
             {searching ? (
-              <div className="px-4 py-6 text-center">
+              <div
+                className="px-4 py-6 text-center"
+                aria-busy="true"
+                aria-live="polite"
+              >
                 <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
               </div>
             ) : searchResults.length > 0 ? (
               <div className="py-1.5 max-h-72 overflow-y-auto">
-                {searchResults.map((result) => (
-                  <Link
-                    key={`${result.type}-${result.id}`}
-                    href={result.href}
-                    onClick={() => {
-                      setSearchOpen(false);
-                      setSearchQuery("");
-                    }}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-elevated transition-colors"
-                  >
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded">
-                      {typeLabels[result.type]}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-text-primary truncate">
-                        {result.title}
-                      </p>
-                      {result.subtitle && (
-                        <p className="text-xs text-text-secondary truncate">
-                          {result.subtitle}
-                        </p>
+                {searchResults.map((result, idx) => {
+                  const isActive = idx === activeIdx;
+                  return (
+                    <Link
+                      key={`${result.type}-${result.id}`}
+                      id={`topbar-search-result-${idx}`}
+                      role="option"
+                      aria-selected={isActive}
+                      href={result.href}
+                      onMouseEnter={() => setActiveIdx(idx)}
+                      onClick={() => {
+                        setSearchOpen(false);
+                        setSearchQuery("");
+                      }}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-2.5 transition-colors",
+                        isActive
+                          ? "bg-accent/10"
+                          : "hover:bg-surface-elevated"
                       )}
-                    </div>
-                  </Link>
-                ))}
+                    >
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded shrink-0">
+                        {typeLabels[result.type]}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">
+                          {result.title}
+                        </p>
+                        {result.subtitle && (
+                          <p className="text-xs text-text-secondary truncate">
+                            {result.subtitle}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+                <div className="border-t border-border/40 px-3 py-1.5 flex items-center justify-between text-[10px] text-text-secondary">
+                  <span className="flex items-center gap-1.5">
+                    <kbd className="px-1 rounded border border-border/60 bg-surface font-mono">
+                      ↑↓
+                    </kbd>
+                    <span>{t("toNavigate")}</span>
+                    <kbd className="px-1 rounded border border-border/60 bg-surface font-mono">
+                      ↵
+                    </kbd>
+                    <span>{t("toSelect")}</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="px-1 rounded border border-border/60 bg-surface font-mono">
+                      esc
+                    </kbd>
+                    <span>{t("toClose")}</span>
+                  </span>
+                </div>
               </div>
             ) : (
               <div className="px-4 py-6 text-center">
