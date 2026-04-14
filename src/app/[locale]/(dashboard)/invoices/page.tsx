@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import {
   FileText,
@@ -217,16 +219,9 @@ export default async function InvoicesPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between animate-fade-in-up">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-display tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">{t("subtitle")}</p>
-        </div>
+      <PageHeader title={t("title")} description={t("subtitle")}>
         <CreateInvoiceButton />
-      </div>
+      </PageHeader>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-children">
@@ -398,7 +393,8 @@ export default async function InvoicesPage({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop table — hidden on mobile in favor of card list below */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-t border-b border-border">
@@ -451,7 +447,11 @@ export default async function InvoicesPage({
                     return (
                       <tr
                         key={invoice.id as string}
-                        className="group border-b border-border/20 last:border-0 hover:bg-surface-elevated/40 transition-colors duration-150"
+                        className={`group border-b border-border/20 last:border-0 transition-colors duration-150 ${
+                          isOverdue
+                            ? "bg-destructive/[0.04] hover:bg-destructive/[0.08]"
+                            : "hover:bg-surface-elevated/40"
+                        }`}
                         style={{
                           animationDelay: `${index * 20}ms`,
                         }}
@@ -627,6 +627,133 @@ export default async function InvoicesPage({
               </tbody>
             </table>
           </div>
+
+          {/* Mobile card list — same data, vertical layout for narrow screens */}
+          <ul className="md:hidden divide-y divide-border/30">
+            {allInvoices.map((invoice: Record<string, unknown>) => {
+              const tenant = invoice.tenants as Record<string, unknown> | null;
+              const unit = invoice.units as Record<string, unknown> | null;
+              const property = unit?.properties as Record<string, unknown> | null;
+              const invoiceStatus = invoice.status as string;
+              const isOverdue =
+                invoiceStatus === "overdue" ||
+                (invoiceStatus === "pending" &&
+                  new Date(invoice.due_date as string) < now);
+              const isPaid = invoiceStatus === "paid";
+              const isPartial = invoiceStatus === "partial";
+              const isWrittenOff = invoiceStatus === "written_off";
+              const isCancelled = invoiceStatus === "cancelled";
+
+              const statusBadge = isPaid ? (
+                <Badge variant="success" className="gap-1">
+                  <CheckCircle2 aria-hidden="true" className="h-3 w-3" />
+                  {t("paid")}
+                </Badge>
+              ) : isWrittenOff ? (
+                <Badge variant="warning" className="gap-1">
+                  <FileX aria-hidden="true" className="h-3 w-3" />
+                  {t("writtenOff")}
+                </Badge>
+              ) : isCancelled ? (
+                <Badge variant="secondary" className="gap-1">
+                  <Ban aria-hidden="true" className="h-3 w-3" />
+                  {t("cancelled")}
+                </Badge>
+              ) : isPartial ? (
+                <Badge variant="default" className="gap-1 bg-info/12 text-info border-info/20">
+                  <CircleDot aria-hidden="true" className="h-3 w-3" />
+                  {t("partial")}
+                </Badge>
+              ) : isOverdue ? (
+                <Badge variant="destructive" className="gap-1">
+                  <AlertTriangle aria-hidden="true" className="h-3 w-3" />
+                  {t("overdue")}
+                </Badge>
+              ) : (
+                <Badge variant="warning" className="gap-1">
+                  <Clock aria-hidden="true" className="h-3 w-3" />
+                  {t("pending")}
+                </Badge>
+              );
+
+              return (
+                <li
+                  key={`m-${invoice.id as string}`}
+                  className={`p-4 ${isOverdue ? "bg-destructive/5" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text-primary truncate">
+                        {(tenant?.full_name as string) || "—"}
+                      </p>
+                      <p className="text-xs text-text-secondary truncate mt-0.5">
+                        {(property?.name as string) || "—"}
+                        {unit?.unit_number ? ` · ${unit.unit_number as string}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-end shrink-0">
+                      <p
+                        className={`text-sm font-semibold font-mono tabular-nums ${
+                          isPaid
+                            ? "text-text-secondary"
+                            : isWrittenOff
+                            ? "text-warning line-through"
+                            : isCancelled
+                            ? "text-text-secondary/50 line-through"
+                            : isOverdue
+                            ? "text-destructive"
+                            : isPartial
+                            ? "text-info"
+                            : "text-text-primary"
+                        }`}
+                      >
+                        {formatAmount(invoice.amount as number)}{" "}
+                        <span className="text-[10px] font-normal text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-text-secondary font-mono tabular-nums mt-0.5">
+                        {formatDate(invoice.due_date as string)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    {statusBadge}
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/api/invoices/${invoice.id}/pdf`}
+                        target="_blank"
+                        className="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-border/50 px-2 text-text-secondary hover:text-accent hover:border-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                        aria-label="View PDF"
+                      >
+                        <Printer aria-hidden="true" className="h-3.5 w-3.5" />
+                      </Link>
+                      {!isPaid && !isWrittenOff && !isCancelled && (
+                        <>
+                          <CancelInvoiceButton
+                            invoiceId={invoice.id as string}
+                            amount={String(invoice.amount)}
+                            paidAmount={String(invoice.paid_amount || 0)}
+                            tenantName={(tenant?.full_name as string) || "—"}
+                          />
+                          <MarkPaidButton
+                            invoiceId={invoice.id as string}
+                            amount={String(invoice.amount)}
+                            paidAmount={String(invoice.paid_amount || 0)}
+                            tenantName={(tenant?.full_name as string) || "—"}
+                            tenantId={invoice.tenant_id as string}
+                            periodStart={(invoice.period_start as string) || undefined}
+                            periodEnd={(invoice.period_end as string) || undefined}
+                            dueDate={(invoice.due_date as string) || undefined}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
 
           {/* Footer */}
           <div className="px-5 py-3 border-t border-border flex items-center justify-between">
