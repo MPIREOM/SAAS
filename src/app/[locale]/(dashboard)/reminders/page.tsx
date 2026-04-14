@@ -5,6 +5,9 @@ import { getTranslations } from "next-intl/server";
 import { Bell, FileText, Plus } from "lucide-react";
 import { ReminderTriggerButton } from "@/components/reminders/trigger-button";
 import { ReminderRules } from "@/components/reminders/reminder-rules";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function RemindersPage({
   params,
@@ -43,31 +46,23 @@ export default async function RemindersPage({
     .select("*")
     .order("name");
 
-  const statusColors: Record<string, string> = {
-    sent: "bg-success/10 text-success",
-    failed: "bg-destructive/10 text-destructive",
-    pending: "bg-warning/10 text-warning",
+  const statusVariant = (s: string): "success" | "destructive" | "warning" => {
+    if (s === "sent") return "success";
+    if (s === "failed") return "destructive";
+    return "warning";
   };
 
-  const channelIcons: Record<string, string> = {
-    whatsapp: "bg-success/10 text-success",
-    email: "bg-accent/10 text-accent",
-    sms: "bg-warning/10 text-warning",
+  const channelVariant = (c: string): "success" | "default" | "warning" => {
+    if (c === "whatsapp") return "success";
+    if (c === "sms") return "warning";
+    return "default";
   };
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between animate-fade-in-up">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary font-display">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
+      <PageHeader title={t("title")} description={t("subtitle")}>
         <ReminderTriggerButton />
-      </div>
+      </PageHeader>
 
       {/* Reminder Log Section */}
       <div className="space-y-4">
@@ -128,22 +123,22 @@ export default async function RemindersPage({
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            channelIcons[(reminder.channel as string) || "email"]
-                          }`}
-                        >
-                          {reminder.channel ? t(`channels.${reminder.channel}`) : "—"}
-                        </span>
+                        {reminder.channel ? (
+                          <Badge variant={channelVariant(reminder.channel as string)}>
+                            {t(`channels.${reminder.channel}`)}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-text-secondary">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            statusColors[(reminder.status as string) || "pending"]
-                          }`}
-                        >
-                          {reminder.status ? t(`statuses.${reminder.status}`) : "—"}
-                        </span>
+                        {reminder.status ? (
+                          <Badge variant={statusVariant(reminder.status as string)}>
+                            {t(`statuses.${reminder.status}`)}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-text-secondary">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-text-secondary max-w-[250px] truncate block">
@@ -158,15 +153,11 @@ export default async function RemindersPage({
             </table>
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-lg p-12 text-center">
-            <Bell className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
-            <h3 className="text-base font-medium text-text-primary mb-1 font-display">
-              {t("noRemindersSent")}
-            </h3>
-            <p className="text-sm text-text-secondary">
-              {t("noRemindersSentDescription")}
-            </p>
-          </div>
+          <EmptyState
+            icon={<Bell className="h-5 w-5" />}
+            title={t("noRemindersSent")}
+            description={t("noRemindersSentDescription")}
+          />
         )}
       </div>
 
@@ -197,13 +188,16 @@ export default async function RemindersPage({
                 href={`/${locale}/reminders/templates/${template.id}`}
                 className="bg-surface border border-border rounded-lg p-5 hover:border-accent/30 transition-colors group"
               >
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between mb-2 gap-3">
                   <h3 className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors font-display">
                     {template.name as string}
                   </h3>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent capitalize">
+                  <Badge
+                    variant={channelVariant((template.channel as string) || "email")}
+                    className="capitalize"
+                  >
                     {(template.channel as string) || "email"}
-                  </span>
+                  </Badge>
                 </div>
                 <p className="text-xs text-text-secondary line-clamp-2">
                   {(template.body_template as string)?.slice(0, 120) || "—"}
@@ -218,22 +212,20 @@ export default async function RemindersPage({
             ))}
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-lg p-12 text-center">
-            <FileText className="h-10 w-10 text-text-secondary/40 mx-auto mb-3" />
-            <h3 className="text-base font-medium text-text-primary mb-1 font-display">
-              {t("noTemplates")}
-            </h3>
-            <p className="text-sm text-text-secondary mb-4">
-              {t("noTemplatesDescription")}
-            </p>
-            <Link
-              href={`/${locale}/reminders/templates/new`}
-              className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
-            >
-              <Plus className="h-4 w-4" />
-              {t("newTemplate")}
-            </Link>
-          </div>
+          <EmptyState
+            icon={<FileText className="h-5 w-5" />}
+            title={t("noTemplates")}
+            description={t("noTemplatesDescription")}
+            action={
+              <Link
+                href={`/${locale}/reminders/templates/new`}
+                className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                {t("newTemplate")}
+              </Link>
+            }
+          />
         )}
       </div>
     </div>

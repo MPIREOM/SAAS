@@ -3,6 +3,9 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { FolderOpen, AlertTriangle, Clock, CheckCircle, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Document {
   id: string;
@@ -103,11 +106,7 @@ export default async function DocumentsPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="animate-fade-in-up">
-        <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-text-secondary mt-1">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} description={t("subtitle")} />
 
       {/* Expiry Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -163,17 +162,16 @@ export default async function DocumentsPage({
       </div>
 
       {/* Documents Table */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        {filteredDocs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-text-secondary">
-            <div className="h-14 w-14 rounded-2xl bg-surface-elevated flex items-center justify-center mb-4">
-              <FolderOpen className="h-6 w-6 opacity-40" />
-            </div>
-            <p className="text-sm font-medium">{t("noDocuments")}</p>
-            <p className="text-xs mt-1">{t("noDocumentsDescription")}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
+      {filteredDocs.length === 0 ? (
+        <EmptyState
+          icon={<FolderOpen className="h-5 w-5" />}
+          title={t("noDocuments")}
+          description={t("noDocumentsDescription")}
+        />
+      ) : (
+        <div className="bg-surface border border-border rounded-xl overflow-hidden">
+          {/* Desktop table — hidden on mobile in favor of card list below */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface-elevated/30">
@@ -188,12 +186,18 @@ export default async function DocumentsPage({
               <tbody>
                 {filteredDocs.map((doc) => {
                   const expiryStatus = getExpiryStatus(doc.expiry_date);
+                  const expiryVariant: "success" | "warning" | "destructive" =
+                    expiryStatus === "expired"
+                      ? "destructive"
+                      : expiryStatus === "expiringSoon"
+                      ? "warning"
+                      : "success";
                   return (
                     <tr key={doc.id} className="border-b border-border/20 hover:bg-surface-elevated/30 transition-colors">
                       <td className="py-3 px-4">
-                        <span className="text-xs font-medium bg-accent/10 text-accent px-2 py-1 rounded-md">
+                        <Badge variant="default">
                           {t(`types.${documentTypeMap[doc.document_type] || "custom"}`)}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="py-3 px-4">
                         <div>
@@ -206,15 +210,9 @@ export default async function DocumentsPage({
                       </td>
                       <td className="py-3 px-4">
                         {doc.expiry_date ? (
-                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                            expiryStatus === "expired"
-                              ? "bg-destructive/10 text-destructive"
-                              : expiryStatus === "expiringSoon"
-                              ? "bg-warning/10 text-warning"
-                              : "bg-success/10 text-success"
-                          }`}>
+                          <Badge variant={expiryVariant}>
                             {format(new Date(doc.expiry_date), "dd MMM yyyy")}
-                          </span>
+                          </Badge>
                         ) : (
                           <span className="text-xs text-text-secondary">—</span>
                         )}
@@ -228,9 +226,10 @@ export default async function DocumentsPage({
                             href={doc.file_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors"
+                            aria-label={t("viewDocument") || "View document"}
+                            className="inline-flex h-8 min-w-8 items-center justify-center rounded-md text-accent hover:text-accent-hover hover:bg-accent/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                           >
-                            <ExternalLink className="h-3.5 w-3.5" />
+                            <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
                           </a>
                         )}
                       </td>
@@ -240,33 +239,86 @@ export default async function DocumentsPage({
               </tbody>
             </table>
           </div>
-        )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-            <Link
-              href={`/${locale}/documents?page=${Math.max(1, currentPage - 1)}${filter ? `&filter=${filter}` : ""}`}
-              className={`text-xs px-3 py-1.5 rounded-md border ${
-                currentPage <= 1 ? "opacity-50 pointer-events-none border-border/30 text-text-secondary" : "border-border text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              Previous
-            </Link>
-            <span className="text-xs text-text-secondary">
-              Page {currentPage} of {totalPages}
-            </span>
-            <Link
-              href={`/${locale}/documents?page=${Math.min(totalPages, currentPage + 1)}${filter ? `&filter=${filter}` : ""}`}
-              className={`text-xs px-3 py-1.5 rounded-md border ${
-                currentPage >= totalPages ? "opacity-50 pointer-events-none border-border/30 text-text-secondary" : "border-border text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              Next
-            </Link>
-          </div>
-        )}
-      </div>
+          {/* Mobile card list */}
+          <ul className="md:hidden divide-y divide-border/30">
+            {filteredDocs.map((doc) => {
+              const expiryStatus = getExpiryStatus(doc.expiry_date);
+              const expiryVariant: "success" | "warning" | "destructive" =
+                expiryStatus === "expired"
+                  ? "destructive"
+                  : expiryStatus === "expiringSoon"
+                  ? "warning"
+                  : "success";
+              return (
+                <li key={`m-${doc.id}`} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text-primary truncate">
+                        {doc.entityName}
+                      </p>
+                      <p className="text-xs text-text-secondary capitalize mt-0.5">
+                        {doc.entity_type}
+                      </p>
+                    </div>
+                    {doc.file_url && (
+                      <a
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={t("viewDocument") || "View document"}
+                        className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md border border-border/50 text-text-secondary hover:text-accent hover:border-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                      >
+                        <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="default">
+                      {t(`types.${documentTypeMap[doc.document_type] || "custom"}`)}
+                    </Badge>
+                    {doc.expiry_date && (
+                      <Badge variant={expiryVariant}>
+                        {format(new Date(doc.expiry_date), "dd MMM yyyy")}
+                      </Badge>
+                    )}
+                  </div>
+                  {doc.file_name && (
+                    <p className="mt-2 text-xs text-text-secondary truncate">
+                      {doc.file_name}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+              <Link
+                href={`/${locale}/documents?page=${Math.max(1, currentPage - 1)}${filter ? `&filter=${filter}` : ""}`}
+                className={`text-xs px-3 py-1.5 rounded-md border ${
+                  currentPage <= 1 ? "opacity-50 pointer-events-none border-border/30 text-text-secondary" : "border-border text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                Previous
+              </Link>
+              <span className="text-xs text-text-secondary">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Link
+                href={`/${locale}/documents?page=${Math.min(totalPages, currentPage + 1)}${filter ? `&filter=${filter}` : ""}`}
+                className={`text-xs px-3 py-1.5 rounded-md border ${
+                  currentPage >= totalPages ? "opacity-50 pointer-events-none border-border/30 text-text-secondary" : "border-border text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                Next
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import Link from "next/link";
 import {
   Receipt,
@@ -101,22 +104,15 @@ export default async function ExpensesPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between animate-fade-in-up">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-display tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">{t("subtitle")}</p>
-        </div>
+      <PageHeader title={t("title")} description={t("subtitle")}>
         <Link
           href={`/${locale}/expenses/new`}
-          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
+          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
-          <Plus className="h-4 w-4" />
+          <Plus aria-hidden="true" className="h-4 w-4" />
           {t("addExpense")}
         </Link>
-      </div>
+      </PageHeader>
 
       {/* Filter */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -151,7 +147,8 @@ export default async function ExpensesPage({
       {/* Table */}
       {allExpenses.length > 0 ? (
         <div className="bg-surface border border-border/60 rounded-xl overflow-hidden animate-fade-in">
-          <div className="overflow-x-auto">
+          {/* Desktop table — hidden on mobile in favor of card list */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b border-border/40">
@@ -220,9 +217,9 @@ export default async function ExpensesPage({
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="inline-flex items-center text-[11px] px-2.5 py-1 rounded-md font-semibold bg-surface-elevated text-text-secondary border border-border/30">
+                          <Badge variant="secondary">
                             {t(`categories.${expense.category as string}`)}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-5 py-3.5">
                           <span className="text-sm text-text-secondary line-clamp-1">
@@ -250,6 +247,55 @@ export default async function ExpensesPage({
             </table>
           </div>
 
+          {/* Mobile card list — same data, vertical layout for narrow screens */}
+          <ul className="md:hidden divide-y divide-border/30">
+            {allExpenses.map((expense: Record<string, unknown>) => {
+              const prop = expense.properties as Record<string, unknown> | null;
+              const unit = expense.units as Record<string, unknown> | null;
+              return (
+                <li key={`m-${expense.id as string}`} className="p-4">
+                  <Link
+                    href={`/${locale}/expenses/${expense.id}/edit`}
+                    className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">
+                          {(prop?.name as string) || "—"}
+                          {unit?.unit_number ? ` · ${unit.unit_number as string}` : ""}
+                        </p>
+                        <p className="mt-0.5 text-xs text-text-secondary line-clamp-2">
+                          {(expense.description as string) || "—"}
+                        </p>
+                      </div>
+                      <div className="text-end shrink-0">
+                        <p className="text-sm font-semibold font-mono tabular-nums text-text-primary">
+                          {formatAmount(expense.amount as number)}{" "}
+                          <span className="text-[10px] font-normal text-text-secondary">
+                            {CURRENCY.code}
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-text-secondary font-mono tabular-nums mt-0.5">
+                          {formatDate(expense.expense_date as string)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <Badge variant="secondary">
+                        {t(`categories.${expense.category as string}`)}
+                      </Badge>
+                      {expense.vendor ? (
+                        <span className="text-text-secondary truncate">
+                          {expense.vendor as string}
+                        </span>
+                      ) : null}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+
           {/* Footer */}
           <div className="px-5 py-3 border-t border-border/40 flex items-center justify-between">
             <span className="text-xs text-text-secondary">
@@ -271,24 +317,20 @@ export default async function ExpensesPage({
           />
         </div>
       ) : (
-        <div className="bg-surface border border-border/60 rounded-xl p-16 text-center">
-          <div className="mx-auto w-14 h-14 rounded-xl bg-surface-elevated flex items-center justify-center mb-4">
-            <Receipt className="h-7 w-7 text-text-secondary/40" />
-          </div>
-          <h3 className="text-base font-semibold text-text-primary font-display mb-1">
-            {t("noExpenses")}
-          </h3>
-          <p className="text-sm text-text-secondary max-w-xs mx-auto">
-            {t("noExpensesDescription")}
-          </p>
-          <Link
-            href={`/${locale}/expenses/new`}
-            className="inline-flex items-center gap-2 mt-4 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            {t("addExpense")}
-          </Link>
-        </div>
+        <EmptyState
+          icon={<Receipt className="h-5 w-5" />}
+          title={t("noExpenses")}
+          description={t("noExpensesDescription")}
+          action={
+            <Link
+              href={`/${locale}/expenses/new`}
+              className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {t("addExpense")}
+            </Link>
+          }
+        />
       )}
     </div>
   );
