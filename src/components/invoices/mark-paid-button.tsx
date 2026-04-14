@@ -154,7 +154,7 @@ export function MarkPaidButton({
       .single();
 
     if (!invoice) {
-      toast({ title: "Invoice not found", variant: "destructive" });
+      toast({ title: t("notFound"), variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -171,7 +171,7 @@ export function MarkPaidButton({
 
     if (paymentAmount <= 0) {
       toast({
-        title: "Invoice already fully paid",
+        title: t("alreadyFullyPaid"),
         variant: "destructive",
       });
       setLoading(false);
@@ -310,7 +310,7 @@ export function MarkPaidButton({
                 status: "paid",
                 paid_amount: invoiceTotal,
                 paid_date: paidDate,
-                notes: `Paid in advance (${advanceMonths} months)`,
+                notes: t("paidInAdvanceNote", { months: advanceMonths }),
                 updated_at: new Date().toISOString(),
               })
               .eq("id", existing.id);
@@ -365,17 +365,21 @@ export function MarkPaidButton({
 
       setOpen(false);
       toast({
-        title: paymentType === "advance"
-          ? `Advance payment for ${advanceMonths} months recorded`
-          : isFullyPaid
-          ? "Invoice marked as paid"
-          : `Partial payment of ${paymentAmount.toFixed(2)} ${CURRENCY.code} recorded`,
+        title:
+          paymentType === "advance"
+            ? t("advancePaymentRecorded", { months: advanceMonths })
+            : isFullyPaid
+            ? t("markedAsPaid")
+            : t("partialPaymentRecorded", {
+                amount: paymentAmount.toFixed(2),
+                code: CURRENCY.code,
+              }),
         variant: "success",
       });
       router.refresh();
     } else {
       toast({
-        title: "Failed to record payment",
+        title: t("recordPaymentFailed"),
         description: error.message,
         variant: "destructive",
       });
@@ -628,7 +632,7 @@ export function MarkPaidButton({
                       {/* No in-window matches, but tenant has other pending cheques */}
                       {!addNewCheque && displayedCheques.length === 0 && cheques.length > 0 && (
                         <div className="p-3 rounded-xl bg-surface-elevated/50 border border-border/40 text-xs text-text-secondary">
-                          No cheques match this invoice&apos;s period.
+                          {t("noChequesMatchPeriod")}
                         </div>
                       )}
 
@@ -643,8 +647,11 @@ export function MarkPaidButton({
                           className="w-full mt-2 text-xs text-text-secondary hover:text-text-primary font-medium py-2 border border-dashed border-border/60 rounded-xl hover:border-border hover:bg-surface-elevated/50 transition-all duration-200"
                         >
                           {showAllCheques
-                            ? `Show only cheques for this period`
-                            : `Show all ${cheques.length} pending cheques (${hiddenChequeCount} outside this period)`}
+                            ? t("showOnlyPeriodCheques")
+                            : t("showAllPendingCheques", {
+                                total: cheques.length,
+                                hidden: hiddenChequeCount,
+                              })}
                         </button>
                       )}
 
@@ -742,7 +749,7 @@ export function MarkPaidButton({
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
                   className="w-full bg-surface-elevated/50 border border-border/60 rounded-xl px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 resize-none"
-                  placeholder="Optional notes..."
+                  placeholder={t("optionalNotes")}
                 />
               </div>
             </form>

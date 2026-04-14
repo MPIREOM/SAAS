@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { Stepper } from "@/components/ui/stepper";
 import { cn } from "@/lib/utils/cn";
 
 export default function NewTenantPage({
@@ -38,6 +39,9 @@ export default function NewTenantPage({
   const [searchResults, setSearchResults] = useState<{ id: string; full_name: string; phone: string }[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<{ id: string; full_name: string; phone: string } | null>(null);
   const [searchingTenants, setSearchingTenants] = useState(false);
+  // 3-step wizard state — only used when assigning to a unit. Standalone
+  // tenant creation keeps the original single-page form.
+  const [currentStep, setCurrentStep] = useState(0);
 
   // Unit context from query params (when assigning from a property/unit page)
   const unitId = searchParams.get("unitId");
@@ -167,55 +171,94 @@ export default function NewTenantPage({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Validate tenant fields (step 0). Returns an error message or null.
+  // Reads the form via the formRef so it can be invoked from the
+  // wizard's "Next" handler without waiting for actual form submit.
+  function validateTenantStep(): string | null {
+    if (tenantMode === "existing") {
+      return selectedTenant ? null : t("selectTenantRequired");
+    }
+    const form = formRef.current;
+    if (!form) return null;
+    const fullName =
+      ((form.elements.namedItem("full_name") as HTMLInputElement | null)?.value || "").trim();
+    const phone =
+      ((form.elements.namedItem("phone") as HTMLInputElement | null)?.value || "").trim();
+    const email =
+      ((form.elements.namedItem("email") as HTMLInputElement | null)?.value || "").trim();
+    if (!fullName) return t("fullNameRequired");
+    if (!phone) return t("phoneRequired");
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return t("invalidEmail");
+    return null;
+  }
+
+  // Validate lease fields (step 1). Returns an error message or null.
+  function validateLeaseStep(): string | null {
+    const form = formRef.current;
+    if (!form) return null;
+    const startDate =
+      (form.elements.namedItem("lease_start_date") as HTMLInputElement | null)?.value || "";
+    const endDate =
+      (form.elements.namedItem("lease_end_date") as HTMLInputElement | null)?.value || "";
+    const monthlyRent = parseFloat(
+      (form.elements.namedItem("monthly_rent") as HTMLInputElement | null)?.value || ""
+    );
+    if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+      return t("endDateAfterStart");
+    }
+    if (isNaN(monthlyRent) || monthlyRent <= 0) {
+      return t("invalidRent");
+    }
+    return null;
+  }
+
+  function handleNext() {
+    setError("");
+    if (currentStep === 0) {
+      const err = validateTenantStep();
+      if (err) {
+        setError(err);
+        return;
+      }
+    } else if (currentStep === 1) {
+      const err = validateLeaseStep();
+      if (err) {
+        setError(err);
+        return;
+      }
+    }
+    setCurrentStep((s) => s + 1);
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
-    const formData = new FormData(e.currentTarget);
-
-    // Validate lease fields if assigning to unit
+    // Re-run all validations on submit. In the standalone (non-wizard)
+    // path nothing is gated by step state, so this is the only check.
+    // In the wizard path the user has already passed each step's
+    // validation, but re-checking here protects against form tampering
+    // and catches stale state.
     if (isAssigningToUnit) {
-      const startDate = formData.get("lease_start_date") as string;
-      const endDate = formData.get("lease_end_date") as string;
-      const monthlyRent = parseFloat(formData.get("monthly_rent") as string);
-
-      if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
-        setError(t("endDateAfterStart"));
+      const leaseErr = validateLeaseStep();
+      if (leaseErr) {
+        setError(leaseErr);
         return;
       }
-
-      if (isNaN(monthlyRent) || monthlyRent <= 0) {
-        setError(t("invalidRent"));
-        return;
-      }
-
       if (tenantMode === "existing" && !selectedTenant) {
         setError(t("selectTenantRequired"));
         return;
       }
     }
-
-    // Validate tenant fields only for new tenant
     if (tenantMode === "new") {
-      const fullName = (formData.get("full_name") as string).trim();
-      const phone = (formData.get("phone") as string).trim();
-      const email = (formData.get("email") as string)?.trim() || "";
-
-      if (!fullName) {
-        setError(t("fullNameRequired"));
-        return;
-      }
-
-      if (!phone) {
-        setError(t("phoneRequired"));
-        return;
-      }
-
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        setError(t("invalidEmail"));
+      const tenantErr = validateTenantStep();
+      if (tenantErr) {
+        setError(tenantErr);
         return;
       }
     }
+
+    const formData = new FormData(e.currentTarget);
 
     setLoading(true);
     const supabase = createClient();
@@ -341,6 +384,23 @@ export default function NewTenantPage({
     router.refresh();
   };
 
+  // Wizard steps — only rendered in assign-to-unit mode. Standalone
+  // creation skips the wizard entirely and uses the original single-page
+  // form so the simple "Add a tenant" path stays one click + scroll.
+  const wizardSteps = [
+    { id: "tenant", label: t("wizardStepTenant") },
+    { id: "lease", label: t("wizardStepLease") },
+    { id: "cheques", label: t("wizardStepCheques") },
+  ];
+  const isLastStep = currentStep === wizardSteps.length - 1;
+
+  // Per-step visibility helpers. In standalone mode every section is
+  // always visible (no wizard); in assign-to-unit mode each section is
+  // gated by the current step.
+  const showTenantStep = !isAssigningToUnit || currentStep === 0;
+  const showLeaseStep = isAssigningToUnit && currentStep === 1;
+  const showChequesStep = isAssigningToUnit && currentStep === 2;
+
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <PageHeader
@@ -367,8 +427,17 @@ export default function NewTenantPage({
         </div>
       )}
 
-      {/* New vs Existing Tenant Toggle - shown when assigning to a unit */}
+      {/* Wizard step indicator — assign-to-unit mode only */}
       {isAssigningToUnit && (
+        <Stepper
+          steps={wizardSteps}
+          activeIndex={currentStep}
+          onChange={setCurrentStep}
+        />
+      )}
+
+      {/* New vs Existing Tenant Toggle - shown when assigning to a unit AND on the tenant step */}
+      {isAssigningToUnit && currentStep === 0 && (
         <div className="bg-surface border border-border rounded-xl p-4">
           <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
             {t("tenantType")}
@@ -471,8 +540,8 @@ export default function NewTenantPage({
         </div>
       )}
 
-      {/* ID Scan Section */}
-      {tenantMode === "new" && (
+      {/* ID Scan Section — visible when creating a new tenant AND on the tenant step (or in standalone mode) */}
+      {tenantMode === "new" && showTenantStep && (
         <div className="bg-surface border border-border rounded-xl p-6">
           <div className="flex items-center gap-2 mb-3">
             <Scan aria-hidden="true" className="h-4 w-4 text-accent" />
@@ -553,9 +622,16 @@ export default function NewTenantPage({
       )}
 
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-        {/* Tenant Info — only for new tenant mode */}
+        {/* Tenant Info — only for new tenant mode. Wrapper is visually
+            hidden when the wizard is on a later step so the form fields
+            stay mounted and FormData captures them on submit. */}
         {tenantMode === "new" && (
-          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
+          <div
+            className={cn(
+              "bg-surface border border-border rounded-xl p-6 space-y-4",
+              !showTenantStep && "hidden"
+            )}
+          >
             <Input
               name="full_name"
               required
@@ -610,9 +686,15 @@ export default function NewTenantPage({
           </div>
         )}
 
-        {/* Lease Details — only shown when assigning to a unit */}
+        {/* Lease Details — only in assign-to-unit mode. Wrapper hidden
+            when on other steps so form fields stay mounted. */}
         {isAssigningToUnit && (
-          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
+          <div
+            className={cn(
+              "bg-surface border border-border rounded-xl p-6 space-y-4",
+              !showLeaseStep && "hidden"
+            )}
+          >
             <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
               <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               {t("leaseInfo")}
@@ -679,9 +761,16 @@ export default function NewTenantPage({
           </div>
         )}
 
-        {/* Cheques Section — shown when assigning to a unit */}
+        {/* Cheques Section — only in assign-to-unit mode. Wrapper hidden
+            when on other steps. (Cheques are React state, not form
+            fields, so they survive across step changes regardless.) */}
         {isAssigningToUnit && (
-          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
+          <div
+            className={cn(
+              "bg-surface border border-border rounded-xl p-6 space-y-4",
+              !showChequesStep && "hidden"
+            )}
+          >
             <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
               <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               {tc("cheques")}
@@ -699,21 +788,63 @@ export default function NewTenantPage({
           </div>
         )}
 
+        {/* Action row. In wizard mode (assign-to-unit) the layout
+            depends on the current step:
+              step 0      [Cancel]      [Next]
+              step 1..N-1 [Back]        [Next]
+              last step   [Back]        [Submit]
+            In standalone mode it's just [Submit] [Cancel]. */}
         <div className="flex items-center gap-3">
-          <Button type="submit" loading={loading}>
-            {loading
-              ? tc("loading")
-              : isAssigningToUnit
-              ? t("assignTenant")
-              : tc("save")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-          >
-            {tc("cancel")}
-          </Button>
+          {isAssigningToUnit ? (
+            <>
+              {currentStep === 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                >
+                  {tc("cancel")}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setError("");
+                    setCurrentStep((s) => Math.max(0, s - 1));
+                  }}
+                >
+                  {tc("back")}
+                </Button>
+              )}
+              {isLastStep ? (
+                <Button type="submit" loading={loading} className="ms-auto">
+                  {loading ? tc("loading") : t("assignTenant")}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  className="ms-auto"
+                >
+                  {tc("next")}
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button type="submit" loading={loading}>
+                {loading ? tc("loading") : tc("save")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+              >
+                {tc("cancel")}
+              </Button>
+            </>
+          )}
         </div>
       </form>
 
