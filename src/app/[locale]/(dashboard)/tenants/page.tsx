@@ -4,7 +4,10 @@ import { CURRENCY } from "@/lib/currency";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
-import { Users, Plus, Phone, Mail } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Users, Plus, Phone } from "lucide-react";
 import { TenantsHeader } from "@/components/tenants/tenants-header";
 import { TenantsFilter } from "@/components/tenants/tenants-filter";
 
@@ -102,30 +105,19 @@ export default async function TenantsPage({
   const { data: tenants } = await query
     .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
-  const statusColors: Record<string, string> = {
-    active: "bg-success/10 text-success",
-    archived: "bg-text-secondary/10 text-text-secondary",
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between animate-fade-in-up">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary font-display">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
+      <PageHeader title={t("title")} description={t("subtitle")}>
         <TenantsHeader locale={locale} />
-      </div>
+      </PageHeader>
 
       <TenantsFilter />
 
       {tenants && tenants.length > 0 ? (
-        <div className="bg-surface border border-border rounded-lg overflow-x-auto animate-fade-in">
-          <table className="w-full min-w-[600px] mobile-card-view">
+        <div className="bg-surface border border-border rounded-xl animate-fade-in overflow-hidden">
+          {/* Desktop table — hidden on mobile in favor of the card list below */}
+          <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
@@ -211,19 +203,86 @@ export default async function TenantsPage({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          statusColors[(tenant.status as string) || "active"]
-                        }`}
+                      <Badge
+                        variant={
+                          (tenant.status as string) === "archived"
+                            ? "secondary"
+                            : "success"
+                        }
                       >
                         {t(tenant.status as string)}
-                      </span>
+                      </Badge>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          </div>
+
+          {/* Mobile card list */}
+          <ul className="md:hidden divide-y divide-border/30">
+            {tenants.map((tenant: Record<string, unknown>) => {
+              const leases = Array.isArray(tenant.leases)
+                ? (tenant.leases as Record<string, unknown>[])
+                : [];
+              const activeLease = leases.find((l) => l.is_active);
+              const lastLease =
+                leases.length > 0
+                  ? leases.sort(
+                      (a, b) =>
+                        new Date(b.end_date as string).getTime() -
+                        new Date(a.end_date as string).getTime()
+                    )[0]
+                  : null;
+              const displayLease =
+                tenant.status === "archived" ? lastLease : activeLease;
+              const unit = displayLease
+                ? (displayLease.units as Record<string, unknown>)
+                : null;
+              const property = unit
+                ? (unit.properties as Record<string, unknown>)
+                : null;
+              const isArchived = (tenant.status as string) === "archived";
+
+              return (
+                <li key={`m-${tenant.id as string}`} className="p-4">
+                  <Link
+                    href={`/${locale}/tenants/${tenant.id}`}
+                    className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors truncate">
+                          {tenant.full_name as string}
+                        </p>
+                        {tenant.phone ? (
+                          <p className="mt-0.5 flex items-center gap-1 text-xs text-text-secondary font-mono ltr-nums">
+                            <Phone aria-hidden="true" className="h-3 w-3" />
+                            {tenant.phone as string}
+                          </p>
+                        ) : null}
+                      </div>
+                      <Badge variant={isArchived ? "secondary" : "success"}>
+                        {t(tenant.status as string)}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                      <span className="text-text-secondary">
+                        {(property?.name as string) || "—"}
+                        {unit?.unit_number ? ` · ${unit.unit_number as string}` : ""}
+                      </span>
+                      {displayLease && (
+                        <span className="ms-auto font-mono tabular-nums text-text-primary">
+                          {displayLease.monthly_rent as string} {CURRENCY.code}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
 
           {/* Pagination */}
           <Pagination
@@ -237,24 +296,20 @@ export default async function TenantsPage({
           />
         </div>
       ) : (
-        <div className="bg-surface border border-border rounded-xl p-16 text-center">
-          <div className="p-3 bg-accent/10 rounded-2xl w-fit mx-auto mb-3">
-            <Users className="h-8 w-8 text-accent/50" />
-          </div>
-          <h3 className="text-base font-medium text-text-primary mb-1 font-display">
-            {t("noTenants")}
-          </h3>
-          <p className="text-sm text-text-secondary mb-4">
-            {t("noTenantsDescription")}
-          </p>
-          <Link
-            href={`/${locale}/tenants/new`}
-            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            {t("createTenant")}
-          </Link>
-        </div>
+        <EmptyState
+          icon={<Users className="h-5 w-5" />}
+          title={t("noTenants")}
+          description={t("noTenantsDescription")}
+          action={
+            <Link
+              href={`/${locale}/tenants/new`}
+              className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {t("createTenant")}
+            </Link>
+          }
+        />
       )}
     </div>
   );

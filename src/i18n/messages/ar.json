@@ -181,6 +181,8 @@
     },
     "noUnits": "لم يتم العثور على وحدات",
     "noUnitsDescription": "أضف وحدات لهذا العقار",
+    "noUnitsForFilter": "لا توجد وحدات تطابق هذا الفلتر",
+    "filterAll": "الكل",
     "amenities": "المرافق",
     "furnished": "مفروشة",
     "unfurnished": "غير مفروشة",

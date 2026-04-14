@@ -3,7 +3,39 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
-import { Wrench, Plus } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Wrench, Plus, AlertTriangle } from "lucide-react";
+
+type UrgencyTone = "low" | "medium" | "high" | "emergency";
+type StatusTone = "open" | "in_progress" | "resolved" | "closed";
+
+function urgencyVariant(u: string): "secondary" | "default" | "warning" | "destructive" {
+  switch (u as UrgencyTone) {
+    case "emergency":
+      return "destructive";
+    case "high":
+      return "warning";
+    case "medium":
+      return "default";
+    default:
+      return "secondary";
+  }
+}
+
+function statusVariant(s: string): "warning" | "default" | "success" | "secondary" {
+  switch (s as StatusTone) {
+    case "open":
+      return "warning";
+    case "in_progress":
+      return "default";
+    case "resolved":
+      return "success";
+    default:
+      return "secondary";
+  }
+}
 
 export default async function MaintenancePage({
   params,
@@ -72,49 +104,27 @@ export default async function MaintenancePage({
   const { data: requests } = await query
     .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
-  const urgencyColors: Record<string, string> = {
-    low: "bg-text-secondary/10 text-text-secondary",
-    medium: "bg-accent/10 text-accent",
-    high: "bg-warning/10 text-warning",
-    emergency: "bg-destructive/10 text-destructive",
-  };
-
-  const statusColors: Record<string, string> = {
-    open: "bg-warning/10 text-warning",
-    in_progress: "bg-accent/10 text-accent",
-    resolved: "bg-success/10 text-success",
-    closed: "bg-text-secondary/10 text-text-secondary",
-  };
-
   const tabs = ["all", "open", "in_progress", "resolved", "closed"] as const;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between animate-fade-in-up">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary font-display">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
+      <PageHeader title={t("title")} description={t("subtitle")}>
         <Link
           href={`/${locale}/maintenance/new`}
-          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
+          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
-          <Plus className="h-4 w-4" />
+          <Plus aria-hidden="true" className="h-4 w-4" />
           {t("newRequest")}
         </Link>
-      </div>
+      </PageHeader>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1 w-fit overflow-x-auto">
+      <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1 w-full sm:w-fit overflow-x-auto">
         {tabs.map((tab) => (
           <Link
             key={tab}
             href={`/${locale}/maintenance${tab === "all" ? "" : `?status=${tab}`}`}
-            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            className={`shrink-0 px-3 py-1.5 text-sm rounded-md transition-colors ${
               statusFilter === tab
                 ? "bg-accent text-background font-medium"
                 : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
@@ -126,7 +136,9 @@ export default async function MaintenancePage({
       </div>
 
       {requests && requests.length > 0 ? (
-        <div className="bg-surface border border-border rounded-lg overflow-x-auto animate-fade-in">
+        <div className="bg-surface border border-border rounded-xl overflow-hidden animate-fade-in">
+          {/* Desktop table — hidden on mobile in favor of card list */}
+          <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b border-border">
@@ -160,18 +172,26 @@ export default async function MaintenancePage({
               {requests.map((request: Record<string, unknown>) => {
                 const unit = request.units as Record<string, unknown> | null;
                 const property = unit?.properties as Record<string, unknown> | null;
+                const urgency = (request.urgency as string) || "low";
+                const isUrgent = urgency === "emergency" || urgency === "high";
 
                 return (
                   <tr
                     key={request.id as string}
-                    className="hover:bg-surface-elevated/50 transition-colors"
+                    className={`transition-colors ${
+                      urgency === "emergency"
+                        ? "bg-destructive/[0.04] hover:bg-destructive/[0.08]"
+                        : urgency === "high"
+                        ? "bg-warning/[0.04] hover:bg-warning/[0.08]"
+                        : "hover:bg-surface-elevated/50"
+                    }`}
                   >
                     <td className="px-4 py-3">
                       <Link
                         href={`/${locale}/maintenance/${request.id}`}
                         className="text-sm font-medium text-text-primary hover:text-accent transition-colors font-mono"
                       >
-                        {(request.id as string).slice(0, 8)}...
+                        {(request.id as string).slice(0, 8)}…
                       </Link>
                     </td>
                     <td className="px-4 py-3">
@@ -192,26 +212,29 @@ export default async function MaintenancePage({
                     <td className="px-4 py-3">
                       <span className="text-sm text-text-secondary max-w-[200px] truncate block">
                         {(request.description as string)?.slice(0, 50) || "—"}
-                        {(request.description as string)?.length > 50 ? "..." : ""}
+                        {(request.description as string)?.length > 50 ? "…" : ""}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                          urgencyColors[(request.urgency as string) || "low"]
-                        }`}
-                      >
-                        {t(`urgencies.${request.urgency}`)}
-                      </span>
+                      <Badge variant={urgencyVariant(urgency)} className="gap-1 capitalize">
+                        {isUrgent && (
+                          <AlertTriangle
+                            aria-hidden="true"
+                            className="h-3 w-3"
+                          />
+                        )}
+                        {t(`urgencies.${urgency}`)}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                          statusColors[(request.status as string) || "open"]
-                        }`}
+                      <Badge
+                        variant={statusVariant(
+                          (request.status as string) || "open"
+                        )}
+                        className="capitalize"
                       >
                         {t(`statuses.${request.status}`)}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-text-secondary font-mono ltr-nums">
@@ -223,6 +246,69 @@ export default async function MaintenancePage({
               })}
             </tbody>
           </table>
+          </div>
+
+          {/* Mobile card list */}
+          <ul className="md:hidden divide-y divide-border/30">
+            {requests.map((request: Record<string, unknown>) => {
+              const unit = request.units as Record<string, unknown> | null;
+              const property = unit?.properties as Record<string, unknown> | null;
+              const urgency = (request.urgency as string) || "low";
+              const isUrgent = urgency === "emergency" || urgency === "high";
+
+              return (
+                <li
+                  key={`m-${request.id as string}`}
+                  className={`p-4 ${
+                    urgency === "emergency"
+                      ? "bg-destructive/5"
+                      : urgency === "high"
+                      ? "bg-warning/5"
+                      : ""
+                  }`}
+                >
+                  <Link
+                    href={`/${locale}/maintenance/${request.id}`}
+                    className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
+                          {(property?.name as string) || "—"}
+                          {unit?.unit_number ? ` · ${unit.unit_number as string}` : ""}
+                        </p>
+                        <p className="mt-0.5 text-xs text-text-secondary line-clamp-2">
+                          {(request.description as string) || "—"}
+                        </p>
+                      </div>
+                      <Badge variant={urgencyVariant(urgency)} className="gap-1 capitalize shrink-0">
+                        {isUrgent && (
+                          <AlertTriangle
+                            aria-hidden="true"
+                            className="h-3 w-3"
+                          />
+                        )}
+                        {t(`urgencies.${urgency}`)}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <Badge
+                        variant={statusVariant(
+                          (request.status as string) || "open"
+                        )}
+                        className="capitalize"
+                      >
+                        {t(`statuses.${request.status}`)}
+                      </Badge>
+                      <span className="text-text-secondary font-mono ltr-nums">
+                        {new Date(request.created_at as string).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
 
           {/* Pagination */}
           <Pagination
@@ -235,24 +321,20 @@ export default async function MaintenancePage({
           />
         </div>
       ) : (
-        <div className="bg-surface border border-border rounded-xl p-16 text-center">
-          <div className="p-3 bg-accent/10 rounded-2xl w-fit mx-auto mb-3">
-            <Wrench className="h-8 w-8 text-accent/50" />
-          </div>
-          <h3 className="text-base font-medium text-text-primary mb-1 font-display">
-            {t("noRequests")}
-          </h3>
-          <p className="text-sm text-text-secondary mb-4">
-            {t("noRequestsDescription")}
-          </p>
-          <Link
-            href={`/${locale}/maintenance/new`}
-            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            {t("newRequest")}
-          </Link>
-        </div>
+        <EmptyState
+          icon={<Wrench className="h-5 w-5" />}
+          title={t("noRequests")}
+          description={t("noRequestsDescription")}
+          action={
+            <Link
+              href={`/${locale}/maintenance/new`}
+              className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {t("newRequest")}
+            </Link>
+          }
+        />
       )}
     </div>
   );

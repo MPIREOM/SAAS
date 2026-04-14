@@ -11,6 +11,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
 import { CURRENCY } from "@/lib/currency";
 
@@ -106,25 +108,16 @@ export default async function PropertiesPage({
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between animate-fade-in-up">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary font-display tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader title={t("title")} description={t("subtitle")}>
         <Link
           href={`/${locale}/properties/new`}
-          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
+          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
-          <Plus className="h-4 w-4" />
+          <Plus aria-hidden="true" className="h-4 w-4" />
           {t("createProperty")}
         </Link>
-      </div>
+      </PageHeader>
 
       {/* Portfolio Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -312,24 +305,20 @@ export default async function PropertiesPage({
         />
         </>
       ) : (
-        <div className="bg-surface border border-border rounded-xl p-16 text-center">
-          <div className="p-4 bg-accent/10 rounded-2xl w-fit mx-auto mb-4">
-            <Building2 className="h-10 w-10 text-accent/60" />
-          </div>
-          <h3 className="text-lg font-semibold text-text-primary mb-2 font-display">
-            {t("noProperties")}
-          </h3>
-          <p className="text-sm text-text-secondary mb-6 max-w-sm mx-auto">
-            {t("noPropertiesDescription")}
-          </p>
-          <Link
-            href={`/${locale}/properties/new`}
-            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20"
-          >
-            <Plus className="h-4 w-4" />
-            {t("createProperty")}
-          </Link>
-        </div>
+        <EmptyState
+          icon={<Building2 className="h-5 w-5" />}
+          title={t("noProperties")}
+          description={t("noPropertiesDescription")}
+          action={
+            <Link
+              href={`/${locale}/properties/new`}
+              className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {t("createProperty")}
+            </Link>
+          }
+        />
       )}
     </div>
   );
