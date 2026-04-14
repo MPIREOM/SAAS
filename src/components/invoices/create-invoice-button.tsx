@@ -1,24 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, X, Loader2, Search } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 
-interface TenantOption {
-  id: string;
-  full_name: string;
-  leases: {
-    id: string;
-    unit_id: string;
-    monthly_rent: number;
-    payment_due_day: number;
-    unit_number: string;
-    property_name: string;
-  }[];
+// An occupied unit: the "pickable" row in the property → unit selector.
+// Every row has exactly one active lease (filtered at query time), so the
+// tenant, rent and due-day are unambiguous once a unit is chosen.
+interface UnitWithLease {
+  unit_id: string;
+  unit_number: string;
+  property_id: string;
+  property_name: string;
+  lease_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  monthly_rent: number;
+  payment_due_day: number;
 }
 
 export function CreateInvoiceButton() {
@@ -29,12 +31,11 @@ export function CreateInvoiceButton() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Tenant search
-  const [search, setSearch] = useState("");
-  const [tenants, setTenants] = useState<TenantOption[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState<TenantOption | null>(null);
-  const [selectedLeaseIdx, setSelectedLeaseIdx] = useState(0);
+  // Occupied-unit catalogue, loaded once per dialog open.
+  const [units, setUnits] = useState<UnitWithLease[]>([]);
+  const [loadingUnits, setLoadingUnits] = useState(false);
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
 
   // Invoice fields
   const [amount, setAmount] = useState("");
@@ -43,99 +44,123 @@ export function CreateInvoiceButton() {
   const [periodEnd, setPeriodEnd] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Search tenants
+  // Load all occupied units (one active lease per unit) when the dialog
+  // opens. Preloading the full list avoids round-trips between dropdown
+  // changes — the dataset is small for a typical property manager.
   useEffect(() => {
-    if (!search || search.length < 2) {
-      setTenants([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setSearching(true);
+    if (!open || units.length > 0) return;
+    let cancelled = false;
+    setLoadingUnits(true);
+    (async () => {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("tenants")
+      const { data, error: err } = await supabase
+        .from("leases")
         .select(`
-          id, full_name,
-          leases(id, unit_id, monthly_rent, payment_due_day, is_active,
-            units(unit_number, properties:property_id(name))
-          )
+          id, tenant_id, unit_id, monthly_rent, payment_due_day, is_active,
+          tenants(full_name),
+          units(unit_number, property_id, properties:property_id(id, name))
         `)
-        .eq("status", "active")
-        .ilike("full_name", `%${search}%`)
-        .limit(10);
+        .eq("is_active", true);
 
-      if (data) {
-        setTenants(
-          data
-            .filter((t) => {
-              const leases = t.leases as unknown as Array<Record<string, unknown>>;
-              return leases?.some((l) => l.is_active);
-            })
-            .map((t) => {
-              const leases = t.leases as unknown as Array<Record<string, unknown>>;
-              return {
-                id: t.id,
-                full_name: t.full_name,
-                leases: leases
-                  .filter((l) => l.is_active)
-                  .map((l) => {
-                    const unit = l.units as Record<string, unknown>;
-                    const prop = unit?.properties as Record<string, unknown>;
-                    return {
-                      id: l.id as string,
-                      unit_id: l.unit_id as string,
-                      monthly_rent: l.monthly_rent as number,
-                      payment_due_day: l.payment_due_day as number,
-                      unit_number: (unit?.unit_number as string) || "",
-                      property_name: (prop?.name as string) || "",
-                    };
-                  }),
-              };
-            })
-        );
+      if (cancelled) return;
+      if (err) {
+        setError(err.message);
+        setLoadingUnits(false);
+        return;
       }
-      setSearching(false);
-    }, 300);
 
-    return () => clearTimeout(timer);
-  }, [search]);
+      const rows: UnitWithLease[] = (data || [])
+        .map((l) => {
+          const tenant = l.tenants as unknown as { full_name?: string } | null;
+          const unit = l.units as unknown as {
+            unit_number?: string;
+            property_id?: string;
+            properties?: { id?: string; name?: string };
+          } | null;
+          return {
+            unit_id: l.unit_id as string,
+            unit_number: unit?.unit_number || "",
+            property_id: unit?.properties?.id || (unit?.property_id as string) || "",
+            property_name: unit?.properties?.name || "",
+            lease_id: l.id as string,
+            tenant_id: l.tenant_id as string,
+            tenant_name: tenant?.full_name || "Unknown",
+            monthly_rent: Number(l.monthly_rent) || 0,
+            payment_due_day: Number(l.payment_due_day) || 1,
+          };
+        })
+        .filter((r) => r.property_id && r.unit_id);
+      setUnits(rows);
+      setLoadingUnits(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, units.length]);
 
-  // Auto-fill when tenant/lease selected
+  // Derive the property dropdown list from the loaded units — each property
+  // appears once, only if it has at least one occupied unit to invoice.
+  const properties = useMemo(() => {
+    const map = new Map<string, string>();
+    units.forEach((u) => map.set(u.property_id, u.property_name));
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [units]);
+
+  // Units for the currently-selected property, sorted by unit number with
+  // numeric awareness so "2" < "10".
+  const unitsForProperty = useMemo(() => {
+    if (!selectedPropertyId) return [];
+    return units
+      .filter((u) => u.property_id === selectedPropertyId)
+      .sort((a, b) =>
+        a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true })
+      );
+  }, [units, selectedPropertyId]);
+
+  const selectedUnit = useMemo(
+    () => units.find((u) => u.unit_id === selectedUnitId) || null,
+    [units, selectedUnitId]
+  );
+
+  // Auto-fill amount/dates when the unit (and therefore the lease) changes.
   useEffect(() => {
-    if (selectedTenant && selectedTenant.leases[selectedLeaseIdx]) {
-      const lease = selectedTenant.leases[selectedLeaseIdx];
-      setAmount(String(lease.monthly_rent));
+    if (!selectedUnit) return;
+    setAmount(String(selectedUnit.monthly_rent));
 
-      // Default to current month
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = now.getMonth();
-      const dueDay = Math.min(lease.payment_due_day || 1, new Date(y, m + 1, 0).getDate());
-      setDueDate(`${y}-${String(m + 1).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`);
-      setPeriodStart(`${y}-${String(m + 1).padStart(2, "0")}-01`);
-      const lastDay = new Date(y, m + 1, 0).getDate();
-      setPeriodEnd(`${y}-${String(m + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`);
-    }
-  }, [selectedTenant, selectedLeaseIdx]);
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const dueDay = Math.min(
+      selectedUnit.payment_due_day || 1,
+      new Date(y, m + 1, 0).getDate()
+    );
+    setDueDate(
+      `${y}-${String(m + 1).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`
+    );
+    setPeriodStart(`${y}-${String(m + 1).padStart(2, "0")}-01`);
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    setPeriodEnd(
+      `${y}-${String(m + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
+    );
+  }, [selectedUnit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTenant || !selectedTenant.leases[selectedLeaseIdx]) return;
+    if (!selectedUnit) return;
 
     setLoading(true);
     setError("");
     setSuccess("");
 
-    const lease = selectedTenant.leases[selectedLeaseIdx];
     const supabase = createClient();
-
     const { data: { user } } = await supabase.auth.getUser();
 
     const { error: insertError } = await supabase.from("invoices").insert({
-      lease_id: lease.id,
-      tenant_id: selectedTenant.id,
-      unit_id: lease.unit_id,
+      lease_id: selectedUnit.lease_id,
+      tenant_id: selectedUnit.tenant_id,
+      unit_id: selectedUnit.unit_id,
       amount: Number(amount),
       due_date: dueDate,
       issued_date: new Date().toISOString().split("T")[0],
@@ -152,7 +177,7 @@ export function CreateInvoiceButton() {
       return;
     }
 
-    setSuccess(`Invoice created for ${selectedTenant.full_name}`);
+    setSuccess(`Invoice created for ${selectedUnit.tenant_name}`);
     setLoading(false);
 
     setTimeout(() => {
@@ -163,10 +188,8 @@ export function CreateInvoiceButton() {
   };
 
   const resetForm = () => {
-    setSearch("");
-    setTenants([]);
-    setSelectedTenant(null);
-    setSelectedLeaseIdx(0);
+    setSelectedPropertyId("");
+    setSelectedUnitId("");
     setAmount("");
     setDueDate("");
     setPeriodStart("");
@@ -206,84 +229,70 @@ export function CreateInvoiceButton() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* Tenant Search */}
-              {!selectedTenant ? (
+              {/* Property picker */}
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">
+                  Property <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={selectedPropertyId}
+                  onChange={(e) => {
+                    setSelectedPropertyId(e.target.value);
+                    setSelectedUnitId("");
+                  }}
+                  disabled={loadingUnits}
+                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors disabled:opacity-50"
+                >
+                  <option value="">
+                    {loadingUnits ? "Loading..." : "Select a property"}
+                  </option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                {!loadingUnits && properties.length === 0 && (
+                  <p className="text-xs text-text-secondary mt-1">
+                    No occupied units found.
+                  </p>
+                )}
+              </div>
+
+              {/* Unit picker — only shown after a property is chosen */}
+              {selectedPropertyId && (
                 <div>
                   <label className="block text-sm text-text-secondary mb-1.5">
-                    {t("tenant")} <span className="text-destructive">*</span>
+                    Unit <span className="text-destructive">*</span>
                   </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search tenant name..."
-                      autoFocus
-                      className="w-full h-10 bg-surface-elevated border border-border rounded-md pl-9 pr-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-                    />
-                    {searching && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary animate-spin" />
-                    )}
-                  </div>
-                  {tenants.length > 0 && (
-                    <div className="mt-2 border border-border rounded-md overflow-hidden">
-                      {tenants.map((tenant) => (
-                        <button
-                          key={tenant.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedTenant(tenant);
-                            setSelectedLeaseIdx(0);
-                            setSearch("");
-                            setTenants([]);
-                          }}
-                          className="w-full text-left px-4 py-2.5 hover:bg-surface-elevated text-sm border-b border-border last:border-b-0 transition-colors"
-                        >
-                          <span className="font-medium text-text-primary">
-                            {tenant.full_name}
-                          </span>
-                          <span className="text-xs text-text-secondary ml-2">
-                            {tenant.leases.map((l) => `${l.property_name} / ${l.unit_number}`).join(", ")}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <select
+                    value={selectedUnitId}
+                    onChange={(e) => setSelectedUnitId(e.target.value)}
+                    className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                  >
+                    <option value="">Select a unit</option>
+                    {unitsForProperty.map((u) => (
+                      <option key={u.unit_id} value={u.unit_id}>
+                        {u.unit_number} — {u.tenant_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              ) : (
+              )}
+
+              {selectedUnit && (
                 <>
-                  {/* Selected Tenant */}
-                  <div className="flex items-center justify-between bg-surface-elevated border border-border rounded-md px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-text-primary">
-                        {selectedTenant.full_name}
-                      </p>
-                      {selectedTenant.leases.length > 1 ? (
-                        <select
-                          value={selectedLeaseIdx}
-                          onChange={(e) => setSelectedLeaseIdx(Number(e.target.value))}
-                          className="mt-1 text-xs bg-transparent text-text-secondary focus:outline-none"
-                        >
-                          {selectedTenant.leases.map((l, i) => (
-                            <option key={l.id} value={i}>
-                              {l.property_name} / {l.unit_number} — {l.monthly_rent} {CURRENCY.code}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <p className="text-xs text-text-secondary mt-0.5">
-                          {selectedTenant.leases[0]?.property_name} / {selectedTenant.leases[0]?.unit_number}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedTenant(null); setSelectedLeaseIdx(0); }}
-                      className="text-xs text-accent hover:underline"
-                    >
-                      Change
-                    </button>
+                  {/* Resolved tenant summary */}
+                  <div className="bg-surface-elevated border border-border rounded-md px-4 py-3">
+                    <p className="text-xs text-text-secondary">Tenant</p>
+                    <p className="text-sm font-medium text-text-primary mt-0.5">
+                      {selectedUnit.tenant_name}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-1">
+                      {selectedUnit.property_name} / {selectedUnit.unit_number}
+                      {" — "}
+                      {selectedUnit.monthly_rent} {CURRENCY.code}/mo
+                    </p>
                   </div>
 
                   {/* Amount */}
@@ -364,7 +373,7 @@ export function CreateInvoiceButton() {
                 <p className="text-sm text-success">{success}</p>
               )}
 
-              {selectedTenant && (
+              {selectedUnit && (
                 <div className="flex items-center gap-3 pt-2">
                   <button
                     type="submit"
