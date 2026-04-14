@@ -4,6 +4,7 @@ import { sendWhatsAppTemplate, buildRentReminderComponents, buildOverdueReminder
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, parseISO } from "date-fns";
+import { runAdminSummary, wasAdminSummaryRunToday } from "@/app/api/cron/admin-summary/route";
 
 // Vercel Cron: runs daily at 8:00 AM (configured in vercel.json)
 export const maxDuration = 300;
@@ -33,6 +34,26 @@ export async function GET(request: NextRequest) {
   const today = new Date();
   const omanNow = new Date(today.getTime() + 4 * 60 * 60 * 1000);
   const todayStr = omanNow.toISOString().split("T")[0];
+
+  // Safety net for the daily admin briefing: that cron is scheduled five
+  // hours earlier (03:00 UTC) but Vercel's dispatcher occasionally misses a
+  // fire window, leaving the admin without their morning summary. If it
+  // hasn't run successfully today, trigger it now before the rest of the
+  // reminders run.
+  const adminSummaryFallback: { triggered: boolean; status?: string } = { triggered: false };
+  try {
+    if (!(await wasAdminSummaryRunToday(supabase))) {
+      console.log("[reminders] Admin summary hasn't run today — triggering fallback");
+      const fallbackResult = await runAdminSummary(supabase, "fallback");
+      adminSummaryFallback.triggered = true;
+      adminSummaryFallback.status = fallbackResult.status;
+    }
+  } catch (err) {
+    console.error(
+      "[reminders] Admin summary fallback failed:",
+      err instanceof Error ? err.message : err
+    );
+  }
 
   const results = {
     rentUpcoming: 0,
@@ -272,6 +293,7 @@ export async function GET(request: NextRequest) {
     success: true,
     timestamp: todayStr,
     results,
+    adminSummaryFallback,
   });
 }
 
