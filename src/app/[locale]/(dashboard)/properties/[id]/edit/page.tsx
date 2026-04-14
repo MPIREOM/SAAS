@@ -41,7 +41,7 @@ export default function EditPropertyPage() {
         .single();
 
       if (fetchError || !data) {
-        setError(fetchError?.message || "Property not found");
+        setError(fetchError?.message || t("notFound"));
         setFetching(false);
         return;
       }
@@ -68,7 +68,7 @@ export default function EditPropertyPage() {
     const name = (formData.get("name") as string).trim();
 
     if (!name) {
-      setError("Property name is required");
+      setError(t("nameRequired"));
       setLoading(false);
       return;
     }

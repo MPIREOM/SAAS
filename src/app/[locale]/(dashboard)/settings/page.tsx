@@ -266,10 +266,10 @@ export default async function SettingsPage({
             </div>
             <div>
               <h2 className="text-base font-medium text-text-primary font-display">
-                Activity Log
+                {t("activityLogTitle")}
               </h2>
               <p className="text-xs text-text-secondary">
-                Recent actions across the system
+                {t("activityLogDescription")}
               </p>
             </div>
           </div>
@@ -285,10 +285,10 @@ export default async function SettingsPage({
           </div>
           <div>
             <h2 className="text-base font-medium text-text-primary font-display">
-              Auto Invoice Generation
+              {t("autoInvoiceTitle")}
             </h2>
             <p className="text-xs text-text-secondary">
-              Control when invoices are automatically created for active leases
+              {t("autoInvoiceDescription")}
             </p>
           </div>
         </div>
@@ -303,10 +303,10 @@ export default async function SettingsPage({
           </div>
           <div>
             <h2 className="text-base font-medium text-text-primary font-display">
-              WhatsApp AI Agent
+              {t("whatsappAgentTitle")}
             </h2>
             <p className="text-xs text-text-secondary">
-              Register your WhatsApp number to manage invoices and expenses via chat
+              {t("whatsappAgentDescription")}
             </p>
           </div>
         </div>
@@ -339,12 +339,12 @@ export default async function SettingsPage({
             href={`/${locale}/settings/whatsapp-test`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors"
           >
-            <MessageSquare className="h-4 w-4" />
-            Test WhatsApp
+            <MessageSquare aria-hidden="true" className="h-4 w-4" />
+            {t("testWhatsapp")}
           </a>
         </div>
         <p className="text-sm text-text-secondary">
-          Send a test message via Meta WhatsApp Cloud API to verify your credentials are working.
+          {t("whatsappTestDescription")}
         </p>
       </div>
 

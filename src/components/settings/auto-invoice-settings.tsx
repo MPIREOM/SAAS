@@ -2,22 +2,29 @@
 
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/toast";
 
 function Toggle({
   enabled,
   onToggle,
   disabled,
+  ariaLabel,
 }: {
   enabled: boolean;
   onToggle: () => void;
   disabled?: boolean;
+  ariaLabel?: string;
 }) {
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      aria-label={ariaLabel}
       onClick={onToggle}
       disabled={disabled}
-      className={`relative h-5 w-9 rounded-full transition-colors ${
+      className={`relative h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
         enabled ? "bg-accent" : "bg-border"
       } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
@@ -30,17 +37,10 @@ function Toggle({
   );
 }
 
-const DAYS_OPTIONS = [
-  { value: 0, label: "On the due day (no advance)" },
-  { value: 3, label: "3 days before" },
-  { value: 5, label: "5 days before" },
-  { value: 7, label: "7 days before" },
-  { value: 10, label: "10 days before" },
-  { value: 14, label: "14 days before" },
-  { value: 30, label: "30 days before (full month)" },
-];
+const DAYS_VALUES = [0, 3, 5, 7, 10, 14, 30] as const;
 
 export function AutoInvoiceSettings() {
+  const t = useTranslations("settings");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,7 +57,7 @@ export function AutoInvoiceSettings() {
         }
       })
       .catch(() => {
-        toast({ title: "Failed to load invoice settings", variant: "destructive" });
+        toast({ title: t("autoInvoiceLoadFailed"), variant: "destructive" });
       })
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -78,10 +78,13 @@ export function AutoInvoiceSettings() {
 
       setEnabled(newEnabled);
       setDaysBefore(newDays);
-      toast({ title: "Invoice settings saved", variant: "success" });
+      toast({ title: t("autoInvoiceSaved"), variant: "success" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
-      toast({ title: `Failed to save invoice settings: ${msg}`, variant: "destructive" });
+      toast({
+        title: t("autoInvoiceSaveFailed", { error: msg }),
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -89,8 +92,8 @@ export function AutoInvoiceSettings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-6">
-        <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />
+      <div className="flex items-center justify-center py-6" aria-busy="true">
+        <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin text-text-secondary" />
       </div>
     );
   }
@@ -100,17 +103,25 @@ export function AutoInvoiceSettings() {
       {/* Auto-generate toggle */}
       <div className="flex items-center justify-between bg-surface-elevated border border-border rounded-md px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-text-primary">Auto-generate invoices</p>
+          <p className="text-sm font-medium text-text-primary">
+            {t("autoInvoiceToggleTitle")}
+          </p>
           <p className="text-xs text-text-secondary mt-0.5">
-            Automatically create monthly invoices for all active leases
+            {t("autoInvoiceToggleHelp")}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-secondary" />}
+          {saving && (
+            <Loader2
+              aria-hidden="true"
+              className="h-3.5 w-3.5 animate-spin text-text-secondary"
+            />
+          )}
           <Toggle
             enabled={enabled}
             onToggle={() => save(!enabled, daysBefore)}
             disabled={saving}
+            ariaLabel={t("autoInvoiceToggleTitle")}
           />
         </div>
       </div>
@@ -118,21 +129,25 @@ export function AutoInvoiceSettings() {
       {/* Days before selector */}
       {enabled && (
         <div className="bg-surface-elevated border border-border rounded-md px-4 py-3">
-          <label className="block text-sm font-medium text-text-primary mb-1">
-            Generate invoices in advance
+          <label
+            htmlFor="auto-invoice-days"
+            className="block text-sm font-medium text-text-primary mb-1"
+          >
+            {t("autoInvoiceAdvanceLabel")}
           </label>
           <p className="text-xs text-text-secondary mb-3">
-            How many days before the due date should invoices be created? For example, if set to 5 days and rent is due on the 1st, the invoice will be created on the 26th of the previous month.
+            {t("autoInvoiceAdvanceHelp")}
           </p>
           <select
+            id="auto-invoice-days"
             value={daysBefore}
             onChange={(e) => save(enabled, Number(e.target.value))}
             disabled={saving}
             className="w-full sm:w-64 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:opacity-50"
           >
-            {DAYS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
+            {DAYS_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {t(`autoInvoiceDays.${value}`)}
               </option>
             ))}
           </select>

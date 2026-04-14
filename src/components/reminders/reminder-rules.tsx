@@ -19,25 +19,6 @@ interface ReminderSetting {
   is_enabled: boolean;
 }
 
-const typeLabels: Record<string, Record<string, string>> = {
-  rent_upcoming: {
-    label: "Rent Upcoming",
-    description: "Days before due date to send reminder",
-  },
-  rent_overdue: {
-    label: "Rent Overdue",
-    description: "Days after due date to start, then repeat interval",
-  },
-  lease_expiry: {
-    label: "Lease Expiry",
-    description: "Days before lease end date to notify",
-  },
-  cheque_due: {
-    label: "Cheque Due",
-    description: "Days before cheque date to send reminder",
-  },
-};
-
 export function ReminderRules() {
   const t = useTranslations("reminders");
   const tc = useTranslations("common");
@@ -54,9 +35,9 @@ export function ReminderRules() {
       .then((data) => {
         if (data.settings) setSettings(data.settings);
       })
-      .catch(() => setError("Failed to load settings"))
+      .catch(() => setError(t("loadFailed")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   function toggleEnabled(type: string) {
     setSettings((prev) =>
@@ -128,14 +109,14 @@ export function ReminderRules() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Failed to save");
+        setError(data.error || t("saveFailed"));
         return;
       }
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
-      setError("Failed to save settings");
+      setError(t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -179,10 +160,11 @@ export function ReminderRules() {
 
       <div className="space-y-3">
         {settings.map((setting) => {
-          const meta = typeLabels[setting.reminder_type] || {
-            label: setting.reminder_type,
-            description: "",
-          };
+          // Look up the localized label and description for this rule
+          // type. The DB stores snake_case keys (rent_upcoming, etc.) so
+          // we read directly from the matching i18n leaves.
+          const label = t(`types.${setting.reminder_type}`);
+          const description = t(`ruleDescriptions.${setting.reminder_type}`);
           const isOverdue = setting.reminder_type === "rent_overdue";
 
           return (
@@ -197,10 +179,10 @@ export function ReminderRules() {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="text-sm font-medium text-text-primary font-display">
-                    {meta.label}
+                    {label}
                   </h3>
                   <p className="text-xs text-text-secondary mt-0.5">
-                    {meta.description}
+                    {description}
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">

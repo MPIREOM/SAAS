@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Activity, ChevronDown, ChevronUp } from "lucide-react";
@@ -17,6 +17,7 @@ interface AuditLog {
 }
 
 export function AuditLogViewer() {
+  const t = useTranslations("settings");
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,11 +25,7 @@ export function AuditLogViewer() {
   const [page, setPage] = useState(0);
   const pageSize = 25;
 
-  useEffect(() => {
-    fetchLogs();
-  }, [page]);
-
-  async function fetchLogs() {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
     try {
@@ -40,7 +37,7 @@ export function AuditLogViewer() {
 
       if (fetchError) {
         if (fetchError.message.includes("does not exist") || fetchError.code === "42P01") {
-          setError("Audit logs table not configured yet.");
+          setError(t("auditNotConfigured"));
         } else {
           setError(fetchError.message);
         }
@@ -49,10 +46,14 @@ export function AuditLogViewer() {
         setLogs(data || []);
       }
     } catch {
-      setError("Could not load audit logs");
+      setError(t("auditLoadFailed"));
     }
     setLoading(false);
-  }
+  }, [page, t]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   if (loading) {
     return (
@@ -73,8 +74,8 @@ export function AuditLogViewer() {
   if (logs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-text-secondary">
-        <Activity className="h-8 w-8 opacity-30 mb-2" />
-        <p className="text-sm">No activity recorded yet</p>
+        <Activity aria-hidden="true" className="h-8 w-8 opacity-30 mb-2" />
+        <p className="text-sm">{t("auditNoActivity")}</p>
       </div>
     );
   }
