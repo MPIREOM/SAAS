@@ -124,7 +124,11 @@ export function CreateInvoiceButton() {
     [units, selectedUnitId]
   );
 
-  // Auto-fill amount/dates when the unit (and therefore the lease) changes.
+  // Auto-fill amount and default the due date to the 1st of the current
+  // month when a unit is picked. The lease's payment_due_day is ignored
+  // here on purpose: the admin always wants the standard "rent-due on
+  // the 1st" calendar, and can type a different date if a specific
+  // lease needs one.
   useEffect(() => {
     if (!selectedUnit) return;
     setAmount(String(selectedUnit.monthly_rent));
@@ -132,19 +136,25 @@ export function CreateInvoiceButton() {
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth();
-    const dueDay = Math.min(
-      selectedUnit.payment_due_day || 1,
-      new Date(y, m + 1, 0).getDate()
-    );
-    setDueDate(
-      `${y}-${String(m + 1).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`
-    );
-    setPeriodStart(`${y}-${String(m + 1).padStart(2, "0")}-01`);
-    const lastDay = new Date(y, m + 1, 0).getDate();
-    setPeriodEnd(
-      `${y}-${String(m + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
-    );
+    setDueDate(`${y}-${String(m + 1).padStart(2, "0")}-01`);
   }, [selectedUnit]);
+
+  // Derive the billing period from the due date: period runs from the
+  // due date to exactly one month later. Keeping this in its own effect
+  // means typing a different due date also shifts the period, so the
+  // admin only ever has to touch one field.
+  useEffect(() => {
+    if (!dueDate) return;
+    setPeriodStart(dueDate);
+    const d = new Date(`${dueDate}T00:00:00`);
+    d.setMonth(d.getMonth() + 1);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    setPeriodEnd(
+      `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    );
+  }, [dueDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
