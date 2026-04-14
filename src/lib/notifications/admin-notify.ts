@@ -31,7 +31,10 @@ function formatPhone(phone: string): string {
 async function sendWhatsAppText(to: string, text: string): Promise<{ success: boolean; error?: string }> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  if (!phoneNumberId || !accessToken) return { success: false, error: "WhatsApp not configured" };
+  if (!phoneNumberId || !accessToken) {
+    console.error("[admin-notify] WhatsApp text skipped: credentials not configured");
+    return { success: false, error: "WhatsApp not configured" };
+  }
 
   try {
     const res = await fetch(`${WHATSAPP_API_URL}/${phoneNumberId}/messages`, {
@@ -47,9 +50,18 @@ async function sendWhatsAppText(to: string, text: string): Promise<{ success: bo
         text: { body: text },
       }),
     });
-    if (!res.ok) return { success: false, error: `WhatsApp API ${res.status}` };
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error("[admin-notify] WhatsApp text failed", {
+        to,
+        status: res.status,
+        metaError: data?.error,
+      });
+      return { success: false, error: data?.error?.message || `WhatsApp API ${res.status}` };
+    }
     return { success: true };
   } catch (err) {
+    console.error("[admin-notify] WhatsApp text threw", { to, err });
     return { success: false, error: err instanceof Error ? err.message : "Unknown" };
   }
 }
@@ -62,7 +74,10 @@ async function sendWhatsAppTemplateMessage(
 ): Promise<{ success: boolean; error?: string }> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  if (!phoneNumberId || !accessToken) return { success: false, error: "WhatsApp not configured" };
+  if (!phoneNumberId || !accessToken) {
+    console.error("[admin-notify] WhatsApp template skipped: credentials not configured", { templateName });
+    return { success: false, error: "WhatsApp not configured" };
+  }
 
   try {
     const res = await fetch(`${WHATSAPP_API_URL}/${phoneNumberId}/messages`, {
@@ -89,10 +104,19 @@ async function sendWhatsAppTemplateMessage(
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
+      console.error("[admin-notify] WhatsApp template failed", {
+        to,
+        templateName,
+        languageCode,
+        paramCount: parameters.length,
+        status: res.status,
+        metaError: data?.error,
+      });
       return { success: false, error: data.error?.message || `WhatsApp API ${res.status}` };
     }
     return { success: true };
   } catch (err) {
+    console.error("[admin-notify] WhatsApp template threw", { to, templateName, err });
     return { success: false, error: err instanceof Error ? err.message : "Unknown" };
   }
 }
