@@ -6,7 +6,6 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { SharePortalButton } from "@/components/tenants/share-portal-button";
 import {
-  ArrowLeft,
   User,
   FileText,
   CreditCard,
@@ -32,6 +31,8 @@ import {
   FileDown,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
 
 export default async function TenantDetailPage({
   params,
@@ -127,87 +128,72 @@ export default async function TenantDetailPage({
         ) || leases.find((l: Record<string, unknown>) => !l.is_active) || null
       : null;
 
-  const statusColors: Record<string, string> = {
-    active: "bg-success/10 text-success",
-    archived: "bg-text-secondary/10 text-text-secondary",
-  };
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
+      <PageHeader
+        title={tenant.full_name}
+        breadcrumbs={[
+          { label: t("title"), href: `/${locale}/tenants` },
+          { label: tenant.full_name },
+        ]}
+      >
+        <Link
+          href={`/${locale}/tenants/${id}/edit`}
+          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        >
+          <Pencil aria-hidden="true" className="h-4 w-4" />
+          {t("editTenant")}
+        </Link>
+        <SharePortalButton
+          tenantId={id}
+          tenantName={tenant.full_name}
+          tenantPhone={tenant.phone}
+          locale={locale}
+        />
+        <Link
+          href={`/${locale}/tenants/${id}/statement`}
+          className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        >
+          <ScrollText aria-hidden="true" className="h-4 w-4" />
+          Statement
+        </Link>
+        <Link
+          href={`/api/tenants/${id}/unpaid-invoices/pdf`}
+          target="_blank"
+          className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          title={ti("downloadUnpaidPDFDescription")}
+        >
+          <FileDown aria-hidden="true" className="h-4 w-4" />
+          {ti("downloadUnpaidPDF")}
+        </Link>
+        {tenant.status === "active" && (
+          <>
             <Link
-              href={`/${locale}/tenants`}
-              className="text-text-secondary hover:text-text-primary transition-colors"
+              href={`/${locale}/tenants/${id}/renew-lease`}
+              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <RefreshCw aria-hidden="true" className="h-4 w-4" />
+              Renew Lease
             </Link>
-            <h1 className="text-2xl font-semibold text-text-primary font-display">
-              {tenant.full_name}
-            </h1>
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full ${
-                statusColors[tenant.status || "active"]
-              }`}
+            <Link
+              href={`/${locale}/tenants/${id}/move-out`}
+              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
-              {t(tenant.status || "active")}
-            </span>
-          </div>
-          <p className="text-sm text-text-secondary">
-            {t("tenantId")}: <span className="font-mono">{tenant.id}</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/${locale}/tenants/${id}/edit`}
-            className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors"
-          >
-            <Pencil className="h-4 w-4" />
-            {t("editTenant")}
-          </Link>
-          <SharePortalButton
-            tenantId={id}
-            tenantName={tenant.full_name}
-            tenantPhone={tenant.phone}
-            locale={locale}
-          />
-          <Link
-            href={`/${locale}/tenants/${id}/statement`}
-            className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors"
-          >
-            <ScrollText className="h-4 w-4" />
-            Statement
-          </Link>
-          <Link
-            href={`/api/tenants/${id}/unpaid-invoices/pdf`}
-            target="_blank"
-            className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors"
-            title={ti("downloadUnpaidPDFDescription")}
-          >
-            <FileDown className="h-4 w-4" />
-            {ti("downloadUnpaidPDF")}
-          </Link>
-          {tenant.status === "active" && (
-            <>
-              <Link
-                href={`/${locale}/tenants/${id}/renew-lease`}
-                className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Renew Lease
-              </Link>
-              <Link
-                href={`/${locale}/tenants/${id}/move-out`}
-                className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
-                {t("moveOut")}
-              </Link>
-            </>
-          )}
-        </div>
+              <LogOut aria-hidden="true" className="h-4 w-4" />
+              {t("moveOut")}
+            </Link>
+          </>
+        )}
+      </PageHeader>
+
+      {/* Status + tenant ID strip */}
+      <div className="-mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary">
+        <Badge variant={tenant.status === "archived" ? "secondary" : "success"}>
+          {t(tenant.status || "active")}
+        </Badge>
+        <span className="text-xs">
+          {t("tenantId")}: <span className="font-mono">{tenant.id}</span>
+        </span>
       </div>
 
       {/* Move-out Summary (archived tenants only) */}

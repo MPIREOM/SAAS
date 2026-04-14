@@ -15,6 +15,7 @@ import {
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
 import { CollectionChart, type MonthlyCollectionData } from "@/components/reports/collection-chart";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { PageHeader } from "@/components/ui/page-header";
 import { CURRENCY } from "@/lib/currency";
 
 /* ------------------------------------------------------------------ */
@@ -348,19 +349,10 @@ export default async function ReportsPage({
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="animate-fade-in-up flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader title={t("title")} description={t("subtitle")}>
         <DateRangeFilter defaultMonth={month} defaultYear={year} />
-      </div>
+      </PageHeader>
 
       {/* Key Financial Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
