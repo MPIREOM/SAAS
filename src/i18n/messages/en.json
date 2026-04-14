@@ -181,6 +181,8 @@
     },
     "noUnits": "No units found",
     "noUnitsDescription": "Add units to this property",
+    "noUnitsForFilter": "No units match this filter",
+    "filterAll": "All",
     "amenities": "Amenities",
     "furnished": "Furnished",
     "unfurnished": "Unfurnished",
