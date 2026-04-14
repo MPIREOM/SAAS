@@ -1,18 +1,24 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Upload, Scan, X, FileText, Home, Building2, Search, Users } from "lucide-react";
+import { Upload, Scan, X, FileText, Building2, Search, Users } from "lucide-react";
 import { logAudit } from "@/lib/audit";
 import { ChequeFormRows, ChequeEntry } from "@/components/cheques/cheque-form-rows";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { cn } from "@/lib/utils/cn";
 
 export default function NewTenantPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }) {
+  const { locale } = use(params);
   const t = useTranslations("tenants");
   const tl = useTranslations("leases");
   const tc = useTranslations("common");
@@ -115,6 +121,9 @@ export default function NewTenantPage({
         return;
       }
 
+      // Backfill the form fields with whatever the OCR returned. Each
+      // field is optional — partial scans (e.g. just the name) still
+      // populate what's available.
       const form = formRef.current;
       if (form) {
         if (data.full_name) {
@@ -285,7 +294,10 @@ export default function NewTenantPage({
         return;
       }
 
-      // Update unit status to occupied
+      // Update unit status to occupied. The DB trigger added in 022
+      // will keep this in sync going forward, but we also write it here
+      // explicitly so the change is visible immediately on this same
+      // request without waiting for a refresh.
       const { error: unitError } = await supabase
         .from("units")
         .update({ status: "occupied" })
@@ -320,35 +332,34 @@ export default function NewTenantPage({
       }
 
       // Navigate back to the unit page
-      const { locale } = await params;
       router.push(`/${locale}/properties/${propertyId}/units/${unitId}`);
       router.refresh();
       return;
     }
 
-    const { locale } = await params;
     router.push(`/${locale}/tenants`);
     router.refresh();
   };
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary font-display">
-          {isAssigningToUnit ? t("assignTenantToUnit") || t("createTenant") : t("createTenant")}
-        </h1>
-        {isAssigningToUnit && (
-          <p className="text-sm text-text-secondary mt-1 flex items-center gap-1.5">
-            <Home className="h-3.5 w-3.5" />
-            {t("assigningToUnit") || "Creating tenant and lease for this unit"}
-          </p>
-        )}
-      </div>
+    <div className="max-w-2xl mx-auto space-y-5">
+      <PageHeader
+        title={isAssigningToUnit ? t("assignTenantToUnit") || t("createTenant") : t("createTenant")}
+        description={
+          isAssigningToUnit
+            ? t("assigningToUnit") || "Creating tenant and lease for this unit"
+            : undefined
+        }
+        breadcrumbs={[
+          { label: t("title"), href: `/${locale}/tenants` },
+          { label: t("createTenant") },
+        ]}
+      />
 
       {/* Unit Context Banner */}
       {unitId && unitInfo && (
-        <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 mb-5 flex items-center gap-3">
-          <Building2 className="h-5 w-5 text-accent shrink-0" />
+        <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 flex items-center gap-3">
+          <Building2 aria-hidden="true" className="h-5 w-5 text-accent shrink-0" />
           <div>
             <p className="text-sm font-medium text-text-primary">
               {unitInfo.property_name} — {unitInfo.unit_number}
@@ -362,33 +373,39 @@ export default function NewTenantPage({
 
       {/* New vs Existing Tenant Toggle - shown when assigning to a unit */}
       {isAssigningToUnit && (
-        <div className="bg-surface border border-border rounded-lg p-4 mb-5">
-          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
             {t("tenantType") || "Tenant"}
-          </label>
-          <div className="grid grid-cols-2 gap-2">
+          </span>
+          <div role="tablist" aria-label={t("tenantType") || "Tenant"} className="grid grid-cols-2 gap-2">
             <button
               type="button"
+              role="tab"
+              aria-selected={tenantMode === "new"}
               onClick={() => { setTenantMode("new"); setSelectedTenant(null); }}
-              className={`flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+              className={cn(
+                "flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
                 tenantMode === "new"
                   ? "bg-accent/10 border-accent/40 text-accent"
                   : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
-              }`}
+              )}
             >
-              <Users className="h-4 w-4" />
+              <Users aria-hidden="true" className="h-4 w-4" />
               {t("newTenant") || "New Tenant"}
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={tenantMode === "existing"}
               onClick={() => setTenantMode("existing")}
-              className={`flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+              className={cn(
+                "flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
                 tenantMode === "existing"
                   ? "bg-accent/10 border-accent/40 text-accent"
                   : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
-              }`}
+              )}
             >
-              <Search className="h-4 w-4" />
+              <Search aria-hidden="true" className="h-4 w-4" />
               {t("existingTenant") || "Existing Tenant"}
             </button>
           </div>
@@ -397,16 +414,17 @@ export default function NewTenantPage({
           {tenantMode === "existing" && (
             <div className="mt-4 space-y-3">
               <div className="relative">
-                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
+                <Search aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
                 <input
                   type="text"
                   value={tenantSearch}
                   onChange={(e) => { setTenantSearch(e.target.value); setSelectedTenant(null); }}
                   placeholder={t("searchTenantPlaceholder") || "Search by name or phone..."}
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md ps-10 pe-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                  aria-label={t("searchTenantPlaceholder") || "Search by name or phone"}
+                  className="w-full h-10 bg-surface-elevated border border-border/60 rounded-lg ps-10 pe-3 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/50 transition-colors"
                 />
                 {searchingTenants && (
-                  <div className="absolute end-3 top-1/2 -translate-y-1/2">
+                  <div className="absolute end-3 top-1/2 -translate-y-1/2" aria-hidden="true">
                     <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
@@ -422,9 +440,10 @@ export default function NewTenantPage({
                   <button
                     type="button"
                     onClick={() => { setSelectedTenant(null); setTenantSearch(""); }}
-                    className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:bg-surface-elevated transition-colors"
+                    aria-label={tc("close")}
+                    className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   >
-                    <X className="h-3 w-3 text-text-secondary" />
+                    <X aria-hidden="true" className="h-3 w-3 text-text-secondary" />
                   </button>
                 </div>
               )}
@@ -437,7 +456,7 @@ export default function NewTenantPage({
                       key={tenant.id}
                       type="button"
                       onClick={() => { setSelectedTenant(tenant); setTenantSearch(tenant.full_name); setSearchResults([]); }}
-                      className="w-full text-start px-4 py-3 hover:bg-surface-elevated/50 transition-colors"
+                      className="w-full text-start px-4 py-3 hover:bg-surface-elevated/50 transition-colors focus-visible:outline-none focus-visible:bg-surface-elevated"
                     >
                       <p className="text-sm font-medium text-text-primary">{tenant.full_name}</p>
                       <p className="text-xs text-text-secondary font-mono">{tenant.phone}</p>
@@ -457,266 +476,218 @@ export default function NewTenantPage({
       )}
 
       {/* ID Scan Section */}
-      {tenantMode === "new" && <div className="bg-surface border border-border rounded-lg p-6 mb-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Scan className="h-4 w-4 text-accent" />
-          <h2 className="text-sm font-medium text-text-primary">
-            {t("scanId")}
-          </h2>
-        </div>
-        <p className="text-xs text-text-secondary mb-4">
-          {t("scanIdDescription")}
-        </p>
+      {tenantMode === "new" && (
+        <div className="bg-surface border border-border rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Scan aria-hidden="true" className="h-4 w-4 text-accent" />
+            <h2 className="text-sm font-medium text-text-primary">
+              {t("scanId")}
+            </h2>
+          </div>
+          <p className="text-xs text-text-secondary mb-4">{t("scanIdDescription")}</p>
 
-        {idPreview ? (
-          <div className="relative">
-            {isPdf ? (
-              <div className="w-full h-48 rounded-md border border-border bg-surface-elevated flex flex-col items-center justify-center gap-2">
-                <FileText className="h-12 w-12 text-text-secondary/50" />
-                <span className="text-sm text-text-secondary">
-                  PDF Document
-                </span>
-              </div>
-            ) : (
-              <img
-                src={idPreview}
-                alt="ID Preview"
-                className="w-full max-h-48 object-contain rounded-md border border-border"
-              />
-            )}
-            <button
-              type="button"
-              onClick={clearPreview}
-              className="absolute top-2 end-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
-            >
-              <X className="h-3 w-3 text-text-secondary" />
-            </button>
-            {scanning && (
-              <div className="absolute inset-0 bg-surface/70 backdrop-blur-sm rounded-md flex items-center justify-center">
-                <div className="flex items-center gap-2 text-sm text-text-secondary">
-                  <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                  {t("scanningId")}
+          {idPreview ? (
+            <div className="relative">
+              {isPdf ? (
+                <div className="w-full h-48 rounded-md border border-border bg-surface-elevated flex flex-col items-center justify-center gap-2">
+                  <FileText aria-hidden="true" className="h-12 w-12 text-text-secondary/50" />
+                  <span className="text-sm text-text-secondary">PDF Document</span>
                 </div>
-              </div>
-            )}
-            {scanSuccess && (
-              <div className="mt-2 text-xs text-success">
-                {t("scanSuccess")}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent/50 transition-colors"
-          >
-            <Upload className="h-8 w-8 text-text-secondary/50 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">{tc("dragAndDrop")}</p>
-            <p className="text-xs text-text-secondary/70 mt-1">
-              {tc("or")}{" "}
-              <span className="text-accent underline">{tc("browseFiles")}</span>
-            </p>
-          </div>
-        )}
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={idPreview}
+                  alt="ID Preview"
+                  className="w-full max-h-48 object-contain rounded-md border border-border"
+                />
+              )}
+              <button
+                type="button"
+                onClick={clearPreview}
+                aria-label={tc("close")}
+                className="absolute top-2 end-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                <X aria-hidden="true" className="h-3 w-3 text-text-secondary" />
+              </button>
+              {scanning && (
+                <div className="absolute inset-0 bg-surface/70 backdrop-blur-sm rounded-md flex items-center justify-center" aria-busy="true">
+                  <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                    {t("scanningId")}
+                  </div>
+                </div>
+              )}
+              {scanSuccess && (
+                <div className="mt-2 text-xs text-success" role="status">{t("scanSuccess")}</div>
+              )}
+            </div>
+          ) : (
+            <div
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+              onClick={() => fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              <Upload aria-hidden="true" className="h-8 w-8 text-text-secondary/50 mx-auto mb-2" />
+              <p className="text-sm text-text-secondary">{tc("dragAndDrop")}</p>
+              <p className="text-xs text-text-secondary/70 mt-1">
+                {tc("or")}{" "}
+                <span className="text-accent underline">{tc("browseFiles")}</span>
+              </p>
+            </div>
+          )}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-      </div>}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+            onChange={handleFileChange}
+            aria-label={t("scanId")}
+            className="hidden"
+          />
+        </div>
+      )}
 
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-        {/* Tenant Info - only for new tenant mode */}
-        {tenantMode === "new" && <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("fullName")} <span className="text-destructive">*</span>
-            </label>
-            <input
+        {/* Tenant Info — only for new tenant mode */}
+        {tenantMode === "new" && (
+          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
+            <Input
               name="full_name"
               required
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              label={`${t("fullName")} *`}
               placeholder={t("fullNamePlaceholder")}
             />
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("nationality")}
-              </label>
-              <input
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
                 name="nationality"
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                label={t("nationality")}
                 placeholder={t("nationalityPlaceholder")}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("nationalId")}
-              </label>
-              <input
+              <Input
                 name="national_id"
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                label={t("nationalId")}
                 placeholder={t("nationalIdPlaceholder")}
+                className="font-mono"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("phone")} <span className="text-destructive">*</span>
-              </label>
-              <input
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
                 name="phone"
                 required
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+                label={`${t("phone")} *`}
                 placeholder={t("phonePlaceholder")}
+                className="font-mono"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("email")}
-              </label>
-              <input
+              <Input
                 name="email"
                 type="email"
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                label={t("email")}
                 placeholder={t("emailPlaceholder")}
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("emergencyContact")}
-            </label>
-            <input
+            <Input
               name="emergency_contact"
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              label={t("emergencyContact")}
               placeholder={t("emergencyContactPlaceholder")}
             />
-          </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("languagePreference")}
-            </label>
-            <select
+            <Select
               name="language_preference"
               defaultValue="en"
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              label={t("languagePreference")}
             >
               <option value="en">{t("languages.en")}</option>
               <option value="ar">{t("languages.ar")}</option>
-            </select>
+            </Select>
           </div>
-        </div>}
+        )}
 
-        {/* Lease Details - only shown when assigning to a unit */}
+        {/* Lease Details — only shown when assigning to a unit */}
         {isAssigningToUnit && (
-          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
             <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <FileText className="h-4 w-4 text-accent" />
+              <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               {t("leaseInfo")}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-text-secondary mb-1.5">
-                  {tl("startDate")} <span className="text-destructive">*</span>
-                </label>
-                <input
-                  name="lease_start_date"
-                  type="date"
-                  required
-                  defaultValue={new Date().toISOString().split("T")[0]}
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-text-secondary mb-1.5">
-                  {tl("endDate")} <span className="text-destructive">*</span>
-                </label>
-                <input
-                  name="lease_end_date"
-                  type="date"
-                  required
-                  defaultValue={
-                    new Date(
-                      new Date().setFullYear(new Date().getFullYear() + 1)
-                    )
-                      .toISOString()
-                      .split("T")[0]
-                  }
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                />
-              </div>
+              <Input
+                name="lease_start_date"
+                type="date"
+                required
+                label={`${tl("startDate")} *`}
+                defaultValue={new Date().toISOString().split("T")[0]}
+                className="font-mono"
+              />
+              <Input
+                name="lease_end_date"
+                type="date"
+                required
+                label={`${tl("endDate")} *`}
+                defaultValue={
+                  new Date(
+                    new Date().setFullYear(new Date().getFullYear() + 1)
+                  )
+                    .toISOString()
+                    .split("T")[0]
+                }
+                className="font-mono"
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-text-secondary mb-1.5">
-                  {tl("monthlyRent")} (OMR){" "}
-                  <span className="text-destructive">*</span>
-                </label>
-                <input
-                  name="monthly_rent"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  defaultValue={unitInfo?.rent_amount || defaultRent}
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-text-secondary mb-1.5">
-                  {tl("securityDeposit")} (OMR)
-                </label>
-                <input
-                  name="security_deposit"
-                  type="number"
-                  step="0.01"
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                  placeholder="0.00"
-                />
-              </div>
+              <Input
+                name="monthly_rent"
+                type="number"
+                step={0.01}
+                min={0.01}
+                required
+                label={`${tl("monthlyRent")} (OMR) *`}
+                defaultValue={unitInfo?.rent_amount || defaultRent}
+                placeholder="0.00"
+                className="font-mono"
+              />
+              <Input
+                name="security_deposit"
+                type="number"
+                step={0.01}
+                label={`${tl("securityDeposit")} (OMR)`}
+                placeholder="0.00"
+                className="font-mono"
+              />
             </div>
 
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("paymentDueDay") || "Payment Due Day"}
-              </label>
-              <select
-                name="payment_due_day"
-                defaultValue="1"
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              name="payment_due_day"
+              defaultValue="1"
+              label={t("paymentDueDay") || "Payment Due Day"}
+            >
+              {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                <option key={day} value={day}>
+                  {day}
+                </option>
+              ))}
+            </Select>
           </div>
         )}
 
-        {/* Cheques Section - shown when assigning to a unit */}
+        {/* Cheques Section — shown when assigning to a unit */}
         {isAssigningToUnit && (
-          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
             <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <FileText className="h-4 w-4 text-accent" />
+              <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               {tc("cheques") || "Post-Dated Cheques"}
             </h2>
             <p className="text-xs text-text-secondary">
@@ -727,32 +698,29 @@ export default function NewTenantPage({
         )}
 
         {error && (
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+          <div role="alert" className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
             {error}
           </div>
         )}
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-          >
+          <Button type="submit" loading={loading}>
             {loading
               ? tc("loading")
               : isAssigningToUnit
               ? t("assignTenant") || tc("save")
               : tc("save")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             onClick={() => router.back()}
-            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
           >
             {tc("cancel")}
-          </button>
+          </Button>
         </div>
       </form>
+
     </div>
   );
 }

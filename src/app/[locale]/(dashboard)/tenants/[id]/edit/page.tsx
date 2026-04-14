@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -10,6 +10,11 @@ import {
   ChequeFormRows,
   ChequeEntry,
 } from "@/components/cheques/cheque-form-rows";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface Tenant {
   id: string;
@@ -40,6 +45,7 @@ export default function EditTenantPage({
 }: {
   params: Promise<{ locale: string; id: string }>;
 }) {
+  const { locale, id } = use(params);
   const t = useTranslations("tenants");
   const tc = useTranslations("common");
   const tch = useTranslations("cheques");
@@ -53,7 +59,6 @@ export default function EditTenantPage({
 
   useEffect(() => {
     const load = async () => {
-      const { id } = await params;
       const supabase = createClient();
 
       // Load tenant
@@ -64,7 +69,8 @@ export default function EditTenantPage({
         .single();
       if (data) setTenant(data as Tenant);
 
-      // Access control check
+      // Access control check — non-super-admins must have an assignment
+      // for the tenant's property.
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
@@ -80,7 +86,6 @@ export default function EditTenantPage({
             .limit(1);
           const propId = (leases?.[0]?.units as unknown as { property_id: string })?.property_id;
           if (propId && access && !access.some(a => a.property_id === propId)) {
-            const { locale } = await params;
             router.push(`/${locale}/tenants`);
             return;
           }
@@ -137,7 +142,7 @@ export default function EditTenantPage({
       setChequesLoaded(true);
     };
     load();
-  }, [params]);
+  }, [id, locale, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -179,12 +184,12 @@ export default function EditTenantPage({
     // Validate leases
     for (const lease of leases) {
       if (lease.start_date && lease.end_date && lease.end_date <= lease.start_date) {
-        setError(`Lease for ${lease.unit_number}: end date must be after start date`);
+        setError(t("leaseEndAfterStart", { unit: lease.unit_number }));
         setLoading(false);
         return;
       }
       if (lease.monthly_rent !== undefined && lease.monthly_rent <= 0) {
-        setError(`Lease for ${lease.unit_number}: monthly rent must be greater than 0`);
+        setError(t("leaseRentPositive", { unit: lease.unit_number }));
         setLoading(false);
         return;
       }
@@ -234,242 +239,176 @@ export default function EditTenantPage({
       }
     }
 
-    const { locale } = await params;
     router.push(`/${locale}/tenants/${tenant.id}`);
     router.refresh();
   };
 
   if (!tenant) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-20" aria-busy="true">
         <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary font-display">
-          {t("editTenant")}
-        </h1>
-      </div>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <PageHeader
+        title={t("editTenant")}
+        breadcrumbs={[
+          { label: t("title"), href: `/${locale}/tenants` },
+          { label: tenant.full_name, href: `/${locale}/tenants/${tenant.id}` },
+          { label: t("editTenant") },
+        ]}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
-          {/* Full Name */}
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("fullName")} <span className="text-destructive">*</span>
-            </label>
-            <input
-              name="full_name"
+        {/* Tenant fields */}
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
+          <Input
+            name="full_name"
+            required
+            label={`${t("fullName")} *`}
+            defaultValue={tenant.full_name}
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              name="phone"
               required
-              defaultValue={tenant.full_name}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              label={`${t("phone")} *`}
+              defaultValue={tenant.phone}
+            />
+            <Input
+              name="email"
+              type="email"
+              label={t("email")}
+              defaultValue={tenant.email || ""}
             />
           </div>
 
-          {/* Phone & Email */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("phone")} <span className="text-destructive">*</span>
-              </label>
-              <input
-                name="phone"
-                required
-                defaultValue={tenant.phone}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("email")}
-              </label>
-              <input
-                name="email"
-                type="email"
-                defaultValue={tenant.email || ""}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              />
-            </div>
-          </div>
-
-          {/* Nationality & National ID */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("nationality")}
-              </label>
-              <input
-                name="nationality"
-                defaultValue={tenant.nationality || ""}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("nationalId")}
-              </label>
-              <input
-                name="national_id"
-                defaultValue={tenant.national_id || ""}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-              />
-            </div>
-          </div>
-
-          {/* Emergency Contact */}
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("emergencyContact")}
-            </label>
-            <input
-              name="emergency_contact"
-              defaultValue={tenant.emergency_contact || ""}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+            <Input
+              name="nationality"
+              label={t("nationality")}
+              defaultValue={tenant.nationality || ""}
+            />
+            <Input
+              name="national_id"
+              label={t("nationalId")}
+              defaultValue={tenant.national_id || ""}
+              className="font-mono"
             />
           </div>
 
-          {/* Language & Status */}
+          <Input
+            name="emergency_contact"
+            label={t("emergencyContact")}
+            defaultValue={tenant.emergency_contact || ""}
+          />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("languagePreference")}
-              </label>
-              <select
-                name="language_preference"
-                defaultValue={tenant.language_preference}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="en">{t("languages.en")}</option>
-                <option value="ar">{t("languages.ar")}</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("status")}
-              </label>
-              <input
-                type="text"
-                name="status"
-                value={tenant.status}
-                readOnly
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-secondary focus:outline-none cursor-not-allowed capitalize"
-              />
-              <p className="text-xs text-text-secondary mt-1">Use the move-out flow to archive a tenant</p>
-            </div>
+            <Select
+              name="language_preference"
+              label={t("languagePreference")}
+              defaultValue={tenant.language_preference}
+            >
+              <option value="en">{t("languages.en")}</option>
+              <option value="ar">{t("languages.ar")}</option>
+            </Select>
+            <Input
+              type="text"
+              name="status"
+              label={t("status")}
+              value={tenant.status}
+              readOnly
+              className="capitalize cursor-not-allowed text-text-secondary"
+              helperText={t("useMoveOutHint")}
+            />
           </div>
         </div>
 
         {/* Lease Section */}
         {leases.length > 0 && (
-          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
             <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <FileText className="h-4 w-4 text-accent" />
+              <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               {t("leaseInfo")}
             </h2>
             {leases.map((lease, idx) => (
               <div
                 key={lease.id}
-                className="border border-border rounded-md p-4 space-y-4"
+                className="border border-border/60 rounded-md p-4 space-y-4"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-text-secondary">
                     {lease.property_name} — {t("unit")} {lease.unit_number}
                   </span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      lease.is_active
-                        ? "bg-success/10 text-success"
-                        : "bg-text-secondary/10 text-text-secondary"
-                    }`}
-                  >
+                  <Badge variant={lease.is_active ? "success" : "secondary"}>
                     {lease.is_active ? t("leaseActive") : t("leaseExpired")}
-                  </span>
+                  </Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1.5">
-                      {t("startDate")}
-                    </label>
-                    <input
-                      type="date"
-                      value={lease.start_date}
-                      onChange={(e) => {
-                        const updated = [...leases];
-                        updated[idx] = { ...updated[idx], start_date: e.target.value };
-                        setLeases(updated);
-                      }}
-                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1.5">
-                      {t("endDate")}
-                    </label>
-                    <input
-                      type="date"
-                      value={lease.end_date}
-                      onChange={(e) => {
-                        const updated = [...leases];
-                        updated[idx] = { ...updated[idx], end_date: e.target.value };
-                        setLeases(updated);
-                      }}
-                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1.5">
-                      {t("monthlyRent")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={lease.monthly_rent}
-                      onChange={(e) => {
-                        const updated = [...leases];
-                        updated[idx] = { ...updated[idx], monthly_rent: Number(e.target.value) };
-                        setLeases(updated);
-                      }}
-                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1.5">
-                      {t("securityDeposit")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={lease.security_deposit || ""}
-                      onChange={(e) => {
-                        const updated = [...leases];
-                        updated[idx] = { ...updated[idx], security_deposit: e.target.value ? Number(e.target.value) : null };
-                        setLeases(updated);
-                      }}
-                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1.5">
-                      {t("paymentDueDay")}
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="28"
-                      value={lease.payment_due_day}
-                      onChange={(e) => {
-                        const updated = [...leases];
-                        updated[idx] = { ...updated[idx], payment_due_day: Number(e.target.value) };
-                        setLeases(updated);
-                      }}
-                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                    />
-                  </div>
+                  <Input
+                    type="date"
+                    label={t("startDate")}
+                    value={lease.start_date}
+                    onChange={(e) => {
+                      const updated = [...leases];
+                      updated[idx] = { ...updated[idx], start_date: e.target.value };
+                      setLeases(updated);
+                    }}
+                    className="font-mono"
+                  />
+                  <Input
+                    type="date"
+                    label={t("endDate")}
+                    value={lease.end_date}
+                    onChange={(e) => {
+                      const updated = [...leases];
+                      updated[idx] = { ...updated[idx], end_date: e.target.value };
+                      setLeases(updated);
+                    }}
+                    className="font-mono"
+                  />
+                  <Input
+                    type="number"
+                    step={0.01}
+                    min={0.01}
+                    label={t("monthlyRent")}
+                    value={lease.monthly_rent}
+                    onChange={(e) => {
+                      const updated = [...leases];
+                      updated[idx] = { ...updated[idx], monthly_rent: Number(e.target.value) };
+                      setLeases(updated);
+                    }}
+                    className="font-mono"
+                  />
+                  <Input
+                    type="number"
+                    step={0.01}
+                    label={t("securityDeposit")}
+                    value={lease.security_deposit ?? ""}
+                    onChange={(e) => {
+                      const updated = [...leases];
+                      updated[idx] = { ...updated[idx], security_deposit: e.target.value ? Number(e.target.value) : null };
+                      setLeases(updated);
+                    }}
+                    className="font-mono"
+                  />
+                  <Input
+                    type="number"
+                    min={1}
+                    max={28}
+                    label={t("paymentDueDay")}
+                    value={lease.payment_due_day}
+                    onChange={(e) => {
+                      const updated = [...leases];
+                      updated[idx] = { ...updated[idx], payment_due_day: Number(e.target.value) };
+                      setLeases(updated);
+                    }}
+                    className="font-mono"
+                  />
                 </div>
               </div>
             ))}
@@ -478,19 +417,17 @@ export default function EditTenantPage({
 
         {/* Cheques Section */}
         {chequesLoaded && (
-          <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
             <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <FileText className="h-4 w-4 text-accent" />
+              <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               {tch("title")}
               {cheques.filter((c) => c.id).length > 0 && (
-                <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
+                <Badge variant="secondary">
                   {cheques.filter((c) => c.id).length}
-                </span>
+                </Badge>
               )}
             </h2>
-            <p className="text-xs text-text-secondary">
-              {tch("subtitle")}
-            </p>
+            <p className="text-xs text-text-secondary">{tch("subtitle")}</p>
             <ChequeFormRows
               cheques={cheques}
               onChange={setCheques}
@@ -499,23 +436,17 @@ export default function EditTenantPage({
           </div>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">{error}</p>
+        )}
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-          >
+          <Button type="submit" loading={loading}>
             {loading ? tc("loading") : tc("save")}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
-          >
+          </Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>
             {tc("cancel")}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
