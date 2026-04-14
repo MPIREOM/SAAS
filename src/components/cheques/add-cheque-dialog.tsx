@@ -16,6 +16,7 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const t = useTranslations("cheques");
+  const tc = useTranslations("common");
   const { toast } = useToast();
   const router = useRouter();
 
@@ -30,7 +31,7 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
     const amount = form.get("amount") as string;
 
     if (!chequeNumber || !bankName || !chequeDate || !amount) {
-      toast({ title: "Please fill all fields", variant: "destructive" });
+      toast({ title: t("fillAllFields"), variant: "destructive" });
       setSaving(false);
       return;
     }
@@ -106,7 +107,7 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
                   name="bank_name"
                   type="text"
                   required
-                  placeholder="Bank name"
+                  placeholder={t("bankNamePlaceholder")}
                   className={inputClass}
                 />
               </div>
@@ -138,17 +139,17 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="h-9 px-4 text-sm text-text-secondary hover:text-text-primary transition-colors"
+                  className="h-9 px-4 text-sm text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                 >
-                  Cancel
+                  {tc("cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
-                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  {saving ? "Saving..." : t("addCheque")}
+                  {saving && <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />}
+                  {saving ? t("saving") : t("addCheque")}
                 </button>
               </div>
             </form>

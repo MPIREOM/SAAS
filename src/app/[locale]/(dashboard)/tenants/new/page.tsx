@@ -180,17 +180,17 @@ export default function NewTenantPage({
       const monthlyRent = parseFloat(formData.get("monthly_rent") as string);
 
       if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
-        setError(t("endDateAfterStart") || "End date must be after start date");
+        setError(t("endDateAfterStart"));
         return;
       }
 
       if (isNaN(monthlyRent) || monthlyRent <= 0) {
-        setError(t("invalidRent") || "Monthly rent must be greater than 0");
+        setError(t("invalidRent"));
         return;
       }
 
       if (tenantMode === "existing" && !selectedTenant) {
-        setError(t("selectTenantRequired") || "Please select a tenant");
+        setError(t("selectTenantRequired"));
         return;
       }
     }
@@ -202,17 +202,17 @@ export default function NewTenantPage({
       const email = (formData.get("email") as string)?.trim() || "";
 
       if (!fullName) {
-        setError(t("fullNameRequired") || "Full name is required");
+        setError(t("fullNameRequired"));
         return;
       }
 
       if (!phone) {
-        setError(t("phoneRequired") || "Phone number is required");
+        setError(t("phoneRequired"));
         return;
       }
 
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        setError(t("invalidEmail") || "Please enter a valid email address");
+        setError(t("invalidEmail"));
         return;
       }
     }
@@ -252,7 +252,7 @@ export default function NewTenantPage({
         .single();
 
       if (insertError || !tenant) {
-        setError(insertError?.message || "Failed to create tenant");
+        setError(insertError?.message || t("failedToCreate"));
         setLoading(false);
         return;
       }
@@ -344,12 +344,8 @@ export default function NewTenantPage({
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <PageHeader
-        title={isAssigningToUnit ? t("assignTenantToUnit") || t("createTenant") : t("createTenant")}
-        description={
-          isAssigningToUnit
-            ? t("assigningToUnit") || "Creating tenant and lease for this unit"
-            : undefined
-        }
+        title={isAssigningToUnit ? t("assignTenantToUnit") : t("createTenant")}
+        description={isAssigningToUnit ? t("assigningToUnit") : undefined}
         breadcrumbs={[
           { label: t("title"), href: `/${locale}/tenants` },
           { label: t("createTenant") },
@@ -375,9 +371,9 @@ export default function NewTenantPage({
       {isAssigningToUnit && (
         <div className="bg-surface border border-border rounded-xl p-4">
           <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
-            {t("tenantType") || "Tenant"}
+            {t("tenantType")}
           </span>
-          <div role="tablist" aria-label={t("tenantType") || "Tenant"} className="grid grid-cols-2 gap-2">
+          <div role="tablist" aria-label={t("tenantType")} className="grid grid-cols-2 gap-2">
             <button
               type="button"
               role="tab"
@@ -391,7 +387,7 @@ export default function NewTenantPage({
               )}
             >
               <Users aria-hidden="true" className="h-4 w-4" />
-              {t("newTenant") || "New Tenant"}
+              {t("newTenant")}
             </button>
             <button
               type="button"
@@ -406,7 +402,7 @@ export default function NewTenantPage({
               )}
             >
               <Search aria-hidden="true" className="h-4 w-4" />
-              {t("existingTenant") || "Existing Tenant"}
+              {t("existingTenant")}
             </button>
           </div>
 
@@ -419,8 +415,8 @@ export default function NewTenantPage({
                   type="text"
                   value={tenantSearch}
                   onChange={(e) => { setTenantSearch(e.target.value); setSelectedTenant(null); }}
-                  placeholder={t("searchTenantPlaceholder") || "Search by name or phone..."}
-                  aria-label={t("searchTenantPlaceholder") || "Search by name or phone"}
+                  placeholder={t("searchTenantPlaceholder")}
+                  aria-label={t("searchTenantPlaceholder")}
                   className="w-full h-10 bg-surface-elevated border border-border/60 rounded-lg ps-10 pe-3 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/50 transition-colors"
                 />
                 {searchingTenants && (
@@ -467,7 +463,7 @@ export default function NewTenantPage({
 
               {!selectedTenant && tenantSearch.length >= 2 && !searchingTenants && searchResults.length === 0 && (
                 <p className="text-xs text-text-secondary text-center py-2">
-                  {t("noTenantsFound") || "No tenants found"}
+                  {t("noTenantsFound")}
                 </p>
               )}
             </div>
@@ -672,7 +668,7 @@ export default function NewTenantPage({
             <Select
               name="payment_due_day"
               defaultValue="1"
-              label={t("paymentDueDay") || "Payment Due Day"}
+              label={t("paymentDueDay")}
             >
               {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
                 <option key={day} value={day}>
@@ -688,10 +684,10 @@ export default function NewTenantPage({
           <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
             <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
               <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
-              {tc("cheques") || "Post-Dated Cheques"}
+              {tc("cheques")}
             </h2>
             <p className="text-xs text-text-secondary">
-              {tc("chequesOptional") || "Optionally add post-dated cheques for this tenant's lease payments."}
+              {tc("chequesOptional")}
             </p>
             <ChequeFormRows cheques={cheques} onChange={setCheques} />
           </div>
@@ -708,7 +704,7 @@ export default function NewTenantPage({
             {loading
               ? tc("loading")
               : isAssigningToUnit
-              ? t("assignTenant") || tc("save")
+              ? t("assignTenant")
               : tc("save")}
           </Button>
           <Button

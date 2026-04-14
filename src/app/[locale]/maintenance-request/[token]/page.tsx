@@ -75,14 +75,14 @@ export default function PublicMaintenanceRequestPage({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError((data as Record<string, string>).error || "Failed to submit request");
+        setError((data as Record<string, string>).error || t("submitFailed"));
         setSubmitting(false);
         return;
       }
 
       router.push(`/${locale}/maintenance-request/${token}/success`);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("submitGenericError"));
       setSubmitting(false);
     }
   };

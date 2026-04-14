@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/toast";
 import { Check, Loader2, Plus, Smartphone, Trash2, X } from "lucide-react";
 
@@ -19,6 +20,7 @@ export function WhatsAppAgentSetup({
   currentPhone,
   notificationPhones,
 }: WhatsAppAgentSetupProps) {
+  const t = useTranslations("settings");
   const [phone, setPhone] = useState(currentPhone || "");
   const [loading, setLoading] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -38,7 +40,7 @@ export function WhatsAppAgentSetup({
     const cleaned = cleanPhone(phone);
     if (!cleaned || cleaned.length < 8) {
       toast({
-        title: "Please enter a valid phone number with country code",
+        title: t("whatsappPhoneInvalid"),
         variant: "destructive",
       });
       setLoading(false);
@@ -54,12 +56,12 @@ export function WhatsAppAgentSetup({
     if (error) {
       toast({
         title: error.message.includes("unique")
-          ? "This phone number is already registered to another user"
-          : "Failed to save phone number",
+          ? t("whatsappPhoneAlreadyRegistered")
+          : t("whatsappPhoneSaveFailed"),
         variant: "destructive",
       });
     } else {
-      toast({ title: "WhatsApp number registered", variant: "success" });
+      toast({ title: t("whatsappNumberRegistered"), variant: "success" });
       router.refresh();
     }
     setLoading(false);
@@ -74,10 +76,10 @@ export function WhatsAppAgentSetup({
       .eq("id", userId);
 
     if (error) {
-      toast({ title: "Failed to remove phone number", variant: "destructive" });
+      toast({ title: t("whatsappPhoneRemoveFailed"), variant: "destructive" });
     } else {
       setPhone("");
-      toast({ title: "WhatsApp number removed", variant: "success" });
+      toast({ title: t("whatsappNumberRemoved"), variant: "success" });
       router.refresh();
     }
     setRemoving(false);
@@ -94,7 +96,7 @@ export function WhatsAppAgentSetup({
       .eq("id", userId);
     if (error) {
       toast({
-        title: "Failed to update notification numbers",
+        title: t("whatsappCcUpdateFailed"),
         variant: "destructive",
       });
       return false;
@@ -107,20 +109,20 @@ export function WhatsAppAgentSetup({
     const cleaned = cleanPhone(newExtraPhone);
     if (!cleaned || cleaned.length < 8) {
       toast({
-        title: "Please enter a valid phone number with country code",
+        title: t("whatsappPhoneInvalid"),
         variant: "destructive",
       });
       return;
     }
     if (cleaned === cleanPhone(currentPhone || "")) {
       toast({
-        title: "This is already your primary number",
+        title: t("whatsappCcSamePrimary"),
         variant: "destructive",
       });
       return;
     }
     if (extraPhones.includes(cleaned)) {
-      toast({ title: "This number is already added", variant: "destructive" });
+      toast({ title: t("whatsappCcDuplicate"), variant: "destructive" });
       return;
     }
     setSavingExtra(true);
@@ -129,7 +131,7 @@ export function WhatsAppAgentSetup({
     if (ok) {
       setExtraPhones(next);
       setNewExtraPhone("");
-      toast({ title: "Notification number added", variant: "success" });
+      toast({ title: t("whatsappCcAdded"), variant: "success" });
       router.refresh();
     }
     setSavingExtra(false);
@@ -141,7 +143,7 @@ export function WhatsAppAgentSetup({
     const ok = await persistExtraPhones(next);
     if (ok) {
       setExtraPhones(next);
-      toast({ title: "Notification number removed", variant: "success" });
+      toast({ title: t("whatsappCcRemoved"), variant: "success" });
       router.refresh();
     }
     setRemovingIndex(null);
@@ -152,11 +154,11 @@ export function WhatsAppAgentSetup({
       {currentPhone ? (
         <div className="flex items-center gap-3 p-3 bg-success/5 border border-success/20 rounded-lg">
           <div className="p-1.5 bg-success/10 rounded-md">
-            <Check className="h-4 w-4 text-success" />
+            <Check aria-hidden="true" className="h-4 w-4 text-success" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-text-primary">
-              Agent Active
+              {t("whatsappAgentActive")}
             </p>
             <p className="text-xs text-text-secondary font-mono">
               +{currentPhone}
@@ -165,12 +167,13 @@ export function WhatsAppAgentSetup({
           <button
             onClick={handleRemove}
             disabled={removing}
-            className="text-xs text-text-secondary hover:text-destructive transition-colors p-1.5 rounded-md hover:bg-destructive/10"
+            aria-label={t("whatsappCcRemoveLabel")}
+            className="text-xs text-text-secondary hover:text-destructive transition-colors p-1.5 rounded-md hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
           >
             {removing ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <X className="h-3.5 w-3.5" />
+              <X aria-hidden="true" className="h-3.5 w-3.5" />
             )}
           </button>
         </div>
@@ -178,13 +181,14 @@ export function WhatsAppAgentSetup({
 
       <form onSubmit={handleSave} className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">
-            Your WhatsApp Number
+          <label htmlFor="whatsapp-phone" className="block text-sm font-medium text-text-primary mb-1.5">
+            {t("whatsappYourNumber")}
           </label>
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Smartphone className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+              <Smartphone aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
               <input
+                id="whatsapp-phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -195,17 +199,17 @@ export function WhatsAppAgentSetup({
             <button
               type="submit"
               disabled={loading || !phone}
-              className="h-10 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-40 flex items-center gap-2"
+              className="h-10 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-40 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
               ) : (
-                currentPhone ? "Update" : "Register"
+                currentPhone ? t("whatsappUpdate") : t("whatsappRegister")
               )}
             </button>
           </div>
           <p className="text-xs text-text-secondary mt-1.5">
-            Enter your number with country code (no + sign). e.g. 968XXXXXXXX
+            {t("whatsappNumberHint")}
           </p>
         </div>
       </form>
@@ -214,12 +218,10 @@ export function WhatsAppAgentSetup({
       <div className="pt-4 border-t border-border/40 space-y-3">
         <div>
           <label className="block text-sm font-medium text-text-primary">
-            Also send daily summary to
+            {t("whatsappCcLabel")}
           </label>
           <p className="text-xs text-text-secondary mt-0.5">
-            These numbers receive the morning daily summary on WhatsApp.
-            Useful for keeping the owner in the loop. They cannot send
-            commands to the agent.
+            {t("whatsappCcDescription")}
           </p>
         </div>
 
@@ -230,7 +232,7 @@ export function WhatsAppAgentSetup({
                 key={`${p}-${i}`}
                 className="flex items-center gap-3 p-2.5 bg-surface-elevated/50 border border-border/40 rounded-lg"
               >
-                <Smartphone className="h-4 w-4 text-text-secondary/60 ms-1" />
+                <Smartphone aria-hidden="true" className="h-4 w-4 text-text-secondary/60 ms-1" />
                 <span className="flex-1 text-sm text-text-primary font-mono">
                   +{p}
                 </span>
@@ -238,13 +240,13 @@ export function WhatsAppAgentSetup({
                   type="button"
                   onClick={() => handleRemoveExtra(i)}
                   disabled={removingIndex === i}
-                  className="text-xs text-text-secondary hover:text-destructive transition-colors p-1.5 rounded-md hover:bg-destructive/10"
-                  aria-label="Remove number"
+                  className="text-xs text-text-secondary hover:text-destructive transition-colors p-1.5 rounded-md hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+                  aria-label={t("whatsappCcRemoveLabel")}
                 >
                   {removingIndex === i ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
                   )}
                 </button>
               </li>
@@ -254,26 +256,27 @@ export function WhatsAppAgentSetup({
 
         <form onSubmit={handleAddExtra} className="flex gap-2">
           <div className="relative flex-1">
-            <Smartphone className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+            <Smartphone aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
             <input
               type="tel"
               value={newExtraPhone}
               onChange={(e) => setNewExtraPhone(e.target.value)}
               placeholder="968XXXXXXXX"
+              aria-label={t("whatsappCcLabel")}
               className="w-full h-10 ps-9 pe-3 bg-surface-elevated/50 border border-border/60 rounded-lg text-sm text-text-primary font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200"
             />
           </div>
           <button
             type="submit"
             disabled={savingExtra || !newExtraPhone}
-            className="h-10 px-4 bg-surface-elevated border border-border/60 hover:border-accent/50 hover:text-accent text-text-primary text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-40 flex items-center gap-2"
+            className="h-10 px-4 bg-surface-elevated border border-border/60 hover:border-accent/50 hover:text-accent text-text-primary text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-40 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
             {savingExtra ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <Plus className="h-4 w-4" />
-                Add
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                {t("whatsappCcAdd")}
               </>
             )}
           </button>
@@ -282,20 +285,20 @@ export function WhatsAppAgentSetup({
 
       <div className="p-3 bg-surface-elevated/50 border border-border/40 rounded-lg space-y-2">
         <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-          What you can do via WhatsApp
+          {t("whatsappCapabilitiesTitle")}
         </p>
         <ul className="text-xs text-text-secondary space-y-1.5">
           <li className="flex items-start gap-2">
-            <span className="text-accent mt-0.5">&#x2022;</span>
-            <span>&quot;Ahmad paid his invoice&quot; — marks the tenant&apos;s invoice as paid</span>
+            <span aria-hidden="true" className="text-accent mt-0.5">•</span>
+            <span>{t("whatsappCapabilityPay")}</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-accent mt-0.5">&#x2022;</span>
-            <span>&quot;Add expense 50 OMR for plumbing at Sunset Tower&quot; — creates an expense</span>
+            <span aria-hidden="true" className="text-accent mt-0.5">•</span>
+            <span>{t("whatsappCapabilityExpense")}</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-accent mt-0.5">&#x2022;</span>
-            <span>&quot;Fatma paid 150 OMR for March via bank transfer&quot; — partial or specific payment</span>
+            <span aria-hidden="true" className="text-accent mt-0.5">•</span>
+            <span>{t("whatsappCapabilityPartial")}</span>
           </li>
         </ul>
       </div>
