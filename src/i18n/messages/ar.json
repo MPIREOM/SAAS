@@ -792,7 +792,15 @@
     "dueToday": "مستحق اليوم",
     "expiringDocuments": "المستندات المنتهية",
     "noExpiringDocuments": "لا توجد مستندات قاربت على الانتهاء",
-    "expired": "منتهي"
+    "expired": "منتهي",
+    "actionNeeded": "يتطلب اتخاذ إجراء",
+    "overdueAlertLine": "{count} فواتير متأخرة · {amount} {code} غير مدفوعة",
+    "vacantAlertLine": "{count} وحدات شاغرة · {cost} {code}/شهر إيراد مفقود",
+    "reviewOverdue": "مراجعة المتأخرات",
+    "viewVacancies": "عرض الشواغر",
+    "dismissAlert": "إغلاق التنبيه",
+    "primaryMetrics": "المؤشرات الرئيسية",
+    "portfolioSnapshot": "نظرة على المحفظة"
   },
   "reports": {
     "title": "التقارير",

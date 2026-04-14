@@ -14,7 +14,6 @@ import {
   Bell,
   Receipt,
   CreditCard,
-  Clock,
   DollarSign,
   ShieldAlert,
   PiggyBank,
@@ -25,6 +24,9 @@ import { OccupancyChart } from "@/components/dashboard/occupancy-chart";
 import { PaymentMethodChart } from "@/components/dashboard/payment-method-chart";
 import { RevenueByPropertyChart } from "@/components/dashboard/revenue-by-property-chart";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { PageHeader } from "@/components/ui/page-header";
+import { HeroAlertStrip } from "@/components/dashboard/hero-alert-strip";
+import { StatTilePrimary, StatTileSecondary } from "@/components/dashboard/stat-tile";
 import { CURRENCY } from "@/lib/currency";
 import { format } from "date-fns";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
@@ -474,109 +476,119 @@ export default async function DashboardPage({
     { label: t("sendReminders"), href: `/${locale}/reminders`, icon: Bell },
   ];
 
-  const cards = [
+  // Compute total overdue amount for the hero alert (count alone is buried).
+  const totalOverdueAmount = overdueInvoices.reduce(
+    (sum, inv) => sum + Number(inv.amount || 0),
+    0
+  );
+
+  // Hero KPIs — the four numbers management cares about first.
+  const heroTiles = [
+    {
+      label: t("revenueThisMonth"),
+      value: `${stats.revenueThisMonth.toLocaleString()} ${CURRENCY.code}`,
+      hint: t("collectionRate"),
+      icon: DollarSign,
+      tone: "success" as const,
+      href: `/${locale}/reports`,
+    },
+    {
+      label: t("netIncome"),
+      value: `${stats.netIncome.toLocaleString()} ${CURRENCY.code}`,
+      hint: `${t("expensesThisMonth")}: ${stats.expensesThisMonth.toLocaleString()} ${CURRENCY.code}`,
+      icon: TrendingUp,
+      tone: stats.netIncome >= 0 ? ("success" as const) : ("destructive" as const),
+      href: `/${locale}/reports`,
+    },
+    {
+      label: t("occupancyRate"),
+      value: `${stats.occupancyRate}%`,
+      hint: `${stats.occupiedCount} / ${stats.unitCount} ${t("totalUnits").toLowerCase()}`,
+      icon: TrendingUp,
+      tone: "info" as const,
+      href: `/${locale}/properties`,
+    },
+    {
+      label: t("overdueInvoices"),
+      value: overdueInvoices.length,
+      hint: overdueInvoices.length > 0
+        ? `${totalOverdueAmount.toLocaleString()} ${CURRENCY.code}`
+        : t("noOverdueInvoices"),
+      icon: AlertTriangle,
+      tone: overdueInvoices.length > 0 ? ("destructive" as const) : ("default" as const),
+      href: `/${locale}/invoices?status=pending`,
+    },
+  ];
+
+  // Secondary KPIs — supporting counts that don't need to dominate.
+  const secondaryTiles = [
     {
       label: t("totalProperties"),
       value: stats.propertyCount,
       icon: Building2,
-      gradient: "from-accent/20 to-accent/5",
-      iconColor: "text-accent",
+      tone: "default" as const,
       href: `/${locale}/properties`,
     },
     {
       label: t("totalUnits"),
       value: stats.unitCount,
       icon: Home,
-      gradient: "from-info/20 to-info/5",
-      iconColor: "text-info",
-      href: `/${locale}/properties`,
-    },
-    {
-      label: t("occupancyRate"),
-      value: `${stats.occupancyRate}%`,
-      icon: TrendingUp,
-      gradient: "from-success/20 to-success/5",
-      iconColor: "text-success",
+      tone: "default" as const,
       href: `/${locale}/properties`,
     },
     {
       label: t("activeTenants"),
       value: stats.tenantCount,
       icon: Users,
-      gradient: "from-info/20 to-info/5",
-      iconColor: "text-info",
+      tone: "default" as const,
       href: `/${locale}/tenants`,
     },
     {
       label: t("openMaintenance"),
       value: stats.openMaintenanceCount,
       icon: Wrench,
-      gradient: "from-warning/20 to-warning/5",
-      iconColor: "text-warning",
+      tone: stats.openMaintenanceCount > 0 ? ("warning" as const) : ("default" as const),
       href: `/${locale}/maintenance`,
-    },
-    {
-      label: t("overdueInvoices"),
-      value: overdueInvoices.length,
-      icon: AlertTriangle,
-      gradient: overdueInvoices.length > 0
-        ? "from-destructive/20 to-destructive/5"
-        : "from-surface-elevated to-surface",
-      iconColor: overdueInvoices.length > 0 ? "text-destructive" : "text-text-secondary",
-      href: `/${locale}/invoices?status=pending`,
     },
     {
       label: t("expensesThisMonth"),
       value: `${stats.expensesThisMonth.toLocaleString()} ${CURRENCY.code}`,
       icon: Receipt,
-      gradient: "from-destructive/20 to-destructive/5",
-      iconColor: "text-destructive",
+      tone: "default" as const,
       href: `/${locale}/expenses`,
-    },
-    {
-      label: t("netIncome"),
-      value: `${stats.netIncome.toLocaleString()} ${CURRENCY.code}`,
-      icon: TrendingUp,
-      gradient: stats.netIncome >= 0
-        ? "from-success/20 to-success/5"
-        : "from-destructive/20 to-destructive/5",
-      iconColor: stats.netIncome >= 0 ? "text-success" : "text-destructive",
-      href: `/${locale}/reports`,
-    },
-    {
-      label: t("revenueThisMonth"),
-      value: `${stats.revenueThisMonth.toLocaleString()} ${CURRENCY.code}`,
-      icon: DollarSign,
-      gradient: "from-success/20 to-success/5",
-      iconColor: "text-success",
-      href: `/${locale}/reports`,
     },
     {
       label: t("vacancyCost"),
       value: `${stats.vacancyCost.toLocaleString()} ${CURRENCY.code}`,
       icon: PiggyBank,
-      gradient: stats.vacancyCost > 0
-        ? "from-warning/20 to-warning/5"
-        : "from-surface-elevated to-surface",
-      iconColor: stats.vacancyCost > 0 ? "text-warning" : "text-text-secondary",
+      tone: stats.vacancyCost > 0 ? ("warning" as const) : ("default" as const),
       href: `/${locale}/properties`,
     },
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Page header */}
-      <div className="animate-fade-in-up flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            {t("subtitle")}
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader title={t("title")} description={t("subtitle")}>
         <DateRangeFilter defaultMonth={month} defaultYear={year} />
-      </div>
+      </PageHeader>
+
+      {/* Hero alerts — only render when there's something to act on */}
+      <HeroAlertStrip
+        overdueCount={overdueInvoices.length}
+        overdueAmount={totalOverdueAmount}
+        vacantCount={stats.vacantCount}
+        vacancyCost={stats.vacancyCost}
+        invoicesHref={`/${locale}/invoices?status=pending`}
+        propertiesHref={`/${locale}/properties`}
+        labels={{
+          overdueTitle: t("actionNeeded"),
+          overdueLine: t("overdueAlertLine"),
+          overdueCta: t("reviewOverdue"),
+          vacantLine: t("vacantAlertLine"),
+          vacantCta: t("viewVacancies"),
+          dismiss: t("dismissAlert"),
+        }}
+      />
 
       {/* Quick Actions */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -586,43 +598,44 @@ export default async function DashboardPage({
             <Link
               key={action.href}
               href={action.href}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-surface border border-border/50 rounded-lg text-sm text-text-secondary hover:text-accent hover:border-accent/30 transition-all duration-200"
+              className="inline-flex items-center gap-2 h-9 px-4 bg-surface border border-border/50 rounded-lg text-sm text-text-secondary hover:text-accent hover:border-accent/30 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon aria-hidden="true" className="h-3.5 w-3.5" />
               {action.label}
             </Link>
           );
         })}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 stagger-children">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link
-              key={card.label}
-              href={card.href}
-              className="group relative bg-surface border border-border rounded-xl p-5 hover:border-accent/30 transition-all duration-300 overflow-hidden"
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[11px] text-text-secondary uppercase tracking-widest font-semibold">
-                    {card.label}
-                  </span>
-                  <div className="h-8 w-8 rounded-lg bg-surface-elevated flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
-                    <Icon className={`h-4 w-4 ${card.iconColor}`} />
-                  </div>
-                </div>
-                <p className="text-3xl font-display font-bold text-text-primary ltr-nums">
-                  {card.value}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+      {/* Hero KPIs — primary row */}
+      <section aria-labelledby="primary-metrics-heading">
+        <h2
+          id="primary-metrics-heading"
+          className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-secondary"
+        >
+          {t("primaryMetrics")}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+          {heroTiles.map((tile) => (
+            <StatTilePrimary key={tile.label} {...tile} />
+          ))}
+        </div>
+      </section>
+
+      {/* Secondary KPIs — supporting counts */}
+      <section aria-labelledby="snapshot-heading">
+        <h2
+          id="snapshot-heading"
+          className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-secondary"
+        >
+          {t("portfolioSnapshot")}
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 stagger-children">
+          {secondaryTiles.map((tile) => (
+            <StatTileSecondary key={tile.label} {...tile} />
+          ))}
+        </div>
+      </section>
 
       {/* Rent Collection Chart */}
       <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>

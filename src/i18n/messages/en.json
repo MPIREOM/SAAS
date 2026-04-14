@@ -792,7 +792,15 @@
     "dueToday": "Due today",
     "expiringDocuments": "Expiring Documents",
     "noExpiringDocuments": "No documents expiring soon",
-    "expired": "Expired"
+    "expired": "Expired",
+    "actionNeeded": "Action needed",
+    "overdueAlertLine": "{count} overdue invoices · {amount} {code} unpaid",
+    "vacantAlertLine": "{count} vacant units · {cost} {code}/mo lost revenue",
+    "reviewOverdue": "Review overdue",
+    "viewVacancies": "View vacancies",
+    "dismissAlert": "Dismiss alert",
+    "primaryMetrics": "Key metrics",
+    "portfolioSnapshot": "Portfolio snapshot"
   },
   "reports": {
     "title": "Reports",
