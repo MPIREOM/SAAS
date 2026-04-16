@@ -197,6 +197,27 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "create_invoices_batch",
+    description:
+      "Create invoices for ALL occupied units in a property for one or more months. Use this instead of calling create_invoice repeatedly. Automatically resolves tenant, lease, and unit IDs. Skips units that already have invoices for the period. Returns a summary of created and skipped invoices.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        property_id: {
+          type: "string",
+          description: "The property UUID",
+        },
+        months: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Array of months in YYYY-MM format, e.g. ['2026-05', '2026-06']. Invoices are created for each month.",
+        },
+      },
+      required: ["property_id", "months"],
+    },
+  },
+  {
     name: "search_properties",
     description:
       "Search for properties by name (partial match). Returns property id, name, location, and unit count.",
@@ -804,6 +825,172 @@ async function executeTool(
       });
     }
 
+    case "create_invoices_batch": {
+      const propertyId = input.property_id as string;
+      const months = input.months as string[];
+
+      if (!months || months.length === 0)
+        return JSON.stringify({ error: "Please specify at least one month in YYYY-MM format." });
+
+      // Get all occupied units with active leases for this property
+      const { data: units, error: unitsError } = await supabase
+        .from("units")
+        .select(
+          `
+          id, unit_number, rent_amount,
+          leases(
+            id, is_active, monthly_rent,
+            tenants(id, full_name)
+          )
+        `
+        )
+        .eq("property_id", propertyId)
+        .eq("status", "occupied")
+        .order("unit_number");
+
+      if (unitsError)
+        return JSON.stringify({ error: unitsError.message });
+
+      if (!units || units.length === 0)
+        return JSON.stringify({ error: "No occupied units found for this property." });
+
+      // Build list of units with active leases
+      const activeUnits = (units as Record<string, unknown>[])
+        .map((u) => {
+          const leases = u.leases as Record<string, unknown>[];
+          const activeLease = leases?.find((l) => l.is_active);
+          if (!activeLease) return null;
+          const tenant = activeLease.tenants as Record<string, unknown> | null;
+          if (!tenant) return null;
+          return {
+            unit_id: u.id as string,
+            unit_number: u.unit_number as string,
+            lease_id: activeLease.id as string,
+            tenant_id: tenant.id as string,
+            tenant_name: tenant.full_name as string,
+            monthly_rent: Number(activeLease.monthly_rent || u.rent_amount || 0),
+          };
+        })
+        .filter(Boolean) as {
+          unit_id: string;
+          unit_number: string;
+          lease_id: string;
+          tenant_id: string;
+          tenant_name: string;
+          monthly_rent: number;
+        }[];
+
+      if (activeUnits.length === 0)
+        return JSON.stringify({ error: "No active leases found for occupied units in this property." });
+
+      const created: { unit: string; tenant: string; month: string; amount: number; invoice_id: string }[] = [];
+      const skipped: { unit: string; tenant: string; month: string; reason: string }[] = [];
+      const failed: { unit: string; tenant: string; month: string; error: string }[] = [];
+
+      for (const month of months) {
+        if (!/^\d{4}-\d{2}$/.test(month)) {
+          failed.push({ unit: "N/A", tenant: "N/A", month, error: "Invalid month format" });
+          continue;
+        }
+
+        const [y, m] = month.split("-").map(Number);
+        const periodStart = `${month}-01`;
+        const lastDay = new Date(y, m, 0).getDate();
+        const periodEnd = `${month}-${String(lastDay).padStart(2, "0")}`;
+        const dueDate = periodStart; // Due on 1st of month
+
+        for (const unit of activeUnits) {
+          // Check for duplicate
+          const { data: existing } = await supabase
+            .from("invoices")
+            .select("id, status")
+            .eq("lease_id", unit.lease_id)
+            .eq("period_start", periodStart)
+            .maybeSingle();
+
+          if (existing) {
+            skipped.push({
+              unit: unit.unit_number,
+              tenant: unit.tenant_name,
+              month,
+              reason: `Invoice already exists (${existing.status})`,
+            });
+            continue;
+          }
+
+          if (unit.monthly_rent <= 0) {
+            skipped.push({
+              unit: unit.unit_number,
+              tenant: unit.tenant_name,
+              month,
+              reason: "No rent amount on lease",
+            });
+            continue;
+          }
+
+          const { data: invoice, error: createError } = await supabase
+            .from("invoices")
+            .insert({
+              tenant_id: unit.tenant_id,
+              lease_id: unit.lease_id,
+              unit_id: unit.unit_id,
+              amount: unit.monthly_rent,
+              due_date: dueDate,
+              issued_date: new Date().toISOString().split("T")[0],
+              period_start: periodStart,
+              period_end: periodEnd,
+              status: "pending",
+              paid_amount: 0,
+              notes: `Batch created via WhatsApp agent`,
+              created_by: userId,
+            })
+            .select("id")
+            .single();
+
+          if (createError) {
+            failed.push({
+              unit: unit.unit_number,
+              tenant: unit.tenant_name,
+              month,
+              error: createError.message,
+            });
+          } else {
+            created.push({
+              unit: unit.unit_number,
+              tenant: unit.tenant_name,
+              month,
+              amount: unit.monthly_rent,
+              invoice_id: invoice?.id,
+            });
+
+            // Audit log
+            await supabase.from("audit_log").insert({
+              user_id: userId,
+              action: "create",
+              entity_type: "invoice",
+              entity_id: invoice?.id,
+              metadata: { amount: unit.monthly_rent, source: "whatsapp_agent_batch" },
+            });
+          }
+        }
+      }
+
+      const totalCreated = created.reduce((sum, c) => sum + c.amount, 0);
+
+      return JSON.stringify({
+        success: true,
+        summary: {
+          created_count: created.length,
+          skipped_count: skipped.length,
+          failed_count: failed.length,
+          total_amount: totalCreated.toFixed(2),
+        },
+        created,
+        skipped: skipped.length > 0 ? skipped : undefined,
+        failed: failed.length > 0 ? failed : undefined,
+      });
+    }
+
     case "search_properties": {
       const name = input.name as string;
       const { data: properties, error } = await supabase
@@ -841,7 +1028,7 @@ async function executeTool(
           `
           id, unit_number, unit_type, rent_amount, status,
           leases(
-            is_active,
+            id, is_active, monthly_rent,
             tenants(id, full_name, phone)
           )
         `
@@ -862,6 +1049,8 @@ async function executeTool(
           type: u.unit_type,
           rent: u.rent_amount,
           status: u.status,
+          lease_id: activeLease ? activeLease.id : null,
+          monthly_rent: activeLease ? activeLease.monthly_rent : null,
           tenant: activeLease
             ? (activeLease.tenants as Record<string, unknown>)
             : null,
@@ -1407,7 +1596,7 @@ CURRENCY: OMR (Omani Rial)
 YOU CAN:
 1. Record payments — "Ahmad paid", "register payment for Fatma", "tenant in unit 101 paid 200 OMR"
 2. Add expenses — "add expense 50 OMR plumbing at Sunset Tower", "electricity bill 30 OMR"
-3. Create invoices — "create invoice for Ahmad for April", "generate rent invoice"
+3. Create invoices — "create invoice for Ahmad for April", "generate rent invoice", "create May and June invoices for all tenants"
 4. Check balances — "how much does Ahmad owe?", "check balance for unit 101"
 5. View unpaid/overdue — "who hasn't paid?", "show overdue invoices", "pending invoices for April", "show me April invoices"
 6. Today's summary — "what's happening today?", "daily summary"
@@ -1433,7 +1622,8 @@ BEHAVIOR RULES:
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
 - NEVER say "there are no invoices" without first calling the tool with the right filters. If the user asks about a specific month (e.g. "April"), use the month parameter (e.g. "2026-04") in get_overdue_summary or get_tenant_invoices.
 - When the user asks about invoices for a specific month, ALWAYS pass the month parameter in YYYY-MM format to filter results. Do NOT just scan through all results — use the filter.
-- CRITICAL: When the user asks about invoices for a PROPERTY or BUILDING (e.g. "invoices for Bousher Ameen Mosque"), first use search_tenants to find the property_id, then call get_property_invoices ONCE with that property_id. NEVER loop through tenants individually with get_tenant_invoices — that will time out. get_property_invoices returns ALL invoices for the property in one call. For date ranges like "Jan to April", use start_date="2026-01-01" and end_date="2026-04-30".
+- CRITICAL: When the user asks about invoices for a PROPERTY or BUILDING (e.g. "invoices for Bousher Ameen Mosque"), first use search_properties to find the property_id, then call get_property_invoices ONCE with that property_id. NEVER loop through tenants individually with get_tenant_invoices — that will time out. get_property_invoices returns ALL invoices for the property in one call. For date ranges like "Jan to April", use start_date="2026-01-01" and end_date="2026-04-30".
+- CRITICAL: When creating invoices for MULTIPLE tenants or a whole property (e.g. "create May invoices", "generate invoices for May and June for all tenants"), use create_invoices_batch with the property_id and the months array. NEVER call create_invoice individually for each tenant — use the batch tool. It handles lease/unit resolution automatically and skips duplicates.
 - If genuinely unsure what the user wants, ask a SHORT clarifying question.
 - You have CONVERSATION HISTORY. When the user says "yes", "ok", "do it", "go ahead", etc., refer back to what you previously offered or discussed and take that action.
 - CRITICAL: NEVER guess or assume invoice statuses, amounts, or dates from conversation history. ALWAYS call the appropriate tool to get LIVE data from the database for ANY query about invoices, balances, or statuses. Conversation history is for understanding context only — actual data MUST come from tool calls.
@@ -1459,7 +1649,7 @@ BEHAVIOR RULES:
 
   // Agent loop — keep processing tool calls until we get a final text response
   let iterations = 0;
-  const maxIterations = 15;
+  const maxIterations = 25;
   while (response.stop_reason === "tool_use" && iterations < maxIterations) {
     iterations++;
     const assistantContent = response.content;
