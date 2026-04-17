@@ -49,6 +49,7 @@ export async function runAdminSummary(
 
     const [
       invoicesDueRes,
+      invoicesPendingRes,
       invoicesOverdueRes,
       chequesDueRes,
       newMaintenanceRes,
@@ -60,6 +61,11 @@ export async function runAdminSummary(
         .select("amount, tenants(full_name), units(unit_number, properties:property_id(name))")
         .eq("status", "pending")
         .eq("due_date", today),
+      supabase
+        .from("invoices")
+        .select("amount, due_date, tenants(full_name), units(unit_number, properties:property_id(name))")
+        .eq("status", "pending")
+        .order("due_date", { ascending: true }),
       supabase
         .from("invoices")
         .select("amount, due_date, tenants(full_name), units(unit_number, properties:property_id(name))")
@@ -95,6 +101,7 @@ export async function runAdminSummary(
     // indistinguishable from "no recipients configured".
     for (const [name, res] of [
       ["invoicesDue", invoicesDueRes],
+      ["invoicesPending", invoicesPendingRes],
       ["invoicesOverdue", invoicesOverdueRes],
       ["chequesDue", chequesDueRes],
       ["newMaintenance", newMaintenanceRes],
@@ -139,6 +146,7 @@ export async function runAdminSummary(
     });
 
     const invoicesDue = invoicesDueRes.data || [];
+    const invoicesPending = invoicesPendingRes.data || [];
     const invoicesOverdue = invoicesOverdueRes.data || [];
     const chequesDue = (chequesDueRes.data || []).filter((c: Record<string, unknown>) => {
       const inv = c.invoices as { status?: string } | null;
@@ -161,7 +169,7 @@ export async function runAdminSummary(
     console.log(
       `[admin-summary] Resolved ${recipients.length} recipients ` +
         `(${primaryRecipients.length} primary + ${dedupedExtras.length} CC); ` +
-        `${invoicesDue.length} due, ${invoicesOverdue.length} overdue, ${chequesDue.length} cheques`
+        `${invoicesDue.length} due, ${invoicesPending.length} pending, ${invoicesOverdue.length} overdue, ${chequesDue.length} cheques`
     );
 
     if (recipients.length === 0) {
@@ -171,6 +179,7 @@ export async function runAdminSummary(
     }
 
     const totalDueToday = invoicesDue.reduce((sum: number, i: Record<string, unknown>) => sum + Number(i.amount || 0), 0);
+    const totalPending = invoicesPending.reduce((sum: number, i: Record<string, unknown>) => sum + Number(i.amount || 0), 0);
     const totalOverdue = invoicesOverdue.reduce((sum: number, i: Record<string, unknown>) => sum + Number(i.amount || 0), 0);
     const totalCheques = chequesDue.reduce((sum: number, c: Record<string, unknown>) => sum + Number(c.amount || 0), 0);
 
@@ -197,6 +206,17 @@ export async function runAdminSummary(
     const overdueByPropertySorted = Array.from(overdueByProperty.entries())
       .sort((a, b) => b[1].total - a[1].total);
 
+    const pendingByProperty = new Map<string, { count: number; total: number }>();
+    invoicesPending.forEach((i: Record<string, unknown>) => {
+      const name = getPropertyName(i);
+      const entry = pendingByProperty.get(name) || { count: 0, total: 0 };
+      entry.count += 1;
+      entry.total += Number(i.amount || 0);
+      pendingByProperty.set(name, entry);
+    });
+    const pendingByPropertySorted = Array.from(pendingByProperty.entries())
+      .sort((a, b) => b[1].total - a[1].total);
+
     const emailSections = [];
 
     emailSections.push({
@@ -208,6 +228,24 @@ export async function runAdminSummary(
             ),
             ...(invoicesDue.length > 10 ? [`<em>...and ${invoicesDue.length - 10} more</em>`] : []),
             `<strong>Total: ${totalDueToday.toFixed(2)} ${CURRENCY.code}</strong>`,
+          ]
+        : [],
+    });
+
+    emailSections.push({
+      heading: `🟡 Pending Invoices (${invoicesPending.length})`,
+      items: invoicesPending.length > 0
+        ? [
+            `<em>By property:</em>`,
+            ...pendingByPropertySorted.map(([name, { count, total }]) =>
+              `&nbsp;&nbsp;• ${name}: ${count} invoice${count !== 1 ? "s" : ""} — <strong>${total.toFixed(2)} ${CURRENCY.code}</strong>`
+            ),
+            `<em>Details:</em>`,
+            ...invoicesPending.slice(0, 10).map((i: Record<string, unknown>) =>
+              `${getTenant(i)} — ${getProperty(i)} — <strong>${Number(i.amount).toFixed(2)} ${CURRENCY.code}</strong> (due ${i.due_date})`
+            ),
+            ...(invoicesPending.length > 10 ? [`<em>...and ${invoicesPending.length - 10} more</em>`] : []),
+            `<strong>Total pending: ${totalPending.toFixed(2)} ${CURRENCY.code}</strong>`,
           ]
         : [],
     });
@@ -265,6 +303,9 @@ export async function runAdminSummary(
     const overdueBreakdownLines = overdueByPropertySorted.map(([name, { count, total }]) =>
       `   • ${name}: ${count} invoice${count !== 1 ? "s" : ""} (${total.toFixed(2)} ${CURRENCY.code})`
     );
+    const pendingBreakdownLines = pendingByPropertySorted.map(([name, { count, total }]) =>
+      `   • ${name}: ${count} invoice${count !== 1 ? "s" : ""} (${total.toFixed(2)} ${CURRENCY.code})`
+    );
     // Single-line variant for WhatsApp template parameter {{10}}. Meta
     // rejects template parameters that contain newlines, tabs, or more
     // than 4 consecutive spaces, so the breakdown is collapsed to inline
@@ -282,12 +323,21 @@ export async function runAdminSummary(
       `📅 ${todayDisplay}`,
       ``,
       `📋 *Invoices Due Today:* ${invoicesDue.length} (${totalDueToday.toFixed(2)} ${CURRENCY.code})`,
+      `🟡 *Pending:* ${invoicesPending.length} (${totalPending.toFixed(2)} ${CURRENCY.code})`,
+      ...pendingBreakdownLines,
       `🔴 *Overdue:* ${invoicesOverdue.length} (${totalOverdue.toFixed(2)} ${CURRENCY.code})`,
       ...overdueBreakdownLines,
       `🏦 *Cheques Due:* ${chequesDue.length} (${totalCheques.toFixed(2)} ${CURRENCY.code})`,
       `🔧 *New Maintenance (24h):* ${newMaintenance.length}`,
       `📊 *Open Maintenance:* ${openMaintenance.length}`,
     ];
+
+    if (invoicesPending.length > 0) {
+      whatsappLines.push(``, `*Top Pending:*`);
+      invoicesPending.slice(0, 5).forEach((i: Record<string, unknown>) => {
+        whatsappLines.push(`• ${getTenant(i)} — ${Number(i.amount).toFixed(2)} ${CURRENCY.code} (due ${i.due_date})`);
+      });
+    }
 
     if (invoicesOverdue.length > 0) {
       whatsappLines.push(``, `*Top Overdue:*`);
@@ -305,7 +355,7 @@ export async function runAdminSummary(
     }
 
     const sendResult = await notifyAdmins(recipients, {
-      subject: `MPIRE Daily Summary — ${invoicesDue.length} due, ${invoicesOverdue.length} overdue, ${chequesDue.length} cheques`,
+      subject: `MPIRE Daily Summary — ${invoicesDue.length} due, ${invoicesPending.length} pending, ${invoicesOverdue.length} overdue, ${chequesDue.length} cheques`,
       emailHtml: buildAdminEmailHtml({
         title: "Good Morning — Daily Summary",
         sections: emailSections,
@@ -340,6 +390,8 @@ export async function runAdminSummary(
       errors: sendResult.errors,
       invoicesDueToday: invoicesDue.length,
       totalDueToday,
+      invoicesPending: invoicesPending.length,
+      totalPending,
       invoicesOverdue: invoicesOverdue.length,
       totalOverdue,
       chequesDue: chequesDue.length,
