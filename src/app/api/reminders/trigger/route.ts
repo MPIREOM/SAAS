@@ -315,7 +315,7 @@ function buildOverdueDetails(invoices: OverdueInvoice[] | undefined, lang: strin
         ? `- ${inv.periodLabel}: ${inv.amount} ر.ع.`
         : `- ${inv.periodLabel}: ${inv.amount} ${CURRENCY.code}`
     )
-    .join("<br>");
+    .join("\n");
 }
 
 function renderTemplate(template: string, params: ReminderParams): string {

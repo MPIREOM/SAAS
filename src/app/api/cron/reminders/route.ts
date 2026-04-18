@@ -339,7 +339,7 @@ function buildOverdueDetails(invoices: OverdueInvoice[] | undefined, lang: strin
         ? `- ${inv.periodLabel}: ${inv.amount} ر.ع.`
         : `- ${inv.periodLabel}: ${inv.amount} ${CURRENCY.code}`
     )
-    .join("<br>");
+    .join("\n");
 }
 
 /**
@@ -458,7 +458,7 @@ async function sendReminder(
       subject,
       html: buildReminderEmailHtml({
         tenantName: params.tenantName,
-        bodyContent,
+        bodyContent: bodyContent.replace(/\n/g, "<br>"),
         isRtl: langCode === "ar",
       }),
     });
@@ -504,22 +504,22 @@ function getDefaultEmailBody(params: ReminderParams, lang: string): string {
   if (lang === "ar") {
     switch (params.reminderType) {
       case "rent_upcoming":
-        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0647\u0630\u0627 \u062A\u0630\u0643\u064A\u0631 \u0628\u0623\u0646 \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u064A\u0633\u062A\u062D\u0642 \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u062F\u0641\u0639 \u0641\u064A \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u0645\u062D\u062F\u062F.`;
+        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C\n\n\u0647\u0630\u0627 \u062A\u0630\u0643\u064A\u0631 \u0628\u0623\u0646 \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u064A\u0633\u062A\u062D\u0642 \u0641\u064A ${params.dueDate}.\n\n\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u062F\u0641\u0639 \u0641\u064A \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u0645\u062D\u062F\u062F.`;
       case "rent_overdue": {
         const detailsAr = buildOverdueDetails(params.overdueInvoices, "ar");
-        let msgAr = `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0646\u0648\u062F \u0625\u0628\u0644\u0627\u063A\u0643\u0645 \u0628\u0623\u0646 \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u0645\u062A\u0623\u062E\u0631.`;
+        let msgAr = `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C\n\n\u0646\u0648\u062F \u0625\u0628\u0644\u0627\u063A\u0643\u0645 \u0628\u0623\u0646 \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u0645\u062A\u0623\u062E\u0631.`;
         if (detailsAr) {
-          msgAr += `<br><br>\u0627\u0644\u0645\u0628\u0627\u0644\u063A \u0627\u0644\u0645\u0633\u062A\u062D\u0642\u0629:<br>${detailsAr}<br><br>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A: ${params.totalOverdue || params.amount} \u0631.\u0639.`;
+          msgAr += `\n\n\u0627\u0644\u0645\u0628\u0627\u0644\u063A \u0627\u0644\u0645\u0633\u062A\u062D\u0642\u0629:\n${detailsAr}\n\n\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A: ${params.totalOverdue || params.amount} \u0631.\u0639.`;
         } else {
           msgAr += ` \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u0643\u0627\u0646 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642 ${params.dueDate}.`;
         }
-        msgAr += `<br><br>\u064A\u0631\u062C\u0649 \u062A\u0633\u0648\u064A\u0629 \u0627\u0644\u0645\u0628\u0644\u063A \u0641\u064A \u0623\u0642\u0631\u0628 \u0648\u0642\u062A \u0645\u0645\u0643\u0646.`;
+        msgAr += `\n\n\u064A\u0631\u062C\u0649 \u062A\u0633\u0648\u064A\u0629 \u0627\u0644\u0645\u0628\u0644\u063A \u0641\u064A \u0623\u0642\u0631\u0628 \u0648\u0642\u062A \u0645\u0645\u0643\u0646.`;
         return msgAr;
       }
       case "cheque_due":
-        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0647\u0630\u0627 \u062A\u0630\u0643\u064A\u0631 \u0628\u0623\u0646 \u0627\u0644\u0634\u064A\u0643 \u0631\u0642\u0645 ${params.chequeNumber || ""} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u064A\u0633\u062A\u062D\u0642 \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0648\u0641\u0631 \u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0643\u0627\u0641\u064A.`;
+        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C\n\n\u0647\u0630\u0627 \u062A\u0630\u0643\u064A\u0631 \u0628\u0623\u0646 \u0627\u0644\u0634\u064A\u0643 \u0631\u0642\u0645 ${params.chequeNumber || ""} \u0628\u0645\u0628\u0644\u063A ${params.amount} \u0631.\u0639. \u064A\u0633\u062A\u062D\u0642 \u0641\u064A ${params.dueDate}.\n\n\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0648\u0641\u0631 \u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0643\u0627\u0641\u064A.`;
       case "lease_expiry":
-        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C<br><br>\u0646\u0648\u062F \u0625\u0628\u0644\u0627\u063A\u0643\u0645 \u0628\u0623\u0646 \u0639\u0642\u062F \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u064A\u0646\u062A\u0647\u064A \u0641\u064A ${params.dueDate}.<br><br>\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627 \u0644\u0645\u0646\u0627\u0642\u0634\u0629 \u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0639\u0642\u062F.`;
+        return `\u0639\u0632\u064A\u0632\u064A/\u0639\u0632\u064A\u0632\u062A\u064A ${params.tenantName}\u060C\n\n\u0646\u0648\u062F \u0625\u0628\u0644\u0627\u063A\u0643\u0645 \u0628\u0623\u0646 \u0639\u0642\u062F \u0625\u064A\u062C\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 ${params.unitNumber} \u0641\u064A ${params.propertyName} \u064A\u0646\u062A\u0647\u064A \u0641\u064A ${params.dueDate}.\n\n\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627 \u0644\u0645\u0646\u0627\u0642\u0634\u0629 \u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0639\u0642\u062F.`;
       default:
         return "";
     }
@@ -527,22 +527,22 @@ function getDefaultEmailBody(params: ReminderParams, lang: string): string {
 
   switch (params.reminderType) {
     case "rent_upcoming":
-      return `Dear ${params.tenantName},<br><br>This is a reminder that your rent of ${params.amount} ${CURRENCY.code} for unit ${params.unitNumber} at ${params.propertyName} is due on ${params.dueDate}.<br><br>Please ensure timely payment.`;
+      return `Dear ${params.tenantName},\n\nThis is a reminder that your rent of ${params.amount} ${CURRENCY.code} for unit ${params.unitNumber} at ${params.propertyName} is due on ${params.dueDate}.\n\nPlease ensure timely payment.`;
     case "rent_overdue": {
       const detailsEn = buildOverdueDetails(params.overdueInvoices, "en");
-      let msgEn = `Dear ${params.tenantName},<br><br>Your rent for unit ${params.unitNumber} at ${params.propertyName} is overdue.`;
+      let msgEn = `Dear ${params.tenantName},\n\nYour rent for unit ${params.unitNumber} at ${params.propertyName} is overdue.`;
       if (detailsEn) {
-        msgEn += `<br><br>Outstanding amounts:<br>${detailsEn}<br><br>Total due: ${params.totalOverdue || params.amount} ${CURRENCY.code}`;
+        msgEn += `\n\nOutstanding amounts:\n${detailsEn}\n\nTotal due: ${params.totalOverdue || params.amount} ${CURRENCY.code}`;
       } else {
         msgEn += ` The amount of ${params.amount} ${CURRENCY.code} was due on ${params.dueDate}.`;
       }
-      msgEn += `<br><br>Please settle the amount at your earliest convenience.`;
+      msgEn += `\n\nPlease settle the amount at your earliest convenience.`;
       return msgEn;
     }
     case "cheque_due":
-      return `Dear ${params.tenantName},<br><br>This is a reminder that cheque #${params.chequeNumber || ""} for ${params.amount} ${CURRENCY.code} is due on ${params.dueDate}.<br><br>Please ensure sufficient funds are available.`;
+      return `Dear ${params.tenantName},\n\nThis is a reminder that cheque #${params.chequeNumber || ""} for ${params.amount} ${CURRENCY.code} is due on ${params.dueDate}.\n\nPlease ensure sufficient funds are available.`;
     case "lease_expiry":
-      return `Dear ${params.tenantName},<br><br>Your lease for unit ${params.unitNumber} at ${params.propertyName} is expiring on ${params.dueDate}.<br><br>Please contact us to discuss renewal options.`;
+      return `Dear ${params.tenantName},\n\nYour lease for unit ${params.unitNumber} at ${params.propertyName} is expiring on ${params.dueDate}.\n\nPlease contact us to discuss renewal options.`;
     default:
       return "";
   }
