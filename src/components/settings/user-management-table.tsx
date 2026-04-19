@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Settings2 } from "lucide-react";
+import { Settings2, Send } from "lucide-react";
 import { ManageUserPropertiesDialog } from "./manage-user-properties-dialog";
 
 interface Property {
@@ -26,16 +26,43 @@ interface UserManagementTableProps {
   users: UserRow[];
   allProperties: Property[];
   isSuperAdmin: boolean;
+  currentUserId: string;
 }
 
 export function UserManagementTable({
   users,
   allProperties,
   isSuperAdmin,
+  currentUserId,
 }: UserManagementTableProps) {
   const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ userId: string; ok: boolean; message: string } | null>(null);
+
+  const handleResendInvite = async (userId: string) => {
+    setResendingId(userId);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/users/resend-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedback({ userId, ok: true, message: t("resendInviteSent") });
+      } else {
+        setFeedback({ userId, ok: false, message: data.error || t("resendInviteFailed") });
+      }
+    } catch {
+      setFeedback({ userId, ok: false, message: tc("error") });
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   const roleColors: Record<string, string> = {
     super_admin: "bg-accent/10 text-accent",
@@ -125,15 +152,37 @@ export function UserManagementTable({
                   </td>
                   {isSuperAdmin && (
                     <td className="px-4 py-3">
-                      {u.role !== "super_admin" && (
-                        <button
-                          type="button"
-                          onClick={() => openManageProperties(u)}
-                          title={t("managePropertyAccess")}
-                          className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-border/30 text-text-secondary hover:text-accent transition-colors"
+                      <div className="flex items-center gap-1">
+                        {u.role !== "super_admin" && (
+                          <button
+                            type="button"
+                            onClick={() => openManageProperties(u)}
+                            title={t("managePropertyAccess")}
+                            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-border/30 text-text-secondary hover:text-accent transition-colors"
+                          >
+                            <Settings2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {u.id !== currentUserId && (
+                          <button
+                            type="button"
+                            onClick={() => handleResendInvite(u.id)}
+                            disabled={resendingId === u.id}
+                            title={t("resendInvite")}
+                            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-border/30 text-text-secondary hover:text-accent transition-colors disabled:opacity-50"
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      {feedback?.userId === u.id && (
+                        <p
+                          className={`text-xs mt-1 ${
+                            feedback.ok ? "text-success" : "text-destructive"
+                          }`}
                         >
-                          <Settings2 className="h-3.5 w-3.5" />
-                        </button>
+                          {feedback.message}
+                        </p>
                       )}
                     </td>
                   )}
