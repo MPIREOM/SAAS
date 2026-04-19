@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { getTranslations } from "next-intl/server";
 import {
   User,
@@ -46,6 +47,33 @@ export default async function SettingsPage({
     .from("users")
     .select("*, user_property_assignments(property_id, properties(name))")
     .order("created_at", { ascending: false });
+
+  // Pull auth-side timestamps (invited_at, last_sign_in_at) so we can show
+  // which users have a pending invite vs. have accepted. The `users` table
+  // doesn't track this — Supabase Auth does.
+  const authMap = new Map<
+    string,
+    { invited_at: string | null; last_sign_in_at: string | null }
+  >();
+  if (profile?.role === "super_admin") {
+    try {
+      const adminClient = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const { data: authList } = await adminClient.auth.admin.listUsers({
+        perPage: 1000,
+      });
+      for (const u of authList?.users ?? []) {
+        authMap.set(u.id, {
+          invited_at: u.invited_at ?? null,
+          last_sign_in_at: u.last_sign_in_at ?? null,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch auth users for invite status:", err);
+    }
+  }
 
   const { data: allProperties } = await supabase
     .from("properties")
@@ -186,7 +214,14 @@ export default async function SettingsPage({
                 property_id: string;
                 properties: { name: string } | null;
               }> | null;
-            }>)}
+            }>).map((u) => {
+              const auth = authMap.get(u.id);
+              return {
+                ...u,
+                invited_at: auth?.invited_at ?? null,
+                last_sign_in_at: auth?.last_sign_in_at ?? null,
+              };
+            })}
             allProperties={propertiesList}
             isSuperAdmin={isSuperAdmin}
             currentUserId={user?.id || ""}

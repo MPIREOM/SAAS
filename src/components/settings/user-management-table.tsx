@@ -16,6 +16,8 @@ interface UserRow {
   email: string;
   role: string;
   is_active: boolean;
+  invited_at: string | null;
+  last_sign_in_at: string | null;
   user_property_assignments: Array<{
     property_id: string;
     properties: { name: string } | null;
@@ -93,6 +95,9 @@ export function UserManagementTable({
                 {t("users")}
               </th>
               <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
+                {t("invitation")}
+              </th>
+              <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
                 {t("properties")}
               </th>
               {isSuperAdmin && (
@@ -137,6 +142,25 @@ export function UserManagementTable({
                     >
                       {u.is_active ? t("active") : t("inactive")}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.last_sign_in_at ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">
+                        {t("inviteAccepted")}
+                      </span>
+                    ) : u.invited_at ? (
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning font-mono ltr-nums"
+                        title={new Date(u.invited_at).toLocaleString()}
+                      >
+                        {t("invitePending")} ·{" "}
+                        {new Date(u.invited_at).toLocaleDateString()}
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-text-secondary/10 text-text-secondary">
+                        {t("inviteNotSent")}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm text-text-secondary">
