@@ -54,6 +54,7 @@ export const maintenanceRequests = pgTable("maintenance_requests", {
   assignedToPhone: text("assigned_to_phone"),
   estimatedCost: numeric("estimated_cost"),
   actualCost: numeric("actual_cost"),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
