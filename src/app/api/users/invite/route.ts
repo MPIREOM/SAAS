@@ -55,12 +55,15 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Create auth user with invite
+  // Create auth user via invite — sends a magic-link email. `createUser`
+  // with email_confirm:true (the previous approach) doesn't email anyone;
+  // it just marks the user as pre-confirmed, which is why invitees were
+  // never receiving anything.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const { data: authData, error: authError } =
-    await adminClient.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { full_name, role },
+    await adminClient.auth.admin.inviteUserByEmail(email, {
+      data: { full_name, role },
+      redirectTo: appUrl ? `${appUrl}/auth/update-password` : undefined,
     });
 
   if (authError) {
