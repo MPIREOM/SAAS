@@ -310,13 +310,25 @@ export async function runAdminSummary(
     // rejects template parameters that contain newlines, tabs, or more
     // than 4 consecutive spaces, so the breakdown is collapsed to inline
     // bullets separated by a single space. Falls back to a lone space
-    // when there are no overdue invoices so the template still has 10
-    // params populated (Meta also rejects empty params).
-    const overdueBreakdownInline = overdueByPropertySorted
-      .map(([name, { count, total }]) =>
+    // when there is nothing outstanding so the template still has 10
+    // params populated (Meta also rejects empty params). Combines pending
+    // + overdue because template delivery ignores `whatsappText`, so this
+    // is the only slot that surfaces pending info to WhatsApp recipients.
+    const pendingInlineParts = pendingByPropertySorted.map(
+      ([name, { count, total }]) =>
         `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
-      )
-      .join(" ") || " ";
+    );
+    const overdueInlineParts = overdueByPropertySorted.map(
+      ([name, { count, total }]) =>
+        `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
+    );
+    const outstandingBreakdownInline =
+      [
+        pendingInlineParts.length ? `Pending: ${pendingInlineParts.join(" ")}` : "",
+        overdueInlineParts.length ? `Overdue: ${overdueInlineParts.join(" ")}` : "",
+      ]
+        .filter(Boolean)
+        .join(" | ") || " ";
 
     const whatsappLines = [
       `📊 *MPIRE Daily Summary*`,
@@ -375,9 +387,9 @@ export async function runAdminSummary(
           totalCheques.toFixed(2),
           String(newMaintenance.length),
           String(openMaintenance.length),
-          // {{10}} — per-property overdue breakdown, single-line form
-          // (Meta rejects newlines/tabs/>4 spaces in template params).
-          overdueBreakdownInline,
+          // {{10}} — per-property pending + overdue breakdown, single-line
+          // form (Meta rejects newlines/tabs/>4 spaces in template params).
+          outstandingBreakdownInline,
         ],
       },
     });
