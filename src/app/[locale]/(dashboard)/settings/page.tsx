@@ -189,6 +189,7 @@ export default async function SettingsPage({
             }>)}
             allProperties={propertiesList}
             isSuperAdmin={isSuperAdmin}
+            currentUserId={user?.id || ""}
           />
         ) : (
           <div className="bg-surface-elevated border border-border rounded-md p-4">

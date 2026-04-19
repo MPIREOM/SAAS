@@ -7,6 +7,7 @@ type AuditAction =
   | "login"
   | "logout"
   | "invite_user"
+  | "resend_invite"
   | "move_out"
   | "mark_paid"
   | "partial_payment"
