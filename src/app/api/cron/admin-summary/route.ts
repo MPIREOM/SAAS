@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { format } from "date-fns";
 import { CURRENCY } from "@/lib/currency";
 import { notifyAdmins, buildAdminEmailHtml } from "@/lib/notifications/admin-notify";
 
@@ -39,7 +38,13 @@ export async function runAdminSummary(
   );
 
   try {
-    const today = format(startedAt, "yyyy-MM-dd");
+    // Use Oman calendar date (UTC+4) so "today" matches the invoices cron
+    // and the in-app invoice listing, both of which evaluate due dates in
+    // Muscat local time. Using UTC here caused invoices due on the current
+    // Muscat day to be missed from the "Due Today" bucket just after
+    // midnight Muscat / before 04:00 UTC.
+    const omanNow = new Date(startedAt.getTime() + 4 * 60 * 60 * 1000);
+    const today = omanNow.toISOString().split("T")[0];
     const todayDisplay = startedAt.toLocaleDateString("en-GB", {
       weekday: "long",
       day: "numeric",
@@ -146,8 +151,26 @@ export async function runAdminSummary(
     });
 
     const invoicesDue = invoicesDueRes.data || [];
-    const invoicesPending = invoicesPendingRes.data || [];
-    const invoicesOverdue = invoicesOverdueRes.data || [];
+    // Reclassify pending invoices whose due_date has already passed as
+    // overdue. The daily invoices cron is supposed to flip the status
+    // column to "overdue", but if it hasn't run yet (or was skipped) these
+    // rows stay as "pending" in the DB even though the UI displays them as
+    // overdue. Without this reclassification, the WhatsApp breakdown can
+    // double-count a property (e.g. "Aljabal Apartments" appears under both
+    // Pending and Overdue) and diverges from the total shown on the
+    // invoices page. See src/app/[locale]/(dashboard)/invoices/page.tsx
+    // which applies the same "pending + due_date < today => overdue" rule.
+    const rawPending = invoicesPendingRes.data || [];
+    const rawOverdue = invoicesOverdueRes.data || [];
+    const effectivelyOverdueFromPending = rawPending.filter(
+      (i: Record<string, unknown>) =>
+        typeof i.due_date === "string" && (i.due_date as string) < today
+    );
+    const invoicesPending = rawPending.filter(
+      (i: Record<string, unknown>) =>
+        !(typeof i.due_date === "string" && (i.due_date as string) < today)
+    );
+    const invoicesOverdue = [...rawOverdue, ...effectivelyOverdueFromPending];
     const chequesDue = (chequesDueRes.data || []).filter((c: Record<string, unknown>) => {
       const inv = c.invoices as { status?: string } | null;
       return !inv?.status || !["paid", "cancelled"].includes(inv.status);
