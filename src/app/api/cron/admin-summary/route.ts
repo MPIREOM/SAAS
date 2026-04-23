@@ -63,17 +63,17 @@ export async function runAdminSummary(
     ] = await Promise.all([
       supabase
         .from("invoices")
-        .select("amount, tenants(full_name), units(unit_number, properties:property_id(name))")
-        .eq("status", "pending")
+        .select("amount, paid_amount, tenants(full_name), units(unit_number, properties:property_id(name))")
+        .in("status", ["pending", "partial"])
         .eq("due_date", today),
       supabase
         .from("invoices")
-        .select("amount, due_date, tenants(full_name), units(unit_number, properties:property_id(name))")
-        .eq("status", "pending")
+        .select("amount, paid_amount, due_date, status, tenants(full_name), units(unit_number, properties:property_id(name))")
+        .in("status", ["pending", "partial"])
         .order("due_date", { ascending: true }),
       supabase
         .from("invoices")
-        .select("amount, due_date, tenants(full_name), units(unit_number, properties:property_id(name))")
+        .select("amount, paid_amount, due_date, status, tenants(full_name), units(unit_number, properties:property_id(name))")
         .eq("status", "overdue")
         .order("due_date", { ascending: true }),
       // Cheques due today or overdue. We pull the linked invoice status so we
@@ -151,26 +151,29 @@ export async function runAdminSummary(
     });
 
     const invoicesDue = invoicesDueRes.data || [];
-    // Reclassify pending invoices whose due_date has already passed as
-    // overdue. The daily invoices cron is supposed to flip the status
-    // column to "overdue", but if it hasn't run yet (or was skipped) these
-    // rows stay as "pending" in the DB even though the UI displays them as
-    // overdue. Without this reclassification, the WhatsApp breakdown can
-    // double-count a property (e.g. "Aljabal Apartments" appears under both
-    // Pending and Overdue) and diverges from the total shown on the
-    // invoices page. See src/app/[locale]/(dashboard)/invoices/page.tsx
-    // which applies the same "pending + due_date < today => overdue" rule.
+    // Classify outstanding invoices into Pending vs Overdue buckets to match
+    // the invoices page (src/app/[locale]/(dashboard)/invoices/page.tsx):
+    //   - Pending: status="pending" AND due_date >= today
+    //   - Overdue: status="overdue" OR status="partial" OR
+    //              (status="pending" AND due_date < today)
+    // The "pending" query also pulls "partial" rows so partially-paid invoices
+    // aren't silently dropped from the summary — they land in the Overdue
+    // bucket because any remaining balance is effectively outstanding.
+    // Reclassification is still needed because the daily invoices cron that
+    // flips status="pending" → "overdue" may not have run yet.
     const rawPending = invoicesPendingRes.data || [];
     const rawOverdue = invoicesOverdueRes.data || [];
-    const effectivelyOverdueFromPending = rawPending.filter(
-      (i: Record<string, unknown>) =>
-        typeof i.due_date === "string" && (i.due_date as string) < today
+    const isPastDuePending = (i: Record<string, unknown>) =>
+      i.status === "pending" &&
+      typeof i.due_date === "string" &&
+      (i.due_date as string) < today;
+    const reclassifiedAsOverdue = rawPending.filter(
+      (i: Record<string, unknown>) => i.status === "partial" || isPastDuePending(i)
     );
     const invoicesPending = rawPending.filter(
-      (i: Record<string, unknown>) =>
-        !(typeof i.due_date === "string" && (i.due_date as string) < today)
+      (i: Record<string, unknown>) => i.status === "pending" && !isPastDuePending(i)
     );
-    const invoicesOverdue = [...rawOverdue, ...effectivelyOverdueFromPending];
+    const invoicesOverdue = [...rawOverdue, ...reclassifiedAsOverdue];
     const chequesDue = (chequesDueRes.data || []).filter((c: Record<string, unknown>) => {
       const inv = c.invoices as { status?: string } | null;
       return !inv?.status || !["paid", "cancelled"].includes(inv.status);
@@ -201,9 +204,14 @@ export async function runAdminSummary(
       return { status: "skipped", summary };
     }
 
-    const totalDueToday = invoicesDue.reduce((sum: number, i: Record<string, unknown>) => sum + Number(i.amount || 0), 0);
-    const totalPending = invoicesPending.reduce((sum: number, i: Record<string, unknown>) => sum + Number(i.amount || 0), 0);
-    const totalOverdue = invoicesOverdue.reduce((sum: number, i: Record<string, unknown>) => sum + Number(i.amount || 0), 0);
+    // Outstanding balance = billed amount minus any payments already recorded.
+    // For status="pending" invoices paid_amount is typically 0, so this is a
+    // no-op; for "partial" invoices it correctly excludes the paid portion.
+    const owing = (i: Record<string, unknown>) =>
+      Number(i.amount || 0) - Number(i.paid_amount || 0);
+    const totalDueToday = invoicesDue.reduce((sum: number, i: Record<string, unknown>) => sum + owing(i), 0);
+    const totalPending = invoicesPending.reduce((sum: number, i: Record<string, unknown>) => sum + owing(i), 0);
+    const totalOverdue = invoicesOverdue.reduce((sum: number, i: Record<string, unknown>) => sum + owing(i), 0);
     const totalCheques = chequesDue.reduce((sum: number, c: Record<string, unknown>) => sum + Number(c.amount || 0), 0);
 
     const getTenant = (row: Record<string, unknown>) => ((row.tenants as Record<string, unknown>)?.full_name as string) || "Unknown";
@@ -223,7 +231,7 @@ export async function runAdminSummary(
       const name = getPropertyName(i);
       const entry = overdueByProperty.get(name) || { count: 0, total: 0 };
       entry.count += 1;
-      entry.total += Number(i.amount || 0);
+      entry.total += owing(i);
       overdueByProperty.set(name, entry);
     });
     const overdueByPropertySorted = Array.from(overdueByProperty.entries())
@@ -234,7 +242,7 @@ export async function runAdminSummary(
       const name = getPropertyName(i);
       const entry = pendingByProperty.get(name) || { count: 0, total: 0 };
       entry.count += 1;
-      entry.total += Number(i.amount || 0);
+      entry.total += owing(i);
       pendingByProperty.set(name, entry);
     });
     const pendingByPropertySorted = Array.from(pendingByProperty.entries())
@@ -247,7 +255,7 @@ export async function runAdminSummary(
       items: invoicesDue.length > 0
         ? [
             ...invoicesDue.slice(0, 10).map((i: Record<string, unknown>) =>
-              `${getTenant(i)} — ${getProperty(i)} — <strong>${Number(i.amount).toFixed(2)} ${CURRENCY.code}</strong>`
+              `${getTenant(i)} — ${getProperty(i)} — <strong>${owing(i).toFixed(2)} ${CURRENCY.code}</strong>`
             ),
             ...(invoicesDue.length > 10 ? [`<em>...and ${invoicesDue.length - 10} more</em>`] : []),
             `<strong>Total: ${totalDueToday.toFixed(2)} ${CURRENCY.code}</strong>`,
@@ -265,7 +273,7 @@ export async function runAdminSummary(
             ),
             `<em>Details:</em>`,
             ...invoicesPending.slice(0, 10).map((i: Record<string, unknown>) =>
-              `${getTenant(i)} — ${getProperty(i)} — <strong>${Number(i.amount).toFixed(2)} ${CURRENCY.code}</strong> (due ${i.due_date})`
+              `${getTenant(i)} — ${getProperty(i)} — <strong>${owing(i).toFixed(2)} ${CURRENCY.code}</strong> (due ${i.due_date})`
             ),
             ...(invoicesPending.length > 10 ? [`<em>...and ${invoicesPending.length - 10} more</em>`] : []),
             `<strong>Total pending: ${totalPending.toFixed(2)} ${CURRENCY.code}</strong>`,
@@ -284,7 +292,7 @@ export async function runAdminSummary(
             `<em>Details:</em>`,
             ...invoicesOverdue.slice(0, 10).map((i: Record<string, unknown>) => {
               const days = Math.floor((Date.now() - new Date(i.due_date as string).getTime()) / (1000 * 60 * 60 * 24));
-              return `${getTenant(i)} — ${getProperty(i)} — <strong>${Number(i.amount).toFixed(2)} ${CURRENCY.code}</strong> (${days}d overdue)`;
+              return `${getTenant(i)} — ${getProperty(i)} — <strong>${owing(i).toFixed(2)} ${CURRENCY.code}</strong> (${days}d overdue)`;
             }),
             ...(invoicesOverdue.length > 10 ? [`<em>...and ${invoicesOverdue.length - 10} more</em>`] : []),
             `<strong>Total overdue: ${totalOverdue.toFixed(2)} ${CURRENCY.code}</strong>`,
@@ -370,7 +378,7 @@ export async function runAdminSummary(
     if (invoicesPending.length > 0) {
       whatsappLines.push(``, `*Top Pending:*`);
       invoicesPending.slice(0, 5).forEach((i: Record<string, unknown>) => {
-        whatsappLines.push(`• ${getTenant(i)} — ${Number(i.amount).toFixed(2)} ${CURRENCY.code} (due ${i.due_date})`);
+        whatsappLines.push(`• ${getTenant(i)} — ${owing(i).toFixed(2)} ${CURRENCY.code} (due ${i.due_date})`);
       });
     }
 
@@ -378,7 +386,7 @@ export async function runAdminSummary(
       whatsappLines.push(``, `*Top Overdue:*`);
       invoicesOverdue.slice(0, 5).forEach((i: Record<string, unknown>) => {
         const days = Math.floor((Date.now() - new Date(i.due_date as string).getTime()) / (1000 * 60 * 60 * 24));
-        whatsappLines.push(`• ${getTenant(i)} — ${Number(i.amount).toFixed(2)} ${CURRENCY.code} (${days}d)`);
+        whatsappLines.push(`• ${getTenant(i)} — ${owing(i).toFixed(2)} ${CURRENCY.code} (${days}d)`);
       });
     }
 
