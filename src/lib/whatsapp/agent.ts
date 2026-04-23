@@ -1255,18 +1255,22 @@ async function executeTool(
     case "get_today_summary": {
       const today = new Date().toISOString().split("T")[0];
 
-      // Invoices due today
+      // Invoices due today (include partial — those still have an
+      // outstanding balance the tenant is expected to pay).
       const { data: dueToday } = await supabase
         .from("invoices")
-        .select("id, amount, tenants(full_name)")
+        .select("id, amount, paid_amount, tenants(full_name)")
         .eq("due_date", today)
-        .in("status", ["pending"]);
+        .in("status", ["pending", "partial"]);
 
-      // Overdue invoices
+      // Overdue invoices — include partial and past-due pending so the count
+      // matches the invoices page outstanding view.
       const { data: overdue } = await supabase
         .from("invoices")
-        .select("id, amount, paid_amount")
-        .in("status", ["overdue"]);
+        .select("id, amount, paid_amount, status, due_date")
+        .or(
+          `status.eq.overdue,status.eq.partial,and(status.eq.pending,due_date.lt.${today})`
+        );
 
       // Payments received today
       const { data: todayPayments } = await supabase
