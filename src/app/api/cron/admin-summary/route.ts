@@ -337,29 +337,29 @@ export async function runAdminSummary(
     const pendingBreakdownLines = pendingByPropertySorted.map(([name, { count, total }]) =>
       `   • ${name}: ${count} invoice${count !== 1 ? "s" : ""} (${total.toFixed(2)} ${CURRENCY.code})`
     );
-    // Single-line variant for WhatsApp template parameter {{10}}. Meta
-    // rejects template parameters that contain newlines, tabs, or more
-    // than 4 consecutive spaces, so the breakdown is collapsed to inline
-    // bullets separated by a single space. Falls back to a lone space
-    // when there is nothing outstanding so the template still has 10
-    // params populated (Meta also rejects empty params). Combines pending
-    // + overdue because template delivery ignores `whatsappText`, so this
-    // is the only slot that surfaces pending info to WhatsApp recipients.
-    const pendingInlineParts = pendingByPropertySorted.map(
-      ([name, { count, total }]) =>
-        `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
-    );
-    const overdueInlineParts = overdueByPropertySorted.map(
-      ([name, { count, total }]) =>
-        `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
-    );
+    // {{10}} of the daily_briefs template. Meta rejects template params
+    // containing newlines, tabs, or >4 consecutive spaces, and rejects
+    // empty params, so we collapse to single-space-separated bullets and
+    // fall back to " " when nothing is outstanding. Pending + overdue are
+    // merged into one total per property so the same property name doesn't
+    // appear twice in the message.
+    const outstandingByProperty = new Map<string, { count: number; total: number }>();
+    for (const source of [pendingByProperty, overdueByProperty]) {
+      for (const [name, { count, total }] of source) {
+        const entry = outstandingByProperty.get(name) || { count: 0, total: 0 };
+        entry.count += count;
+        entry.total += total;
+        outstandingByProperty.set(name, entry);
+      }
+    }
+    const outstandingByPropertySorted = Array.from(outstandingByProperty.entries())
+      .sort((a, b) => b[1].total - a[1].total);
     const outstandingBreakdownInline =
-      [
-        pendingInlineParts.length ? `Pending: ${pendingInlineParts.join(" ")}` : "",
-        overdueInlineParts.length ? `Overdue: ${overdueInlineParts.join(" ")}` : "",
-      ]
-        .filter(Boolean)
-        .join(" | ") || " ";
+      outstandingByPropertySorted
+        .map(([name, { count, total }]) =>
+          `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
+        )
+        .join(" ") || " ";
 
     const whatsappLines = [
       `📊 *MPIRE Daily Summary*`,
