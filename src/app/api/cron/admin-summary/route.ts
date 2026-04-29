@@ -412,8 +412,10 @@ export async function runAdminSummary(
           todayDisplay,
           String(invoicesDue.length),
           totalDueToday.toFixed(2),
-          String(invoicesOverdue.length),
-          totalOverdue.toFixed(2),
+          // {{4}}/{{5}} — pending + overdue merged so the headline count
+          // and amount match the per-property breakdown in {{10}}.
+          String(invoicesOverdue.length + invoicesPending.length),
+          (totalOverdue + totalPending).toFixed(2),
           String(chequesDue.length),
           totalCheques.toFixed(2),
           String(newMaintenance.length),
