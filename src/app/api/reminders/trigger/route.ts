@@ -318,6 +318,20 @@ function buildOverdueDetails(invoices: OverdueInvoice[] | undefined, lang: strin
     .join("\n");
 }
 
+// Meta rejects template parameters containing newlines, tabs, or >4
+// consecutive spaces (error #132018), so the WhatsApp template variant
+// flattens the list to a single line with bullet separators.
+function buildOverdueDetailsInline(invoices: OverdueInvoice[] | undefined, lang: string): string {
+  if (!invoices || invoices.length === 0) return "";
+  return invoices
+    .map((inv) =>
+      lang === "ar"
+        ? `• ${inv.periodLabel}: ${inv.amount} ر.ع.`
+        : `• ${inv.periodLabel}: ${inv.amount} ${CURRENCY.code}`
+    )
+    .join(" ");
+}
+
 function renderTemplate(template: string, params: ReminderParams): string {
   const langCode = params.language === "ar" ? "ar" : "en";
   return template
@@ -568,7 +582,7 @@ async function sendReminder(
             unitNumber: params.unitNumber,
             propertyName: params.propertyName,
             totalOverdue: params.totalOverdue || params.amount,
-            overdueDetails: buildOverdueDetails(params.overdueInvoices, langCode),
+            overdueDetails: buildOverdueDetailsInline(params.overdueInvoices, langCode),
           })
         : buildRentReminderComponents({
             tenantName: params.tenantName,
