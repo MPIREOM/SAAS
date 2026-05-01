@@ -328,12 +328,12 @@ export default async function InvoicesPage({
 
       {/* Property Filter */}
       {properties && properties.length > 1 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-text-secondary" />
+        <div className="-mx-4 md:mx-0 px-4 md:px-0 overflow-x-auto md:overflow-visible">
+          <div className="flex items-center gap-2 w-max md:w-auto md:flex-wrap">
+            <Building2 className="h-4 w-4 text-text-secondary shrink-0" />
             <Link
               href={`/${locale}/invoices${status ? `?status=${status}` : ""}${month ? `${status ? "&" : "?"}month=${month}` : ""}`}
-              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
+              className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 !property
                   ? "bg-accent/10 text-accent font-medium"
                   : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
