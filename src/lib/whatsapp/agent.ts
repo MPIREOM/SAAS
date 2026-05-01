@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import { getOwnerBalance, getDefaultOwnerBalance } from "@/lib/owners/balance";
 
 const anthropic = new Anthropic();
 
@@ -302,6 +303,11 @@ const tools: Anthropic.Tool[] = [
           type: "string",
           description: "Vendor or service provider name",
         },
+        attachment_token: {
+          type: "string",
+          description:
+            "Optional: a receipt-attachment token from a prior image message in this conversation. The system surfaces these as 'PENDING_RECEIPT_TOKEN: <token>' in the user's message. Pass it here to attach the receipt photo to the new expense. If no such token was surfaced, omit this field.",
+        },
       },
       required: ["property_id", "category", "amount"],
     },
@@ -433,6 +439,84 @@ const tools: Anthropic.Tool[] = [
       required: ["invoice_id", "action"],
     },
   },
+  {
+    name: "get_owner_balance",
+    description:
+      "Get the running balance for a property owner. Positive = company owes the owner (we are holding their money). Negative = owner owes the company (expenses + commissions exceeded rent received). Returns the balance plus a full breakdown (rent collected, commission earned, business manager fee, expenses, settlements). If owner_id is omitted and there is exactly one active owner, that owner's balance is returned.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        owner_id: {
+          type: "string",
+          description:
+            "Owner UUID. Omit when only one owner exists in the system.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "record_owner_settlement",
+    description:
+      "Record a settlement payment between the company and the owner. Use 'company_to_owner' when WE paid the owner (decreases the running balance). Use 'owner_to_company' when the OWNER paid us (increases the running balance). Examples: 'I paid the owner 1500 cash' → company_to_owner 1500; 'owner gave me 200' → owner_to_company 200.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        owner_id: {
+          type: "string",
+          description:
+            "Owner UUID. Omit when only one owner exists in the system.",
+        },
+        direction: {
+          type: "string",
+          enum: ["company_to_owner", "owner_to_company"],
+          description: "Direction of the settlement.",
+        },
+        amount: {
+          type: "number",
+          description: "Settlement amount in OMR (positive number).",
+        },
+        method: {
+          type: "string",
+          enum: ["cash", "bank_transfer", "cheque"],
+          description: "Method used. Defaults to cash if omitted.",
+        },
+        settled_at: {
+          type: "string",
+          description: "Date of the settlement in YYYY-MM-DD. Defaults to today.",
+        },
+        reference_number: {
+          type: "string",
+          description: "Optional reference (cheque number, transfer reference, etc).",
+        },
+        notes: {
+          type: "string",
+          description: "Optional free-text notes.",
+        },
+      },
+      required: ["direction", "amount"],
+    },
+  },
+  {
+    name: "list_recent_owner_activity",
+    description:
+      "List recent ledger activity for an owner — payments received, expenses logged, commissions, business fees, and settlements — within a window (default 14 days). Useful for sanity-checking the running balance.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        owner_id: {
+          type: "string",
+          description:
+            "Owner UUID. Omit when only one owner exists in the system.",
+        },
+        days: {
+          type: "number",
+          description: "How many days back to look. Default 14.",
+        },
+      },
+      required: [],
+    },
+  },
 ];
 
 // ── Tool execution ────────────────────────────────────────────────────────
@@ -484,7 +568,7 @@ async function executeTool(
     }
 
     case "list_tenants": {
-      let query = supabase
+      const query = supabase
         .from("tenants")
         .select(
           `
@@ -1097,6 +1181,21 @@ async function executeTool(
         },
       });
 
+      // Optional receipt photo: the webhook stashes incoming images in
+      // pending_receipt_attachments and surfaces a token in the user's
+      // message; the agent passes that token here so we can move the file
+      // from a temp area to a permanent one tied to this expense.
+      let attachedReceipt: string | null = null;
+      const attachmentToken = input.attachment_token as string | undefined;
+      if (attachmentToken && expense?.id) {
+        attachedReceipt = await attachReceiptToExpense(
+          supabase,
+          attachmentToken,
+          expense.id as string,
+          userId,
+        );
+      }
+
       return JSON.stringify({
         success: true,
         expense_id: expense?.id,
@@ -1104,6 +1203,8 @@ async function executeTool(
         category: input.category,
         description: input.description || null,
         date: expenseDate,
+        receipt_attached: attachedReceipt ? true : false,
+        receipt_path: attachedReceipt,
       });
     }
 
@@ -1505,9 +1606,318 @@ async function executeTool(
       });
     }
 
+    case "get_owner_balance": {
+      const ownerId = input.owner_id as string | undefined;
+      const result = ownerId
+        ? await getOwnerBalance(supabase, ownerId)
+        : await getDefaultOwnerBalance(supabase);
+
+      if (!result) {
+        return JSON.stringify({
+          error:
+            "Could not resolve owner. Either no owner is set up yet, or there are multiple owners and owner_id was not provided. Ask the user which owner they mean.",
+        });
+      }
+
+      const sideText =
+        result.side === "company_owes_owner"
+          ? `Company owes ${result.ownerName} ${result.balance.toFixed(2)} OMR`
+          : result.side === "owner_owes_company"
+            ? `${result.ownerName} owes the company ${Math.abs(result.balance).toFixed(2)} OMR`
+            : "Balance is settled (zero)";
+
+      return JSON.stringify({
+        owner_id: result.ownerId,
+        owner_name: result.ownerName,
+        as_of: result.asOf,
+        balance: result.balance,
+        side: result.side,
+        summary: sideText,
+        breakdown: result.breakdown,
+      });
+    }
+
+    case "record_owner_settlement": {
+      let ownerId = input.owner_id as string | undefined;
+      const direction = input.direction as
+        | "company_to_owner"
+        | "owner_to_company";
+      const amount = Number(input.amount);
+      const method = (input.method as string) || "cash";
+      const settledAt =
+        (input.settled_at as string) || new Date().toISOString().split("T")[0];
+
+      if (!direction || !["company_to_owner", "owner_to_company"].includes(direction)) {
+        return JSON.stringify({
+          error: "direction must be 'company_to_owner' or 'owner_to_company'.",
+        });
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return JSON.stringify({ error: "amount must be a positive number." });
+      }
+
+      // Resolve owner if not provided.
+      if (!ownerId) {
+        const { data: owners } = await supabase
+          .from("owners")
+          .select("id")
+          .eq("is_active", true)
+          .limit(2);
+        if (!owners || owners.length === 0) {
+          return JSON.stringify({
+            error: "No active owner exists. Create an owner first.",
+          });
+        }
+        if (owners.length > 1) {
+          return JSON.stringify({
+            error:
+              "Multiple owners exist. Ask the user which owner this settlement is for and pass owner_id.",
+          });
+        }
+        ownerId = owners[0].id as string;
+      }
+
+      const { data: settlement, error: insertErr } = await supabase
+        .from("owner_settlements")
+        .insert({
+          owner_id: ownerId,
+          direction,
+          amount,
+          method,
+          settled_at: settledAt,
+          reference_number: input.reference_number || null,
+          notes: input.notes || null,
+          recorded_by: userId,
+        })
+        .select("id")
+        .single();
+
+      if (insertErr) return JSON.stringify({ error: insertErr.message });
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "create",
+        entity_type: "owner_settlement",
+        entity_id: settlement?.id,
+        metadata: {
+          owner_id: ownerId,
+          direction,
+          amount,
+          method,
+          source: "whatsapp_agent",
+        },
+      });
+
+      // Pull the new running balance so the agent can confirm the impact.
+      const newBalance = await getOwnerBalance(supabase, ownerId);
+
+      return JSON.stringify({
+        success: true,
+        settlement_id: settlement?.id,
+        owner_id: ownerId,
+        direction,
+        amount,
+        method,
+        settled_at: settledAt,
+        new_balance: newBalance?.balance ?? null,
+        new_balance_side: newBalance?.side ?? null,
+      });
+    }
+
+    case "list_recent_owner_activity": {
+      let ownerId = input.owner_id as string | undefined;
+      const days = Number(input.days) > 0 ? Number(input.days) : 14;
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+
+      if (!ownerId) {
+        const { data: owners } = await supabase
+          .from("owners")
+          .select("id, name")
+          .eq("is_active", true)
+          .limit(2);
+        if (!owners || owners.length === 0) {
+          return JSON.stringify({ error: "No active owner exists." });
+        }
+        if (owners.length > 1) {
+          return JSON.stringify({
+            error: "Multiple owners exist. Pass owner_id.",
+          });
+        }
+        ownerId = owners[0].id as string;
+      }
+
+      const { data: properties } = await supabase
+        .from("properties")
+        .select("id, name")
+        .eq("owner_id", ownerId);
+      const propertyIds = (properties || []).map((p) => p.id as string);
+      const propertyNameById = new Map(
+        (properties || []).map((p) => [p.id as string, p.name as string]),
+      );
+
+      // Lease ids (for payments lookup) — same trick as in balance.ts.
+      const { data: ownerUnits } = await supabase
+        .from("units")
+        .select("id")
+        .in("property_id", propertyIds.length > 0 ? propertyIds : ["00000000-0000-0000-0000-000000000000"]);
+      const ownerUnitIds = (ownerUnits || []).map((u) => u.id as string);
+      const { data: ownerLeases } = await supabase
+        .from("leases")
+        .select("id, unit_id, units(property_id), tenants(full_name)")
+        .in(
+          "unit_id",
+          ownerUnitIds.length > 0
+            ? ownerUnitIds
+            : ["00000000-0000-0000-0000-000000000000"],
+        );
+      const leaseIds = (ownerLeases || []).map((l) => l.id as string);
+      const leaseInfo = new Map(
+        (ownerLeases || []).map((l) => {
+          const u = l.units as unknown as Record<string, unknown> | null;
+          const t = l.tenants as unknown as Record<string, unknown> | null;
+          return [
+            l.id as string,
+            {
+              propertyName:
+                propertyNameById.get((u?.property_id as string) || "") || "?",
+              tenantName: (t?.full_name as string) || "?",
+            },
+          ];
+        }),
+      );
+
+      const [paymentsRes, expensesRes, settlementsRes, feesRes] = await Promise.all([
+        leaseIds.length > 0
+          ? supabase
+              .from("payments")
+              .select("amount, method, payment_date, lease_id")
+              .in("lease_id", leaseIds)
+              .gte("payment_date", since)
+              .order("payment_date", { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+        propertyIds.length > 0
+          ? supabase
+              .from("expenses")
+              .select("amount, category, description, expense_date, property_id, vendor")
+              .in("property_id", propertyIds)
+              .gte("expense_date", since)
+              .order("expense_date", { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+        supabase
+          .from("owner_settlements")
+          .select("amount, direction, method, settled_at")
+          .eq("owner_id", ownerId)
+          .gte("settled_at", since)
+          .order("settled_at", { ascending: false }),
+        supabase
+          .from("owner_business_fees")
+          .select("amount, period_month")
+          .eq("owner_id", ownerId)
+          .gte("period_month", since)
+          .order("period_month", { ascending: false }),
+      ]);
+
+      const payments = (paymentsRes.data || []).map((p: Record<string, unknown>) => {
+        const info = leaseInfo.get(p.lease_id as string);
+        return {
+          date: p.payment_date,
+          tenant: info?.tenantName || "?",
+          property: info?.propertyName || "?",
+          amount: Number(p.amount || 0),
+          method: p.method,
+        };
+      });
+      const expenses = (expensesRes.data || []).map((e: Record<string, unknown>) => ({
+        date: e.expense_date,
+        property: propertyNameById.get(e.property_id as string) || "?",
+        category: e.category,
+        amount: Number(e.amount || 0),
+        vendor: e.vendor || null,
+        description: e.description || null,
+      }));
+      const settlements = (settlementsRes.data || []).map(
+        (s: Record<string, unknown>) => ({
+          date: s.settled_at,
+          direction: s.direction,
+          amount: Number(s.amount || 0),
+          method: s.method,
+        }),
+      );
+      const fees = (feesRes.data || []).map((f: Record<string, unknown>) => ({
+        period: f.period_month,
+        amount: Number(f.amount || 0),
+      }));
+
+      return JSON.stringify({
+        owner_id: ownerId,
+        window_days: days,
+        since,
+        payments,
+        expenses,
+        settlements,
+        business_fees: fees,
+      });
+    }
+
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
+}
+
+// ── Receipt attachment helper ─────────────────────────────────────────────
+
+// Pending receipts captured by the webhook live in pending_receipt_attachments.
+// When the agent calls add_expense with the matching token, we move the file
+// to a path under the new expense id and write an expense_attachments row.
+async function attachReceiptToExpense(
+  supabase: ReturnType<typeof getAdminSupabase>,
+  token: string,
+  expenseId: string,
+  userId: string,
+): Promise<string | null> {
+  const { data: pending } = await supabase
+    .from("pending_receipt_attachments")
+    .select("id, storage_path, mime_type, file_size")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (!pending) return null;
+
+  const oldPath = pending.storage_path as string;
+  const ext = oldPath.split(".").pop() || "bin";
+  const newPath = `receipts/${expenseId}/${Date.now()}.${ext}`;
+
+  const { error: moveErr } = await supabase.storage
+    .from("expense-receipts")
+    .move(oldPath, newPath);
+  // If move fails (e.g. file already moved), fall back to keeping the old
+  // path so we don't silently lose the receipt — better a stale path than
+  // nothing.
+  const finalPath = moveErr ? oldPath : newPath;
+
+  await supabase.from("expense_attachments").insert({
+    expense_id: expenseId,
+    storage_path: finalPath,
+    mime_type: pending.mime_type || null,
+    file_size: pending.file_size || null,
+    uploaded_by: userId,
+  });
+
+  // Also stamp the expense's primary receipt_url for the legacy UI column.
+  await supabase
+    .from("expenses")
+    .update({ receipt_url: finalPath })
+    .eq("id", expenseId);
+
+  // Mark the pending row consumed (or delete it).
+  await supabase
+    .from("pending_receipt_attachments")
+    .delete()
+    .eq("id", pending.id);
+
+  return finalPath;
 }
 
 // ── Conversation history ──────────────────────────────────────────────────
@@ -1600,6 +2010,7 @@ CURRENCY: OMR (Omani Rial)
 YOU CAN:
 1. Record payments — "Ahmad paid", "register payment for Fatma", "tenant in unit 101 paid 200 OMR"
 2. Add expenses — "add expense 50 OMR plumbing at Sunset Tower", "electricity bill 30 OMR"
+   - If the user attached a photo (look for "PENDING_RECEIPT_TOKEN: <token>" in their message), pass that token as attachment_token to add_expense so the receipt is saved with the expense.
 3. Create invoices — "create invoice for Ahmad for April", "generate rent invoice", "create May and June invoices for all tenants"
 4. Check balances — "how much does Ahmad owe?", "check balance for unit 101"
 5. View unpaid/overdue — "who hasn't paid?", "show overdue invoices", "pending invoices for April", "show me April invoices"
@@ -1609,6 +2020,10 @@ YOU CAN:
 9. Update rent — "change rent for unit 17 to 230 OMR", "increase Ahmad's rent to 300"
 10. Update invoices — "change invoice amount to 230 OMR", "update due date"
 11. Cancel invoices — "cancel invoice for Ahmad", "write off unit 5 invoice"
+12. Owner ledger — "what's the owner balance?", "how much do I owe the owner?", "owner statement"
+    - Use get_owner_balance for "what's the balance / how much do we owe / how much does owner owe".
+    - Use record_owner_settlement when the user paid the owner ("I paid the owner 1500 cash" → company_to_owner) or the owner paid the company ("owner gave me 200" → owner_to_company).
+    - Use list_recent_owner_activity when the user wants to see recent rent / expenses / settlements feeding the balance.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
