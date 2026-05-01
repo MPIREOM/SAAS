@@ -76,38 +76,40 @@ export function InvoicesTabs({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       {/* Status Tabs */}
-      <div className="flex items-center gap-0.5 bg-surface border border-border/60 rounded-xl p-1">
-        {tabs.map((tab) => {
-          const isActive = currentStatus === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => handleTabChange(tab.key)}
-              className={`relative flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActive
-                  ? "bg-accent text-accent-foreground shadow-sm shadow-accent/20"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
-              }`}
-            >
-              {tab.label}
-              <span
-                className={`text-[10px] font-semibold font-mono tabular-nums px-1.5 py-0.5 rounded-md ${
+      <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible">
+        <div className="inline-flex items-center gap-0.5 bg-surface border border-border/60 rounded-xl p-1">
+          {tabs.map((tab) => {
+            const isActive = currentStatus === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleTabChange(tab.key)}
+                className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
                   isActive
-                    ? "bg-accent-foreground/15 text-accent-foreground"
-                    : "bg-surface-elevated text-text-secondary"
+                    ? "bg-accent text-accent-foreground shadow-sm shadow-accent/20"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
                 }`}
               >
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
+                {tab.label}
+                <span
+                  className={`text-[10px] font-semibold font-mono tabular-nums px-1.5 py-0.5 rounded-md ${
+                    isActive
+                      ? "bg-accent-foreground/15 text-accent-foreground"
+                      : "bg-surface-elevated text-text-secondary"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Month Filter */}
-      <div className="relative">
+      <div className="relative self-start sm:self-auto">
         <CalendarDays className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary pointer-events-none" />
         <select
           value={currentMonth}
