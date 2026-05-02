@@ -3,7 +3,7 @@ import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 
 const anthropic = new Anthropic();
 
-const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
+const CLAUDE_MODEL = "claude-sonnet-4-6";
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 2000;
 
@@ -258,6 +258,27 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "get_unit_by_number",
+    description:
+      "Look up a SPECIFIC unit by its unit number and return the EXACT current tenant, lease, and recent invoices. ALWAYS use this when the user mentions a unit number (e.g. 'unit 27', 'unit 66', 'unit 101 invoices', 'tenant in unit 5 paid'). NEVER guess or recall a tenant from memory — always call this tool to get authoritative data. If multiple properties have the same unit number, pass property_name to disambiguate.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        unit_number: {
+          type: "string",
+          description:
+            "The unit number EXACTLY as the user said it (e.g. '27', '66', 'A12'). Do not modify or normalize.",
+        },
+        property_name: {
+          type: "string",
+          description:
+            "Optional: property name (or partial) to disambiguate when the same unit number exists in multiple properties.",
+        },
+      },
+      required: ["unit_number"],
+    },
+  },
+  {
     name: "add_expense",
     description:
       "Add a new expense record to a property. For tracking costs like maintenance, utilities, insurance, etc.",
@@ -484,7 +505,7 @@ async function executeTool(
     }
 
     case "list_tenants": {
-      let query = supabase
+      const query = supabase
         .from("tenants")
         .select(
           `
@@ -1060,6 +1081,149 @@ async function executeTool(
       return JSON.stringify(result);
     }
 
+    case "get_unit_by_number": {
+      const unitNumber = String(input.unit_number ?? "").trim();
+      const propertyName = (input.property_name as string | undefined)?.trim();
+
+      if (!unitNumber) {
+        return JSON.stringify({ error: "unit_number is required" });
+      }
+
+      const { data: unitMatches, error: unitErr } = await supabase
+        .from("units")
+        .select(
+          `
+          id, unit_number, status, rent_amount, property_id,
+          properties(id, name, location)
+          `
+        )
+        .eq("unit_number", unitNumber);
+      if (unitErr) return JSON.stringify({ error: unitErr.message });
+
+      if (!unitMatches || unitMatches.length === 0) {
+        return JSON.stringify({
+          message: `No unit with number "${unitNumber}" exists. Do NOT invent a tenant. Tell the user the unit was not found.`,
+        });
+      }
+
+      // If multiple matches and property_name provided, narrow it down
+      let matched = unitMatches as Record<string, unknown>[];
+      if (matched.length > 1 && propertyName) {
+        const lower = propertyName.toLowerCase();
+        const filtered = matched.filter((u) => {
+          const prop = u.properties as unknown as Record<string, unknown> | null;
+          const name = (prop?.name as string | undefined)?.toLowerCase() ?? "";
+          return name.includes(lower);
+        });
+        if (filtered.length > 0) matched = filtered;
+      }
+
+      if (matched.length > 1) {
+        return JSON.stringify({
+          message: `Multiple units with number "${unitNumber}" exist across properties. Ask the user to specify the property.`,
+          candidates: matched.map((u) => {
+            const prop = u.properties as unknown as Record<string, unknown> | null;
+            return {
+              unit_id: u.id,
+              unit_number: u.unit_number,
+              property: prop?.name,
+            };
+          }),
+        });
+      }
+
+      const unit = matched[0];
+      const unitId = unit.id as string;
+      const property = unit.properties as unknown as Record<string, unknown> | null;
+
+      // Fetch active lease + tenant for this unit (single source of truth)
+      const { data: lease } = await supabase
+        .from("leases")
+        .select(
+          `
+          id, monthly_rent, start_date, end_date, payment_due_day, is_active,
+          tenants(id, full_name, phone)
+          `
+        )
+        .eq("unit_id", unitId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      const tenant = lease
+        ? ((lease as Record<string, unknown>).tenants as
+            | Record<string, unknown>
+            | null)
+        : null;
+
+      // Recent invoices for this unit (newest first)
+      const { data: invoices } = await supabase
+        .from("invoices")
+        .select(
+          "id, amount, paid_amount, due_date, status, period_start, period_end, paid_date, tenant_id"
+        )
+        .eq("unit_id", unitId)
+        .order("due_date", { ascending: false })
+        .limit(12);
+
+      const invoiceList = (invoices || []).map((inv) => ({
+        invoice_id: inv.id,
+        amount: Number(inv.amount || 0),
+        paid_amount: Number(inv.paid_amount || 0),
+        remaining:
+          Number(inv.amount || 0) - Number(inv.paid_amount || 0),
+        due_date: inv.due_date,
+        status: inv.status,
+        period_start: inv.period_start,
+        period_end: inv.period_end,
+        paid_date: inv.paid_date,
+        belongs_to_current_tenant: tenant
+          ? inv.tenant_id === (tenant.id as string)
+          : false,
+      }));
+
+      const unpaid = invoiceList.filter((i) =>
+        ["pending", "overdue", "partial"].includes(i.status as string)
+      );
+
+      return JSON.stringify({
+        unit: {
+          unit_id: unitId,
+          unit_number: unit.unit_number,
+          status: unit.status,
+          rent_amount: unit.rent_amount,
+          property: property
+            ? {
+                property_id: property.id,
+                name: property.name,
+                location: property.location,
+              }
+            : null,
+        },
+        tenant: tenant
+          ? {
+              tenant_id: tenant.id,
+              full_name: tenant.full_name,
+              phone: tenant.phone,
+            }
+          : null,
+        lease: lease
+          ? {
+              lease_id: (lease as Record<string, unknown>).id,
+              monthly_rent: (lease as Record<string, unknown>).monthly_rent,
+              start_date: (lease as Record<string, unknown>).start_date,
+              end_date: (lease as Record<string, unknown>).end_date,
+              payment_due_day: (lease as Record<string, unknown>)
+                .payment_due_day,
+            }
+          : null,
+        invoices: invoiceList,
+        unpaid_invoices: unpaid,
+        instructions: tenant
+          ? "Use ONLY the tenant.full_name and unit.unit_number values shown above. Do NOT invent or recall any other name. To record a payment, call mark_invoice_paid with one of the invoice_id values listed above (prefer an unpaid_invoices entry)."
+          : "This unit has no active lease/tenant right now. Tell the user the unit appears vacant. Do NOT invent a tenant name.",
+      });
+    }
+
     case "add_expense": {
       const expenseDate =
         (input.expense_date as string) ||
@@ -1613,7 +1777,7 @@ YOU CAN:
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
 - "Register payment", "add payment", "record payment", "tenant paid" ALL mean the same thing: mark their invoice as paid using mark_invoice_paid.
-- When the user mentions a tenant name, ALWAYS search for them first.
+- When the user mentions a tenant name, ALWAYS search for them first using search_tenants.
 - If a tenant has exactly ONE unpaid invoice, just pay it without asking.
 - If a tenant has MULTIPLE unpaid invoices, ask which one (show the list with dates and amounts).
 - If no unpaid invoices exist, tell the user and offer to create one.
@@ -1626,13 +1790,17 @@ BEHAVIOR RULES:
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
 - NEVER say "there are no invoices" without first calling the tool with the right filters. If the user asks about a specific month (e.g. "April"), use the month parameter (e.g. "2026-04") in get_overdue_summary or get_tenant_invoices.
 - When the user asks about invoices for a specific month, ALWAYS pass the month parameter in YYYY-MM format to filter results. Do NOT just scan through all results — use the filter.
+- CRITICAL — UNIT NUMBER LOOKUPS: Whenever the user mentions a unit number (e.g. "unit 27", "unit 66", "send me unit 28 invoices", "tenant in unit 5 paid"), you MUST call get_unit_by_number FIRST. Do NOT use search_tenants, get_property_units, or any other tool to figure out who lives in a unit — only get_unit_by_number is authoritative. NEVER reuse a tenant name from earlier in the conversation for a different unit number; always re-look it up. After get_unit_by_number returns, copy the tenant.full_name and unit.unit_number EXACTLY from the tool response — never substitute, abbreviate, or invent.
+- CRITICAL — RECORDING PAYMENT FOR A UNIT: When the user says "they paid", "tenant paid", "record payment" in the context of a unit number, you MUST: (1) call get_unit_by_number with that exact unit_number, (2) take an invoice_id from the unpaid_invoices array in the response, (3) call mark_invoice_paid with that invoice_id. Do NOT skip step 1. Do NOT make up a payment confirmation without actually calling mark_invoice_paid and seeing { success: true } in its response. If mark_invoice_paid returns an error or you skipped it, tell the user honestly that you could not record the payment.
 - CRITICAL: When the user asks about invoices for a PROPERTY or BUILDING (e.g. "invoices for Bousher Ameen Mosque"), first use search_properties to find the property_id, then call get_property_invoices ONCE with that property_id. NEVER loop through tenants individually with get_tenant_invoices — that will time out. get_property_invoices returns ALL invoices for the property in one call. For date ranges like "Jan to April", use start_date="2026-01-01" and end_date="2026-04-30".
 - CRITICAL: When creating invoices for MULTIPLE tenants or a whole property (e.g. "create May invoices", "generate invoices for May and June for all tenants"), use create_invoices_batch with the property_id and the months array. NEVER call create_invoice individually for each tenant — use the batch tool. It handles lease/unit resolution automatically and skips duplicates.
 - If genuinely unsure what the user wants, ask a SHORT clarifying question.
 - You have CONVERSATION HISTORY. When the user says "yes", "ok", "do it", "go ahead", etc., refer back to what you previously offered or discussed and take that action.
 - CRITICAL: NEVER guess or assume invoice statuses, amounts, or dates from conversation history. ALWAYS call the appropriate tool to get LIVE data from the database for ANY query about invoices, balances, or statuses. Conversation history is for understanding context only — actual data MUST come from tool calls.
-- CRITICAL — NO HALLUCINATION: When listing invoices, tenants, or units from a tool result, you MUST copy unit numbers, tenant names, amounts and dates EXACTLY as they appear in the tool response. NEVER invent, guess, or extrapolate unit numbers (e.g. do not assume a sequence like 39, 49, 59). If a tool returns a "formatted_list" field, quote lines from it verbatim. If a value is missing in the tool response, say "N/A" — do NOT fill it in with a plausible number.
-- When checking a status, balance, or summary: ALWAYS call the tool first, then report what the tool returned. NEVER rely on what was said earlier in the conversation.`;
+- CRITICAL — NO HALLUCINATION: When listing invoices, tenants, or units from a tool result, you MUST copy unit numbers, tenant names, amounts and dates EXACTLY as they appear in the tool response. NEVER invent, guess, or extrapolate unit numbers (e.g. do not assume a sequence like 39, 49, 59). If a tool returns a "formatted_list" field, quote lines from it verbatim. If a value is missing in the tool response, say "N/A" — do NOT fill it in with a plausible number. NEVER carry a tenant name from a previous unit lookup over to a new unit number — every unit lookup is independent.
+- CRITICAL — NEVER FABRICATE SUCCESS: Only claim a payment was "recorded", an invoice was "created", or rent was "updated" AFTER the corresponding mutation tool (mark_invoice_paid, create_invoice, update_lease_rent, etc.) returned { success: true } in its tool result. If you have not received that confirmation, do NOT post a "✅ Payment Recorded" style message.
+- When checking a status, balance, or summary: ALWAYS call the tool first, then report what the tool returned. NEVER rely on what was said earlier in the conversation.
+- CRITICAL — ALWAYS REPLY WITH TEXT: After your final tool call, you MUST emit a short text answer for the user (e.g. "Done — 280 OMR recorded for unit 34 (Moza)"). Never end the turn with only tool_use blocks and no text. The user is on WhatsApp and only sees text.`;
 
   // Build messages: conversation history + current message
   // The current message is already the last entry in history, so use history directly
@@ -1693,10 +1861,54 @@ BEHAVIOR RULES:
   const textBlocks = response.content.filter(
     (block): block is Anthropic.TextBlock => block.type === "text"
   );
-  const reply = textBlocks.map((block) => block.text).join("\n") || "Done!";
+  let reply = textBlocks.map((block) => block.text).join("\n").trim();
 
-  // 5. Save agent reply to conversation history
-  await saveConversationMessage(cleanPhone, "assistant", reply);
+  // If the model returned no text (e.g. ended with only tool_use blocks or
+  // hit max_iterations), nudge it once for an explicit text answer instead of
+  // silently replying "Done!". The previous fallback caused the model to
+  // mimic that pattern in subsequent turns.
+  if (!reply && response.stop_reason !== "tool_use") {
+    console.warn(
+      "[WhatsApp Agent] Empty final response from model — requesting explicit text reply",
+      { stop_reason: response.stop_reason, iterations }
+    );
+    messages.push({ role: "assistant", content: response.content });
+    messages.push({
+      role: "user",
+      content:
+        "Please reply to my last request in plain text. Summarise what you did or what you found. Do not call any more tools.",
+    });
+    try {
+      const followUp = await callClaude({
+        model: CLAUDE_MODEL,
+        max_tokens: 1024,
+        system: systemPrompt,
+        // Disable tools on the retry so we are guaranteed a text answer.
+        messages,
+      });
+      reply = followUp.content
+        .filter((b): b is Anthropic.TextBlock => b.type === "text")
+        .map((b) => b.text)
+        .join("\n")
+        .trim();
+    } catch (err) {
+      console.error("[WhatsApp Agent] Follow-up text request failed", err);
+    }
+  }
+
+  if (!reply) {
+    reply =
+      "Sorry — I couldn't finish that request. Please try again or rephrase it.";
+  }
+
+  // 5. Save agent reply to conversation history (skip generic fallbacks so
+  // they don't pollute future context and condition the model into repeating
+  // them).
+  const isGenericFallback =
+    /^(done!?\s*$|sorry — i couldn't finish that request)/i.test(reply);
+  if (!isGenericFallback) {
+    await saveConversationMessage(cleanPhone, "assistant", reply);
+  }
 
   return reply;
 }
