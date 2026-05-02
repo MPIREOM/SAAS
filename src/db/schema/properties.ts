@@ -93,6 +93,10 @@ export const units = pgTable(
     sizeSqm: numeric("size_sqm"),
     rentAmount: numeric("rent_amount").notNull(),
     status: unitStatusEnum("status").notNull().default("vacant"),
+    // Per-unit commission override. When NULL, the property-level
+    // settings on `properties` apply.
+    commissionType: commissionTypeEnum("commission_type"),
+    commissionRate: numeric("commission_rate"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .default(sql`now()`),

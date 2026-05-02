@@ -66,27 +66,44 @@ export async function getOwnerBalance(
   const openingDate = (owner.opening_balance_date as string) || "1970-01-01";
 
   // 3. Payments (rent collected) for the owner's properties.
-  // Need to walk: payments → leases → units → property_id.
-  // Easiest in two hops: (a) all leases under our properties, then
-  //   (b) all payments on those leases within the date window.
+  // Walk: payments → leases → units → property_id, plus pull the
+  // unit-level commission override (e.g. one Bareeq Alshatti unit pays
+  // 9% while the other is exempt) so we can resolve per-payment.
   // Skip the rent walk entirely when the owner has no properties yet — the
   // owner-level balance still works for opening balance + owner-level
   // expenses + business fees + settlements.
-  const leasePropertyMap = new Map<string, string>();
+  const leaseUnitMap = new Map<string, string>(); // lease_id → unit_id
+  const leasePropertyMap = new Map<string, string>(); // lease_id → property_id
+  const unitCommissionMap = new Map<
+    string,
+    { type: string; rate: number } | null
+  >(); // unit_id → override (or null when no override)
   if (propertyIds.length > 0) {
     const ownerUnitsRes = await supabase
       .from("units")
-      .select("id")
+      .select("id, commission_type, commission_rate")
       .in("property_id", propertyIds);
     const ownerUnitIds = (ownerUnitsRes.data || []).map((u) => u.id as string);
+    for (const u of ownerUnitsRes.data || []) {
+      // Only stash a non-null override; NULL means "inherit property".
+      if (u.commission_type) {
+        unitCommissionMap.set(u.id as string, {
+          type: u.commission_type as string,
+          rate: Number(u.commission_rate || 0),
+        });
+      }
+    }
     if (ownerUnitIds.length > 0) {
       const { data: leases } = await supabase
         .from("leases")
-        .select("id, units(id, property_id)")
+        .select("id, unit_id, units(id, property_id)")
         .in("unit_id", ownerUnitIds);
       for (const l of leases || []) {
         const u = pickJoined(l.units);
-        if (u) leasePropertyMap.set(l.id as string, u.property_id as string);
+        if (u) {
+          leasePropertyMap.set(l.id as string, u.property_id as string);
+          leaseUnitMap.set(l.id as string, u.id as string);
+        }
       }
     }
   }
@@ -107,8 +124,13 @@ export async function getOwnerBalance(
     for (const p of payments || []) {
       const amount = Number(p.amount || 0);
       const method = (p.method as string) || "cash";
+      const unitId = leaseUnitMap.get(p.lease_id as string);
       const propId = leasePropertyMap.get(p.lease_id as string);
-      const config = propId ? commissionByProperty.get(propId) : undefined;
+      // Unit-level override takes precedence; otherwise fall back to
+      // the property-level commission setting.
+      const unitOverride = unitId ? unitCommissionMap.get(unitId) : undefined;
+      const config =
+        unitOverride ?? (propId ? commissionByProperty.get(propId) : undefined);
 
       // Cash & bank transfer hit our account → we owe owner.
       // Cheques go direct to owner → no balance change for the rent itself.
@@ -118,13 +140,13 @@ export async function getOwnerBalance(
         rentDirectCheque += amount;
       }
 
-      // Commission applies to all rent for properties with type=percentage,
-      // INCLUDING cheques (per the owner's rule: 9% is owed regardless of
-      // payment channel for those properties).
+      // Commission applies to all rent for properties/units with
+      // type=percentage, INCLUDING cheques (per the owner's rule:
+      // 9% is owed regardless of payment channel for those units).
       if (config && config.type === "percentage" && config.rate > 0) {
         commissionEarned += amount * (config.rate / 100);
       }
-      // For "included_in_business_fee" properties: no per-payment commission;
+      // For "included_in_business_fee" units: no per-payment commission;
       // the flat owner_business_fees row covers it.
       // For "none": no commission ever.
     }
