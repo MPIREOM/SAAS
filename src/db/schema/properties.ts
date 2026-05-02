@@ -13,6 +13,7 @@ import {
 import { users } from "./users";
 import { leases } from "./tenants";
 import { maintenanceRequests } from "./maintenance";
+import { owners, commissionTypeEnum } from "./owners";
 
 // ── Enums ──────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,11 @@ export const properties = pgTable("properties", {
   propertyType: text("property_type"),
   isArchived: boolean("is_archived").notNull().default(false),
   notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
+  ownerId: uuid("owner_id").references(() => owners.id, {
+    onDelete: "set null",
+  }),
+  commissionType: commissionTypeEnum("commission_type").notNull().default("none"),
+  commissionRate: numeric("commission_rate").notNull().default("0"),
   createdBy: uuid("created_by").references(() => users.id, {
     onDelete: "set null",
   }),
@@ -61,6 +67,10 @@ export const propertiesRelations = relations(properties, ({ one, many }) => ({
   createdByUser: one(users, {
     fields: [properties.createdBy],
     references: [users.id],
+  }),
+  owner: one(owners, {
+    fields: [properties.ownerId],
+    references: [owners.id],
   }),
   units: many(units),
 }));
@@ -83,6 +93,10 @@ export const units = pgTable(
     sizeSqm: numeric("size_sqm"),
     rentAmount: numeric("rent_amount").notNull(),
     status: unitStatusEnum("status").notNull().default("vacant"),
+    // Per-unit commission override. When NULL, the property-level
+    // settings on `properties` apply.
+    commissionType: commissionTypeEnum("commission_type"),
+    commissionRate: numeric("commission_rate"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .default(sql`now()`),

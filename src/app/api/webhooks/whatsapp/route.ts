@@ -3,6 +3,10 @@ import crypto from "crypto";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { processWhatsAppMessage } from "@/lib/whatsapp/agent";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp/client";
+import {
+  downloadWhatsAppMedia,
+  extensionForMime,
+} from "@/lib/whatsapp/media";
 
 // Verify Meta webhook signature (X-Hub-Signature-256 header)
 function verifySignature(body: string, signature: string | null): boolean {
@@ -17,6 +21,60 @@ function verifySignature(body: string, signature: string | null): boolean {
     Buffer.from(signature),
     Buffer.from(expectedSig)
   );
+}
+
+// Download an inbound image, drop it into the expense-receipts bucket
+// under a temp path, and create a pending_receipt_attachments row keyed
+// by a short token. The token is then handed to the agent in the user's
+// message text so it can be passed to add_expense.
+async function stashIncomingReceipt(
+  mediaId: string,
+  userPhone: string,
+): Promise<string | null> {
+  const supabase = createSupabaseAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+  const media = await downloadWhatsAppMedia(mediaId);
+  if (!media) return null;
+
+  const token = crypto.randomBytes(8).toString("hex");
+  const ext = extensionForMime(media.mimeType);
+  const tempPath = `pending/${userPhone}/${Date.now()}-${token}.${ext}`;
+
+  const { error: uploadErr } = await supabase.storage
+    .from("expense-receipts")
+    .upload(tempPath, new Uint8Array(media.bytes), {
+      contentType: media.mimeType,
+      upsert: false,
+    });
+  if (uploadErr) {
+    console.error("[WhatsApp Webhook] Receipt upload failed:", uploadErr.message);
+    return null;
+  }
+
+  const { error: insertErr } = await supabase
+    .from("pending_receipt_attachments")
+    .insert({
+      token,
+      user_phone: userPhone,
+      storage_path: tempPath,
+      mime_type: media.mimeType,
+      file_size: media.fileSize,
+      whatsapp_media_id: mediaId,
+    });
+  if (insertErr) {
+    console.error(
+      "[WhatsApp Webhook] Receipt row insert failed:",
+      insertErr.message,
+    );
+    // Clean up the orphaned object so we don't leak storage.
+    await supabase.storage.from("expense-receipts").remove([tempPath]);
+    return null;
+  }
+
+  return token;
 }
 
 // Deduplicate messages using a database table to persist across serverless invocations
@@ -82,17 +140,15 @@ export async function POST(request: NextRequest) {
     for (const change of changes) {
       const value = change.value;
 
-      // Handle incoming messages
+      // Handle incoming messages — text and image (image is treated as a
+      // receipt photo for an expense the user is about to describe).
       const messages = value?.messages || [];
       for (const msg of messages) {
-        // Only process text messages
-        if (msg.type !== "text") continue;
+        if (msg.type !== "text" && msg.type !== "image") continue;
 
         const messageId = msg.id;
         const senderPhone = msg.from;
-        const messageText = msg.text?.body;
-
-        if (!messageText || !messageId) continue;
+        if (!messageId) continue;
 
         // Deduplicate — skip if we've already processed this message
         const alreadyProcessed = await isMessageProcessed(messageId);
@@ -101,7 +157,44 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        console.log("[WhatsApp Webhook] Processing message:", messageText, "from:", senderPhone, "id:", messageId);
+        // Build the text we hand to the agent. For an image, we either use
+        // its caption verbatim or a stub like "[image attached]" so the
+        // assistant has SOMETHING to react to. The pending-receipt token is
+        // appended on its own line so the system prompt's regex hint can
+        // pick it out.
+        let messageText: string | null = null;
+        let pendingToken: string | null = null;
+
+        if (msg.type === "text") {
+          messageText = msg.text?.body || null;
+        } else if (msg.type === "image") {
+          const mediaId = msg.image?.id as string | undefined;
+          const caption = (msg.image?.caption as string | undefined) || "";
+
+          if (mediaId) {
+            try {
+              pendingToken = await stashIncomingReceipt(mediaId, senderPhone);
+            } catch (err) {
+              console.error("[WhatsApp Webhook] Receipt stash failed:", err);
+            }
+          }
+
+          messageText = caption || "[image attached]";
+          if (pendingToken) {
+            messageText += `\n\nPENDING_RECEIPT_TOKEN: ${pendingToken}`;
+          }
+        }
+
+        if (!messageText) continue;
+
+        console.log(
+          "[WhatsApp Webhook] Processing message:",
+          messageText.substring(0, 200),
+          "from:",
+          senderPhone,
+          "id:",
+          messageId,
+        );
 
         try {
           const reply = await processWhatsAppMessage(messageText, senderPhone);

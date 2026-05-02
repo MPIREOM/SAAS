@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CURRENCY } from "@/lib/currency";
 import { notifyAdmins, buildAdminEmailHtml } from "@/lib/notifications/admin-notify";
+import { getDefaultOwnerBalance } from "@/lib/owners/balance";
 
 export const maxDuration = 60;
 
@@ -204,6 +205,37 @@ export async function runAdminSummary(
       return { status: "skipped", summary };
     }
 
+    // ── Owner ledger maintenance ──────────────────────────────────────────
+    // Before computing the balance, lazily create the current month's
+    // business-manager fee row for any owner that has at least one
+    // property using the `included_in_business_fee` arrangement. This keeps
+    // the balance calculation pure-read while ensuring the flat 1,500 OMR
+    // (or whatever the configured amount is) hits the books on the 1st of
+    // each month without manual intervention.
+    await ensureCurrentMonthBusinessFees(supabase, today);
+
+    // Prune pending receipt attachments older than 24h (the user never
+    // followed up with an expense — drop both the row and the storage object
+    // so the bucket doesn't accumulate orphans).
+    await prunePendingReceipts(supabase);
+
+    // Compute the owner running balance for the daily summary line.
+    let ownerBalanceLine: string | null = null;
+    try {
+      const ownerBalance = await getDefaultOwnerBalance(supabase);
+      if (ownerBalance) {
+        if (ownerBalance.side === "company_owes_owner") {
+          ownerBalanceLine = `💼 *Owner balance:* +${ownerBalance.balance.toFixed(2)} ${CURRENCY.code} (company owes ${ownerBalance.ownerName})`;
+        } else if (ownerBalance.side === "owner_owes_company") {
+          ownerBalanceLine = `💼 *Owner balance:* -${Math.abs(ownerBalance.balance).toFixed(2)} ${CURRENCY.code} (${ownerBalance.ownerName} owes company)`;
+        } else {
+          ownerBalanceLine = `💼 *Owner balance:* settled (${ownerBalance.ownerName})`;
+        }
+      }
+    } catch (err) {
+      console.error("[admin-summary] owner balance computation failed:", err);
+    }
+
     // Outstanding balance = billed amount minus any payments already recorded.
     // For status="pending" invoices paid_amount is typically 0, so this is a
     // no-op; for "partial" invoices it correctly excludes the paid portion.
@@ -329,6 +361,13 @@ export async function runAdminSummary(
       items: [`${openMaintenance.length} request${openMaintenance.length !== 1 ? "s" : ""} currently open or in progress`],
     });
 
+    if (ownerBalanceLine) {
+      emailSections.push({
+        heading: `💼 Owner Balance`,
+        items: [ownerBalanceLine.replace(/\*/g, "")],
+      });
+    }
+
     // Per-property overdue breakdown — rendered into the plaintext
     // WhatsApp fallback and email. Multi-line form.
     const overdueBreakdownLines = overdueByPropertySorted.map(([name, { count, total }]) =>
@@ -373,6 +412,7 @@ export async function runAdminSummary(
       `🏦 *Cheques Due:* ${chequesDue.length} (${totalCheques.toFixed(2)} ${CURRENCY.code})`,
       `🔧 *New Maintenance (24h):* ${newMaintenance.length}`,
       `📊 *Open Maintenance:* ${openMaintenance.length}`,
+      ...(ownerBalanceLine ? [ownerBalanceLine] : []),
     ];
 
     if (invoicesPending.length > 0) {
@@ -454,6 +494,103 @@ export async function runAdminSummary(
     console.error(`[admin-summary] Unhandled error:`, error);
     await logCronRun(supabase, ADMIN_SUMMARY_CRON, "error", { trigger }, error);
     return { status: "error", summary: { trigger }, error };
+  }
+}
+
+// For every active owner that has at least one property using the
+// `included_in_business_fee` arrangement, ensure a row exists for the
+// current calendar month. Idempotent thanks to the unique constraint on
+// (owner_id, period_month). Default amount comes from the most recent
+// existing fee row for that owner, falling back to 1500 OMR.
+async function ensureCurrentMonthBusinessFees(
+  supabase: SupabaseClient,
+  todayMuscat: string,
+): Promise<void> {
+  try {
+    const periodMonth = `${todayMuscat.slice(0, 7)}-01`; // YYYY-MM-01
+
+    const { data: owners } = await supabase
+      .from("owners")
+      .select("id")
+      .eq("is_active", true);
+    if (!owners || owners.length === 0) return;
+
+    for (const owner of owners) {
+      const ownerId = owner.id as string;
+
+      // Skip owners that have no `included_in_business_fee` properties —
+      // the flat fee only applies to arrangements that bundle multiple
+      // properties under it.
+      const { data: includedProps } = await supabase
+        .from("properties")
+        .select("id")
+        .eq("owner_id", ownerId)
+        .eq("commission_type", "included_in_business_fee")
+        .limit(1);
+      if (!includedProps || includedProps.length === 0) continue;
+
+      // Pick the most recent fee row to inherit the amount. Falls back to
+      // 1500 if no prior row exists.
+      const { data: lastFee } = await supabase
+        .from("owner_business_fees")
+        .select("amount")
+        .eq("owner_id", ownerId)
+        .order("period_month", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const amount = lastFee ? Number(lastFee.amount) : 1500;
+
+      const { error: insertErr } = await supabase
+        .from("owner_business_fees")
+        .insert({
+          owner_id: ownerId,
+          period_month: periodMonth,
+          amount,
+          notes: `Auto-created by admin-summary cron on ${todayMuscat}`,
+        });
+      // Unique violation = already exists for this month, which is fine.
+      if (insertErr && insertErr.code !== "23505") {
+        console.error(
+          `[admin-summary] business fee insert failed for owner ${ownerId}:`,
+          insertErr.message,
+        );
+      }
+    }
+  } catch (err) {
+    console.error("[admin-summary] ensureCurrentMonthBusinessFees failed:", err);
+  }
+}
+
+// Drop pending receipts older than 24h: the user uploaded a photo but
+// never told the agent what expense it belongs to. Keeping them around
+// would confuse later expense logs that pick up a stale token.
+async function prunePendingReceipts(supabase: SupabaseClient): Promise<void> {
+  try {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: stale } = await supabase
+      .from("pending_receipt_attachments")
+      .select("id, storage_path")
+      .lt("created_at", cutoff);
+    if (!stale || stale.length === 0) return;
+
+    const paths = stale
+      .map((s: Record<string, unknown>) => s.storage_path as string)
+      .filter(Boolean);
+    if (paths.length > 0) {
+      await supabase.storage.from("expense-receipts").remove(paths);
+    }
+    await supabase
+      .from("pending_receipt_attachments")
+      .delete()
+      .in(
+        "id",
+        stale.map((s: Record<string, unknown>) => s.id),
+      );
+    console.log(
+      `[admin-summary] Pruned ${stale.length} stale pending receipts`,
+    );
+  } catch (err) {
+    console.error("[admin-summary] prunePendingReceipts failed:", err);
   }
 }
 
