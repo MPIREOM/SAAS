@@ -2,30 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
 
-// One-shot import endpoint for migrating historical owner expenses out
-// of the user's Excel sheet into the `expenses` table. Guarded by
-// CRON_SECRET so only the operator can call it.
+// One-shot import endpoint for migrating historical expenses out of the
+// operator's Excel sheet (`weekly expenses report DATA.xlsx`) into the
+// `expenses` table. Guarded by CRON_SECRET so only the operator can run
+// it.
+//
+// The actual sheet has no property dimension — every row is owner-level —
+// so by default rows are imported with owner_id set and property_id null.
+// Pass property_name in the sheet (or the column doesn't exist at all)
+// and we'll attempt to resolve it; otherwise we attribute to the owner.
+//
+// The sheet's "Category" column doubles as a ledger-event marker for
+// rows like `business manager fee`, `Commission fee`, `paid by owner to
+// MPIRE`, and `pending amount to MPIRE`. Those rows are skipped here —
+// the new system handles fees / commissions / settlements / balances
+// natively, and re-importing them would double-count.
 //
 // Usage:
 //   curl -X POST https://<host>/api/admin/import-owner-expenses \
 //     -H "Authorization: Bearer $CRON_SECRET" \
 //     -F "file=@expenses.xlsx" \
 //     -F "owner_id=<uuid>"            # optional if only one owner exists
-//     -F "default_category=other"     # optional fallback category
+//     -F "default_category=other"     # fallback category for rows with no
+//                                      # mapping
+//     -F "since=2026-05-01"           # optional: only import rows on/after
+//                                      # this date
 //     -F "dry_run=true"               # preview without inserting
-//
-// Expected Excel columns (case-insensitive, trimmed; aliases accepted):
-//   - date / expense_date / تاريخ              → expense_date (YYYY-MM-DD)
-//   - property / property_name / عقار          → property name (matched ilike)
-//   - description / desc / item / وصف          → description text
-//   - amount / cost / value / المبلغ           → numeric amount in OMR
-//   - category / cat / فئة (optional)          → expense_category enum value
-//   - vendor / supplier / مورد (optional)      → vendor name
-//   - unit / unit_number (optional)            → unit number within property
 
 export const maxDuration = 60;
 
+// Maps both English and the operator's actual sheet wording to our enum.
 const CATEGORY_ALIASES: Record<string, string> = {
+  // Generic English
   maintenance: "maintenance",
   maint: "maintenance",
   repair: "maintenance",
@@ -43,7 +51,27 @@ const CATEGORY_ALIASES: Record<string, string> = {
   fee: "management_fees",
   other: "other",
   misc: "other",
+  // Specific to the operator's existing sheet
+  "repair & maintnance": "maintenance",
+  "repair & maintenance": "maintenance",
+  "general expenses": "other",
+  "private expenses": "other",
+  salary: "other",
+  "municipality fee": "taxes",
+  "garbage disposal": "cleaning",
 };
+
+// Categories that are NOT real expenses — these map to other tables in
+// the new system (or are pure ledger snapshots) and must NOT be imported
+// as expense rows or the running balance will double-count.
+const SKIP_CATEGORIES = new Set([
+  "business manager fee",
+  "personal management fee",
+  "commission fee",
+  "rental commission",
+  "paid by owner to mpire",
+  "pending amount to mpire",
+]);
 
 const COLUMN_ALIASES: Record<string, string[]> = {
   expense_date: ["date", "expense_date", "expensedate", "تاريخ"],
@@ -81,6 +109,7 @@ export async function POST(request: NextRequest) {
   const defaultCategory =
     ((formData.get("default_category") as string | null) || "other").toLowerCase();
   const dryRun = (formData.get("dry_run") as string | null) === "true";
+  const since = (formData.get("since") as string | null) || null;
 
   const supabase = createSupabaseAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -109,26 +138,21 @@ export async function POST(request: NextRequest) {
     ownerId = owners[0].id as string;
   }
 
-  // Pull the owner's properties so we can match by name.
+  // Pull the owner's properties for optional name-matching. Doesn't error
+  // when there are zero — owner-level imports are the common case.
   const { data: properties } = await supabase
     .from("properties")
     .select("id, name")
     .eq("owner_id", ownerId);
-  if (!properties || properties.length === 0) {
-    return NextResponse.json(
-      { error: `Owner ${ownerId} has no properties — assign properties first` },
-      { status: 400 },
-    );
-  }
   const propertyByLowerName = new Map<string, string>(
-    properties.map((p) => [(p.name as string).trim().toLowerCase(), p.id as string]),
+    (properties || []).map((p) => [
+      (p.name as string).trim().toLowerCase(),
+      p.id as string,
+    ]),
   );
   const propertyByContains = (name: string): string | null => {
     const target = name.trim().toLowerCase();
     if (propertyByLowerName.has(target)) return propertyByLowerName.get(target)!;
-    // Fuzzy: prefix or substring match — pick the shortest matching name to
-    // avoid grabbing an over-broad property (e.g. "Tower" matching "Tower A"
-    // and "Tower B" both — picks the more-specific one).
     let best: { id: string; len: number } | null = null;
     for (const [lower, id] of propertyByLowerName) {
       if (lower.includes(target) || target.includes(lower)) {
@@ -156,14 +180,15 @@ export async function POST(request: NextRequest) {
 
   // Build column → canonical map from the first row's keys.
   const headerKeys = Object.keys(rawRows[0]);
-  const headerMap = new Map<string, string>(); // canonical → actual header
+  const headerMap = new Map<string, string>();
   for (const [canonical, aliases] of Object.entries(COLUMN_ALIASES)) {
     const match = headerKeys.find((h) =>
       aliases.includes(h.trim().toLowerCase()),
     );
     if (match) headerMap.set(canonical, match);
   }
-  for (const required of ["expense_date", "property_name", "amount"]) {
+  // Only date and amount are strictly required now — property is optional.
+  for (const required of ["expense_date", "amount"]) {
     if (!headerMap.has(required)) {
       return NextResponse.json(
         {
@@ -185,8 +210,10 @@ export async function POST(request: NextRequest) {
     const rowNum = i + 2; // +1 for header, +1 for 1-indexing
 
     const dateRaw = row[headerMap.get("expense_date")!];
-    const propertyRaw = row[headerMap.get("property_name")!];
     const amountRaw = row[headerMap.get("amount")!];
+    const propertyRaw = headerMap.get("property_name")
+      ? row[headerMap.get("property_name")!]
+      : null;
     const descRaw = headerMap.get("description")
       ? row[headerMap.get("description")!]
       : null;
@@ -196,12 +223,39 @@ export async function POST(request: NextRequest) {
     const vendorRaw = headerMap.get("vendor") ? row[headerMap.get("vendor")!] : null;
 
     // Skip blank-ish rows silently.
-    if (!dateRaw && !propertyRaw && !amountRaw) continue;
+    if (!dateRaw && !amountRaw && !descRaw) continue;
+
+    // Skip ledger-event categories (commissions / fees / settlements /
+    // balance snapshots).
+    const categoryLower = String(categoryRaw || "").trim().toLowerCase();
+    if (
+      [...SKIP_CATEGORIES].some(
+        (s) => categoryLower === s || categoryLower.includes(s),
+      )
+    ) {
+      results.push({
+        row: rowNum,
+        status: "skipped",
+        reason: `Ledger event '${categoryRaw}' — handled natively, not imported`,
+      });
+      skipped++;
+      continue;
+    }
 
     const expenseDate = normalizeDate(dateRaw);
     if (!expenseDate) {
       results.push({ row: rowNum, status: "failed", reason: "Invalid date" });
       failed++;
+      continue;
+    }
+
+    if (since && expenseDate < since) {
+      results.push({
+        row: rowNum,
+        status: "skipped",
+        reason: `Before since=${since}`,
+      });
+      skipped++;
       continue;
     }
 
@@ -212,26 +266,26 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    const propertyName = String(propertyRaw || "").trim();
-    if (!propertyName) {
-      results.push({ row: rowNum, status: "failed", reason: "Missing property" });
-      failed++;
-      continue;
-    }
-    const propertyId = propertyByContains(propertyName);
-    if (!propertyId) {
-      results.push({
-        row: rowNum,
-        status: "skipped",
-        reason: `Property '${propertyName}' not found`,
-      });
-      skipped++;
-      continue;
+    // Property is optional — when absent, attribute to the owner.
+    let propertyId: string | null = null;
+    if (propertyRaw) {
+      const propertyName = String(propertyRaw).trim();
+      if (propertyName) {
+        propertyId = propertyByContains(propertyName);
+        if (!propertyId) {
+          // Fall through to owner-level rather than failing the row.
+          results.push({
+            row: rowNum,
+            status: "skipped",
+            reason: `Property '${propertyName}' not found — falling back to owner-level`,
+          });
+          // Don't increment skipped — we'll still insert; this is just a
+          // diagnostic note.
+        }
+      }
     }
 
-    const categoryStr = String(categoryRaw || defaultCategory)
-      .trim()
-      .toLowerCase();
+    const categoryStr = String(categoryRaw || defaultCategory).trim().toLowerCase();
     const category = CATEGORY_ALIASES[categoryStr] || defaultCategory;
 
     if (dryRun) {
@@ -240,16 +294,19 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    const { data: inserted_row, error } = await supabase
+    const payload: Record<string, unknown> = {
+      owner_id: ownerId,
+      category,
+      amount,
+      expense_date: expenseDate,
+      description: descRaw ? String(descRaw).trim() : null,
+      vendor: vendorRaw ? String(vendorRaw).trim() : null,
+    };
+    if (propertyId) payload.property_id = propertyId;
+
+    const { data: insertedRow, error } = await supabase
       .from("expenses")
-      .insert({
-        property_id: propertyId,
-        category,
-        amount,
-        expense_date: expenseDate,
-        description: descRaw ? String(descRaw).trim() : null,
-        vendor: vendorRaw ? String(vendorRaw).trim() : null,
-      })
+      .insert(payload)
       .select("id")
       .single();
 
@@ -260,7 +317,7 @@ export async function POST(request: NextRequest) {
       results.push({
         row: rowNum,
         status: "inserted",
-        expense_id: inserted_row?.id as string,
+        expense_id: insertedRow?.id as string,
       });
       inserted++;
     }
@@ -273,7 +330,7 @@ export async function POST(request: NextRequest) {
     skipped,
     failed,
     dry_run: dryRun,
-    // Cap the per-row report so the response stays small for big sheets.
+    since: since || null,
     results: results.slice(0, 200),
     truncated: results.length > 200,
   });
@@ -287,9 +344,7 @@ function normalizeDate(raw: unknown): string | null {
     return raw.toISOString().split("T")[0];
   }
   const s = String(raw).trim();
-  // Already ISO-ish: 2026-04-15
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  // DD/MM/YYYY or DD-MM-YYYY
   const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (m) {
     const [, d, mo, y] = m;
@@ -297,7 +352,6 @@ function normalizeDate(raw: unknown): string | null {
     const dt = new Date(Date.UTC(year, Number(mo) - 1, Number(d)));
     if (!isNaN(dt.getTime())) return dt.toISOString().split("T")[0];
   }
-  // Fallback: let Date parse it.
   const dt = new Date(s);
   if (!isNaN(dt.getTime())) return dt.toISOString().split("T")[0];
   return null;

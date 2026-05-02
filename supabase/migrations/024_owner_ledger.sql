@@ -60,6 +60,50 @@ ALTER TABLE properties
 CREATE INDEX idx_properties_owner ON properties(owner_id);
 
 -- ============================================
+-- EXPENSES — make owner-level expenses possible
+-- ============================================
+-- The original expenses table required property_id, but in practice the
+-- operator records expenses at the owner level (across the portfolio)
+-- rather than allocating to a specific building. Drop NOT NULL on
+-- property_id, add an owner_id, and require at least one of the two
+-- via a CHECK constraint so we never end up with orphaned expenses.
+
+ALTER TABLE expenses
+  ALTER COLUMN property_id DROP NOT NULL,
+  ADD COLUMN owner_id UUID REFERENCES owners(id) ON DELETE SET NULL,
+  ADD CONSTRAINT expenses_owner_or_property CHECK (
+    property_id IS NOT NULL OR owner_id IS NOT NULL
+  );
+
+CREATE INDEX idx_expenses_owner ON expenses(owner_id);
+
+-- Existing RLS on expenses uses has_property_access(property_id) which
+-- short-circuits to TRUE for super_admin and otherwise checks the
+-- assignment table. With property_id now nullable we need to also allow
+-- access when the row is owner-level. Replace the SELECT/INSERT/UPDATE
+-- policies so they accept either dimension.
+
+DROP POLICY IF EXISTS "expenses_select" ON expenses;
+CREATE POLICY "expenses_select" ON expenses FOR SELECT USING (
+  (property_id IS NOT NULL AND has_property_access(property_id))
+  OR (owner_id IS NOT NULL AND auth.uid() IS NOT NULL)
+);
+
+DROP POLICY IF EXISTS "expenses_insert" ON expenses;
+CREATE POLICY "expenses_insert" ON expenses FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL AND (
+    (property_id IS NOT NULL AND has_property_access(property_id))
+    OR owner_id IS NOT NULL
+  )
+);
+
+DROP POLICY IF EXISTS "expenses_update" ON expenses;
+CREATE POLICY "expenses_update" ON expenses FOR UPDATE USING (
+  (property_id IS NOT NULL AND has_property_access(property_id))
+  OR (owner_id IS NOT NULL AND auth.uid() IS NOT NULL)
+);
+
+-- ============================================
 -- BUSINESS-MANAGER FEE — flat monthly charge per owner
 -- ============================================
 

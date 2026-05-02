@@ -261,13 +261,19 @@ const tools: Anthropic.Tool[] = [
   {
     name: "add_expense",
     description:
-      "Add a new expense record to a property. For tracking costs like maintenance, utilities, insurance, etc.",
+      "Add a new expense. Most expenses for this owner are portfolio-wide (no specific property) — when the user just says 'add expense 50 OMR for X' without naming a building, omit property_id and the system attaches it to the owner. Pass property_id ONLY if the user explicitly tied the expense to a specific property.",
     input_schema: {
       type: "object" as const,
       properties: {
         property_id: {
           type: "string",
-          description: "The property UUID",
+          description:
+            "Optional: the property UUID. Omit when the expense isn't tied to a specific building.",
+        },
+        owner_id: {
+          type: "string",
+          description:
+            "Optional: the owner UUID. Omit when only one owner exists — the system resolves it automatically.",
         },
         unit_id: {
           type: "string",
@@ -309,7 +315,7 @@ const tools: Anthropic.Tool[] = [
             "Optional: a receipt-attachment token from a prior image message in this conversation. The system surfaces these as 'PENDING_RECEIPT_TOKEN: <token>' in the user's message. Pass it here to attach the receipt photo to the new expense. If no such token was surfaced, omit this field.",
         },
       },
-      required: ["property_id", "category", "amount"],
+      required: ["category", "amount"],
     },
   },
   {
@@ -1149,14 +1155,57 @@ async function executeTool(
         (input.expense_date as string) ||
         new Date().toISOString().split("T")[0];
 
+      // Resolve owner: most expenses for the operator's portfolio are
+      // owner-level (no property dimension). If the agent didn't pass a
+      // property_id AND there's exactly one active owner, fall back to
+      // attaching the expense to that owner. If the agent did pass a
+      // property_id, we still try to resolve the owner from the property
+      // so the expense shows up in the owner's ledger.
+      const resolvedPropertyId = (input.property_id as string | undefined) || null;
+      let resolvedOwnerId = (input.owner_id as string | undefined) || null;
+
+      if (!resolvedPropertyId && !resolvedOwnerId) {
+        const { data: owners } = await supabase
+          .from("owners")
+          .select("id")
+          .eq("is_active", true)
+          .limit(2);
+        if (!owners || owners.length === 0) {
+          return JSON.stringify({
+            error:
+              "No active owner is configured. Either create an owner first or pass property_id.",
+          });
+        }
+        if (owners.length > 1) {
+          return JSON.stringify({
+            error:
+              "Multiple owners exist — pass either owner_id or property_id so we know which ledger to charge.",
+          });
+        }
+        resolvedOwnerId = owners[0].id as string;
+      }
+
+      // When a property_id IS provided, also attach owner_id (if we can
+      // resolve it) so the expense flows into the right balance without an
+      // extra hop at read time.
+      if (resolvedPropertyId && !resolvedOwnerId) {
+        const { data: prop } = await supabase
+          .from("properties")
+          .select("owner_id")
+          .eq("id", resolvedPropertyId)
+          .maybeSingle();
+        if (prop?.owner_id) resolvedOwnerId = prop.owner_id as string;
+      }
+
       const payload: Record<string, unknown> = {
-        property_id: input.property_id,
         category: input.category,
         amount: input.amount,
         expense_date: expenseDate,
         created_by: userId,
       };
 
+      if (resolvedPropertyId) payload.property_id = resolvedPropertyId;
+      if (resolvedOwnerId) payload.owner_id = resolvedOwnerId;
       if (input.unit_id) payload.unit_id = input.unit_id;
       if (input.description) payload.description = input.description;
       if (input.vendor) payload.vendor = input.vendor;

@@ -60,29 +60,6 @@ export async function getOwnerBalance(
     });
   }
 
-  if (propertyIds.length === 0) {
-    // Owner exists but has no properties — return opening balance only.
-    const opening = Number(owner.opening_balance || 0);
-    return {
-      ownerId: owner.id as string,
-      ownerName: owner.name as string,
-      asOf,
-      balance: opening,
-      side: signedSide(opening),
-      breakdown: {
-        openingBalance: opening,
-        rentReceivedToCompany: 0,
-        rentReceivedDirectByCheque: 0,
-        commissionEarned: 0,
-        businessManagerFees: 0,
-        expensesCoveredByCompany: 0,
-        settlementsPaidToOwner: 0,
-        settlementsReceivedFromOwner: 0,
-        balance: opening,
-      },
-    };
-  }
-
   // Cutoff for what counts toward this snapshot. Opening balance has its own
   // date so we don't double-count anything that already preceded it — we only
   // sum activity strictly AFTER opening_balance_date.
@@ -92,22 +69,26 @@ export async function getOwnerBalance(
   // Need to walk: payments → leases → units → property_id.
   // Easiest in two hops: (a) all leases under our properties, then
   //   (b) all payments on those leases within the date window.
-  const { data: leases } = await supabase
-    .from("leases")
-    .select("id, units(id, property_id)")
-    .in(
-      "unit_id",
-      (
-        await supabase
-          .from("units")
-          .select("id")
-          .in("property_id", propertyIds)
-      ).data?.map((u) => u.id as string) || [],
-    );
+  // Skip the rent walk entirely when the owner has no properties yet — the
+  // owner-level balance still works for opening balance + owner-level
+  // expenses + business fees + settlements.
   const leasePropertyMap = new Map<string, string>();
-  for (const l of leases || []) {
-    const u = pickJoined(l.units);
-    if (u) leasePropertyMap.set(l.id as string, u.property_id as string);
+  if (propertyIds.length > 0) {
+    const ownerUnitsRes = await supabase
+      .from("units")
+      .select("id")
+      .in("property_id", propertyIds);
+    const ownerUnitIds = (ownerUnitsRes.data || []).map((u) => u.id as string);
+    if (ownerUnitIds.length > 0) {
+      const { data: leases } = await supabase
+        .from("leases")
+        .select("id, units(id, property_id)")
+        .in("unit_id", ownerUnitIds);
+      for (const l of leases || []) {
+        const u = pickJoined(l.units);
+        if (u) leasePropertyMap.set(l.id as string, u.property_id as string);
+      }
+    }
   }
   const leaseIds = Array.from(leasePropertyMap.keys());
 
@@ -161,15 +142,40 @@ export async function getOwnerBalance(
     0,
   );
 
-  // 5. Expenses on the owner's properties (assumed paid by company).
-  const { data: expenses } = await supabase
-    .from("expenses")
-    .select("amount, expense_date")
-    .in("property_id", propertyIds)
-    .gt("expense_date", openingDate)
-    .lte("expense_date", asOf);
-  const expensesPaid = (expenses || []).reduce(
-    (s, e) => s + Number(e.amount || 0),
+  // 5. Expenses paid by the company. Two flavours:
+  //   (a) tied to a specific property the owner owns
+  //   (b) owner-level expenses (no property — most of this owner's actual
+  //       bookkeeping looks like this since costs aren't allocated per
+  //       building). These are matched directly via expenses.owner_id.
+  // We do two queries and OR the results in JS rather than relying on
+  // PostgREST's `or=` filter, which is awkward when one side is `in()`.
+  const [propertyScopedRes, ownerScopedRes] = await Promise.all([
+    propertyIds.length > 0
+      ? supabase
+          .from("expenses")
+          .select("id, amount, expense_date")
+          .in("property_id", propertyIds)
+          .gt("expense_date", openingDate)
+          .lte("expense_date", asOf)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("expenses")
+      .select("id, amount, expense_date")
+      .eq("owner_id", ownerId)
+      .gt("expense_date", openingDate)
+      .lte("expense_date", asOf),
+  ]);
+  // Dedup by id in case a row matches both predicates (unlikely — a row
+  // is normally either property-scoped OR owner-scoped — but defensive).
+  const expenseMap = new Map<string, number>();
+  for (const e of propertyScopedRes.data || []) {
+    expenseMap.set(e.id as string, Number(e.amount || 0));
+  }
+  for (const e of ownerScopedRes.data || []) {
+    expenseMap.set(e.id as string, Number(e.amount || 0));
+  }
+  const expensesPaid = Array.from(expenseMap.values()).reduce(
+    (s, n) => s + n,
     0,
   );
 
