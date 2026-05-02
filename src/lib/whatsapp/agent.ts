@@ -1827,6 +1827,7 @@ BEHAVIOR RULES:
 - When adding expenses, search for the property first, then pick the best category from context.
 - Be concise — this is WhatsApp. Use short confirmations with key details.
 - Use bullet points and line breaks for readability.
+- FORMATTING — WhatsApp uses SINGLE asterisks for bold (e.g. *Tenant:* Ammar). NEVER use double asterisks (**Tenant:**) — WhatsApp renders them as literal stars. Use single * for bold and _ for italic. No Markdown headings (#).
 - Include amounts with "OMR" suffix.
 - When updating rent, search for the tenant first, get their lease ID, then use update_lease_rent.
 - When cancelling an invoice, search for the tenant and their invoices first, then cancel the right one.
@@ -1987,6 +1988,12 @@ BEHAVIOR RULES:
     reply =
       "Sorry — I couldn't finish that request. Please try again or rephrase it.";
   }
+
+  // Convert any leftover Markdown-style bold (**text**) to WhatsApp's
+  // single-asterisk bold so the user doesn't see literal stars around
+  // labels. The system prompt forbids ** but defends against the model
+  // slipping back into Markdown habits.
+  reply = reply.replace(/\*\*([^*\n]+?)\*\*/g, "*$1*");
 
   // 5. Save agent reply to conversation history (skip generic fallbacks so
   // they don't pollute future context and condition the model into repeating
