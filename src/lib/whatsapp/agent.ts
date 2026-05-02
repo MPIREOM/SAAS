@@ -15,7 +15,10 @@ function getAdminSupabase() {
   );
 }
 
-// Retry wrapper for Claude API calls with exponential backoff
+// Retry wrapper for Claude API calls with exponential backoff. Retries on
+// 429 (rate limit) and 5xx (overloaded / transient server error). Logs the
+// underlying status + body on failure so production issues surface in logs
+// instead of producing an opaque "something went wrong" reply.
 async function callClaude(
   params: Anthropic.MessageCreateParamsNonStreaming
 ): Promise<Anthropic.Message> {
@@ -23,17 +26,29 @@ async function callClaude(
     try {
       return await anthropic.messages.create(params);
     } catch (error: unknown) {
-      const isRateLimit =
-        error instanceof Error &&
-        (error.message.includes("429") || error.message.includes("rate_limit"));
-      if (isRateLimit && attempt < MAX_RETRIES - 1) {
+      const status =
+        error instanceof Anthropic.APIError ? error.status : undefined;
+      const isRateLimit = status === 429;
+      const isTransientServerError =
+        typeof status === "number" && status >= 500 && status < 600;
+      const shouldRetry =
+        (isRateLimit || isTransientServerError) && attempt < MAX_RETRIES - 1;
+
+      if (shouldRetry) {
         const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
         console.log(
-          `[WhatsApp Agent] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
+          `[WhatsApp Agent] Claude API ${status} — retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
+
+      console.error("[WhatsApp Agent] Claude API call failed", {
+        status,
+        message: error instanceof Error ? error.message : String(error),
+        model: params.model,
+        message_count: params.messages.length,
+      });
       throw error;
     }
   }
@@ -1676,35 +1691,63 @@ async function executeTool(
 
 // ── Conversation history ──────────────────────────────────────────────────
 
-const MAX_HISTORY_MESSAGES = 20; // Last 20 messages (10 exchanges)
-const HISTORY_WINDOW_MINUTES = 60; // Only load messages from last hour
+const MAX_HISTORY_MESSAGES = 12; // Last 12 messages (~6 exchanges)
+const HISTORY_WINDOW_MINUTES = 30; // Only load messages from last 30 min
+
+// Skip these stale assistant replies when rebuilding context — they were
+// emitted by an older buggy fallback and condition the model into repeating
+// the same useless answer.
+const STALE_ASSISTANT_PATTERNS = [
+  /^done!?\s*$/i,
+  /^sorry — i couldn't finish that request/i,
+  /^sorry, something went wrong processing your request/i,
+];
+
+function isStaleAssistantReply(message: string): boolean {
+  return STALE_ASSISTANT_PATTERNS.some((re) => re.test(message.trim()));
+}
 
 async function loadConversationHistory(
   phone: string
 ): Promise<Anthropic.MessageParam[]> {
   const supabase = getAdminSupabase();
-  const cutoff = new Date(Date.now() - HISTORY_WINDOW_MINUTES * 60 * 1000).toISOString();
+  const cutoff = new Date(
+    Date.now() - HISTORY_WINDOW_MINUTES * 60 * 1000
+  ).toISOString();
 
+  // Order DESC + limit so we always get the *newest* messages, then reverse
+  // to chronological order before feeding to Claude. The previous ASC+limit
+  // pattern silently dropped the newest messages once the window had >20
+  // entries.
   const { data: history } = await supabase
     .from("whatsapp_conversations")
-    .select("role, message")
+    .select("role, message, created_at")
     .eq("user_phone", phone)
     .gte("created_at", cutoff)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(MAX_HISTORY_MESSAGES);
 
   if (!history || history.length === 0) return [];
 
-  // Convert to Claude message format, ensuring alternating user/assistant
+  const chronological = [...history].reverse();
+
   const messages: Anthropic.MessageParam[] = [];
-  for (const entry of history) {
+  for (const entry of chronological) {
     const role = entry.role as "user" | "assistant";
-    // Ensure messages alternate properly
+    const raw = typeof entry.message === "string" ? entry.message : "";
+    // Anthropic rejects empty content blocks and trailing whitespace on the
+    // final assistant content block, so normalise both up front.
+    const content = raw.trim();
+    if (!content) continue;
+    if (role === "assistant" && isStaleAssistantReply(content)) continue;
+
     if (messages.length > 0 && messages[messages.length - 1].role === role) {
-      // Same role twice — skip to maintain alternation
+      // Same role twice in a row — keep the newer one so the most recent
+      // user message isn't dropped on retry attempts.
+      messages[messages.length - 1] = { role, content };
       continue;
     }
-    messages.push({ role, content: entry.message });
+    messages.push({ role, content });
   }
 
   // Ensure first message is from user (Claude requirement)
@@ -1802,52 +1845,43 @@ BEHAVIOR RULES:
 - When checking a status, balance, or summary: ALWAYS call the tool first, then report what the tool returned. NEVER rely on what was said earlier in the conversation.
 - CRITICAL — ALWAYS REPLY WITH TEXT: After your final tool call, you MUST emit a short text answer for the user (e.g. "Done — 280 OMR recorded for unit 34 (Moza)"). Never end the turn with only tool_use blocks and no text. The user is on WhatsApp and only sees text.`;
 
-  // Build messages: conversation history + current message
-  // The current message is already the last entry in history, so use history directly
-  const messages: Anthropic.MessageParam[] = [...conversationHistory];
-
-  // If history is empty or doesn't end with current message, add it
-  if (messages.length === 0) {
-    messages.push({ role: "user", content: message });
+  // Build messages: trimmed conversation history + the current user message
+  // appended explicitly. We can't rely on the freshly-saved row showing up
+  // in loadConversationHistory() because of read-after-write timing on
+  // Supabase replicas, and because the alternation/limit logic could drop
+  // it. Appending here also guarantees the last message is always the
+  // current user prompt — required by the Anthropic API.
+  const trimmedMessage = message.trim();
+  const messages: Anthropic.MessageParam[] = conversationHistory.filter(
+    (m, idx, arr) => {
+      // Drop any trailing user echo that matches the current message; we'll
+      // add it back explicitly below.
+      if (idx === arr.length - 1 && m.role === "user") {
+        const content =
+          typeof m.content === "string" ? m.content.trim() : "";
+        return content !== trimmedMessage;
+      }
+      return true;
+    }
+  );
+  // If the last history entry is now an assistant turn (good), append current
+  // user message. If the last is a user turn (someone else's message that
+  // wasn't us), still append — Anthropic accepts adjacent same-role turns
+  // by merging, but to be safe we replace it.
+  if (
+    messages.length > 0 &&
+    messages[messages.length - 1].role === "user"
+  ) {
+    messages[messages.length - 1] = { role: "user", content: trimmedMessage };
+  } else {
+    messages.push({ role: "user", content: trimmedMessage });
   }
 
-  let response = await callClaude({
-    model: CLAUDE_MODEL,
-    max_tokens: 2048,
-    system: systemPrompt,
-    tools,
-    messages,
-  });
-
-  // Agent loop — keep processing tool calls until we get a final text response
+  let response: Anthropic.Message;
   let iterations = 0;
   const maxIterations = 25;
-  while (response.stop_reason === "tool_use" && iterations < maxIterations) {
-    iterations++;
-    const assistantContent = response.content;
-    messages.push({ role: "assistant", content: assistantContent });
 
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-
-    for (const block of assistantContent) {
-      if (block.type === "tool_use") {
-        console.log(`[WhatsApp Agent] Tool call: ${block.name}`, JSON.stringify(block.input));
-        const result = await executeTool(
-          block.name,
-          block.input as Record<string, unknown>,
-          user.id
-        );
-        console.log(`[WhatsApp Agent] Tool result: ${result.substring(0, 200)}`);
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: block.id,
-          content: result,
-        });
-      }
-    }
-
-    messages.push({ role: "user", content: toolResults });
-
+  try {
     response = await callClaude({
       model: CLAUDE_MODEL,
       max_tokens: 2048,
@@ -1855,6 +1889,59 @@ BEHAVIOR RULES:
       tools,
       messages,
     });
+
+    // Agent loop — keep processing tool calls until we get a final text response
+    while (
+      response.stop_reason === "tool_use" &&
+      iterations < maxIterations
+    ) {
+      iterations++;
+      const assistantContent = response.content;
+      messages.push({ role: "assistant", content: assistantContent });
+
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
+
+      for (const block of assistantContent) {
+        if (block.type === "tool_use") {
+          console.log(
+            `[WhatsApp Agent] Tool call: ${block.name}`,
+            JSON.stringify(block.input)
+          );
+          const result = await executeTool(
+            block.name,
+            block.input as Record<string, unknown>,
+            user.id
+          );
+          console.log(
+            `[WhatsApp Agent] Tool result: ${result.substring(0, 200)}`
+          );
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: result,
+          });
+        }
+      }
+
+      messages.push({ role: "user", content: toolResults });
+
+      response = await callClaude({
+        model: CLAUDE_MODEL,
+        max_tokens: 2048,
+        system: systemPrompt,
+        tools,
+        messages,
+      });
+    }
+  } catch (err) {
+    console.error("[WhatsApp Agent] Agent loop failed", {
+      iterations,
+      message_count: messages.length,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    const fallback =
+      "Sorry — I hit a snag processing that. Please try again in a moment.";
+    return fallback;
   }
 
   // Extract the final text response
@@ -1904,9 +1991,7 @@ BEHAVIOR RULES:
   // 5. Save agent reply to conversation history (skip generic fallbacks so
   // they don't pollute future context and condition the model into repeating
   // them).
-  const isGenericFallback =
-    /^(done!?\s*$|sorry — i couldn't finish that request)/i.test(reply);
-  if (!isGenericFallback) {
+  if (!isStaleAssistantReply(reply)) {
     await saveConversationMessage(cleanPhone, "assistant", reply);
   }
 
