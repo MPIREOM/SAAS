@@ -354,16 +354,13 @@ export default function MoveOutPage({
                     {commissionPreview.monthsRemainingAtVacate}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span>{t("earlyTerminationCommission.fullContract")}</span>
-                  <span className="font-mono tabular-nums text-text-primary">
-                    {fmt(commissionPreview.fullContractCommission)} {CURRENCY.code}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t("earlyTerminationCommission.alreadyTaken")}</span>
-                  <span className="font-mono tabular-nums text-text-primary">
-                    {fmt(commissionPreview.alreadyTakenCommission)} {CURRENCY.code}
+                <div className="flex justify-between col-span-2">
+                  <span>
+                    {t("earlyTerminationCommission.formula", {
+                      months: commissionPreview.monthsRemainingAtVacate,
+                      rent: fmt(commissionPreview.monthlyRent),
+                      rate: commissionPreview.commissionRate,
+                    })}
                   </span>
                 </div>
               </div>
