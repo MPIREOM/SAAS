@@ -5,6 +5,7 @@ import { getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { SharePortalButton } from "@/components/tenants/share-portal-button";
+import { EditPaymentMethod } from "@/components/payments/edit-payment-method";
 import {
   User,
   FileText,
@@ -515,9 +516,16 @@ export default async function TenantDetailPage({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary">
-                        {payment.method ? ti(`methods.${payment.method}`) : "—"}
-                      </span>
+                      <EditPaymentMethod
+                        paymentId={payment.id as string}
+                        currentMethod={
+                          (payment.method as
+                            | "cash"
+                            | "bank_transfer"
+                            | "cheque"
+                            | null) ?? null
+                        }
+                      />
                     </td>
                     <td className="px-4 py-3">
                       {payment.method === "cheque" && payment.reference_number ? (

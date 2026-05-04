@@ -153,7 +153,8 @@ const tools: Anthropic.Tool[] = [
         method: {
           type: "string",
           enum: ["cash", "bank_transfer", "cheque"],
-          description: "Payment method. Defaults to cash if not specified.",
+          description:
+            "Payment method. REQUIRED in practice — the owner ledger treats cheque payments differently (they go direct to the owner and don't enter the company account, while cash and bank_transfer do). NEVER guess; if the user didn't say cash / bank transfer / cheque, ask them before calling this tool. Only omit when the user has explicitly stated the method.",
         },
         payment_date: {
           type: "string",
@@ -757,7 +758,18 @@ async function executeTool(
 
     case "mark_invoice_paid": {
       const invoiceId = input.invoice_id as string;
-      const method = (input.method as string) || "cash";
+      const rawMethod = input.method as string | undefined;
+      // The owner ledger treats cheque vs cash/transfer very differently
+      // (cheques go direct to owner, cash/transfer enter the company
+      // account). Don't silently default to cash — make the model ask.
+      if (!rawMethod) {
+        return JSON.stringify({
+          error: "method_required",
+          message:
+            "Ask the user how the tenant paid before calling this tool. Reply with: 'How was the payment made — cash, bank transfer, or cheque?' Then re-call mark_invoice_paid with the chosen method.",
+        });
+      }
+      const method = rawMethod;
       const notes = (input.notes as string) || "Paid via WhatsApp agent";
       const paidDate =
         (input.payment_date as string) ||
@@ -2299,7 +2311,8 @@ BEHAVIOR RULES:
 - NEVER say "there are no invoices" without first calling the tool with the right filters. If the user asks about a specific month (e.g. "April"), use the month parameter (e.g. "2026-04") in get_overdue_summary or get_tenant_invoices.
 - When the user asks about invoices for a specific month, ALWAYS pass the month parameter in YYYY-MM format to filter results. Do NOT just scan through all results — use the filter.
 - CRITICAL — UNIT NUMBER LOOKUPS: Whenever the user mentions a unit number (e.g. "unit 27", "unit 66", "send me unit 28 invoices", "tenant in unit 5 paid"), you MUST call get_unit_by_number FIRST. Do NOT use search_tenants, get_property_units, or any other tool to figure out who lives in a unit — only get_unit_by_number is authoritative. NEVER reuse a tenant name from earlier in the conversation for a different unit number; always re-look it up. After get_unit_by_number returns, copy the tenant.full_name and unit.unit_number EXACTLY from the tool response — never substitute, abbreviate, or invent.
-- CRITICAL — RECORDING PAYMENT FOR A UNIT: When the user says "they paid", "tenant paid", "record payment" in the context of a unit number, you MUST: (1) call get_unit_by_number with that exact unit_number, (2) take an invoice_id from the unpaid_invoices array in the response, (3) call mark_invoice_paid with that invoice_id. Do NOT skip step 1. Do NOT make up a payment confirmation without actually calling mark_invoice_paid and seeing { success: true } in its response. If mark_invoice_paid returns an error or you skipped it, tell the user honestly that you could not record the payment.
+- CRITICAL — RECORDING PAYMENT FOR A UNIT: When the user says "they paid", "tenant paid", "record payment" in the context of a unit number, you MUST: (1) call get_unit_by_number with that exact unit_number, (2) take an invoice_id from the unpaid_invoices array in the response, (3) call mark_invoice_paid with that invoice_id AND the payment method. Do NOT skip step 1. Do NOT make up a payment confirmation without actually calling mark_invoice_paid and seeing { success: true } in its response. If mark_invoice_paid returns an error or you skipped it, tell the user honestly that you could not record the payment.
+- CRITICAL — PAYMENT METHOD: ALWAYS ask the user how the payment was made — cash, bank transfer, or cheque — UNLESS they already said it ("Ahmad paid 280 cash", "transfer for unit 27", "cheque from Fatma"). Cheque payments go direct to the owner (don't enter the company balance) while cash and bank transfer enter the company account, so misclassifying them corrupts the owner ledger. Never default to cash. If the method isn't clear, reply with a short question like: "How was the payment made — cash, bank transfer, or cheque?" and wait for the answer before calling mark_invoice_paid.
 - CRITICAL: When the user asks about invoices for a PROPERTY or BUILDING (e.g. "invoices for Bousher Ameen Mosque"), first use search_properties to find the property_id, then call get_property_invoices ONCE with that property_id. NEVER loop through tenants individually with get_tenant_invoices — that will time out. get_property_invoices returns ALL invoices for the property in one call. For date ranges like "Jan to April", use start_date="2026-01-01" and end_date="2026-04-30".
 - CRITICAL: When creating invoices for MULTIPLE tenants or a whole property (e.g. "create May invoices", "generate invoices for May and June for all tenants"), use create_invoices_batch with the property_id and the months array. NEVER call create_invoice individually for each tenant — use the batch tool. It handles lease/unit resolution automatically and skips duplicates.
 - If genuinely unsure what the user wants, ask a SHORT clarifying question.
