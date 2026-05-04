@@ -335,11 +335,10 @@
     },
     "earlyTerminationCommission": {
       "title": "Early-termination commission owed",
-      "description": "Tenant is leaving before the contract ends. The company is still owed the full contract commission — collect this from the tenant before confirming the move-out.",
+      "description": "Tenant is leaving before the contract ends. The company is still owed commission on the remaining months — collect this from the tenant before confirming the move-out.",
       "contractMonths": "Contract length (months)",
       "monthsRemaining": "Months remaining",
-      "fullContract": "Full contract commission",
-      "alreadyTaken": "Already collected",
+      "formula": "{months} months × {rent} OMR × {rate}%",
       "calculating": "Calculating commission owed..."
     },
     "outstandingInvoices": "Outstanding Invoices",

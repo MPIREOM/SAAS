@@ -113,9 +113,6 @@ export async function getOwnerBalance(
   let rentToCompany = 0;
   let rentDirectCheque = 0;
   let commissionEarned = 0;
-  // Commission already recognised per lease — used to compute the catch-up
-  // owed on early-terminated leases without double-counting.
-  const commissionByLease = new Map<string, number>();
 
   if (leaseIds.length > 0) {
     const { data: payments } = await supabase
@@ -149,12 +146,7 @@ export async function getOwnerBalance(
       // type=percentage, INCLUDING cheques (per the owner's rule:
       // 9% is owed regardless of payment channel for those units).
       if (config && config.type === "percentage" && config.rate > 0) {
-        const commission = amount * (config.rate / 100);
-        commissionEarned += commission;
-        commissionByLease.set(
-          leaseId,
-          (commissionByLease.get(leaseId) || 0) + commission,
-        );
+        commissionEarned += amount * (config.rate / 100);
       }
       // For "included_in_business_fee" units: no per-payment commission;
       // the flat owner_business_fees row covers it.
@@ -163,13 +155,17 @@ export async function getOwnerBalance(
   }
 
   // 3b. Early-termination commission catch-up.
-  // When a tenant vacates before their contract end_date on a percentage-
-  // commission unit, the owner is still owed the FULL contract commission
-  // (monthly_rent × contract_months × rate). We've already recognised
-  // commission on payments collected; the catch-up is the difference, so
-  // even cancelled / written-off final months still produce commission.
-  // Restricted to commission_type='percentage' as requested — units on
+  // When a tenant on a percentage-commission unit vacates before their
+  // contract end_date, the owner is still owed commission on the
+  // *remaining* months of the contract (months from vacate_date through
+  // end_date). Per-payment commission already covers months actually paid;
+  // this just catches the unpaid tail.
+  //   catch_up_per_lease = months_remaining × monthly_rent × rate
+  // Restricted to commission_type='percentage' — units on
   // included_in_business_fee or none are unaffected.
+  // Skips leases whose vacate_date is on/before the owner's
+  // opening_balance_date — those are already baked into the opening
+  // balance and shouldn't generate fresh catch-up after-the-fact.
   let earlyTerminationCatchUp = 0;
   if (leaseIds.length > 0) {
     const { data: vacatedLeases } = await supabase
@@ -177,11 +173,11 @@ export async function getOwnerBalance(
       .select("id, unit_id, start_date, end_date, vacate_date, monthly_rent")
       .in("id", leaseIds)
       .eq("is_active", false)
-      .not("vacate_date", "is", null);
+      .not("vacate_date", "is", null)
+      .gt("vacate_date", openingDate);
 
     for (const lease of vacatedLeases || []) {
       const leaseId = lease.id as string;
-      const startDate = lease.start_date as string;
       const endDate = lease.end_date as string;
       const vacateDate = lease.vacate_date as string;
       const monthlyRent = Number(lease.monthly_rent || 0);
@@ -197,14 +193,11 @@ export async function getOwnerBalance(
         unitOverride ?? (propId ? commissionByProperty.get(propId) : undefined);
       if (!config || config.type !== "percentage" || config.rate <= 0) continue;
 
-      const months = monthsInRange(startDate, endDate);
-      if (months <= 0 || monthlyRent <= 0) continue;
+      const monthsRemaining = monthsInRange(vacateDate, endDate);
+      if (monthsRemaining <= 0 || monthlyRent <= 0) continue;
 
-      const fullContractCommission =
-        months * monthlyRent * (config.rate / 100);
-      const alreadyTaken = commissionByLease.get(leaseId) || 0;
-      const catchUp = Math.max(0, fullContractCommission - alreadyTaken);
-      earlyTerminationCatchUp += catchUp;
+      earlyTerminationCatchUp +=
+        monthsRemaining * monthlyRent * (config.rate / 100);
     }
   }
 
@@ -315,8 +308,6 @@ export type EarlyTerminationCommissionPreview = {
   reason?: string;
   monthlyRent: number;
   contractMonths: number;
-  fullContractCommission: number;
-  alreadyTakenCommission: number;
   remainingCommission: number;
   commissionRate: number;
   monthsRemainingAtVacate: number;
@@ -331,8 +322,6 @@ export async function getEarlyTerminationCommissionForLease(
     applicable: false,
     monthlyRent: 0,
     contractMonths: 0,
-    fullContractCommission: 0,
-    alreadyTakenCommission: 0,
     remainingCommission: 0,
     commissionRate: 0,
     monthsRemainingAtVacate: 0,
@@ -393,36 +382,25 @@ export async function getEarlyTerminationCommissionForLease(
 
   const contractMonths = monthsInRange(startDate, endDate);
   const monthsRemainingAtVacate = monthsInRange(vacateDate, endDate);
-  if (contractMonths <= 0 || monthlyRent <= 0) {
-    return { ...empty, monthlyRent, commissionRate: config.rate };
+  if (monthsRemainingAtVacate <= 0 || monthlyRent <= 0) {
+    return {
+      ...empty,
+      monthlyRent,
+      commissionRate: config.rate,
+      contractMonths,
+    };
   }
 
-  const fullContractCommission =
-    contractMonths * monthlyRent * (config.rate / 100);
-
-  // Subtract commission already recognised on payments collected so far —
-  // we only want to charge the *missing* portion.
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("amount")
-    .eq("lease_id", leaseId);
-  const totalPaid = (payments || []).reduce(
-    (s, p) => s + Number(p.amount || 0),
-    0,
-  );
-  const alreadyTakenCommission = totalPaid * (config.rate / 100);
-
-  const remainingCommission = Math.max(
-    0,
-    fullContractCommission - alreadyTakenCommission,
-  );
+  // Catch-up = unpaid future months × rent × rate. Per-payment commission
+  // already covers the months actually collected on, so we only charge the
+  // remaining (post-vacate) portion.
+  const remainingCommission =
+    monthsRemainingAtVacate * monthlyRent * (config.rate / 100);
 
   return {
     applicable: true,
     monthlyRent,
     contractMonths,
-    fullContractCommission: round2(fullContractCommission),
-    alreadyTakenCommission: round2(alreadyTakenCommission),
     remainingCommission: round2(remainingCommission),
     commissionRate: config.rate,
     monthsRemainingAtVacate,
