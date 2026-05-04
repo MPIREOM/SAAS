@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
+import { getEarlyTerminationCommissionForLease, type EarlyTerminationCommissionPreview } from "@/lib/owners/balance";
 
 interface OutstandingInvoice {
   id: string;
@@ -37,6 +38,10 @@ export default function MoveOutPage({
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({});
   const [loadingInvoices, setLoadingInvoices] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<{ locale: string; id: string } | null>(null);
+  const [activeLeaseId, setActiveLeaseId] = useState<string | null>(null);
+  const [vacateDate, setVacateDate] = useState("");
+  const [commissionPreview, setCommissionPreview] = useState<EarlyTerminationCommissionPreview | null>(null);
+  const [loadingCommission, setLoadingCommission] = useState(false);
 
   // Resolve params and fetch outstanding invoices
   useEffect(() => {
@@ -55,6 +60,7 @@ export default function MoveOutPage({
         .single();
 
       if (activeLease) {
+        setActiveLeaseId(activeLease.id);
         // Fetch outstanding invoices for this lease
         const { data: outstandingInvoices } = await supabase
           .from("invoices")
@@ -77,6 +83,35 @@ export default function MoveOutPage({
     };
     init();
   }, [params]);
+
+  // Recompute the commission catch-up whenever the user changes the vacate
+  // date, so the user sees how much the tenant owes before confirming. The
+  // render itself gates on `vacateDate` being set, so we don't need to
+  // imperatively clear the preview here when it goes blank.
+  useEffect(() => {
+    if (!activeLeaseId || !vacateDate) return;
+    let cancelled = false;
+    const run = async () => {
+      setLoadingCommission(true);
+      try {
+        const supabase = createClient();
+        const preview = await getEarlyTerminationCommissionForLease(
+          supabase,
+          activeLeaseId,
+          vacateDate,
+        );
+        if (!cancelled) setCommissionPreview(preview);
+      } catch {
+        if (!cancelled) setCommissionPreview(null);
+      } finally {
+        if (!cancelled) setLoadingCommission(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLeaseId, vacateDate]);
 
   const setAction = (invoiceId: string, action: InvoiceAction) => {
     setInvoiceActions((prev) => ({ ...prev, [invoiceId]: action }));
@@ -286,9 +321,60 @@ export default function MoveOutPage({
               name="vacate_date"
               type="date"
               required
+              value={vacateDate}
+              onChange={(e) => setVacateDate(e.target.value)}
               className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
             />
           </div>
+
+          {/* Early-termination commission preview */}
+          {vacateDate && commissionPreview && commissionPreview.applicable && commissionPreview.remainingCommission > 0 && (
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-warning">
+                  {t("earlyTerminationCommission.title")}
+                </span>
+                <span className="font-mono tabular-nums text-warning text-base font-semibold">
+                  {fmt(commissionPreview.remainingCommission)} {CURRENCY.code}
+                </span>
+              </div>
+              <p className="text-xs text-text-secondary">
+                {t("earlyTerminationCommission.description")}
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-text-secondary pt-1">
+                <div className="flex justify-between">
+                  <span>{t("earlyTerminationCommission.contractMonths")}</span>
+                  <span className="font-mono tabular-nums text-text-primary">
+                    {commissionPreview.contractMonths}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{t("earlyTerminationCommission.monthsRemaining")}</span>
+                  <span className="font-mono tabular-nums text-text-primary">
+                    {commissionPreview.monthsRemainingAtVacate}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{t("earlyTerminationCommission.fullContract")}</span>
+                  <span className="font-mono tabular-nums text-text-primary">
+                    {fmt(commissionPreview.fullContractCommission)} {CURRENCY.code}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{t("earlyTerminationCommission.alreadyTaken")}</span>
+                  <span className="font-mono tabular-nums text-text-primary">
+                    {fmt(commissionPreview.alreadyTakenCommission)} {CURRENCY.code}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+          {vacateDate && loadingCommission && !commissionPreview && (
+            <div className="rounded-lg border border-border/40 bg-surface-elevated/30 p-3 text-xs text-text-secondary flex items-center gap-2">
+              <div className="h-3 w-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              {t("earlyTerminationCommission.calculating")}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm text-text-secondary mb-1.5">

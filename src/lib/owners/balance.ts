@@ -9,6 +9,7 @@ export type OwnerBalanceBreakdown = {
   rentReceivedToCompany: number;   // cash + bank_transfer payments on owner's properties
   rentReceivedDirectByCheque: number; // for transparency only — does NOT enter the balance
   commissionEarned: number;            // 9% on eligible rent (cash, transfer, AND cheque) for properties with commission_type='percentage'
+  earlyTerminationCommissionCatchUp: number; // catch-up for leases that vacated before contract end — owner is still owed full-contract commission
   businessManagerFees: number;         // sum of owner_business_fees rows
   expensesCoveredByCompany: number;    // sum of expenses on owner's properties
   settlementsPaidToOwner: number;      // company_to_owner
@@ -112,6 +113,9 @@ export async function getOwnerBalance(
   let rentToCompany = 0;
   let rentDirectCheque = 0;
   let commissionEarned = 0;
+  // Commission already recognised per lease — used to compute the catch-up
+  // owed on early-terminated leases without double-counting.
+  const commissionByLease = new Map<string, number>();
 
   if (leaseIds.length > 0) {
     const { data: payments } = await supabase
@@ -124,8 +128,9 @@ export async function getOwnerBalance(
     for (const p of payments || []) {
       const amount = Number(p.amount || 0);
       const method = (p.method as string) || "cash";
-      const unitId = leaseUnitMap.get(p.lease_id as string);
-      const propId = leasePropertyMap.get(p.lease_id as string);
+      const leaseId = p.lease_id as string;
+      const unitId = leaseUnitMap.get(leaseId);
+      const propId = leasePropertyMap.get(leaseId);
       // Unit-level override takes precedence; otherwise fall back to
       // the property-level commission setting.
       const unitOverride = unitId ? unitCommissionMap.get(unitId) : undefined;
@@ -144,11 +149,62 @@ export async function getOwnerBalance(
       // type=percentage, INCLUDING cheques (per the owner's rule:
       // 9% is owed regardless of payment channel for those units).
       if (config && config.type === "percentage" && config.rate > 0) {
-        commissionEarned += amount * (config.rate / 100);
+        const commission = amount * (config.rate / 100);
+        commissionEarned += commission;
+        commissionByLease.set(
+          leaseId,
+          (commissionByLease.get(leaseId) || 0) + commission,
+        );
       }
       // For "included_in_business_fee" units: no per-payment commission;
       // the flat owner_business_fees row covers it.
       // For "none": no commission ever.
+    }
+  }
+
+  // 3b. Early-termination commission catch-up.
+  // When a tenant vacates before their contract end_date on a percentage-
+  // commission unit, the owner is still owed the FULL contract commission
+  // (monthly_rent × contract_months × rate). We've already recognised
+  // commission on payments collected; the catch-up is the difference, so
+  // even cancelled / written-off final months still produce commission.
+  // Restricted to commission_type='percentage' as requested — units on
+  // included_in_business_fee or none are unaffected.
+  let earlyTerminationCatchUp = 0;
+  if (leaseIds.length > 0) {
+    const { data: vacatedLeases } = await supabase
+      .from("leases")
+      .select("id, unit_id, start_date, end_date, vacate_date, monthly_rent")
+      .in("id", leaseIds)
+      .eq("is_active", false)
+      .not("vacate_date", "is", null);
+
+    for (const lease of vacatedLeases || []) {
+      const leaseId = lease.id as string;
+      const startDate = lease.start_date as string;
+      const endDate = lease.end_date as string;
+      const vacateDate = lease.vacate_date as string;
+      const monthlyRent = Number(lease.monthly_rent || 0);
+
+      // Only counts as an early termination if the tenant left before the
+      // original contract end_date. End-of-lease moves don't trigger.
+      if (!(vacateDate < endDate)) continue;
+
+      const unitId = lease.unit_id as string;
+      const propId = leasePropertyMap.get(leaseId);
+      const unitOverride = unitCommissionMap.get(unitId);
+      const config =
+        unitOverride ?? (propId ? commissionByProperty.get(propId) : undefined);
+      if (!config || config.type !== "percentage" || config.rate <= 0) continue;
+
+      const months = monthsInRange(startDate, endDate);
+      if (months <= 0 || monthlyRent <= 0) continue;
+
+      const fullContractCommission =
+        months * monthlyRent * (config.rate / 100);
+      const alreadyTaken = commissionByLease.get(leaseId) || 0;
+      const catchUp = Math.max(0, fullContractCommission - alreadyTaken);
+      earlyTerminationCatchUp += catchUp;
     }
   }
 
@@ -221,6 +277,7 @@ export async function getOwnerBalance(
     opening +
     rentToCompany -
     commissionEarned -
+    earlyTerminationCatchUp -
     businessFees -
     expensesPaid -
     paidToOwner +
@@ -237,6 +294,7 @@ export async function getOwnerBalance(
       rentReceivedToCompany: round2(rentToCompany),
       rentReceivedDirectByCheque: round2(rentDirectCheque),
       commissionEarned: round2(commissionEarned),
+      earlyTerminationCommissionCatchUp: round2(earlyTerminationCatchUp),
       businessManagerFees: round2(businessFees),
       expensesCoveredByCompany: round2(expensesPaid),
       settlementsPaidToOwner: round2(paidToOwner),
@@ -244,6 +302,149 @@ export async function getOwnerBalance(
       balance: round2(balance),
     },
   };
+}
+
+// ── Move-out preview ─────────────────────────────────────────────────────
+// Helper used by the move-out UI to show "if you set vacate_date to X, the
+// company is owed Y in commission" before the user confirms. Returns 0 for
+// units that aren't on commission_type='percentage' (per the owner's rule —
+// only percentage-commission units trigger early-termination commission).
+
+export type EarlyTerminationCommissionPreview = {
+  applicable: boolean;
+  reason?: string;
+  monthlyRent: number;
+  contractMonths: number;
+  fullContractCommission: number;
+  alreadyTakenCommission: number;
+  remainingCommission: number;
+  commissionRate: number;
+  monthsRemainingAtVacate: number;
+};
+
+export async function getEarlyTerminationCommissionForLease(
+  supabase: SupabaseClient,
+  leaseId: string,
+  vacateDate: string,
+): Promise<EarlyTerminationCommissionPreview> {
+  const empty: EarlyTerminationCommissionPreview = {
+    applicable: false,
+    monthlyRent: 0,
+    contractMonths: 0,
+    fullContractCommission: 0,
+    alreadyTakenCommission: 0,
+    remainingCommission: 0,
+    commissionRate: 0,
+    monthsRemainingAtVacate: 0,
+  };
+
+  // Walk lease → unit → property to find the applicable commission config.
+  const { data: lease } = await supabase
+    .from("leases")
+    .select(
+      `
+      id, start_date, end_date, monthly_rent, unit_id,
+      units(id, commission_type, commission_rate, property_id,
+        properties(id, commission_type, commission_rate, owner_id))
+      `,
+    )
+    .eq("id", leaseId)
+    .maybeSingle();
+  if (!lease) return { ...empty, reason: "lease_not_found" };
+
+  const monthlyRent = Number(lease.monthly_rent || 0);
+  const startDate = lease.start_date as string;
+  const endDate = lease.end_date as string;
+  const unit = pickJoined(lease.units);
+  const property = pickJoined(unit?.properties as unknown);
+  const unitOverride =
+    unit && unit.commission_type
+      ? {
+          type: unit.commission_type as string,
+          rate: Number(unit.commission_rate || 0),
+        }
+      : undefined;
+  const propertyConfig = property
+    ? {
+        type: (property.commission_type as string) || "none",
+        rate: Number(property.commission_rate || 0),
+      }
+    : undefined;
+  const config = unitOverride ?? propertyConfig;
+
+  if (!config || config.type !== "percentage" || config.rate <= 0) {
+    return {
+      ...empty,
+      monthlyRent,
+      reason: "not_percentage_commission",
+    };
+  }
+
+  // Only applicable when vacate_date is strictly before end_date — leaving
+  // on or after the contract end is not an early termination.
+  if (!(vacateDate < endDate)) {
+    return {
+      ...empty,
+      monthlyRent,
+      commissionRate: config.rate,
+      reason: "not_early_termination",
+    };
+  }
+
+  const contractMonths = monthsInRange(startDate, endDate);
+  const monthsRemainingAtVacate = monthsInRange(vacateDate, endDate);
+  if (contractMonths <= 0 || monthlyRent <= 0) {
+    return { ...empty, monthlyRent, commissionRate: config.rate };
+  }
+
+  const fullContractCommission =
+    contractMonths * monthlyRent * (config.rate / 100);
+
+  // Subtract commission already recognised on payments collected so far —
+  // we only want to charge the *missing* portion.
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("amount")
+    .eq("lease_id", leaseId);
+  const totalPaid = (payments || []).reduce(
+    (s, p) => s + Number(p.amount || 0),
+    0,
+  );
+  const alreadyTakenCommission = totalPaid * (config.rate / 100);
+
+  const remainingCommission = Math.max(
+    0,
+    fullContractCommission - alreadyTakenCommission,
+  );
+
+  return {
+    applicable: true,
+    monthlyRent,
+    contractMonths,
+    fullContractCommission: round2(fullContractCommission),
+    alreadyTakenCommission: round2(alreadyTakenCommission),
+    remainingCommission: round2(remainingCommission),
+    commissionRate: config.rate,
+    monthsRemainingAtVacate,
+  };
+}
+
+// Counts whole calendar months between two YYYY-MM-DD dates.
+//   2026-01-01 → 2026-12-31 → 12
+//   2026-01-15 → 2026-07-15 → 6
+//   2026-01-15 → 2027-01-14 → 12
+// Off-by-one edge cases (e.g. trailing day-of-month) round up to the next
+// full period, which matches how rent invoices are billed monthly.
+function monthsInRange(start: string, end: string): number {
+  if (!start || !end) return 0;
+  const s = new Date(start + "T00:00:00Z");
+  const e = new Date(end + "T00:00:00Z");
+  if (isNaN(s.getTime()) || isNaN(e.getTime()) || e < s) return 0;
+  let months =
+    (e.getUTCFullYear() - s.getUTCFullYear()) * 12 +
+    (e.getUTCMonth() - s.getUTCMonth());
+  if (e.getUTCDate() > s.getUTCDate()) months += 1;
+  return Math.max(0, months);
 }
 
 // Convenience: when the system has exactly one active owner (the common case

@@ -150,6 +150,11 @@ function BalanceBreakdownCard({
       muted: true,
     },
     { label: "Commission earned by company", value: breakdown.commissionEarned, sign: "-" },
+    {
+      label: "Commission catch-up (early move-outs)",
+      value: breakdown.earlyTerminationCommissionCatchUp,
+      sign: "-",
+    },
     { label: "Business manager fees", value: breakdown.businessManagerFees, sign: "-" },
     { label: "Expenses paid by company", value: breakdown.expensesCoveredByCompany, sign: "-" },
     { label: "Settlements paid to owner", value: breakdown.settlementsPaidToOwner, sign: "-" },
