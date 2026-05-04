@@ -45,12 +45,26 @@ export async function PATCH(
     return NextResponse.json({ success: true, unchanged: true });
   }
 
-  const { error: updateError } = await supabase
+  // Use .select() so we get the actual updated rows back. Without it,
+  // RLS-rejected updates return { error: null, data: null } and look
+  // identical to a successful no-op — which is exactly how the missing
+  // payments_update policy hid this for ~9 attempts before being noticed.
+  const { data: updated, error: updateError } = await supabase
     .from("payments")
     .update({ method })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+  if (!updated || updated.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "Update was silently rejected (no rows changed). Likely a row-level security policy is missing or you don't have access to this payment.",
+      },
+      { status: 403 },
+    );
   }
 
   await logAudit(supabase, {
