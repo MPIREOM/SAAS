@@ -8,7 +8,7 @@ export type OwnerBalanceBreakdown = {
   openingBalance: number;
   rentReceivedToCompany: number;   // cash + bank_transfer payments on owner's properties
   rentReceivedDirectByCheque: number; // for transparency only — does NOT enter the balance
-  commissionEarned: number;            // 9% on eligible rent (cash, transfer, AND cheque) for properties with commission_type='percentage'
+  commissionEarned: number;            // 9% on every billed invoice (paid OR unpaid) for properties with commission_type='percentage'. Excludes cancelled and written_off invoices.
   earlyTerminationCommissionCatchUp: number; // catch-up for leases that vacated before contract end — owner is still owed full-contract commission
   businessManagerFees: number;         // sum of owner_business_fees rows
   expensesCoveredByCompany: number;    // sum of expenses on owner's properties
@@ -112,8 +112,10 @@ export async function getOwnerBalance(
 
   let rentToCompany = 0;
   let rentDirectCheque = 0;
-  let commissionEarned = 0;
 
+  // 3a. Rent collected. Walks the payments table because rent attribution
+  // depends on payment method (cash/transfer enter the company account,
+  // cheques go direct to owner).
   if (leaseIds.length > 0) {
     const { data: payments } = await supabase
       .from("payments")
@@ -125,15 +127,6 @@ export async function getOwnerBalance(
     for (const p of payments || []) {
       const amount = Number(p.amount || 0);
       const method = (p.method as string) || "cash";
-      const leaseId = p.lease_id as string;
-      const unitId = leaseUnitMap.get(leaseId);
-      const propId = leasePropertyMap.get(leaseId);
-      // Unit-level override takes precedence; otherwise fall back to
-      // the property-level commission setting.
-      const unitOverride = unitId ? unitCommissionMap.get(unitId) : undefined;
-      const config =
-        unitOverride ?? (propId ? commissionByProperty.get(propId) : undefined);
-
       // Cash & bank transfer hit our account → we owe owner.
       // Cheques go direct to owner → no balance change for the rent itself.
       if (method === "cash" || method === "bank_transfer") {
@@ -141,16 +134,48 @@ export async function getOwnerBalance(
       } else if (method === "cheque") {
         rentDirectCheque += amount;
       }
+    }
+  }
 
-      // Commission applies to all rent for properties/units with
-      // type=percentage, INCLUDING cheques (per the owner's rule:
-      // 9% is owed regardless of payment channel for those units).
-      if (config && config.type === "percentage" && config.rate > 0) {
-        commissionEarned += amount * (config.rate / 100);
-      }
-      // For "included_in_business_fee" units: no per-payment commission;
-      // the flat owner_business_fees row covers it.
-      // For "none": no commission ever.
+  // 3b. Commission earned. Walks the *invoices* table — the company is
+  // owed commission on every billed period regardless of whether the
+  // tenant actually paid. Excluding cancelled / written_off invoices
+  // (those bills were voided, no commission owed). Anchored on
+  // period_start (or due_date when period_start is null) so the
+  // "as-of" filter aligns with the period the rent applies to, not when
+  // the invoice happened to be created.
+  // Restricted to commission_type='percentage' — units on
+  // included_in_business_fee or none are unaffected.
+  let commissionEarned = 0;
+  if (leaseIds.length > 0) {
+    const { data: invoices } = await supabase
+      .from("invoices")
+      .select("amount, lease_id, status, period_start, due_date")
+      .in("lease_id", leaseIds)
+      .not("status", "in", '("cancelled","written_off")');
+
+    for (const inv of invoices || []) {
+      const periodAnchor =
+        (inv.period_start as string | null) ||
+        (inv.due_date as string | null);
+      if (!periodAnchor) continue;
+      // Invoice periods align to month boundaries (typically the 1st), so
+      // we use >= here. An owner's opening_balance_date of YYYY-MM-01
+      // means "balance as of the start of that month" — invoices for that
+      // month are NEW commission, not part of the opening balance.
+      if (!(periodAnchor >= openingDate) || !(periodAnchor <= asOf)) continue;
+
+      const leaseId = inv.lease_id as string;
+      const unitId = leaseUnitMap.get(leaseId);
+      const propId = leasePropertyMap.get(leaseId);
+      // Unit-level override takes precedence; otherwise fall back to
+      // the property-level commission setting.
+      const unitOverride = unitId ? unitCommissionMap.get(unitId) : undefined;
+      const config =
+        unitOverride ?? (propId ? commissionByProperty.get(propId) : undefined);
+      if (!config || config.type !== "percentage" || config.rate <= 0) continue;
+
+      commissionEarned += Number(inv.amount || 0) * (config.rate / 100);
     }
   }
 
