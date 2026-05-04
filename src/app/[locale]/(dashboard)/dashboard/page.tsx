@@ -75,6 +75,8 @@ interface UpcomingCheque {
   amount: string;
   chequeDate: string;
   daysUntil: number;
+  propertyName: string | null;
+  unitNumber: string | null;
 }
 
 interface ExpiringDocument {
@@ -367,9 +369,20 @@ async function getUpcomingCheques(): Promise<UpcomingCheque[]> {
     "yyyy-MM-dd"
   );
 
+  // Pull cheques + the property/unit they belong to. Prefer the invoice
+  // link (most reliable for cheques tied to a specific invoice); fall back
+  // to the tenant's currently-active lease when invoice_id is null. Both
+  // paths are joined inline so this stays a single round-trip.
   const { data } = await supabase
     .from("cheques")
-    .select("id, cheque_number, bank_name, cheque_date, amount, tenants!inner(full_name)")
+    .select(
+      `id, cheque_number, bank_name, cheque_date, amount, invoice_id,
+       tenants!inner(
+         full_name,
+         leases(is_active, units(unit_number, properties(name)))
+       ),
+       invoices(units(unit_number, properties(name)))`,
+    )
     .eq("status", "pending")
     .gte("cheque_date", today)
     .lte("cheque_date", thirtyDaysOut)
@@ -379,8 +392,25 @@ async function getUpcomingCheques(): Promise<UpcomingCheque[]> {
   if (!data) return [];
   const now = new Date();
   return data.map((c) => {
-    const tenant = c.tenants as unknown as { full_name: string };
+    const tenant = c.tenants as unknown as {
+      full_name: string;
+      leases?: Array<{
+        is_active: boolean;
+        units?: { unit_number?: string; properties?: { name?: string } } | null;
+      }>;
+    };
+    const invoice = c.invoices as unknown as
+      | { units?: { unit_number?: string; properties?: { name?: string } } | null }
+      | null;
     const chequeDate = new Date(c.cheque_date);
+
+    // Prefer the unit/property from the linked invoice; fall back to the
+    // tenant's first active lease so cheques without an invoice link still
+    // show context.
+    const invoiceUnit = invoice?.units || null;
+    const activeLeaseUnit = tenant.leases?.find((l) => l.is_active)?.units || null;
+    const resolved = invoiceUnit || activeLeaseUnit;
+
     return {
       id: c.id,
       tenantName: tenant.full_name,
@@ -389,6 +419,8 @@ async function getUpcomingCheques(): Promise<UpcomingCheque[]> {
       amount: c.amount,
       chequeDate: c.cheque_date,
       daysUntil: Math.ceil((chequeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+      unitNumber: resolved?.unit_number || null,
+      propertyName: resolved?.properties?.name || null,
     };
   });
 }
@@ -862,6 +894,12 @@ export default async function DashboardPage({
                     <p className="text-sm font-medium text-text-primary truncate">
                       {cheque.tenantName}
                     </p>
+                    {(cheque.propertyName || cheque.unitNumber) && (
+                      <p className="text-xs text-text-secondary truncate mt-0.5">
+                        {cheque.propertyName || "?"}
+                        {cheque.unitNumber && ` · Unit ${cheque.unitNumber}`}
+                      </p>
+                    )}
                     <p className="text-xs text-text-secondary truncate mt-0.5">
                       #{cheque.chequeNumber} &middot; {cheque.bankName}
                     </p>
