@@ -164,11 +164,24 @@ export async function getOwnerBalance(
   // included_in_business_fee or none are unaffected.
   let commissionEarned = 0;
   if (leaseIds.length > 0) {
-    const { data: invoices } = await supabase
+    // Filter on the *positive* set of "billable" statuses rather than
+    // .not("status", "in", '("cancelled","written_off")'). The earlier
+    // form referenced "written_off", which isn't part of the production
+    // invoice_status enum yet — PostgREST raised
+    //   ERROR 22P02: invalid input value for enum invoice_status:
+    //   "written_off"
+    // and the Supabase JS client returned { data: null, error: ... }.
+    // Because the calling code only destructured `data`, the error was
+    // silently dropped and commissionEarned ended up at 0.
+    const { data: invoices, error: invErr } = await supabase
       .from("invoices")
       .select("amount, lease_id, status, period_start, due_date")
       .in("lease_id", leaseIds)
-      .not("status", "in", '("cancelled","written_off")');
+      .in("status", ["pending", "paid", "overdue", "partial"]);
+    if (invErr) {
+      // Surface in the server log so a future enum mismatch isn't silent.
+      console.error("[getOwnerBalance] invoice fetch failed", invErr);
+    }
 
     for (const inv of invoices || []) {
       const periodAnchor =
