@@ -463,6 +463,11 @@ export async function runAdminSummary(
           // {{10}} — per-property pending + overdue breakdown, single-line
           // form (Meta rejects newlines/tabs/>4 spaces in template params).
           outstandingBreakdownInline,
+          // {{11}} — owner running balance line. Falls back to a single
+          // space because Meta rejects empty strings in template params.
+          ownerBalanceLine
+            ? ownerBalanceLine.replace(/\s+/g, " ").trim() || " "
+            : " ",
         ],
       },
     });
