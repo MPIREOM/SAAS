@@ -37,7 +37,9 @@ export async function getOwnerBalance(
   // 1. Owner record (opening balance + name).
   const { data: owner, error: ownerErr } = await supabase
     .from("owners")
-    .select("id, name, opening_balance, opening_balance_date")
+    .select(
+      "id, name, opening_balance, opening_balance_date, rent_excluded_until",
+    )
     .eq("id", ownerId)
     .single();
   if (ownerErr || !owner) return null;
@@ -65,6 +67,14 @@ export async function getOwnerBalance(
   // date so we don't double-count anything that already preceded it — we only
   // sum activity strictly AFTER opening_balance_date.
   const openingDate = (owner.opening_balance_date as string) || "1970-01-01";
+
+  // When the ledger is rolled out mid-cycle, the prior reconciled opening
+  // balance often already absorbs rent deposited earlier in the same month.
+  // rent_excluded_until lets the bookkeeper say "ignore cash/transfer rent
+  // up to this date — it's already in the opening balance" without affecting
+  // commission or expenses, which still use opening_balance_date.
+  const rentExcludedUntil =
+    (owner.rent_excluded_until as string | null) || null;
 
   // 3. Payments (rent collected) for the owner's properties.
   // Walk: payments → leases → units → property_id, plus pull the
@@ -127,10 +137,16 @@ export async function getOwnerBalance(
     for (const p of payments || []) {
       const amount = Number(p.amount || 0);
       const method = (p.method as string) || "cash";
+      const paymentDate = p.payment_date as string;
+      // Skip cash/transfer rent that's already absorbed into the opening
+      // balance (mid-cycle ledger rollout). Cheques don't enter the balance
+      // either way, so they're not affected by this filter.
+      const rentAlreadyInOpening =
+        rentExcludedUntil !== null && paymentDate <= rentExcludedUntil;
       // Cash & bank transfer hit our account → we owe owner.
       // Cheques go direct to owner → no balance change for the rent itself.
       if (method === "cash" || method === "bank_transfer") {
-        rentToCompany += amount;
+        if (!rentAlreadyInOpening) rentToCompany += amount;
       } else if (method === "cheque") {
         rentDirectCheque += amount;
       }
