@@ -31,6 +31,7 @@ import {
   XCircle,
   LogOut,
   FileDown,
+  Receipt,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
@@ -84,7 +85,7 @@ export default async function UnitDetailPage({
   const tenantId = currentTenant?.id as string | undefined;
 
   // Fetch payment history, cheques, documents, maintenance in parallel
-  const [paymentsRes, chequesRes, documentsRes, maintenanceRes, pastLeasesRes] =
+  const [paymentsRes, chequesRes, documentsRes, maintenanceRes, pastLeasesRes, invoicesRes] =
     await Promise.all([
       activeLease
         ? supabase
@@ -119,6 +120,14 @@ export default async function UnitDetailPage({
         .eq("unit_id", unitId)
         .eq("is_active", false)
         .order("vacate_date", { ascending: false }),
+      activeLease
+        ? supabase
+            .from("invoices")
+            .select("id, amount, paid_amount, due_date, period_start, period_end, status")
+            .eq("lease_id", activeLease.id)
+            .in("status", ["pending", "overdue", "partial", "paid"])
+            .order("due_date", { ascending: false })
+        : Promise.resolve({ data: null }),
     ]);
 
   const payments = paymentsRes.data;
@@ -126,6 +135,34 @@ export default async function UnitDetailPage({
   const documents = documentsRes.data;
   const maintenance = maintenanceRes.data;
   const pastLeases = pastLeasesRes.data;
+  const invoices = invoicesRes.data as Array<{
+    id: string;
+    amount: number | string;
+    paid_amount: number | string | null;
+    due_date: string;
+    period_start: string | null;
+    period_end: string | null;
+    status: "pending" | "overdue" | "partial" | "paid";
+  }> | null;
+
+  // Roll up totals across the active lease's invoices for the summary cards.
+  // Pending bucket includes overdue + partial (anything not fully settled).
+  const invoiceTotals = (invoices || []).reduce(
+    (acc, inv) => {
+      const amount = Number(inv.amount) || 0;
+      const paid = Number(inv.paid_amount) || 0;
+      const remaining = Math.max(0, amount - paid);
+      if (inv.status === "paid") {
+        acc.paidCount += 1;
+        acc.paidAmount += amount;
+      } else {
+        acc.pendingCount += 1;
+        acc.pendingAmount += remaining;
+      }
+      return acc;
+    },
+    { paidCount: 0, paidAmount: 0, pendingCount: 0, pendingAmount: 0 }
+  );
 
   // Generate signed URLs for document downloads
   const docUrlMap = documents && documents.length > 0
@@ -571,6 +608,192 @@ export default async function UnitDetailPage({
               </tbody>
             </table>
           </div>
+        </section>
+      )}
+
+      {/* Invoices for the current lease */}
+      {currentTenant && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-accent/10">
+                <Receipt className="h-4 w-4 text-accent" />
+              </div>
+              <h2 className="text-lg font-semibold text-text-primary font-display tracking-tight">
+                {ti("title")}
+              </h2>
+              {invoices && invoices.length > 0 && (
+                <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
+                  {invoices.length}
+                </span>
+              )}
+            </div>
+            <Link
+              href={`/${locale}/invoices`}
+              className="inline-flex items-center gap-1.5 h-8 px-3 bg-surface-elevated border border-border text-text-secondary text-xs rounded-md hover:border-accent/30 hover:text-accent transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              {tc("viewAll")}
+            </Link>
+          </div>
+
+          {invoices && invoices.length > 0 ? (
+            <>
+              {/* Paid / Pending summary cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <div className="bg-surface border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                    <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      {ti("paid")}
+                    </span>
+                    <span className="ms-auto text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
+                      {invoiceTotals.paidCount}
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold font-mono tabular-nums text-success">
+                    {invoiceTotals.paidAmount.toLocaleString("en-OM", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                    <span className="text-xs font-sans font-normal text-text-secondary ms-1">
+                      {CURRENCY.code}
+                    </span>
+                  </p>
+                </div>
+                <div className="bg-surface border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Clock className="h-3.5 w-3.5 text-warning" />
+                    <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      {ti("pending")}
+                    </span>
+                    <span className="ms-auto text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
+                      {invoiceTotals.pendingCount}
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold font-mono tabular-nums text-warning">
+                    {invoiceTotals.pendingAmount.toLocaleString("en-OM", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                    <span className="text-xs font-sans font-normal text-text-secondary ms-1">
+                      {CURRENCY.code}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Invoice table */}
+              <div className="bg-surface border border-border rounded-xl overflow-x-auto">
+                <table className="w-full min-w-[640px]">
+                  <thead>
+                    <tr className="border-b border-border bg-surface-elevated/30">
+                      <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3">
+                        {ti("dueDate")}
+                      </th>
+                      <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3">
+                        {ti("periodStart")} — {ti("periodEnd")}
+                      </th>
+                      <th className="text-end text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3">
+                        {ti("amount")}
+                      </th>
+                      <th className="text-end text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3">
+                        {ti("paidAmount")}
+                      </th>
+                      <th className="text-end text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3">
+                        {ti("remaining")}
+                      </th>
+                      <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-wider px-5 py-3">
+                        {ti("status")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {invoices.map((inv) => {
+                      const amount = Number(inv.amount) || 0;
+                      const paid = Number(inv.paid_amount) || 0;
+                      const remaining = Math.max(0, amount - paid);
+                      const statusStyle =
+                        inv.status === "paid"
+                          ? "bg-success/10 text-success"
+                          : inv.status === "overdue"
+                            ? "bg-destructive/10 text-destructive"
+                            : inv.status === "partial"
+                              ? "bg-info/10 text-info"
+                              : "bg-warning/10 text-warning";
+                      return (
+                        <tr
+                          key={inv.id}
+                          className="hover:bg-surface-elevated/30 transition-colors"
+                        >
+                          <td className="px-5 py-3.5">
+                            <span className="text-sm text-text-primary font-mono tabular-nums">
+                              {new Date(inv.due_date).toLocaleDateString()}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-sm text-text-secondary font-mono tabular-nums">
+                              {inv.period_start
+                                ? new Date(inv.period_start).toLocaleDateString()
+                                : "—"}
+                              {" — "}
+                              {inv.period_end
+                                ? new Date(inv.period_end).toLocaleDateString()
+                                : "—"}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-end">
+                            <span className="text-sm font-bold text-text-primary font-mono tabular-nums">
+                              {amount.toLocaleString("en-OM", {
+                                minimumFractionDigits: 2,
+                              })}
+                              <span className="text-[10px] font-normal text-text-secondary ms-1">
+                                {CURRENCY.code}
+                              </span>
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-end">
+                            <span className="text-sm text-success font-mono tabular-nums">
+                              {paid.toLocaleString("en-OM", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-end">
+                            <span
+                              className={`text-sm font-mono tabular-nums ${
+                                remaining > 0
+                                  ? "text-warning font-semibold"
+                                  : "text-text-secondary"
+                              }`}
+                            >
+                              {remaining.toLocaleString("en-OM", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-lg capitalize ${statusStyle}`}
+                            >
+                              {ti(inv.status)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="bg-surface border border-border rounded-xl p-10 text-center">
+              <Receipt className="h-8 w-8 text-text-secondary/30 mx-auto mb-2" />
+              <p className="text-sm text-text-secondary">
+                {ti("noInvoices")}
+              </p>
+            </div>
+          )}
         </section>
       )}
 
