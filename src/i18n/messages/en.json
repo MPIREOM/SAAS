@@ -333,6 +333,15 @@
       "refunded": "Refunded",
       "deducted": "Deducted"
     },
+    "earlyTerminationCommission": {
+      "title": "Early-termination commission owed",
+      "description": "Tenant is leaving before the contract ends. The company is still owed the full contract commission — collect this from the tenant before confirming the move-out.",
+      "contractMonths": "Contract length (months)",
+      "monthsRemaining": "Months remaining",
+      "fullContract": "Full contract commission",
+      "alreadyTaken": "Already collected",
+      "calculating": "Calculating commission owed..."
+    },
     "outstandingInvoices": "Outstanding Invoices",
     "invoiceResolutionDescription": "Choose how to handle each outstanding invoice before completing the move-out.",
     "bulkAction": "Set all to",

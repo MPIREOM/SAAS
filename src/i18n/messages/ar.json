@@ -333,6 +333,15 @@
       "refunded": "مسترد",
       "deducted": "مخصوم"
     },
+    "earlyTerminationCommission": {
+      "title": "عمولة الإنهاء المبكر المستحقة",
+      "description": "المستأجر يغادر قبل انتهاء العقد. لا تزال الشركة تستحق عمولة العقد كاملةً — يُرجى تحصيل هذا المبلغ من المستأجر قبل تأكيد الإخلاء.",
+      "contractMonths": "مدة العقد (بالأشهر)",
+      "monthsRemaining": "الأشهر المتبقية",
+      "fullContract": "إجمالي عمولة العقد",
+      "alreadyTaken": "تم تحصيلها مسبقاً",
+      "calculating": "جارٍ حساب العمولة المستحقة..."
+    },
     "outstandingInvoices": "الفواتير المستحقة",
     "invoiceResolutionDescription": "اختر كيفية التعامل مع كل فاتورة مستحقة قبل إتمام الخروج.",
     "bulkAction": "تعيين الكل إلى",
