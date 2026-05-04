@@ -80,6 +80,12 @@ export function MarkPaidButton({
   const [selectedChequeId, setSelectedChequeId] = useState("");
   const [loadingCheques, setLoadingCheques] = useState(false);
   const [addNewCheque, setAddNewCheque] = useState(false);
+  // Paid by cheque, but no cheque to record on our side — used when the
+  // tenant handed the cheque directly to the owner. The payment still goes
+  // in with method="cheque" so the owner ledger treats it as "direct to
+  // owner" (no balance impact) while still applying the 9% commission for
+  // percentage-rate units.
+  const [noChequeOnFile, setNoChequeOnFile] = useState(false);
   const [showAllCheques, setShowAllCheques] = useState(false);
   const [newChequeNumber, setNewChequeNumber] = useState("");
   const [newChequeBankName, setNewChequeBankName] = useState("");
@@ -117,6 +123,7 @@ export function MarkPaidButton({
     if (method === "cheque" && open) {
       setLoadingCheques(true);
       setAddNewCheque(false);
+      setNoChequeOnFile(false);
       setShowAllCheques(false);
       const supabase = createClient();
       supabase
@@ -131,10 +138,9 @@ export function MarkPaidButton({
           // Auto-select the single in-window match if there's exactly one.
           const inWindow = all.filter((c) => isRelevantCheque(c.cheque_date));
           setSelectedChequeId(inWindow.length === 1 ? inWindow[0].id : "");
-          // If no pending cheques at all, jump straight to the "add new" form.
-          if (all.length === 0) {
-            setAddNewCheque(true);
-          }
+          // No auto-jump to "add new" anymore — the user might just want to
+          // record the payment as method="cheque" (direct to owner) without
+          // tracking an actual cheque. They'll pick a path from the toggles.
           setLoadingCheques(false);
         });
     }
@@ -247,6 +253,9 @@ export function MarkPaidButton({
             status: "cleared",
           });
       }
+      // noChequeOnFile === true → no cheque row created or updated;
+      // the payment carries method="cheque" so the owner ledger flags it
+      // as paid-direct-to-owner with no company balance impact.
 
       // When the invoice is fully paid by any method, retire any pending
       // cheques tied to it so they stop showing up on the daily briefing.
@@ -569,15 +578,72 @@ export function MarkPaidButton({
 
               {/* Cheque selection */}
               {method === "cheque" && (
-                <div className="animate-fade-in-up">
+                <div className="animate-fade-in-up space-y-3">
                   {loadingCheques ? (
                     <div className="flex items-center justify-center py-4">
                       <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                     </div>
                   ) : (
                     <>
+                      {/* Mode toggle: pick existing / add new / no cheque */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          disabled={cheques.length === 0}
+                          onClick={() => {
+                            setAddNewCheque(false);
+                            setNoChequeOnFile(false);
+                          }}
+                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 ${
+                            !addNewCheque && !noChequeOnFile
+                              ? "bg-accent/10 border-accent/40 text-accent"
+                              : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                          }`}
+                        >
+                          {t("selectCheque")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddNewCheque(true);
+                            setNoChequeOnFile(false);
+                            setSelectedChequeId("");
+                          }}
+                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 ${
+                            addNewCheque
+                              ? "bg-accent/10 border-accent/40 text-accent"
+                              : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                          }`}
+                        >
+                          {t("addCheque")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNoChequeOnFile(true);
+                            setAddNewCheque(false);
+                            setSelectedChequeId("");
+                          }}
+                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 ${
+                            noChequeOnFile
+                              ? "bg-accent/10 border-accent/40 text-accent"
+                              : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                          }`}
+                          title="Tenant gave the cheque directly to the owner — no cheque tracked here"
+                        >
+                          Paid to owner
+                        </button>
+                      </div>
+
+                      {/* Direct-to-owner mode: explainer card */}
+                      {noChequeOnFile && (
+                        <div className="p-3 rounded-xl bg-surface-elevated/50 border border-border/40 text-xs text-text-secondary">
+                          Recorded as paid by cheque, but no cheque is logged on the company side. The rent goes direct to the owner — it won&apos;t increase the &quot;company owes owner&quot; balance, but commission still applies for percentage-rate units.
+                        </div>
+                      )}
+
                       {/* Existing cheques list */}
-                      {displayedCheques.length > 0 && !addNewCheque && (
+                      {displayedCheques.length > 0 && !addNewCheque && !noChequeOnFile && (
                         <div>
                           <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                             {t("selectCheque")}
@@ -630,21 +696,21 @@ export function MarkPaidButton({
                       )}
 
                       {/* No in-window matches, but tenant has other pending cheques */}
-                      {!addNewCheque && displayedCheques.length === 0 && cheques.length > 0 && (
+                      {!addNewCheque && !noChequeOnFile && displayedCheques.length === 0 && cheques.length > 0 && (
                         <div className="p-3 rounded-xl bg-surface-elevated/50 border border-border/40 text-xs text-text-secondary">
                           {t("noChequesMatchPeriod")}
                         </div>
                       )}
 
                       {/* Show all / only-matching toggle when some cheques were hidden */}
-                      {!addNewCheque && hiddenChequeCount > 0 && (
+                      {!addNewCheque && !noChequeOnFile && hiddenChequeCount > 0 && (
                         <button
                           type="button"
                           onClick={() => {
                             setShowAllCheques(!showAllCheques);
                             setSelectedChequeId("");
                           }}
-                          className="w-full mt-2 text-xs text-text-secondary hover:text-text-primary font-medium py-2 border border-dashed border-border/60 rounded-xl hover:border-border hover:bg-surface-elevated/50 transition-all duration-200"
+                          className="w-full text-xs text-text-secondary hover:text-text-primary font-medium py-2 border border-dashed border-border/60 rounded-xl hover:border-border hover:bg-surface-elevated/50 transition-all duration-200"
                         >
                           {showAllCheques
                             ? t("showOnlyPeriodCheques")
@@ -652,20 +718,6 @@ export function MarkPaidButton({
                                 total: cheques.length,
                                 hidden: hiddenChequeCount,
                               })}
-                        </button>
-                      )}
-
-                      {/* Toggle between existing cheques and new cheque form */}
-                      {cheques.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAddNewCheque(!addNewCheque);
-                            setSelectedChequeId("");
-                          }}
-                          className="w-full mt-2 text-xs text-accent hover:text-accent-hover font-medium py-2 border border-dashed border-accent/30 rounded-xl hover:border-accent/50 hover:bg-accent/5 transition-all duration-200"
-                        >
-                          {addNewCheque ? t("selectCheque") : `+ ${t("addCheque")}`}
                         </button>
                       )}
 
@@ -768,7 +820,7 @@ export function MarkPaidButton({
               form="mark-paid-form"
               disabled={
                 loading ||
-                (method === "cheque" && !selectedChequeId && !addNewCheque) ||
+                (method === "cheque" && !selectedChequeId && !addNewCheque && !noChequeOnFile) ||
                 (method === "cheque" && addNewCheque && (!newChequeNumber || !newChequeBankName)) ||
                 (paymentType === "partial" && (!partialAmount || Number(partialAmount) <= 0))
               }

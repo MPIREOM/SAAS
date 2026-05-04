@@ -122,7 +122,7 @@ const tools: Anthropic.Tool[] = [
   {
     name: "mark_invoice_paid",
     description:
-      "Record a payment against an invoice. Updates the invoice status and creates a payment record. Can do full or partial payments.",
+      "Record a payment against an invoice. Updates the invoice status and creates a payment record. Can do full or partial payments. NOTE on method='cheque': use this when the tenant paid by cheque AND the cheque went directly to the owner — the rent doesn't increase the company-owes-owner balance, but commission is still owed. No cheque record is required (use this even if the tenant doesn't have a tracked cheque on file).",
     input_schema: {
       type: "object" as const,
       properties: {
