@@ -28,7 +28,10 @@ type EntityType =
   | "maintenance_request"
   | "document"
   | "notification_template"
-  | "user";
+  | "user"
+  | "owner"
+  | "owner_settlement"
+  | "owner_business_fee";
 
 interface AuditLogEntry {
   action: AuditAction;
