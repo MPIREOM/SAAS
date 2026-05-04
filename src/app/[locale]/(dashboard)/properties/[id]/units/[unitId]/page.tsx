@@ -36,6 +36,7 @@ import {
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
 import { AddChequeDialog } from "@/components/cheques/add-cheque-dialog";
+import { EditPaymentMethod } from "@/components/payments/edit-payment-method";
 import { ChequeActions } from "@/components/cheques/cheque-actions";
 
 export default async function UnitDetailPage({
@@ -859,9 +860,16 @@ export default async function UnitDetailPage({
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-sm text-text-secondary">
-                        {payment.method ? ti(`methods.${payment.method}`) : "—"}
-                      </span>
+                      <EditPaymentMethod
+                        paymentId={payment.id as string}
+                        currentMethod={
+                          (payment.method as
+                            | "cash"
+                            | "bank_transfer"
+                            | "cheque"
+                            | null) ?? null
+                        }
+                      />
                     </td>
                     <td className="px-5 py-3.5">
                       {payment.method === "cheque" && payment.reference_number ? (
