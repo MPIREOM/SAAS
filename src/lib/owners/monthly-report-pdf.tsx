@@ -16,47 +16,48 @@ import type { MonthlyReport } from "./monthly-report-data";
 // ships with @react-pdf/renderer doesn't have Arabic glyphs, so tenant
 // names like "أحمد النبهاني" came out as garbage.
 //
-// We read the OTF bytes synchronously at module load and hand them to
-// Font.register as raw buffers. Passing buffers (instead of a path
-// string) sidesteps @react-pdf's internal "is this a URL or a file?"
-// resolution, which behaves unpredictably on Vercel serverless. If the
-// files aren't bundled, fs.readFileSync will throw ENOENT here with a
-// clear path — much easier to diagnose than a generic "could not
-// resolve font" later during render.
+// Encode the OTF bytes as a data: URL at module load and pass that to
+// Font.register. @react-pdf/font/lib/index.js explicitly handles
+// data URLs (see isDataUrl branch) — no filesystem access during
+// render, no fontkit.open() with a Buffer that doesn't quite fit, and
+// the data URL string travels with the JS module wherever it ends up.
+// We still need fs.readFileSync to succeed at module load: if Vercel
+// didn't trace public/fonts into the bundle, the route falls back to
+// Helvetica (Arabic will look wrong but the route returns 200).
 const FONT_FAMILY = "ThmanyahSans";
 const FONT_FALLBACK = "Helvetica";
 
-function loadFontBuffer(filename: string): Buffer | null {
-  // Try a few likely locations. process.cwd() is /var/task on Vercel
-  // and the project root locally; both should contain public/fonts/
-  // when outputFileTracingIncludes is honoured. The last entry uses
-  // import.meta.url-style resolution so a future move of this file
-  // closer to the fonts (e.g. co-locating them under src/) keeps
-  // working without a config change.
+function loadFontDataUrl(filename: string): string | null {
   const candidates = [
     path.join(process.cwd(), "public/fonts", filename),
     path.join(process.cwd(), "fonts", filename),
   ];
   for (const p of candidates) {
     try {
-      return fs.readFileSync(p);
+      const buf = fs.readFileSync(p);
+      const mime = filename.toLowerCase().endsWith(".otf")
+        ? "font/otf"
+        : "font/ttf";
+      return `data:${mime};base64,${buf.toString("base64")}`;
     } catch {
-      // try the next candidate
+      // try next candidate
     }
   }
-  console.warn(`[monthly-report-pdf] Font ${filename} not found; falling back to ${FONT_FALLBACK}`);
+  console.warn(
+    `[monthly-report-pdf] Font ${filename} not found in any candidate path; falling back to ${FONT_FALLBACK}`,
+  );
   return null;
 }
 
-const regularBuf = loadFontBuffer("ThmanyahSans-Regular.otf");
-const boldBuf = loadFontBuffer("ThmanyahSans-Bold.otf");
-const FONT_LOADED = regularBuf !== null && boldBuf !== null;
+const regularSrc = loadFontDataUrl("ThmanyahSans-Regular.otf");
+const boldSrc = loadFontDataUrl("ThmanyahSans-Bold.otf");
+const FONT_LOADED = regularSrc !== null && boldSrc !== null;
 if (FONT_LOADED) {
   Font.register({
     family: FONT_FAMILY,
     fonts: [
-      { src: regularBuf as unknown as string, fontWeight: 400 },
-      { src: boldBuf as unknown as string, fontWeight: 700 },
+      { src: regularSrc as string, fontWeight: 400 },
+      { src: boldSrc as string, fontWeight: 700 },
     ],
   });
 }
