@@ -7,24 +7,60 @@ import {
   Font,
   pdf,
 } from "@react-pdf/renderer";
+import fs from "node:fs";
 import path from "node:path";
 import { CURRENCY, formatCurrency } from "@/lib/currency";
 import type { MonthlyReport } from "./monthly-report-data";
 
 // Register Thmanyah Sans (Latin + Arabic). The default Helvetica that
 // ships with @react-pdf/renderer doesn't have Arabic glyphs, so tenant
-// names like "أحمد النبهاني" came out as garbage. Resolving from the
-// public/ directory keeps the renderer self-contained — no runtime
-// network call to Google Fonts and no font loss on cold start.
+// names like "أحمد النبهاني" came out as garbage.
+//
+// We read the OTF bytes synchronously at module load and hand them to
+// Font.register as raw buffers. Passing buffers (instead of a path
+// string) sidesteps @react-pdf's internal "is this a URL or a file?"
+// resolution, which behaves unpredictably on Vercel serverless. If the
+// files aren't bundled, fs.readFileSync will throw ENOENT here with a
+// clear path — much easier to diagnose than a generic "could not
+// resolve font" later during render.
 const FONT_FAMILY = "ThmanyahSans";
-const fontDir = path.resolve(process.cwd(), "public/fonts");
-Font.register({
-  family: FONT_FAMILY,
-  fonts: [
-    { src: path.join(fontDir, "ThmanyahSans-Regular.otf"), fontWeight: 400 },
-    { src: path.join(fontDir, "ThmanyahSans-Bold.otf"), fontWeight: 700 },
-  ],
-});
+const FONT_FALLBACK = "Helvetica";
+
+function loadFontBuffer(filename: string): Buffer | null {
+  // Try a few likely locations. process.cwd() is /var/task on Vercel
+  // and the project root locally; both should contain public/fonts/
+  // when outputFileTracingIncludes is honoured. The last entry uses
+  // import.meta.url-style resolution so a future move of this file
+  // closer to the fonts (e.g. co-locating them under src/) keeps
+  // working without a config change.
+  const candidates = [
+    path.join(process.cwd(), "public/fonts", filename),
+    path.join(process.cwd(), "fonts", filename),
+  ];
+  for (const p of candidates) {
+    try {
+      return fs.readFileSync(p);
+    } catch {
+      // try the next candidate
+    }
+  }
+  console.warn(`[monthly-report-pdf] Font ${filename} not found; falling back to ${FONT_FALLBACK}`);
+  return null;
+}
+
+const regularBuf = loadFontBuffer("ThmanyahSans-Regular.otf");
+const boldBuf = loadFontBuffer("ThmanyahSans-Bold.otf");
+const FONT_LOADED = regularBuf !== null && boldBuf !== null;
+if (FONT_LOADED) {
+  Font.register({
+    family: FONT_FAMILY,
+    fonts: [
+      { src: regularBuf as unknown as string, fontWeight: 400 },
+      { src: boldBuf as unknown as string, fontWeight: 700 },
+    ],
+  });
+}
+const ACTIVE_FONT = FONT_LOADED ? FONT_FAMILY : FONT_FALLBACK;
 
 // Brand palette mirrors the email template in admin-notify.ts so the PDF
 // feels like part of the same system.
@@ -45,7 +81,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     padding: 32,
     fontSize: 10,
-    fontFamily: FONT_FAMILY,
+    fontFamily: ACTIVE_FONT,
   },
   header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
   brand: { color: colors.gold, fontSize: 18, fontWeight: 700, letterSpacing: -0.5 },
