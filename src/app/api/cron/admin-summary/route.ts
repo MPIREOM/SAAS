@@ -393,12 +393,19 @@ export async function runAdminSummary(
     }
     const outstandingByPropertySorted = Array.from(outstandingByProperty.entries())
       .sort((a, b) => b[1].total - a[1].total);
-    const outstandingBreakdownInline =
-      outstandingByPropertySorted
-        .map(([name, { count, total }]) =>
-          `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
-        )
-        .join(" ") || " ";
+    const breakdownPieces = outstandingByPropertySorted.map(
+      ([name, { count, total }]) =>
+        `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
+    );
+    // Owner balance was previously sent as {{11}}, but the live `daily_briefs`
+    // Meta template only has 10 placeholders — passing 11 made every send
+    // fail. Fold the balance into the {{10}} breakdown so it still appears
+    // in the WhatsApp message without breaking the parameter count.
+    const ownerBalanceInline = ownerBalanceLine
+      ? ownerBalanceLine.replace(/\s+/g, " ").trim()
+      : "";
+    if (ownerBalanceInline) breakdownPieces.push(ownerBalanceInline);
+    const outstandingBreakdownInline = breakdownPieces.join(" ") || " ";
 
     const whatsappLines = [
       `📊 *MPIRE Daily Summary*`,
@@ -462,12 +469,10 @@ export async function runAdminSummary(
           String(openMaintenance.length),
           // {{10}} — per-property pending + overdue breakdown, single-line
           // form (Meta rejects newlines/tabs/>4 spaces in template params).
+          // Owner balance is appended here too; the live template has only
+          // 10 placeholders, so a separate {{11}} param makes Meta reject
+          // every message.
           outstandingBreakdownInline,
-          // {{11}} — owner running balance line. Falls back to a single
-          // space because Meta rejects empty strings in template params.
-          ownerBalanceLine
-            ? ownerBalanceLine.replace(/\s+/g, " ").trim() || " "
-            : " ",
         ],
       },
     });
