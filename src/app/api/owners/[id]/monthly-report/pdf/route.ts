@@ -28,15 +28,28 @@ export async function GET(
     return NextResponse.json({ error: "Owner not found" }, { status: 404 });
   }
 
-  const pdfBuffer = await renderMonthlyReportPdf(report);
+  try {
+    const pdfBuffer = await renderMonthlyReportPdf(report);
 
-  const filename = `MPIRE-${report.ownerName.replace(/[^A-Za-z0-9]+/g, "-")}-${report.monthLabel.replace(/\s+/g, "-")}.pdf`;
-  return new NextResponse(new Uint8Array(pdfBuffer), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${filename}"`,
-      "Cache-Control": "no-store",
-    },
-  });
+    const filename = `MPIRE-${report.ownerName.replace(/[^A-Za-z0-9]+/g, "-")}-${report.monthLabel.replace(/\s+/g, "-")}.pdf`;
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="${filename}"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (err) {
+    // Surface the actual error in the HTTP response so it doesn't get
+    // truncated in Vercel's first-stdout-line-only log view. This route
+    // is only reachable by signed-in operators, so leaking the message
+    // is acceptable here.
+    const message = err instanceof Error ? `${err.message}\n\n${err.stack ?? ""}` : String(err);
+    console.error("[monthly-report] render failed:", message);
+    return new NextResponse(`Failed to render PDF:\n\n${message}`, {
+      status: 500,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
 }
