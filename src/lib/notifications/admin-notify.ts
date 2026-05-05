@@ -139,6 +139,77 @@ async function sendWhatsAppTemplateMessage(
   }
 }
 
+// Send a template message that includes a document (PDF) header — used by
+// the weekly owner report cron. Meta's template document header takes a
+// public link and an optional filename; the body parameters work the same
+// way as a text-only template.
+export async function sendWhatsAppDocumentTemplate(args: {
+  to: string;
+  templateName: string;
+  languageCode: string;
+  bodyParameters: string[];
+  documentLink: string;
+  filename: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { to, templateName, languageCode, bodyParameters, documentLink, filename } = args;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  if (!phoneNumberId || !accessToken) {
+    console.error("[admin-notify] WhatsApp document template skipped: credentials not configured", { templateName });
+    return { success: false, error: "WhatsApp not configured" };
+  }
+
+  try {
+    const res = await fetch(`${WHATSAPP_API_URL}/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: to.replace(/\+/g, ""),
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: languageCode },
+          components: [
+            {
+              type: "header",
+              parameters: [
+                {
+                  type: "document",
+                  document: { link: documentLink, filename },
+                },
+              ],
+            },
+            {
+              type: "body",
+              parameters: bodyParameters.map((p) => ({ type: "text", text: p })),
+            },
+          ],
+        },
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error("[admin-notify] WhatsApp document template failed", {
+        to,
+        templateName,
+        languageCode,
+        bodyParamCount: bodyParameters.length,
+        status: res.status,
+        metaError: data?.error,
+      });
+      return { success: false, error: data.error?.message || `WhatsApp API ${res.status}` };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("[admin-notify] WhatsApp document template threw", { to, templateName, err });
+    return { success: false, error: err instanceof Error ? err.message : "Unknown" };
+  }
+}
+
 export type NotifyAdminsResult = {
   emailsSent: number;
   whatsappSent: number;

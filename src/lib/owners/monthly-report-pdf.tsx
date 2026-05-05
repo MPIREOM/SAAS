@@ -1,0 +1,362 @@
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  pdf,
+} from "@react-pdf/renderer";
+import { CURRENCY, formatCurrency } from "@/lib/currency";
+import type { MonthlyReport } from "./monthly-report-data";
+
+// Brand palette mirrors the email template in admin-notify.ts so the PDF
+// feels like part of the same system.
+const colors = {
+  bg: "#0B0A0F",
+  card: "#13121A",
+  border: "#2A293A",
+  gold: "#C9A84C",
+  text: "#F0EDE6",
+  muted: "#8A8697",
+  good: "#7AB36F",
+  bad: "#D86E6E",
+};
+
+const styles = StyleSheet.create({
+  page: {
+    backgroundColor: colors.bg,
+    color: colors.text,
+    padding: 32,
+    fontSize: 10,
+    fontFamily: "Helvetica",
+  },
+  header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
+  brand: { color: colors.gold, fontSize: 18, fontWeight: 700, letterSpacing: -0.5 },
+  brandSub: { color: colors.muted, fontSize: 9, marginTop: 2 },
+  title: { color: colors.text, fontSize: 14, fontWeight: 700, textAlign: "right" },
+  titleSub: { color: colors.muted, fontSize: 9, textAlign: "right", marginTop: 2 },
+  card: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 12,
+    marginBottom: 12,
+  },
+  sectionHeading: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: 700,
+    marginBottom: 8,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    paddingBottom: 4,
+  },
+  balanceRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  balanceLabel: { color: colors.muted },
+  balanceValue: { color: colors.text },
+  balanceTotal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+  },
+  balanceTotalLabel: { color: colors.text, fontWeight: 700 },
+  balanceTotalValuePos: { color: colors.good, fontWeight: 700, fontSize: 12 },
+  balanceTotalValueNeg: { color: colors.bad, fontWeight: 700, fontSize: 12 },
+  balanceTotalValueZero: { color: colors.muted, fontWeight: 700, fontSize: 12 },
+  tableHeader: {
+    flexDirection: "row",
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    paddingBottom: 4,
+    marginBottom: 4,
+  },
+  tableHeaderCell: { color: colors.muted, fontSize: 8, fontWeight: 700 },
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 3,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 0.5,
+  },
+  tableRowLast: { flexDirection: "row", paddingVertical: 3 },
+  cell: { color: colors.text, fontSize: 9 },
+  cellMuted: { color: colors.muted, fontSize: 9 },
+  cellRight: { color: colors.text, fontSize: 9, textAlign: "right" },
+  totalRow: {
+    flexDirection: "row",
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+  },
+  totalLabel: { color: colors.text, fontSize: 9, fontWeight: 700 },
+  totalValue: { color: colors.gold, fontSize: 9, fontWeight: 700, textAlign: "right" },
+  empty: { color: colors.muted, fontStyle: "italic", fontSize: 9 },
+  footer: {
+    position: "absolute",
+    bottom: 16,
+    left: 32,
+    right: 32,
+    textAlign: "center",
+    color: colors.muted,
+    fontSize: 8,
+  },
+});
+
+const fmt = (n: number) => `${formatCurrency(n)} ${CURRENCY.code}`;
+
+function balanceColour(side: MonthlyReport["balance"]["side"]) {
+  if (side === "company_owes_owner") return styles.balanceTotalValuePos;
+  if (side === "owner_owes_company") return styles.balanceTotalValueNeg;
+  return styles.balanceTotalValueZero;
+}
+
+function balanceCaption(report: MonthlyReport): string {
+  const { side, balance } = report.balance;
+  if (side === "company_owes_owner") return `Company owes ${report.ownerName}`;
+  if (side === "owner_owes_company") return `${report.ownerName} owes company`;
+  return "Settled";
+  void balance;
+}
+
+function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
+  const b = report.balance.breakdown;
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.brand}>MPIRE</Text>
+            <Text style={styles.brandSub}>Property Management</Text>
+          </View>
+          <View>
+            <Text style={styles.title}>Monthly Owner Report</Text>
+            <Text style={styles.titleSub}>
+              {report.monthLabel} · As of {report.asOf}
+            </Text>
+            <Text style={styles.titleSub}>Owner: {report.ownerName}</Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionHeading}>Owner Balance</Text>
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceLabel}>Opening balance ({report.balance.breakdown.openingBalance >= 0 ? "company owes owner" : "owner owes company"})</Text>
+            <Text style={styles.balanceValue}>{fmt(b.openingBalance)}</Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceLabel}>+ Rent received to company</Text>
+            <Text style={styles.balanceValue}>{fmt(b.rentReceivedToCompany)}</Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceLabel}>+ Commission earned</Text>
+            <Text style={styles.balanceValue}>{fmt(b.commissionEarned)}</Text>
+          </View>
+          {b.earlyTerminationCommissionCatchUp !== 0 ? (
+            <View style={styles.balanceRow}>
+              <Text style={styles.balanceLabel}>+ Early-termination catch-up</Text>
+              <Text style={styles.balanceValue}>{fmt(b.earlyTerminationCommissionCatchUp)}</Text>
+            </View>
+          ) : null}
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceLabel}>+ Business manager fees</Text>
+            <Text style={styles.balanceValue}>{fmt(b.businessManagerFees)}</Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceLabel}>+ Expenses covered by company</Text>
+            <Text style={styles.balanceValue}>{fmt(b.expensesCoveredByCompany)}</Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceLabel}>− Settlements paid to owner</Text>
+            <Text style={styles.balanceValue}>{fmt(b.settlementsPaidToOwner)}</Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceLabel}>+ Settlements received from owner</Text>
+            <Text style={styles.balanceValue}>{fmt(b.settlementsReceivedFromOwner)}</Text>
+          </View>
+          <View style={styles.balanceTotal}>
+            <Text style={styles.balanceTotalLabel}>Current balance — {balanceCaption(report)}</Text>
+            <Text style={balanceColour(report.balance.side)}>{fmt(Math.abs(report.balance.balance))}</Text>
+          </View>
+          {b.rentReceivedDirectByCheque > 0 ? (
+            <Text style={[styles.cellMuted, { marginTop: 6, fontSize: 8 }]}>
+              Rent received directly by cheque (informational, not in balance): {fmt(b.rentReceivedDirectByCheque)}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionHeading}>
+            Defaulted Tenants · {report.defaultedInvoices.length} invoice{report.defaultedInvoices.length === 1 ? "" : "s"}
+          </Text>
+          {report.defaultedInvoices.length === 0 ? (
+            <Text style={styles.empty}>No outstanding invoices. All tenants up to date.</Text>
+          ) : (
+            <>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Tenant</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Property / Unit</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Due</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 0.7, textAlign: "right" }]}>Days</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1.2, textAlign: "right" }]}>Owing</Text>
+              </View>
+              {report.defaultedInvoices.map((inv, i) => (
+                <View
+                  key={i}
+                  style={
+                    i === report.defaultedInvoices.length - 1
+                      ? styles.tableRowLast
+                      : styles.tableRow
+                  }
+                >
+                  <Text style={[styles.cell, { flex: 2 }]}>{inv.tenantName}</Text>
+                  <Text style={[styles.cellMuted, { flex: 2 }]}>
+                    {inv.propertyName} — {inv.unitNumber}
+                  </Text>
+                  <Text style={[styles.cellMuted, { flex: 1 }]}>{inv.dueDate}</Text>
+                  <Text style={[styles.cellRight, { flex: 0.7 }]}>{inv.daysOverdue}</Text>
+                  <Text style={[styles.cellRight, { flex: 1.2 }]}>{fmt(inv.owing)}</Text>
+                </View>
+              ))}
+              <View style={styles.totalRow}>
+                <Text style={[styles.totalLabel, { flex: 5.7 }]}>Total outstanding</Text>
+                <Text style={[styles.totalValue, { flex: 1.2 }]}>{fmt(report.defaultedTotal)}</Text>
+              </View>
+            </>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionHeading}>
+            Expenses · {report.monthLabel} ({report.expenses.length})
+          </Text>
+          {report.expenses.length === 0 ? (
+            <Text style={styles.empty}>No expenses recorded this month.</Text>
+          ) : (
+            <>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Category</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 2.5 }]}>Description</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Property</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
+              </View>
+              {report.expenses.map((e, i) => (
+                <View
+                  key={i}
+                  style={
+                    i === report.expenses.length - 1
+                      ? styles.tableRowLast
+                      : styles.tableRow
+                  }
+                >
+                  <Text style={[styles.cellMuted, { flex: 1 }]}>{e.date}</Text>
+                  <Text style={[styles.cell, { flex: 1.2 }]}>{e.category}</Text>
+                  <Text style={[styles.cell, { flex: 2.5 }]}>
+                    {e.description || "—"}
+                    {e.vendor ? ` · ${e.vendor}` : ""}
+                  </Text>
+                  <Text style={[styles.cellMuted, { flex: 1.5 }]}>
+                    {e.propertyName || "Owner-level"}
+                  </Text>
+                  <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(e.amount)}</Text>
+                </View>
+              ))}
+              <View style={styles.totalRow}>
+                <Text style={[styles.totalLabel, { flex: 6.2 }]}>Total expenses</Text>
+                <Text style={[styles.totalValue, { flex: 1 }]}>{fmt(report.expensesTotal)}</Text>
+              </View>
+            </>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionHeading}>
+            Transfers to Owner · {report.transfersToOwner.length}
+          </Text>
+          {report.transfersToOwner.length === 0 ? (
+            <Text style={styles.empty}>No transfers to owner this month.</Text>
+          ) : (
+            <>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Method</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Reference</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
+              </View>
+              {report.transfersToOwner.map((s, i) => (
+                <View
+                  key={i}
+                  style={
+                    i === report.transfersToOwner.length - 1
+                      ? styles.tableRowLast
+                      : styles.tableRow
+                  }
+                >
+                  <Text style={[styles.cellMuted, { flex: 1 }]}>{s.date}</Text>
+                  <Text style={[styles.cell, { flex: 1 }]}>{s.method}</Text>
+                  <Text style={[styles.cellMuted, { flex: 2 }]}>{s.reference || "—"}</Text>
+                  <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(s.amount)}</Text>
+                </View>
+              ))}
+              <View style={styles.totalRow}>
+                <Text style={[styles.totalLabel, { flex: 4 }]}>Total to owner</Text>
+                <Text style={[styles.totalValue, { flex: 1 }]}>{fmt(report.transfersToOwnerTotal)}</Text>
+              </View>
+            </>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionHeading}>
+            Transfers to Company · {report.transfersToCompany.length}
+          </Text>
+          {report.transfersToCompany.length === 0 ? (
+            <Text style={styles.empty}>No transfers to company this month.</Text>
+          ) : (
+            <>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Method</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Reference</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
+              </View>
+              {report.transfersToCompany.map((s, i) => (
+                <View
+                  key={i}
+                  style={
+                    i === report.transfersToCompany.length - 1
+                      ? styles.tableRowLast
+                      : styles.tableRow
+                  }
+                >
+                  <Text style={[styles.cellMuted, { flex: 1 }]}>{s.date}</Text>
+                  <Text style={[styles.cell, { flex: 1 }]}>{s.method}</Text>
+                  <Text style={[styles.cellMuted, { flex: 2 }]}>{s.reference || "—"}</Text>
+                  <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(s.amount)}</Text>
+                </View>
+              ))}
+              <View style={styles.totalRow}>
+                <Text style={[styles.totalLabel, { flex: 4 }]}>Total to company</Text>
+                <Text style={[styles.totalValue, { flex: 1 }]}>{fmt(report.transfersToCompanyTotal)}</Text>
+              </View>
+            </>
+          )}
+        </View>
+
+        <Text style={styles.footer} fixed>
+          Generated {new Date(report.generatedAt).toUTCString()} · MPIRE Property Management
+        </Text>
+      </Page>
+    </Document>
+  );
+}
+
+export async function renderMonthlyReportPdf(report: MonthlyReport): Promise<Buffer> {
+  const blob = await pdf(<MonthlyReportDocument report={report} />).toBlob();
+  const arrayBuffer = await blob.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}

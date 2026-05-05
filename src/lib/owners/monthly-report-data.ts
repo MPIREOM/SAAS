@@ -1,0 +1,244 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getOwnerBalance, type OwnerBalanceResult } from "./balance";
+
+export type MonthlyReportExpense = {
+  date: string;
+  category: string;
+  description: string;
+  amount: number;
+  vendor: string | null;
+  propertyName: string | null;
+};
+
+export type MonthlyReportSettlement = {
+  date: string;
+  direction: "company_to_owner" | "owner_to_company";
+  amount: number;
+  method: string;
+  reference: string | null;
+};
+
+export type MonthlyReportDefaultedInvoice = {
+  tenantName: string;
+  propertyName: string;
+  unitNumber: string;
+  dueDate: string;
+  amount: number;
+  paidAmount: number;
+  owing: number;
+  status: string;
+  daysOverdue: number;
+};
+
+export type MonthlyReport = {
+  ownerId: string;
+  ownerName: string;
+  whatsappPhone: string | null;
+  email: string | null;
+  generatedAt: string;
+  monthLabel: string;     // e.g. "May 2026"
+  monthStart: string;     // YYYY-MM-DD, 1st of current month
+  asOf: string;           // YYYY-MM-DD, today
+  balance: OwnerBalanceResult;
+  expenses: MonthlyReportExpense[];
+  expensesTotal: number;
+  transfersToOwner: MonthlyReportSettlement[];
+  transfersToOwnerTotal: number;
+  transfersToCompany: MonthlyReportSettlement[];
+  transfersToCompanyTotal: number;
+  defaultedInvoices: MonthlyReportDefaultedInvoice[];
+  defaultedTotal: number;
+};
+
+function firstOfMonth(asOf: Date): string {
+  return `${asOf.getUTCFullYear()}-${String(asOf.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function ymd(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
+// Pulls everything needed to render a single owner's monthly-to-date PDF
+// report: cumulative balance + all unpaid invoices on their properties
+// (the "defaulted tenants" — drops off the report once paid) + this
+// month's expenses and settlements (resets at month rollover).
+export async function getOwnerMonthlyReport(
+  supabase: SupabaseClient,
+  ownerId: string,
+  asOfInput?: Date,
+): Promise<MonthlyReport | null> {
+  // Use Muscat-local date so the cron firing at 13:00 UTC Thursday
+  // (17:00 Muscat) reports on the correct calendar day if it ever
+  // straddles midnight.
+  const now = asOfInput ?? new Date();
+  const muscatNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+  const asOf = ymd(muscatNow);
+  const monthStart = firstOfMonth(muscatNow);
+
+  const balance = await getOwnerBalance(supabase, ownerId, asOf);
+  if (!balance) return null;
+
+  const { data: owner } = await supabase
+    .from("owners")
+    .select("name, whatsapp_phone, email")
+    .eq("id", ownerId)
+    .single();
+
+  const ownerProps = await supabase
+    .from("properties")
+    .select("id, name")
+    .eq("owner_id", ownerId);
+  const propertyIds = (ownerProps.data || []).map((p) => p.id as string);
+  const propertyNames = new Map<string, string>();
+  for (const p of ownerProps.data || []) {
+    propertyNames.set(p.id as string, (p.name as string) || "?");
+  }
+
+  // Expenses for this month — owner-level OR on one of their properties.
+  // Mirrors the balance logic in src/lib/owners/balance.ts.
+  const [propExpensesRes, ownerExpensesRes] = await Promise.all([
+    propertyIds.length > 0
+      ? supabase
+          .from("expenses")
+          .select("amount, expense_date, category, description, vendor, property_id")
+          .in("property_id", propertyIds)
+          .gte("expense_date", monthStart)
+          .lte("expense_date", asOf)
+          .order("expense_date", { ascending: true })
+      : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
+    supabase
+      .from("expenses")
+      .select("amount, expense_date, category, description, vendor, property_id")
+      .eq("owner_id", ownerId)
+      .gte("expense_date", monthStart)
+      .lte("expense_date", asOf)
+      .order("expense_date", { ascending: true }),
+  ]);
+
+  // Same expense can show up in both queries (owner_id set AND property_id
+  // set). De-dupe on (date, amount, category, description) to avoid double
+  // counting in the report.
+  const expenseSeen = new Set<string>();
+  const expenses: MonthlyReportExpense[] = [];
+  for (const row of [
+    ...(propExpensesRes.data || []),
+    ...(ownerExpensesRes.data || []),
+  ] as Record<string, unknown>[]) {
+    const key = `${row.expense_date}|${row.amount}|${row.category}|${row.description ?? ""}|${row.property_id ?? ""}`;
+    if (expenseSeen.has(key)) continue;
+    expenseSeen.add(key);
+    expenses.push({
+      date: row.expense_date as string,
+      category: (row.category as string) || "other",
+      description: (row.description as string) || "",
+      amount: Number(row.amount || 0),
+      vendor: (row.vendor as string) || null,
+      propertyName: row.property_id
+        ? propertyNames.get(row.property_id as string) || null
+        : null,
+    });
+  }
+  const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
+
+  // Settlements for this month, split by direction.
+  const settlementsRes = await supabase
+    .from("owner_settlements")
+    .select("amount, direction, method, settled_at, reference_number")
+    .eq("owner_id", ownerId)
+    .gte("settled_at", monthStart)
+    .lte("settled_at", asOf)
+    .order("settled_at", { ascending: true });
+  const transfersToOwner: MonthlyReportSettlement[] = [];
+  const transfersToCompany: MonthlyReportSettlement[] = [];
+  for (const row of (settlementsRes.data || []) as Record<string, unknown>[]) {
+    const entry: MonthlyReportSettlement = {
+      date: row.settled_at as string,
+      direction: row.direction as MonthlyReportSettlement["direction"],
+      amount: Number(row.amount || 0),
+      method: (row.method as string) || "cash",
+      reference: (row.reference_number as string) || null,
+    };
+    if (entry.direction === "company_to_owner") transfersToOwner.push(entry);
+    else transfersToCompany.push(entry);
+  }
+  const transfersToOwnerTotal = transfersToOwner.reduce((s, e) => s + e.amount, 0);
+  const transfersToCompanyTotal = transfersToCompany.reduce((s, e) => s + e.amount, 0);
+
+  // Defaulted tenants — every unpaid invoice across the owner's units,
+  // regardless of the month it's from. Once an invoice is fully paid its
+  // status flips to 'paid' and it falls off the next report.
+  const defaultedInvoices: MonthlyReportDefaultedInvoice[] = [];
+  let defaultedTotal = 0;
+  if (propertyIds.length > 0) {
+    const ownerUnitsRes = await supabase
+      .from("units")
+      .select("id")
+      .in("property_id", propertyIds);
+    const unitIds = (ownerUnitsRes.data || []).map((u) => u.id as string);
+    if (unitIds.length > 0) {
+      const invRes = await supabase
+        .from("invoices")
+        .select(
+          "amount, paid_amount, due_date, status, " +
+            "tenants(full_name), " +
+            "units(unit_number, properties:property_id(name))"
+        )
+        .in("unit_id", unitIds)
+        .in("status", ["pending", "partial", "overdue"])
+        .order("due_date", { ascending: true });
+      for (const row of (invRes.data as unknown as Record<string, unknown>[] | null) || []) {
+        const amount = Number(row.amount || 0);
+        const paid = Number(row.paid_amount || 0);
+        const owing = amount - paid;
+        if (owing <= 0.005) continue;
+        const tenant = row.tenants as Record<string, unknown> | null;
+        const unit = row.units as Record<string, unknown> | null;
+        const property = unit?.properties as Record<string, unknown> | null;
+        const dueDate = row.due_date as string;
+        const days = Math.max(
+          0,
+          Math.floor(
+            (Date.parse(asOf) - Date.parse(dueDate)) / (1000 * 60 * 60 * 24),
+          ),
+        );
+        defaultedInvoices.push({
+          tenantName: (tenant?.full_name as string) || "Unknown",
+          propertyName: (property?.name as string) || "?",
+          unitNumber: (unit?.unit_number as string) || "?",
+          dueDate,
+          amount,
+          paidAmount: paid,
+          owing,
+          status: row.status as string,
+          daysOverdue: days,
+        });
+        defaultedTotal += owing;
+      }
+    }
+  }
+
+  const monthLabel = muscatNow.toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return {
+    ownerId,
+    ownerName: (owner?.name as string) || balance.ownerName,
+    whatsappPhone: (owner?.whatsapp_phone as string) || null,
+    email: (owner?.email as string) || null,
+    generatedAt: new Date().toISOString(),
+    monthLabel,
+    monthStart,
+    asOf,
+    balance,
+    expenses,
+    expensesTotal,
+    transfersToOwner,
+    transfersToOwnerTotal,
+    transfersToCompany,
+    transfersToCompanyTotal,
+    defaultedInvoices,
+    defaultedTotal,
+  };
+}
