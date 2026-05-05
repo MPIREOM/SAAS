@@ -67,10 +67,14 @@ export async function runOwnerReports(
   try {
     // Recipients: every active owner with a whatsapp_phone. The user
     // explicitly scoped delivery to WhatsApp (no email branch), so owners
-    // without a number are silently skipped.
+    // without a number are silently skipped. We also pull the bookkeeping
+    // fields the rollover needs (opening balance + last-sent flag) so we
+    // can advance the ledger checkpoint after a successful send.
     const { data: ownersRows, error: ownersErr } = await supabase
       .from("owners")
-      .select("id, name, whatsapp_phone")
+      .select(
+        "id, name, whatsapp_phone, opening_balance, opening_balance_date, last_report_sent_at",
+      )
       .eq("is_active", true)
       .not("whatsapp_phone", "is", null);
     if (ownersErr) throw ownersErr;
@@ -147,6 +151,57 @@ export async function runOwnerReports(
 
         if (send.success) {
           sent++;
+          // Rollover the ledger checkpoint so next week's report shows just
+          // the period since this send. Skip the very first send (when
+          // last_report_sent_at is NULL) so the initial report still
+          // anchors on the manually-reconciled opening_balance.
+          const previousLastSent = (owner.last_report_sent_at as string | null) ?? null;
+          const previousOpeningBalance = Number(owner.opening_balance ?? 0);
+          const previousOpeningDate = (owner.opening_balance_date as string) ?? null;
+          const isFirstSend = previousLastSent === null;
+          let rollover: Record<string, unknown> = { rolledOver: false };
+          if (isFirstSend) {
+            // First report — only stamp the timestamp so subsequent runs
+            // know to start rolling.
+            const { error: stampErr } = await supabase
+              .from("owners")
+              .update({ last_report_sent_at: new Date().toISOString() })
+              .eq("id", ownerId);
+            if (stampErr) {
+              console.error(`[${CRON_NAME}] Failed to stamp last_report_sent_at for ${ownerId}:`, stampErr);
+              rollover = { rolledOver: false, error: stampErr.message };
+            } else {
+              rollover = { rolledOver: false, reason: "first_send" };
+            }
+          } else {
+            // Subsequent report — advance opening_balance to the current
+            // balance so next week's view contains only this week's deltas.
+            // Clear rent_excluded_until since the new opening_balance_date
+            // is past whatever cutoff was in effect.
+            const newOpeningBalance = Number(report.balance.balance.toFixed(2));
+            const newOpeningDate = report.asOf;
+            const { error: rolloverErr } = await supabase
+              .from("owners")
+              .update({
+                opening_balance: newOpeningBalance,
+                opening_balance_date: newOpeningDate,
+                rent_excluded_until: null,
+                last_report_sent_at: new Date().toISOString(),
+              })
+              .eq("id", ownerId);
+            if (rolloverErr) {
+              console.error(`[${CRON_NAME}] Failed to rollover ledger for ${ownerId}:`, rolloverErr);
+              rollover = { rolledOver: false, error: rolloverErr.message };
+            } else {
+              rollover = {
+                rolledOver: true,
+                previousOpeningBalance,
+                previousOpeningDate,
+                newOpeningBalance,
+                newOpeningDate,
+              };
+            }
+          }
           perOwner.push({
             ownerId,
             ownerName,
@@ -157,6 +212,7 @@ export async function runOwnerReports(
             transfersToOwner: report.transfersToOwner.length,
             transfersToCompany: report.transfersToCompany.length,
             balance: report.balance.balance,
+            rollover,
           });
         } else {
           errors++;
