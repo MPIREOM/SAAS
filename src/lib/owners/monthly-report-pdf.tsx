@@ -53,11 +53,18 @@ const regularSrc = loadFontDataUrl("ThmanyahSans-Regular.otf");
 const boldSrc = loadFontDataUrl("ThmanyahSans-Bold.otf");
 const FONT_LOADED = regularSrc !== null && boldSrc !== null;
 if (FONT_LOADED) {
+  // Register italic variants pointing back at the upright OTF — Thmanyah
+  // doesn't ship a slanted cut, but @react-pdf throws "Could not resolve
+  // font" the moment any style sets fontStyle: 'italic' on a family that
+  // hasn't registered an italic source. The placeholder "empty" rows in
+  // this report use italic, which was crashing the entire render.
   Font.register({
     family: FONT_FAMILY,
     fonts: [
-      { src: regularSrc as string, fontWeight: 400 },
-      { src: boldSrc as string, fontWeight: 700 },
+      { src: regularSrc as string, fontWeight: 400, fontStyle: "normal" },
+      { src: regularSrc as string, fontWeight: 400, fontStyle: "italic" },
+      { src: boldSrc as string, fontWeight: 700, fontStyle: "normal" },
+      { src: boldSrc as string, fontWeight: 700, fontStyle: "italic" },
     ],
   });
 }
