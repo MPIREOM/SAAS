@@ -212,15 +212,25 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
             <Text style={styles.balanceLabel}>+ Rent received to company</Text>
             <Text style={styles.balanceValue}>{fmt(b.rentReceivedToCompany)}</Text>
           </View>
-          {b.earlyTerminationCommissionCatchUp !== 0 ? (
-            <View style={styles.balanceRow}>
-              <Text style={styles.balanceLabel}>+ Early-termination catch-up</Text>
-              <Text style={styles.balanceValue}>{fmt(b.earlyTerminationCommissionCatchUp)}</Text>
-            </View>
-          ) : null}
+          {/*
+            Combine pass-through expenses with service charges (commission,
+            BM fees, early-termination catch-up) into a single "Expenses &
+            service charges" line. The detailed itemisation lives in the
+            Charges & Expenses section below; here we only need the rolled-up
+            number so the math from opening → current balance visibly
+            reconciles. The label uses "−" because the bookkeeping subtracts
+            this combined total from the owner's balance.
+          */}
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>+ Expenses covered by company</Text>
-            <Text style={styles.balanceValue}>{fmt(b.expensesCoveredByCompany)}</Text>
+            <Text style={styles.balanceLabel}>− Expenses &amp; service charges</Text>
+            <Text style={styles.balanceValue}>
+              {fmt(
+                b.expensesCoveredByCompany +
+                  b.commissionEarned +
+                  b.earlyTerminationCommissionCatchUp +
+                  b.businessManagerFees,
+              )}
+            </Text>
           </View>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel}>− Settlements paid to owner</Text>
