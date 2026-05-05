@@ -4,10 +4,27 @@ import {
   Text,
   View,
   StyleSheet,
+  Font,
   pdf,
 } from "@react-pdf/renderer";
+import path from "node:path";
 import { CURRENCY, formatCurrency } from "@/lib/currency";
 import type { MonthlyReport } from "./monthly-report-data";
+
+// Register Thmanyah Sans (Latin + Arabic). The default Helvetica that
+// ships with @react-pdf/renderer doesn't have Arabic glyphs, so tenant
+// names like "أحمد النبهاني" came out as garbage. Resolving from the
+// public/ directory keeps the renderer self-contained — no runtime
+// network call to Google Fonts and no font loss on cold start.
+const FONT_FAMILY = "ThmanyahSans";
+const fontDir = path.resolve(process.cwd(), "public/fonts");
+Font.register({
+  family: FONT_FAMILY,
+  fonts: [
+    { src: path.join(fontDir, "ThmanyahSans-Regular.otf"), fontWeight: 400 },
+    { src: path.join(fontDir, "ThmanyahSans-Bold.otf"), fontWeight: 700 },
+  ],
+});
 
 // Brand palette mirrors the email template in admin-notify.ts so the PDF
 // feels like part of the same system.
@@ -28,7 +45,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     padding: 32,
     fontSize: 10,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_FAMILY,
   },
   header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
   brand: { color: colors.gold, fontSize: 18, fontWeight: 700, letterSpacing: -0.5 },
