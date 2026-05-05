@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CURRENCY } from "@/lib/currency";
-import { notifyAdmins, buildAdminEmailHtml } from "@/lib/notifications/admin-notify";
+import {
+  notifyAdmins,
+  buildAdminEmailHtml,
+  sanitiseTemplateParam,
+} from "@/lib/notifications/admin-notify";
 import { getDefaultOwnerBalance } from "@/lib/owners/balance";
 
 export const maxDuration = 60;
@@ -393,19 +397,12 @@ export async function runAdminSummary(
     }
     const outstandingByPropertySorted = Array.from(outstandingByProperty.entries())
       .sort((a, b) => b[1].total - a[1].total);
-    const breakdownPieces = outstandingByPropertySorted.map(
-      ([name, { count, total }]) =>
-        `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
-    );
-    // Owner balance was previously sent as {{11}}, but the live `daily_briefs`
-    // Meta template only has 10 placeholders — passing 11 made every send
-    // fail. Fold the balance into the {{10}} breakdown so it still appears
-    // in the WhatsApp message without breaking the parameter count.
-    const ownerBalanceInline = ownerBalanceLine
-      ? ownerBalanceLine.replace(/\s+/g, " ").trim()
-      : "";
-    if (ownerBalanceInline) breakdownPieces.push(ownerBalanceInline);
-    const outstandingBreakdownInline = breakdownPieces.join(" ") || " ";
+    const outstandingBreakdownInline =
+      outstandingByPropertySorted
+        .map(([name, { count, total }]) =>
+          `• ${name}: ${count} inv (${total.toFixed(2)} ${CURRENCY.code})`
+        )
+        .join(" ") || "—";
 
     const whatsappLines = [
       `📊 *MPIRE Daily Summary*`,
@@ -455,6 +452,10 @@ export async function runAdminSummary(
       whatsappTemplate: {
         name: "daily_briefs",
         languageCode: "en",
+        // sanitiseTemplateParam guards against the Meta rejection rules:
+        // no newlines/tabs, no >4 consecutive spaces, no empty/whitespace-only
+        // values, no markdown formatting characters that break parameter
+        // parsing. Apply uniformly so future placeholders inherit the rule.
         parameters: [
           todayDisplay,
           String(invoicesDue.length),
@@ -467,17 +468,15 @@ export async function runAdminSummary(
           totalCheques.toFixed(2),
           String(newMaintenance.length),
           String(openMaintenance.length),
-          // {{10}} — per-property pending + overdue breakdown, single-line
-          // form (Meta rejects newlines/tabs/>4 spaces in template params).
-          // Owner balance is appended here too; the live template has only
-          // 10 placeholders, so a separate {{11}} param makes Meta reject
-          // every message.
+          // {{10}} — per-property pending + overdue breakdown, single-line.
           outstandingBreakdownInline,
-        ],
+          // {{11}} — owner running balance line.
+          ownerBalanceLine || "—",
+        ].map(sanitiseTemplateParam),
       },
     });
 
-    const summary = {
+    const summary: Record<string, unknown> = {
       trigger,
       recipients: recipients.length,
       emailsSent: sendResult.emailsSent,
@@ -494,6 +493,10 @@ export async function runAdminSummary(
       newMaintenance: newMaintenance.length,
       openMaintenance: openMaintenance.length,
     };
+    // Persist per-recipient failure detail so Meta rejection codes are
+    // visible from SQL — Vercel function logs only return the first stdout
+    // line per request, which makes ad-hoc debugging impossible.
+    if (sendResult.failures.length > 0) summary.failures = sendResult.failures;
 
     const status: "success" | "error" = sendResult.emailsSent + sendResult.whatsappSent > 0 ? "success" : "error";
     console.log(`[admin-summary] Done: ${JSON.stringify(summary)}`);

@@ -28,6 +28,24 @@ function formatPhone(phone: string): string {
   return cleaned.startsWith("+") ? cleaned : "+" + cleaned;
 }
 
+// Meta's body-parameter validation rejects:
+//   - newline / tab / carriage-return characters
+//   - more than 4 consecutive spaces
+//   - empty or whitespace-only values
+//   - values longer than 1024 chars (per param)
+// Any of these returns error 132012 ("Parameter format does not match the
+// format in the created template") with no per-param hint, which is what
+// silently broke today's daily summary. Run every template parameter
+// through this so the sender can never produce a value Meta will reject.
+export function sanitiseTemplateParam(raw: string): string {
+  const collapsed = (raw ?? "")
+    .replace(/[\t\r\n]+/g, " ")
+    .replace(/ {5,}/g, "    ")
+    .trim();
+  const safe = collapsed.length > 0 ? collapsed : "—";
+  return safe.length > 1024 ? safe.slice(0, 1021) + "…" : safe;
+}
+
 async function sendWhatsAppText(to: string, text: string): Promise<{ success: boolean; error?: string }> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
@@ -121,13 +139,28 @@ async function sendWhatsAppTemplateMessage(
   }
 }
 
+export type NotifyAdminsResult = {
+  emailsSent: number;
+  whatsappSent: number;
+  errors: number;
+  // Per-failure error details. Persisted into cron_run_logs.summary so we can
+  // diagnose Meta rejections (parameter count, format, etc.) from SQL — Vercel
+  // function logs only surface the first stdout line per request.
+  failures: Array<{
+    channel: "email" | "whatsapp";
+    recipient: string;
+    error: string;
+  }>;
+};
+
 export async function notifyAdmins(
   recipients: Recipient[],
   options: AdminNotifyOptions
-): Promise<{ emailsSent: number; whatsappSent: number; errors: number }> {
+): Promise<NotifyAdminsResult> {
   let emailsSent = 0;
   let whatsappSent = 0;
   let errors = 0;
+  const failures: NotifyAdminsResult["failures"] = [];
 
   for (const r of recipients) {
     if (r.notify_email && r.email) {
@@ -137,7 +170,14 @@ export async function notifyAdmins(
         html: options.emailHtml,
       });
       if (result.success) emailsSent++;
-      else errors++;
+      else {
+        errors++;
+        failures.push({
+          channel: "email",
+          recipient: r.email,
+          error: result.error || "unknown",
+        });
+      }
     }
 
     if (r.notify_whatsapp && r.phone) {
@@ -151,11 +191,18 @@ export async function notifyAdmins(
           )
         : await sendWhatsAppText(phone, options.whatsappText);
       if (result.success) whatsappSent++;
-      else errors++;
+      else {
+        errors++;
+        failures.push({
+          channel: "whatsapp",
+          recipient: phone,
+          error: result.error || "unknown",
+        });
+      }
     }
   }
 
-  return { emailsSent, whatsappSent, errors };
+  return { emailsSent, whatsappSent, errors, failures };
 }
 
 export function buildAdminEmailHtml(params: {
