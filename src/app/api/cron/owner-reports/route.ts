@@ -9,6 +9,7 @@ import {
 import { CURRENCY } from "@/lib/currency";
 import { getOwnerMonthlyReport } from "@/lib/owners/monthly-report-data";
 import { renderMonthlyReportPdf } from "@/lib/owners/monthly-report-pdf";
+import { getOwnerBalance } from "@/lib/owners/balance";
 
 // PDF rendering takes a few seconds per owner; keep the function generous so
 // we can serve a portfolio of 10–20 owners without hitting Vercel's default
@@ -94,10 +95,70 @@ export async function runOwnerReports(
     let sent = 0;
     let errors = 0;
 
+    // Muscat-local "today" → used to detect month rollover. The report
+    // already uses Muscat for its asOf so the two are kept in sync here.
+    const muscatNow = new Date(Date.now() + 4 * 60 * 60 * 1000);
+    const currentMonth = muscatNow.toISOString().slice(0, 7); // YYYY-MM
+    const firstDayCurrMonth = `${currentMonth}-01`;
+    // Last day of previous Muscat month (Date(y, m, 0) returns the
+    // day-zero of the m-th month, which is the last day of m-1).
+    const lastDayPrevMonth = new Date(
+      Date.UTC(muscatNow.getUTCFullYear(), muscatNow.getUTCMonth(), 0),
+    )
+      .toISOString()
+      .slice(0, 10);
+
     for (const owner of eligible) {
       const ownerId = owner.id as string;
       const ownerName = (owner.name as string) || "Owner";
+      const previousLastSent = (owner.last_report_sent_at as string | null) ?? null;
+      const previousOpeningBalance = Number(owner.opening_balance ?? 0);
+      const previousOpeningDate = (owner.opening_balance_date as string) ?? null;
+      const isFirstSend = previousLastSent === null;
+      const openingMonth = previousOpeningDate ? previousOpeningDate.slice(0, 7) : null;
+      const isNewMonth = openingMonth !== null && openingMonth !== currentMonth;
+      let rollover: Record<string, unknown> = { rolledOver: false };
       try {
+        // Monthly rollover — fires only on the first cron of a calendar
+        // month (Muscat). Computes the balance at end-of-previous-month and
+        // pins it as the new opening, so the upcoming report's expenses
+        // section (1st-of-month → today) and the balance breakdown both
+        // anchor at the same date. Skipped on the very first send so the
+        // initial report still shows the manually-reconciled opening.
+        if (!isFirstSend && isNewMonth) {
+          const prevSnapshot = await getOwnerBalance(supabase, ownerId, lastDayPrevMonth);
+          if (prevSnapshot) {
+            const newOpeningBalance = Number(prevSnapshot.balance.toFixed(2));
+            const { error: rolloverErr } = await supabase
+              .from("owners")
+              .update({
+                opening_balance: newOpeningBalance,
+                opening_balance_date: firstDayCurrMonth,
+                rent_excluded_until: null,
+              })
+              .eq("id", ownerId);
+            if (rolloverErr) {
+              console.error(`[${CRON_NAME}] Failed to rollover ledger for ${ownerId}:`, rolloverErr);
+              rollover = { rolledOver: false, error: rolloverErr.message };
+            } else {
+              rollover = {
+                rolledOver: true,
+                previousOpeningBalance,
+                previousOpeningDate,
+                newOpeningBalance,
+                newOpeningDate: firstDayCurrMonth,
+                snapshotAsOf: lastDayPrevMonth,
+              };
+            }
+          } else {
+            rollover = { rolledOver: false, error: "snapshot_unavailable" };
+          }
+        } else if (isFirstSend) {
+          rollover = { rolledOver: false, reason: "first_send" };
+        } else {
+          rollover = { rolledOver: false, reason: "same_month" };
+        }
+
         const report = await getOwnerMonthlyReport(supabase, ownerId);
         if (!report) {
           errors++;
@@ -151,56 +212,15 @@ export async function runOwnerReports(
 
         if (send.success) {
           sent++;
-          // Rollover the ledger checkpoint so next week's report shows just
-          // the period since this send. Skip the very first send (when
-          // last_report_sent_at is NULL) so the initial report still
-          // anchors on the manually-reconciled opening_balance.
-          const previousLastSent = (owner.last_report_sent_at as string | null) ?? null;
-          const previousOpeningBalance = Number(owner.opening_balance ?? 0);
-          const previousOpeningDate = (owner.opening_balance_date as string) ?? null;
-          const isFirstSend = previousLastSent === null;
-          let rollover: Record<string, unknown> = { rolledOver: false };
-          if (isFirstSend) {
-            // First report — only stamp the timestamp so subsequent runs
-            // know to start rolling.
-            const { error: stampErr } = await supabase
-              .from("owners")
-              .update({ last_report_sent_at: new Date().toISOString() })
-              .eq("id", ownerId);
-            if (stampErr) {
-              console.error(`[${CRON_NAME}] Failed to stamp last_report_sent_at for ${ownerId}:`, stampErr);
-              rollover = { rolledOver: false, error: stampErr.message };
-            } else {
-              rollover = { rolledOver: false, reason: "first_send" };
-            }
-          } else {
-            // Subsequent report — advance opening_balance to the current
-            // balance so next week's view contains only this week's deltas.
-            // Clear rent_excluded_until since the new opening_balance_date
-            // is past whatever cutoff was in effect.
-            const newOpeningBalance = Number(report.balance.balance.toFixed(2));
-            const newOpeningDate = report.asOf;
-            const { error: rolloverErr } = await supabase
-              .from("owners")
-              .update({
-                opening_balance: newOpeningBalance,
-                opening_balance_date: newOpeningDate,
-                rent_excluded_until: null,
-                last_report_sent_at: new Date().toISOString(),
-              })
-              .eq("id", ownerId);
-            if (rolloverErr) {
-              console.error(`[${CRON_NAME}] Failed to rollover ledger for ${ownerId}:`, rolloverErr);
-              rollover = { rolledOver: false, error: rolloverErr.message };
-            } else {
-              rollover = {
-                rolledOver: true,
-                previousOpeningBalance,
-                previousOpeningDate,
-                newOpeningBalance,
-                newOpeningDate,
-              };
-            }
+          // Stamp the last-sent timestamp for audit. The opening_balance
+          // rollover already happened above (only at month boundaries) so
+          // there's nothing else to update here.
+          const { error: stampErr } = await supabase
+            .from("owners")
+            .update({ last_report_sent_at: new Date().toISOString() })
+            .eq("id", ownerId);
+          if (stampErr) {
+            console.error(`[${CRON_NAME}] Failed to stamp last_report_sent_at for ${ownerId}:`, stampErr);
           }
           perOwner.push({
             ownerId,

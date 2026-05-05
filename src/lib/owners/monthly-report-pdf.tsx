@@ -297,13 +297,13 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
           // expense rows below.
           const charges: Array<{ label: string; amount: number }> = [];
           if (b.commissionEarned > 0) {
-            charges.push({ label: "Commission earned (cumulative)", amount: b.commissionEarned });
+            charges.push({ label: "Commission earned", amount: b.commissionEarned });
           }
           if (b.earlyTerminationCommissionCatchUp > 0) {
             charges.push({ label: "Early-termination commission catch-up", amount: b.earlyTerminationCommissionCatchUp });
           }
           if (b.businessManagerFees > 0) {
-            charges.push({ label: "Business manager fees (cumulative)", amount: b.businessManagerFees });
+            charges.push({ label: "Business manager fees", amount: b.businessManagerFees });
           }
           const chargesTotal = charges.reduce((s, c) => s + c.amount, 0);
           const rowCount = charges.length + report.expenses.length;
