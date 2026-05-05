@@ -201,6 +201,10 @@ export async function getOwnerMonthlyReport(
             (Date.parse(asOf) - Date.parse(dueDate)) / (1000 * 60 * 60 * 24),
           ),
         );
+        // A tenant only counts as "defaulted" once they're more than 30
+        // days past due. Anything within the 30-day grace window is still
+        // collectable as normal and shouldn't be flagged to the owner.
+        if (days <= 30) continue;
         defaultedInvoices.push({
           tenantName: (tenant?.full_name as string) || "Unknown",
           propertyName: (property?.name as string) || "?",
