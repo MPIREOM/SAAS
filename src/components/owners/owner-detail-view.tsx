@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Wallet, Building2, Banknote, Receipt, Activity } from "lucide-react";
+import { Pencil, Wallet, Building2, Banknote, Receipt, Activity, FileText } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { PageHeader } from "@/components/ui/page-header";
 import { EditOwnerDialog } from "@/components/owners/edit-owner-dialog";
@@ -41,6 +41,15 @@ export function OwnerDetailView(props: OwnerDetailProps) {
   return (
     <div className="space-y-6">
       <PageHeader title={owner.name} description="Owner ledger">
+        <a
+          href={`/api/owners/${owner.id}/monthly-report/pdf`}
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated/80 border border-border/60 hover:border-accent/40 text-sm font-medium rounded-xl transition-colors"
+        >
+          <FileText className="h-4 w-4" />
+          Preview report
+        </a>
         <button
           onClick={() => setEditOwnerOpen(true)}
           className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated/80 border border-border/60 hover:border-accent/40 text-sm font-medium rounded-xl transition-colors"
