@@ -212,20 +212,12 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
             <Text style={styles.balanceLabel}>+ Rent received to company</Text>
             <Text style={styles.balanceValue}>{fmt(b.rentReceivedToCompany)}</Text>
           </View>
-          <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>+ Commission earned</Text>
-            <Text style={styles.balanceValue}>{fmt(b.commissionEarned)}</Text>
-          </View>
           {b.earlyTerminationCommissionCatchUp !== 0 ? (
             <View style={styles.balanceRow}>
               <Text style={styles.balanceLabel}>+ Early-termination catch-up</Text>
               <Text style={styles.balanceValue}>{fmt(b.earlyTerminationCommissionCatchUp)}</Text>
             </View>
           ) : null}
-          <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>+ Business manager fees</Text>
-            <Text style={styles.balanceValue}>{fmt(b.businessManagerFees)}</Text>
-          </View>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel}>+ Expenses covered by company</Text>
             <Text style={styles.balanceValue}>{fmt(b.expensesCoveredByCompany)}</Text>
@@ -242,11 +234,6 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
             <Text style={styles.balanceTotalLabel}>Current balance — {balanceCaption(report)}</Text>
             <Text style={balanceColour(report.balance.side)}>{fmt(Math.abs(report.balance.balance))}</Text>
           </View>
-          {b.rentReceivedDirectByCheque > 0 ? (
-            <Text style={[styles.cellMuted, { marginTop: 6, fontSize: 8 }]}>
-              Rent received directly by cheque (informational, not in balance): {fmt(b.rentReceivedDirectByCheque)}
-            </Text>
-          ) : null}
         </View>
 
         <View style={styles.card}>
@@ -290,49 +277,89 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
           )}
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionHeading}>
-            Expenses · {report.monthLabel} ({report.expenses.length})
-          </Text>
-          {report.expenses.length === 0 ? (
-            <Text style={styles.empty}>No expenses recorded this month.</Text>
-          ) : (
-            <>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Category</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 2.5 }]}>Description</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Property</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
-              </View>
-              {report.expenses.map((e, i) => (
-                <View
-                  key={i}
-                  style={
-                    i === report.expenses.length - 1
-                      ? styles.tableRowLast
-                      : styles.tableRow
-                  }
-                >
-                  <Text style={[styles.cellMuted, { flex: 1 }]}>{e.date}</Text>
-                  <Text style={[styles.cell, { flex: 1.2 }]}>{e.category}</Text>
-                  <Text style={[styles.cell, { flex: 2.5 }]}>
-                    {e.description || "—"}
-                    {e.vendor ? ` · ${e.vendor}` : ""}
-                  </Text>
-                  <Text style={[styles.cellMuted, { flex: 1.5 }]}>
-                    {e.propertyName || "Owner-level"}
-                  </Text>
-                  <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(e.amount)}</Text>
-                </View>
-              ))}
-              <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { flex: 6.2 }]}>Total expenses</Text>
-                <Text style={[styles.totalValue, { flex: 1 }]}>{fmt(report.expensesTotal)}</Text>
-              </View>
-            </>
-          )}
-        </View>
+        {(() => {
+          // Service charges are what the company is owed on top of pass-through
+          // expenses. Surfacing them in the same section as the expense rows
+          // gives the owner a single place to see every deduction this period.
+          // Commission + BM fees are cumulative (they live on the balance
+          // breakdown which is anchored on opening_balance_date), so they're
+          // explicitly labelled to avoid confusion with the month-to-date
+          // expense rows below.
+          const charges: Array<{ label: string; amount: number }> = [];
+          if (b.commissionEarned > 0) {
+            charges.push({ label: "Commission earned (cumulative)", amount: b.commissionEarned });
+          }
+          if (b.earlyTerminationCommissionCatchUp > 0) {
+            charges.push({ label: "Early-termination commission catch-up", amount: b.earlyTerminationCommissionCatchUp });
+          }
+          if (b.businessManagerFees > 0) {
+            charges.push({ label: "Business manager fees (cumulative)", amount: b.businessManagerFees });
+          }
+          const chargesTotal = charges.reduce((s, c) => s + c.amount, 0);
+          const rowCount = charges.length + report.expenses.length;
+          const grandTotal = chargesTotal + report.expensesTotal;
+          return (
+            <View style={styles.card}>
+              <Text style={styles.sectionHeading}>
+                Expenses & Charges · {report.monthLabel} ({rowCount})
+              </Text>
+              {rowCount === 0 ? (
+                <Text style={styles.empty}>No charges or expenses this period.</Text>
+              ) : (
+                <>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Category</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 2.5 }]}>Description</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Property</Text>
+                    <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
+                  </View>
+                  {charges.map((c, i) => (
+                    <View
+                      key={`charge-${i}`}
+                      style={
+                        i === charges.length - 1 && report.expenses.length === 0
+                          ? styles.tableRowLast
+                          : styles.tableRow
+                      }
+                    >
+                      <Text style={[styles.cellMuted, { flex: 1 }]}>—</Text>
+                      <Text style={[styles.cell, { flex: 1.2 }]}>Service fee</Text>
+                      <Text style={[styles.cell, { flex: 2.5 }]}>{c.label}</Text>
+                      <Text style={[styles.cellMuted, { flex: 1.5 }]}>—</Text>
+                      <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(c.amount)}</Text>
+                    </View>
+                  ))}
+                  {report.expenses.map((e, i) => (
+                    <View
+                      key={`exp-${i}`}
+                      style={
+                        i === report.expenses.length - 1
+                          ? styles.tableRowLast
+                          : styles.tableRow
+                      }
+                    >
+                      <Text style={[styles.cellMuted, { flex: 1 }]}>{e.date}</Text>
+                      <Text style={[styles.cell, { flex: 1.2 }]}>{e.category}</Text>
+                      <Text style={[styles.cell, { flex: 2.5 }]}>
+                        {e.description || "—"}
+                        {e.vendor ? ` · ${e.vendor}` : ""}
+                      </Text>
+                      <Text style={[styles.cellMuted, { flex: 1.5 }]}>
+                        {e.propertyName || "Owner-level"}
+                      </Text>
+                      <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(e.amount)}</Text>
+                    </View>
+                  ))}
+                  <View style={styles.totalRow}>
+                    <Text style={[styles.totalLabel, { flex: 6.2 }]}>Total charges & expenses</Text>
+                    <Text style={[styles.totalValue, { flex: 1 }]}>{fmt(grandTotal)}</Text>
+                  </View>
+                </>
+              )}
+            </View>
+          );
+        })()}
 
         <View style={styles.card}>
           <Text style={styles.sectionHeading}>
