@@ -18,9 +18,13 @@ const nextConfig: NextConfig = {
   // "public/fonts/..."). Vercel's serverless bundler doesn't trace static
   // assets unless we list them explicitly, so the function ships without
   // the font files and Font.register fails with "Could not resolve font".
+  // List both the wildcard and bracketed forms — Next.js's matcher for
+  // App Router dynamic segments has flipped between minor versions, so
+  // covering both shapes guarantees the OTFs land in the function bundle.
   outputFileTracingIncludes: {
-    "/api/owners/*/monthly-report/pdf": ["./public/fonts/**"],
-    "/api/cron/owner-reports": ["./public/fonts/**"],
+    "/api/owners/*/monthly-report/pdf": ["./public/fonts/**/*"],
+    "/api/owners/[id]/monthly-report/pdf": ["./public/fonts/**/*"],
+    "/api/cron/owner-reports": ["./public/fonts/**/*"],
   },
 };
 
