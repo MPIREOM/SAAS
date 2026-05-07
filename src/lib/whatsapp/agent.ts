@@ -541,6 +541,32 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "search_cheques_by_number",
+    description:
+      "Find cheques by cheque number (partial, case-insensitive match) and return the tenant they belong to. Use whenever the user asks 'whose cheque is X', 'find cheque 12345', 'who gave cheque CHQ-001', or wants to identify a cheque holder. Returns each match with the tenant's name and phone, the bank, cheque date, amount, status, and the linked invoice/property/unit when available.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        cheque_number: {
+          type: "string",
+          description:
+            "The cheque number (or a partial fragment) to search for. Matched case-insensitively against cheques.cheque_number.",
+        },
+        status_filter: {
+          type: "string",
+          enum: ["pending", "cleared", "bounced", "cancelled", "all"],
+          description:
+            "Optional status filter. Default 'all'. Use 'pending' when the user asks about uncleared/upcoming cheques.",
+        },
+        limit: {
+          type: "number",
+          description: "Max results to return. Default 10.",
+        },
+      },
+      required: ["cheque_number"],
+    },
+  },
+  {
     name: "list_recent_owner_activity",
     description:
       "List recent ledger activity for an owner — payments received, expenses logged, commissions, business fees, and settlements — within a window (default 14 days). Useful for sanity-checking the running balance.",
@@ -2101,6 +2127,101 @@ async function executeTool(
       });
     }
 
+    case "search_cheques_by_number": {
+      const chequeNumber = (input.cheque_number as string | undefined)?.trim();
+      const statusFilter = (input.status_filter as string | undefined) || "all";
+      const limit = Math.min(Number(input.limit) || 10, 25);
+
+      if (!chequeNumber) {
+        return JSON.stringify({
+          error: "cheque_number is required",
+        });
+      }
+
+      let query = supabase
+        .from("cheques")
+        .select(
+          `
+          id, cheque_number, bank_name, cheque_date, amount, status, notes,
+          tenant_id, invoice_id, payment_id, created_at,
+          tenants(id, full_name, phone),
+          invoices(
+            id, status, amount, due_date, period_start, period_end,
+            units(id, unit_number, properties(id, name))
+          )
+        `
+        )
+        .ilike("cheque_number", `%${chequeNumber}%`)
+        .order("cheque_date", { ascending: false })
+        .limit(limit);
+
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data: cheques, error } = await query;
+
+      if (error) return JSON.stringify({ error: error.message });
+      if (!cheques || cheques.length === 0) {
+        return JSON.stringify({
+          message: `No cheques found matching "${chequeNumber}"${
+            statusFilter !== "all" ? ` with status ${statusFilter}` : ""
+          }.`,
+        });
+      }
+
+      const results = cheques.map((c: Record<string, unknown>) => {
+        const tenant = c.tenants as Record<string, unknown> | null;
+        const invoice = c.invoices as Record<string, unknown> | null;
+        const unit = invoice?.units as Record<string, unknown> | null;
+        const property = unit?.properties as Record<string, unknown> | null;
+
+        return {
+          cheque_id: c.id,
+          cheque_number: c.cheque_number,
+          bank_name: c.bank_name,
+          cheque_date: c.cheque_date,
+          amount: Number(c.amount || 0),
+          status: c.status,
+          notes: c.notes || null,
+          tenant: tenant
+            ? {
+                id: tenant.id,
+                full_name: tenant.full_name,
+                phone: tenant.phone,
+              }
+            : null,
+          invoice: invoice
+            ? {
+                id: invoice.id,
+                status: invoice.status,
+                amount: Number(invoice.amount || 0),
+                due_date: invoice.due_date,
+                period_start: invoice.period_start,
+                period_end: invoice.period_end,
+              }
+            : null,
+          unit: unit
+            ? {
+                id: unit.id,
+                unit_number: unit.unit_number,
+              }
+            : null,
+          property: property
+            ? {
+                id: property.id,
+                name: property.name,
+              }
+            : null,
+        };
+      });
+
+      return JSON.stringify({
+        count: results.length,
+        cheques: results,
+      });
+    }
+
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
@@ -2292,6 +2413,8 @@ YOU CAN:
     - Use get_owner_balance for "what's the balance / how much do we owe / how much does owner owe".
     - Use record_owner_settlement when the user paid the owner ("I paid the owner 1500 cash" → company_to_owner) or the owner paid the company ("owner gave me 200" → owner_to_company).
     - Use list_recent_owner_activity when the user wants to see recent rent / expenses / settlements feeding the balance.
+13. Look up cheques — "whose cheque is 12345?", "find cheque CHQ-001", "who gave me this cheque?", "cheque 9087 belongs to which tenant?"
+    - Use search_cheques_by_number with the cheque number (partial matches work). Reply with the tenant name, bank, amount, status, and (if known) the linked invoice/unit/property.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
