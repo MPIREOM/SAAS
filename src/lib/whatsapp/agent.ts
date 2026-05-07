@@ -92,7 +92,7 @@ const tools: Anthropic.Tool[] = [
   {
     name: "get_tenant_invoices",
     description:
-      "Get invoices for a tenant. Can filter by status and/or month. Returns invoice id, amount, due date, status, paid amount, period, and unit/property info.",
+      "Get invoices for a tenant. Can filter by status and/or month. Returns invoice id, amount, due date, status, paid amount, period, unit/property info, and — for paid/partial invoices — the linked payments[] (each with payment_id, method, amount, payment_date) so you can answer 'how was X paid?'.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -541,6 +541,43 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "get_invoice_payments",
+    description:
+      "Get all payments recorded against a specific invoice — including the payment method (cash, bank transfer, cheque), amount, date, and reference number. Use this when the user asks 'how was X paid?', 'what method was used for the Feb invoice?', 'was this paid in cash?', or any question about HOW (not whether) an invoice was paid. Also returns any cheques explicitly linked to the invoice.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        invoice_id: {
+          type: "string",
+          description: "The invoice UUID to look up payments for.",
+        },
+      },
+      required: ["invoice_id"],
+    },
+  },
+  {
+    name: "update_payment_method",
+    description:
+      "Change the payment method (cash / bank_transfer / cheque) of a previously recorded payment. Use when the user says 'that was actually a cheque, not cash', 'change Feb payment to bank transfer', 'fix the method'. The owner ledger is computed on read, so this re-classification takes effect immediately — cheque payments do not feed into the company-owes-owner balance, while cash and bank transfers do. Requires payment_id (get it from get_invoice_payments or the payments[] array on get_tenant_invoices). When changing TO 'cheque', remind the user that the cheque record (number, bank, status) is tracked separately and must be added via the cheques screen if not already present.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        payment_id: {
+          type: "string",
+          description:
+            "The payment UUID to update. Look it up via get_invoice_payments or the payments[] array returned by get_tenant_invoices.",
+        },
+        new_method: {
+          type: "string",
+          enum: ["cash", "bank_transfer", "cheque"],
+          description:
+            "The corrected payment method. Must be exactly one of cash / bank_transfer / cheque.",
+        },
+      },
+      required: ["payment_id", "new_method"],
+    },
+  },
+  {
     name: "search_cheques_by_number",
     description:
       "Find cheques by cheque number (partial, case-insensitive match) and return the tenant they belong to. Use whenever the user asks 'whose cheque is X', 'find cheque 12345', 'who gave cheque CHQ-001', or wants to identify a cheque holder. Returns each match with the tenant's name and phone, the bank, cheque date, amount, status, and the linked invoice/property/unit when available.",
@@ -730,7 +767,8 @@ async function executeTool(
               : "No invoices found for this tenant.",
         });
 
-      return JSON.stringify(invoices);
+      const enriched = await attachPaymentsToInvoices(supabase, invoices);
+      return JSON.stringify(enriched);
     }
 
     case "get_tenant_balance": {
@@ -2127,6 +2165,194 @@ async function executeTool(
       });
     }
 
+    case "get_invoice_payments": {
+      const invoiceId = input.invoice_id as string;
+      if (!invoiceId)
+        return JSON.stringify({ error: "invoice_id is required" });
+
+      const { data: invoice, error: invErr } = await supabase
+        .from("invoices")
+        .select(
+          `
+          id, lease_id, tenant_id, amount, paid_amount, status, due_date,
+          period_start, period_end, paid_date,
+          tenants(id, full_name),
+          units(id, unit_number, properties(id, name))
+        `,
+        )
+        .eq("id", invoiceId)
+        .maybeSingle();
+
+      if (invErr) return JSON.stringify({ error: invErr.message });
+      if (!invoice)
+        return JSON.stringify({ error: `Invoice ${invoiceId} not found` });
+
+      const periodStart = invoice.period_start as string | null;
+      const paidDate = invoice.paid_date as string | null;
+      const lower = periodStart || (paidDate ? `${paidDate.slice(0, 4)}-01-01` : null);
+      const upper =
+        invoice.status === "paid" && paidDate
+          ? paidDate
+          : new Date().toISOString().slice(0, 10);
+
+      let paymentsQuery = supabase
+        .from("payments")
+        .select("id, amount, method, payment_date, reference_number, notes, created_at")
+        .eq("lease_id", invoice.lease_id as string)
+        .order("payment_date", { ascending: false });
+      if (lower) paymentsQuery = paymentsQuery.gte("payment_date", lower);
+      if (upper) paymentsQuery = paymentsQuery.lte("payment_date", upper);
+
+      const { data: payments, error: payErr } = await paymentsQuery;
+      if (payErr) return JSON.stringify({ error: payErr.message });
+
+      const { data: linkedCheques } = await supabase
+        .from("cheques")
+        .select("id, cheque_number, bank_name, cheque_date, amount, status, payment_id")
+        .eq("invoice_id", invoiceId)
+        .order("cheque_date", { ascending: false });
+
+      const tenant = invoice.tenants as unknown as
+        | Record<string, unknown>
+        | null;
+      const unit = invoice.units as unknown as
+        | Record<string, unknown>
+        | null;
+      const property = unit?.properties as unknown as
+        | Record<string, unknown>
+        | null;
+
+      return JSON.stringify({
+        invoice: {
+          id: invoice.id,
+          status: invoice.status,
+          amount: Number(invoice.amount || 0),
+          paid_amount: Number(invoice.paid_amount || 0),
+          due_date: invoice.due_date,
+          period_start: invoice.period_start,
+          period_end: invoice.period_end,
+          paid_date: invoice.paid_date,
+          tenant_name: tenant?.full_name || null,
+          unit_number: unit?.unit_number || null,
+          property_name: property?.name || null,
+        },
+        payments: (payments || []).map((p: Record<string, unknown>) => ({
+          id: p.id,
+          method: p.method,
+          amount: Number(p.amount || 0),
+          payment_date: p.payment_date,
+          reference_number: p.reference_number || null,
+          notes: p.notes || null,
+        })),
+        linked_cheques: (linkedCheques || []).map(
+          (c: Record<string, unknown>) => ({
+            id: c.id,
+            cheque_number: c.cheque_number,
+            bank_name: c.bank_name,
+            cheque_date: c.cheque_date,
+            amount: Number(c.amount || 0),
+            status: c.status,
+            payment_id: c.payment_id,
+          }),
+        ),
+        note:
+          invoice.status === "pending" || invoice.status === "overdue"
+            ? "This invoice is unpaid — no payments recorded yet."
+            : "Payments are matched by lease_id and date window (invoices have no direct payment_id FK). Confirm with the user if multiple payments are returned.",
+      });
+    }
+
+    case "update_payment_method": {
+      const paymentId = input.payment_id as string;
+      const newMethod = input.new_method as string;
+      const allowed = ["cash", "bank_transfer", "cheque"];
+
+      if (!paymentId)
+        return JSON.stringify({ error: "payment_id is required" });
+      if (!allowed.includes(newMethod))
+        return JSON.stringify({
+          error: `new_method must be one of: ${allowed.join(", ")}`,
+        });
+
+      const { data: existing, error: fetchErr } = await supabase
+        .from("payments")
+        .select("id, method, amount, tenant_id, lease_id, payment_date")
+        .eq("id", paymentId)
+        .maybeSingle();
+
+      if (fetchErr) return JSON.stringify({ error: fetchErr.message });
+      if (!existing)
+        return JSON.stringify({ error: `Payment ${paymentId} not found` });
+
+      if (existing.method === newMethod) {
+        return JSON.stringify({
+          success: true,
+          unchanged: true,
+          payment_id: paymentId,
+          method: newMethod,
+          message: `Payment was already recorded as ${newMethod} — no change made.`,
+        });
+      }
+
+      const previousMethod = existing.method as string;
+
+      const { data: updated, error: updateErr } = await supabase
+        .from("payments")
+        .update({ method: newMethod })
+        .eq("id", paymentId)
+        .select("id");
+
+      if (updateErr) return JSON.stringify({ error: updateErr.message });
+      if (!updated || updated.length === 0)
+        return JSON.stringify({
+          error:
+            "Update was silently rejected (no rows changed). Likely an RLS policy or the payment_id is wrong.",
+        });
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "update",
+        entity_type: "payment",
+        entity_id: paymentId,
+        metadata: {
+          field: "method",
+          previous_method: previousMethod,
+          new_method: newMethod,
+          amount: Number(existing.amount || 0),
+          payment_date: existing.payment_date,
+          source: "whatsapp_agent",
+        },
+      });
+
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("full_name")
+        .eq("id", existing.tenant_id as string)
+        .maybeSingle();
+
+      const ledgerNote =
+        previousMethod === "cheque" || newMethod === "cheque"
+          ? "Owner balance affected: cheques bypass the company account, while cash/bank transfers feed into it. The owner balance is recalculated on read, so the change is live."
+          : "No owner-balance impact (cash and bank transfer are equivalent for the ledger).";
+
+      const chequeNote =
+        newMethod === "cheque"
+          ? "Heads up: the cheque details (number, bank, status) are tracked in the cheques table separately. If a cheque record doesn't already exist for this payment, add it via the cheques screen."
+          : null;
+
+      return JSON.stringify({
+        success: true,
+        payment_id: paymentId,
+        previous_method: previousMethod,
+        new_method: newMethod,
+        amount: Number(existing.amount || 0),
+        payment_date: existing.payment_date,
+        tenant_name: tenant?.full_name || null,
+        ledger_note: ledgerNote,
+        cheque_note: chequeNote,
+      });
+    }
+
     case "search_cheques_by_number": {
       const chequeNumber = (input.cheque_number as string | undefined)?.trim();
       const statusFilter = (input.status_filter as string | undefined) || "all";
@@ -2225,6 +2451,72 @@ async function executeTool(
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
+}
+
+// ── Payment lookup helpers ────────────────────────────────────────────────
+
+// Fetch payments for a list of invoices and attach a `payments` array to each
+// paid/partial invoice. Payments don't carry a direct invoice_id FK, so we
+// match by lease_id + a date window covering the invoice period through the
+// invoice's paid_date. This is a heuristic but is the same correlation the
+// rest of the system uses (e.g. owner ledger).
+async function attachPaymentsToInvoices(
+  supabase: ReturnType<typeof getAdminSupabase>,
+  invoices: Record<string, unknown>[],
+): Promise<Record<string, unknown>[]> {
+  const needsPayments = invoices.filter(
+    (i) => i.status === "paid" || i.status === "partial",
+  );
+  if (needsPayments.length === 0) return invoices;
+
+  const leaseIds = Array.from(
+    new Set(needsPayments.map((i) => i.lease_id as string).filter(Boolean)),
+  );
+  if (leaseIds.length === 0) return invoices;
+
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("id, lease_id, amount, method, payment_date, reference_number, notes")
+    .in("lease_id", leaseIds)
+    .order("payment_date", { ascending: false });
+
+  const allPayments = (payments || []) as Record<string, unknown>[];
+
+  return invoices.map((inv) => {
+    if (inv.status !== "paid" && inv.status !== "partial") return inv;
+
+    const leaseId = inv.lease_id as string;
+    const periodStart = inv.period_start as string | null;
+    const paidDate = inv.paid_date as string | null;
+    // Lower bound: invoice period start (fall back to a year before paid_date
+    // if period_start is missing). Upper bound: paid_date for fully-paid
+    // invoices (the payment that completed it), otherwise today.
+    const lower = periodStart || (paidDate ? `${paidDate.slice(0, 4)}-01-01` : "");
+    const upper =
+      inv.status === "paid" && paidDate
+        ? paidDate
+        : new Date().toISOString().slice(0, 10);
+
+    const matched = allPayments
+      .filter((p) => p.lease_id === leaseId)
+      .filter((p) => {
+        const d = p.payment_date as string;
+        if (!d) return false;
+        if (lower && d < lower) return false;
+        if (upper && d > upper) return false;
+        return true;
+      })
+      .map((p) => ({
+        id: p.id,
+        method: p.method,
+        amount: Number(p.amount || 0),
+        payment_date: p.payment_date,
+        reference_number: p.reference_number || null,
+        notes: p.notes || null,
+      }));
+
+    return { ...inv, payments: matched };
+  });
 }
 
 // ── Receipt attachment helper ─────────────────────────────────────────────
@@ -2415,6 +2707,15 @@ YOU CAN:
     - Use list_recent_owner_activity when the user wants to see recent rent / expenses / settlements feeding the balance.
 13. Look up cheques — "whose cheque is 12345?", "find cheque CHQ-001", "who gave me this cheque?", "cheque 9087 belongs to which tenant?"
     - Use search_cheques_by_number with the cheque number (partial matches work). Reply with the tenant name, bank, amount, status, and (if known) the linked invoice/unit/property.
+14. See HOW an invoice was paid — "how was Feb invoice paid?", "what method did Ahmad use?", "was unit 11 paid in cash or cheque?"
+    - get_tenant_invoices already returns a payments[] array on each paid/partial invoice (with method). Read that first.
+    - If the user asks about a single specific invoice or you need more detail, call get_invoice_payments with the invoice_id.
+    - NEVER say "the method isn't shown" without first calling one of these tools.
+15. Fix the payment method on a previous payment — "actually that was a cheque, not cash", "change Feb's payment to bank transfer", "fix the method"
+    - First call get_invoice_payments (or rely on the payments[] from get_tenant_invoices) to find the payment_id.
+    - Then call update_payment_method with payment_id and new_method.
+    - If multiple payments exist for the invoice, ask the user WHICH one (show date + amount) before updating.
+    - After a change involving 'cheque' (to or from), tell the user the owner balance was recalculated, and if changing TO cheque, remind them the cheque record (number, bank) is tracked separately on the cheques screen.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
