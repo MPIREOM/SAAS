@@ -152,7 +152,18 @@
     "namePlaceholder": "Enter property name",
     "locationPlaceholder": "Enter location",
     "nameRequired": "Property name is required",
-    "notFound": "Property not found"
+    "notFound": "Property not found",
+    "moveOutDefaults": {
+      "title": "Move-out fee defaults",
+      "description": "These defaults pre-fill the move-out fees when a tenant in this property vacates. They can be overridden per move-out.",
+      "code": "Property code",
+      "codePlaceholder": "e.g. VILLA-A",
+      "codeHint": "Used as the prefix in move-out invoice numbers ({CODE}-MO-YYYY-NNNN). Defaults to a slug of the property name when empty.",
+      "cleaningFee": "Cleaning fee",
+      "paintingFee": "Painting / maintenance fee",
+      "earlyTerminationRate": "Early-termination rate",
+      "earlyTerminationHint": "Applied to (remaining months × monthly rent). Common value: 12% — municipality + office fees."
+    }
   },
   "units": {
     "title": "Units",
@@ -340,6 +351,45 @@
       "monthsRemaining": "Months remaining",
       "formula": "{months} months × {rent} OMR × {rate}%",
       "calculating": "Calculating commission owed..."
+    },
+    "moveOutFees": {
+      "title": "Move-out Fees",
+      "description": "Cleaning and painting are pre-filled from the property defaults. Early-termination is calculated automatically when vacating before the contract ends.",
+      "cleaningLabel": "Cleaning fee",
+      "paintingLabel": "Painting / maintenance fee",
+      "earlyTerminationLabel": "Early-termination fee",
+      "earlyTerminationFormula": "{months} months × {rent} OMR × {rate}%",
+      "customDescriptionPlaceholder": "Describe the fee (e.g. broken window)",
+      "addCustom": "Add custom fee",
+      "reviewAndConfirm": "Review & Confirm Move-out",
+      "errors": {
+        "vacateDateRequired": "Pick a vacate date before reviewing.",
+        "reasonRequired": "Pick a reason before reviewing.",
+        "customDescriptionRequired": "Custom fees need a description.",
+        "negativeAmount": "Fee amounts must be positive."
+      },
+      "preview": {
+        "title": "Move-out invoice preview",
+        "invoiceNumber": "Invoice #",
+        "invoiceNumberPending": "(assigned on confirm)",
+        "billTo": "Bill to",
+        "unit": "Property & unit",
+        "unitNumber": "Unit",
+        "floor": "Floor",
+        "vacateDate": "Vacate date",
+        "description": "Description",
+        "amount": "Amount",
+        "totalDue": "Total due",
+        "noLineItems": "No fees to invoice. Add at least one item or go back to skip.",
+        "confirm": "Confirm Move-out",
+        "back": "Back to edit"
+      },
+      "success": {
+        "title": "Move-out confirmed",
+        "description": "Invoice {invoiceNumber} has been issued to the tenant.",
+        "downloadPdf": "Download PDF",
+        "backToTenants": "Back to tenants"
+      }
     },
     "outstandingInvoices": "Outstanding Invoices",
     "invoiceResolutionDescription": "Choose how to handle each outstanding invoice before completing the move-out.",
