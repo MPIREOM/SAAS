@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
-import { processWhatsAppMessage } from "@/lib/whatsapp/agent";
+import { processWhatsAppMessage, type InlineImage } from "@/lib/whatsapp/agent";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp/client";
 import {
   downloadWhatsAppMedia,
   extensionForMime,
+  type DownloadedMedia,
 } from "@/lib/whatsapp/media";
 
 // Verify Meta webhook signature (X-Hub-Signature-256 header)
@@ -26,11 +27,16 @@ function verifySignature(body: string, signature: string | null): boolean {
 // Download an inbound image, drop it into the expense-receipts bucket
 // under a temp path, and create a pending_receipt_attachments row keyed
 // by a short token. The token is then handed to the agent in the user's
-// message text so it can be passed to add_expense.
+// message text so it can be passed to add_expense. We also return the
+// downloaded bytes so the caller can hand them to the agent as a vision
+// block — that way Claude reads the receipt directly instead of having
+// to guess the amount from the caption.
+type StashedReceipt = { token: string; media: DownloadedMedia };
+
 async function stashIncomingReceipt(
   mediaId: string,
   userPhone: string,
-): Promise<string | null> {
+): Promise<StashedReceipt | null> {
   const supabase = createSupabaseAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -74,7 +80,7 @@ async function stashIncomingReceipt(
     return null;
   }
 
-  return token;
+  return { token, media };
 }
 
 // Deduplicate messages using a database table to persist across serverless invocations
@@ -164,6 +170,7 @@ export async function POST(request: NextRequest) {
         // pick it out.
         let messageText: string | null = null;
         let pendingToken: string | null = null;
+        let inlineImage: InlineImage | null = null;
 
         if (msg.type === "text") {
           messageText = msg.text?.body || null;
@@ -173,7 +180,14 @@ export async function POST(request: NextRequest) {
 
           if (mediaId) {
             try {
-              pendingToken = await stashIncomingReceipt(mediaId, senderPhone);
+              const stashed = await stashIncomingReceipt(mediaId, senderPhone);
+              if (stashed) {
+                pendingToken = stashed.token;
+                inlineImage = {
+                  mimeType: stashed.media.mimeType,
+                  base64: Buffer.from(stashed.media.bytes).toString("base64"),
+                };
+              }
             } catch (err) {
               console.error("[WhatsApp Webhook] Receipt stash failed:", err);
             }
@@ -194,10 +208,15 @@ export async function POST(request: NextRequest) {
           senderPhone,
           "id:",
           messageId,
+          inlineImage ? "(with image)" : "",
         );
 
         try {
-          const reply = await processWhatsAppMessage(messageText, senderPhone);
+          const reply = await processWhatsAppMessage(
+            messageText,
+            senderPhone,
+            inlineImage,
+          );
           console.log("[WhatsApp Webhook] Agent reply:", reply.substring(0, 200));
 
           const result = await sendWhatsAppTextMessage(senderPhone, reply);
