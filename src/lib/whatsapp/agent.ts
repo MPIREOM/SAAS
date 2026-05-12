@@ -2656,9 +2656,25 @@ async function saveConversationMessage(
 
 // ── Main agent function ───────────────────────────────────────────────────
 
+// Image MIME types Anthropic's vision model accepts. HEIC/HEIF/PDF fall
+// through to text-only mode — the receipt is still stashed via the token,
+// the agent just has to ask the user for the amount instead of reading it.
+const CLAUDE_VISION_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
+export type InlineImage = {
+  mimeType: string;
+  base64: string;
+};
+
 export async function processWhatsAppMessage(
   message: string,
-  senderPhone: string
+  senderPhone: string,
+  inlineImage?: InlineImage | null,
 ): Promise<string> {
   const supabase = getAdminSupabase();
 
@@ -2691,7 +2707,11 @@ CURRENCY: OMR (Omani Rial)
 YOU CAN:
 1. Record payments — "Ahmad paid", "register payment for Fatma", "tenant in unit 101 paid 200 OMR"
 2. Add expenses — "add expense 50 OMR plumbing at Sunset Tower", "electricity bill 30 OMR"
-   - If the user attached a photo (look for "PENDING_RECEIPT_TOKEN: <token>" in their message), pass that token as attachment_token to add_expense so the receipt is saved with the expense.
+   - RECEIPT PHOTOS: When the user's message contains "PENDING_RECEIPT_TOKEN: <token>" it means they sent a photo of a receipt/invoice. You MUST treat this as a request to record an expense — that's the only thing receipt photos are used for here. Do not just acknowledge the photo; record it.
+   - If a photo is attached to this turn, READ the receipt yourself: extract amount (total payable in OMR), vendor, date, and pick the best category. The caption text is supplementary — the image is the source of truth.
+   - Call add_expense with category, amount, optional vendor/description/expense_date, AND attachment_token set to the token from the user message so the photo is saved with the expense.
+   - If the amount is genuinely unreadable from BOTH the image and the caption, ask the user for the amount in one short message before calling add_expense — do not invent a number.
+   - Default category to "other" only when no better match is obvious from the receipt (utility bill → utilities, plumber/AC/repair → maintenance, cleaning company → cleaning, etc.).
 3. Create invoices — "create invoice for Ahmad for April", "generate rent invoice", "create May and June invoices for all tenants"
 4. Check balances — "how much does Ahmad owe?", "check balance for unit 101"
 5. View unpaid/overdue — "who hasn't paid?", "show overdue invoices", "pending invoices for April", "show me April invoices"
@@ -2766,6 +2786,31 @@ BEHAVIOR RULES:
       return true;
     }
   );
+  // When the inbound WhatsApp message included a photo and we got the bytes
+  // back from the webhook, hand them to Claude as a vision block alongside
+  // the caption text. That lets the model read the receipt itself (amount,
+  // vendor, date) instead of having to guess from a vague caption like
+  // "[image attached]".
+  const includeImage =
+    !!inlineImage && CLAUDE_VISION_MIME_TYPES.has(inlineImage.mimeType);
+  const currentUserContent: Anthropic.MessageParam["content"] = includeImage
+    ? [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: inlineImage!.mimeType as
+              | "image/jpeg"
+              | "image/png"
+              | "image/gif"
+              | "image/webp",
+            data: inlineImage!.base64,
+          },
+        },
+        { type: "text", text: trimmedMessage },
+      ]
+    : trimmedMessage;
+
   // If the last history entry is now an assistant turn (good), append current
   // user message. If the last is a user turn (someone else's message that
   // wasn't us), still append — Anthropic accepts adjacent same-role turns
@@ -2774,9 +2819,9 @@ BEHAVIOR RULES:
     messages.length > 0 &&
     messages[messages.length - 1].role === "user"
   ) {
-    messages[messages.length - 1] = { role: "user", content: trimmedMessage };
+    messages[messages.length - 1] = { role: "user", content: currentUserContent };
   } else {
-    messages.push({ role: "user", content: trimmedMessage });
+    messages.push({ role: "user", content: currentUserContent });
   }
 
   let response: Anthropic.Message;
