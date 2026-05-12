@@ -30,7 +30,19 @@ export async function GET(
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
 
-  // Fetch payment records for this invoice's tenant/lease within the invoice period
+  const isMoveOut = invoice.invoice_type === "move_out";
+
+  // Line items for itemized invoices (move-out)
+  const { data: lineItems } = isMoveOut
+    ? await supabase
+        .from("invoice_items")
+        .select("kind, description, amount, sort_order")
+        .eq("invoice_id", id)
+        .order("sort_order", { ascending: true })
+    : { data: null };
+
+  // Payment history is meaningful for rent invoices (settled over a period).
+  // For move-out invoices, only show it if there's been a payment recorded.
   const { data: paymentRecords } = await supabase
     .from("payments")
     .select("amount, payment_date, method, reference_number")
@@ -66,10 +78,12 @@ export async function GET(
   const statusLabel = invoice.status === "paid" ? "PAID" : invoice.status === "partial" ? "PARTIAL" : invoice.status === "overdue" ? "OVERDUE" : "PENDING";
   const statusColor = invoice.status === "paid" ? "#16a34a" : invoice.status === "partial" ? "#3b82f6" : invoice.status === "overdue" ? "#dc2626" : "#ca8a04";
 
+  const documentTitle = isMoveOut ? "MOVE-OUT INVOICE" : "INVOICE";
+  const invoiceReference = invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase();
+
   const formatAmount = (n: number) => n.toLocaleString("en", { minimumFractionDigits: 2 });
   const formatMethod = (m: string) => m === "bank_transfer" ? "Bank Transfer" : m === "cash" ? "Cash" : m === "cheque" ? "Cheque" : m;
 
-  // Build payment history rows for the table
   const payments = paymentRecords || [];
   const paymentRows = payments.map((p) => {
     const date = new Date(p.payment_date as string).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -81,11 +95,25 @@ export async function GET(
     </tr>`;
   }).join("");
 
+  // Move-out invoices show each fee as its own row. Rent invoices keep
+  // their single "Monthly Rent" row.
+  const itemsRows = isMoveOut && lineItems && lineItems.length > 0
+    ? lineItems.map((it) => `<tr>
+        <td>${escapeHtml(it.description as string)}</td>
+        <td>${invoiceDate}</td>
+        <td>${formatAmount(parseFloat(it.amount as string))} ${CURRENCY.code}</td>
+      </tr>`).join("")
+    : `<tr>
+        <td>${isMoveOut ? "Move-out charges" : `Monthly Rent - Unit ${unit.unit_number}`}</td>
+        <td>${invoice.period_start ? `${invoice.period_start} to ${invoice.period_end}` : invoiceDate}</td>
+        <td>${formatAmount(totalAmount)} ${CURRENCY.code}</td>
+      </tr>`;
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Invoice - ${invoice.id.slice(0, 8).toUpperCase()}</title>
+  <title>${documentTitle} - ${invoiceReference}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a1a; padding: 40px; max-width: 800px; margin: 0 auto; }
@@ -132,8 +160,8 @@ export async function GET(
       <div class="logo-subtitle">PROPERTY MANAGEMENT</div>
     </div>
     <div class="invoice-title">
-      <h1>INVOICE</h1>
-      <div class="invoice-number">#${invoice.id.slice(0, 8).toUpperCase()}</div>
+      <h1>${documentTitle}</h1>
+      <div class="invoice-number">#${invoiceReference}</div>
       <div class="status">${statusLabel}</div>
     </div>
   </div>
@@ -164,11 +192,7 @@ export async function GET(
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Monthly Rent - Unit ${unit.unit_number}</td>
-        <td>${invoice.period_start ? `${invoice.period_start} to ${invoice.period_end}` : invoiceDate}</td>
-        <td>${formatAmount(totalAmount)} ${CURRENCY.code}</td>
-      </tr>
+      ${itemsRows}
       <tr class="total-row">
         <td colspan="2">Total Due</td>
         <td>${formatAmount(totalAmount)} ${CURRENCY.code}</td>
@@ -230,4 +254,13 @@ export async function GET(
       "Content-Type": "text/html; charset=utf-8",
     },
   });
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

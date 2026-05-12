@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   date,
+  integer,
   numeric,
   pgEnum,
   pgTable,
@@ -35,6 +36,15 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
   "cancelled",
 ]);
 
+export const invoiceTypeEnum = pgEnum("invoice_type", ["rent", "move_out"]);
+
+export const invoiceItemKindEnum = pgEnum("invoice_item_kind", [
+  "cleaning",
+  "painting",
+  "early_termination",
+  "custom",
+]);
+
 // ── Invoices ──────────────────────────────────────────────────────────────
 
 export const invoices = pgTable("invoices", {
@@ -50,6 +60,8 @@ export const invoices = pgTable("invoices", {
   unitId: uuid("unit_id")
     .notNull()
     .references(() => units.id, { onDelete: "cascade" }),
+  invoiceType: invoiceTypeEnum("invoice_type").notNull().default("rent"),
+  invoiceNumber: text("invoice_number"),
   amount: numeric("amount").notNull(),
   dueDate: date("due_date").notNull(),
   issuedDate: date("issued_date"),
@@ -68,7 +80,7 @@ export const invoices = pgTable("invoices", {
     .default(sql`now()`),
 });
 
-export const invoicesRelations = relations(invoices, ({ one }) => ({
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   lease: one(leases, {
     fields: [invoices.leaseId],
     references: [leases.id],
@@ -80,6 +92,32 @@ export const invoicesRelations = relations(invoices, ({ one }) => ({
   unit: one(units, {
     fields: [invoices.unitId],
     references: [units.id],
+  }),
+  items: many(invoiceItems),
+}));
+
+// ── Invoice line items ─────────────────────────────────────────────────────
+
+export const invoiceItems = pgTable("invoice_items", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  invoiceId: uuid("invoice_id")
+    .notNull()
+    .references(() => invoices.id, { onDelete: "cascade" }),
+  kind: invoiceItemKindEnum("kind").notNull(),
+  description: text("description").notNull(),
+  amount: numeric("amount").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceItems.invoiceId],
+    references: [invoices.id],
   }),
 }));
 

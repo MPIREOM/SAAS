@@ -10,7 +10,10 @@ import {
   MapPin,
   Home,
   Loader2,
+  Hash,
+  LogOut,
 } from "lucide-react";
+import { CURRENCY } from "@/lib/currency";
 
 export default function EditPropertyPage() {
   const t = useTranslations("properties");
@@ -29,6 +32,10 @@ export default function EditPropertyPage() {
     location: string;
     total_units: number;
     property_type: string;
+    code: string;
+    cleaning_fee_default: string;
+    painting_fee_default: string;
+    early_termination_rate: string;
   } | null>(null);
 
   useEffect(() => {
@@ -36,7 +43,7 @@ export default function EditPropertyPage() {
       const supabase = createClient();
       const { data, error: fetchError } = await supabase
         .from("properties")
-        .select("name, location, total_units, property_type")
+        .select("name, location, total_units, property_type, code, cleaning_fee_default, painting_fee_default, early_termination_rate")
         .eq("id", id)
         .single();
 
@@ -51,6 +58,10 @@ export default function EditPropertyPage() {
         location: data.location || "",
         total_units: data.total_units || 0,
         property_type: data.property_type || "residential",
+        code: data.code || "",
+        cleaning_fee_default: String(data.cleaning_fee_default ?? "0"),
+        painting_fee_default: String(data.painting_fee_default ?? "0"),
+        early_termination_rate: String(data.early_termination_rate ?? "0.12"),
       });
       setSelectedType(data.property_type || "residential");
       setFetching(false);
@@ -78,11 +89,23 @@ export default function EditPropertyPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
+    const code = (formData.get("code") as string)?.trim().toUpperCase() || null;
+    const earlyTerminationPercent = parseFloat(
+      (formData.get("early_termination_rate") as string) || "0",
+    );
+
     const updateData = {
       name,
       location: (formData.get("location") as string)?.trim() || null,
       total_units: parseInt(formData.get("total_units") as string) || 0,
       property_type: formData.get("property_type") as string,
+      code,
+      cleaning_fee_default: parseFloat((formData.get("cleaning_fee_default") as string) || "0") || 0,
+      painting_fee_default: parseFloat((formData.get("painting_fee_default") as string) || "0") || 0,
+      // UI takes a percentage (0–100); store as a decimal rate (0–1)
+      early_termination_rate: isFinite(earlyTerminationPercent)
+        ? Math.max(0, Math.min(100, earlyTerminationPercent)) / 100
+        : 0,
     };
 
     const { error: updateError } = await supabase
@@ -196,6 +219,92 @@ export default function EditPropertyPage() {
               className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl px-3.5 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
               placeholder="0"
             />
+          </div>
+        </div>
+
+        {/* Move-out fee defaults */}
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <LogOut className="h-4 w-4 text-text-secondary" />
+            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+              {t("moveOutDefaults.title")}
+            </h3>
+          </div>
+          <p className="text-xs text-text-secondary -mt-2">
+            {t("moveOutDefaults.description")}
+          </p>
+
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+              {t("moveOutDefaults.code")}
+            </label>
+            <div className="relative">
+              <Hash className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
+              <input
+                name="code"
+                defaultValue={initialData?.code}
+                maxLength={12}
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl ps-10 pe-3 text-sm text-text-primary uppercase font-mono tracking-wider focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 placeholder:text-text-secondary/40"
+                placeholder={t("moveOutDefaults.codePlaceholder")}
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] text-text-secondary">
+              {t("moveOutDefaults.codeHint")}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                {t("moveOutDefaults.cleaningFee")} ({CURRENCY.code})
+              </label>
+              <input
+                name="cleaning_fee_default"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={initialData?.cleaning_fee_default}
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl px-3.5 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                {t("moveOutDefaults.paintingFee")} ({CURRENCY.code})
+              </label>
+              <input
+                name="painting_fee_default"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={initialData?.painting_fee_default}
+                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl px-3.5 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+              {t("moveOutDefaults.earlyTerminationRate")} (%)
+            </label>
+            <input
+              name="early_termination_rate"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              defaultValue={
+                initialData
+                  ? (parseFloat(initialData.early_termination_rate) * 100).toFixed(2)
+                  : "12"
+              }
+              className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-xl px-3.5 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 font-mono tabular-nums placeholder:text-text-secondary/40"
+              placeholder="12.00"
+            />
+            <p className="mt-1.5 text-[11px] text-text-secondary">
+              {t("moveOutDefaults.earlyTerminationHint")}
+            </p>
           </div>
         </div>
 

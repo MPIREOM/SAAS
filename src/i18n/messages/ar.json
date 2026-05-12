@@ -152,7 +152,18 @@
     "namePlaceholder": "أدخل اسم العقار",
     "locationPlaceholder": "أدخل الموقع",
     "nameRequired": "اسم العقار مطلوب",
-    "notFound": "العقار غير موجود"
+    "notFound": "العقار غير موجود",
+    "moveOutDefaults": {
+      "title": "الإعدادات الافتراضية لرسوم الإخلاء",
+      "description": "تُستخدم هذه القيم لتعبئة رسوم الإخلاء تلقائياً عند مغادرة المستأجر. يمكن تعديلها لكل عملية إخلاء.",
+      "code": "رمز العقار",
+      "codePlaceholder": "مثال: VILLA-A",
+      "codeHint": "يُستخدم كبادئة في أرقام فواتير الإخلاء ({CODE}-MO-YYYY-NNNN). يُشتق من اسم العقار إن تُرك فارغاً.",
+      "cleaningFee": "رسوم التنظيف",
+      "paintingFee": "رسوم الدهان / الصيانة",
+      "earlyTerminationRate": "نسبة الإنهاء المبكر",
+      "earlyTerminationHint": "تُطبّق على (الأشهر المتبقية × الإيجار الشهري). القيمة الشائعة: 12% — رسوم البلدية والمكتب."
+    }
   },
   "units": {
     "title": "الوحدات",
@@ -340,6 +351,45 @@
       "monthsRemaining": "الأشهر المتبقية",
       "formula": "{months} شهر × {rent} ر.ع × {rate}%",
       "calculating": "جارٍ حساب العمولة المستحقة..."
+    },
+    "moveOutFees": {
+      "title": "رسوم الإخلاء",
+      "description": "يتم تعبئة رسوم التنظيف والدهان من الإعدادات الافتراضية للعقار. تُحسب رسوم الإنهاء المبكر تلقائياً عند المغادرة قبل انتهاء العقد.",
+      "cleaningLabel": "رسوم التنظيف",
+      "paintingLabel": "رسوم الدهان / الصيانة",
+      "earlyTerminationLabel": "رسوم الإنهاء المبكر",
+      "earlyTerminationFormula": "{months} شهر × {rent} ر.ع × {rate}%",
+      "customDescriptionPlaceholder": "صف الرسوم (مثل: زجاج مكسور)",
+      "addCustom": "إضافة رسوم مخصصة",
+      "reviewAndConfirm": "مراجعة وتأكيد الإخلاء",
+      "errors": {
+        "vacateDateRequired": "اختر تاريخ الإخلاء قبل المراجعة.",
+        "reasonRequired": "اختر السبب قبل المراجعة.",
+        "customDescriptionRequired": "الرسوم المخصصة تحتاج إلى وصف.",
+        "negativeAmount": "يجب أن تكون مبالغ الرسوم موجبة."
+      },
+      "preview": {
+        "title": "معاينة فاتورة الإخلاء",
+        "invoiceNumber": "رقم الفاتورة",
+        "invoiceNumberPending": "(يتم إنشاؤه عند التأكيد)",
+        "billTo": "فاتورة إلى",
+        "unit": "العقار والوحدة",
+        "unitNumber": "الوحدة",
+        "floor": "الطابق",
+        "vacateDate": "تاريخ الإخلاء",
+        "description": "الوصف",
+        "amount": "المبلغ",
+        "totalDue": "الإجمالي المستحق",
+        "noLineItems": "لا توجد رسوم في الفاتورة. أضف بنداً واحداً على الأقل أو ارجع للتخطي.",
+        "confirm": "تأكيد الإخلاء",
+        "back": "العودة للتعديل"
+      },
+      "success": {
+        "title": "تم تأكيد الإخلاء",
+        "description": "تم إصدار الفاتورة {invoiceNumber} للمستأجر.",
+        "downloadPdf": "تحميل PDF",
+        "backToTenants": "العودة إلى المستأجرين"
+      }
     },
     "outstandingInvoices": "الفواتير المستحقة",
     "invoiceResolutionDescription": "اختر كيفية التعامل مع كل فاتورة مستحقة قبل إتمام الخروج.",

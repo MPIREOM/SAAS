@@ -52,6 +52,12 @@ export const properties = pgTable("properties", {
   }),
   commissionType: commissionTypeEnum("commission_type").notNull().default("none"),
   commissionRate: numeric("commission_rate").notNull().default("0"),
+  // Short code used as a prefix in move-out invoice numbers
+  // ({CODE}-MO-{YYYY}-{NNNN}). Falls back to a slug of the name.
+  code: text("code"),
+  cleaningFeeDefault: numeric("cleaning_fee_default").notNull().default("0"),
+  paintingFeeDefault: numeric("painting_fee_default").notNull().default("0"),
+  earlyTerminationRate: numeric("early_termination_rate").notNull().default("0.12"),
   createdBy: uuid("created_by").references(() => users.id, {
     onDelete: "set null",
   }),
