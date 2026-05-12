@@ -21,14 +21,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_invoice_number
   ON invoices(invoice_number)
   WHERE invoice_number IS NOT NULL;
 
--- The existing (lease_id, due_date) unique index would block a move-out
--- invoice whose due date collides with an existing rent invoice. Scope it
--- to rent invoices only.
-DROP INDEX IF EXISTS idx_invoices_lease_due_date;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_lease_due_date_rent
-  ON invoices(lease_id, due_date)
-  WHERE invoice_type = 'rent';
-
 CREATE INDEX IF NOT EXISTS idx_invoices_type ON invoices(invoice_type);
 
 -- ── Per-property move-out fee defaults + invoice code ──────────────────────
@@ -124,4 +116,5 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION next_move_out_invoice_number(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION next_move_out_invoice_number(UUID) TO authenticated;
