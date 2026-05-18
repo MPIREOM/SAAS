@@ -86,9 +86,34 @@ export async function runOwnerReports(
       return { status: "skipped" as const, summary };
     }
 
+    // Super-admin CC: every active admin_notification_recipients row with a
+    // WhatsApp number receives a copy of every owner's report. Fetched once
+    // since the list is identical for all owners.
+    const { data: adminRows, error: adminErr } = await supabase
+      .from("admin_notification_recipients")
+      .select("name, phone, notify_whatsapp")
+      .eq("is_active", true)
+      .eq("notify_whatsapp", true);
+    if (adminErr) {
+      console.error(`[${CRON_NAME}] admin recipients query failed:`, adminErr.message);
+    }
+    const seenCcPhones = new Set<string>();
+    const ccRecipients = (adminRows || [])
+      .map((r: Record<string, unknown>) => ({
+        name: (r.name as string) || "Admin",
+        phone: typeof r.phone === "string" ? r.phone.replace(/[^\d]/g, "") : "",
+      }))
+      .filter((r: { name: string; phone: string }) => {
+        if (r.phone.length < 8 || seenCcPhones.has(r.phone)) return false;
+        seenCcPhones.add(r.phone);
+        return true;
+      });
+
     const perOwner: Array<Record<string, unknown>> = [];
     let sent = 0;
     let errors = 0;
+    let ccSent = 0;
+    let ccErrors = 0;
 
     for (const owner of eligible) {
       const ownerId = owner.id as string;
@@ -132,18 +157,45 @@ export async function runOwnerReports(
         }
 
         const phone = (owner.whatsapp_phone as string).replace(/[^\d]/g, "");
+        const bodyParameters = [
+          ownerName,
+          report.monthLabel,
+          balanceCaption(report.balance.side, ownerName, report.balance.balance),
+        ].map(sanitiseTemplateParam);
+
         const send = await sendWhatsAppDocumentTemplate({
           to: phone,
           templateName: TEMPLATE_NAME,
           languageCode: TEMPLATE_LANGUAGE,
-          bodyParameters: [
-            ownerName,
-            report.monthLabel,
-            balanceCaption(report.balance.side, ownerName, report.balance.balance),
-          ].map(sanitiseTemplateParam),
+          bodyParameters,
           documentLink: publicUrl,
           filename,
         });
+
+        // Send a copy to each super-admin recipient. Done independently of the
+        // owner send result so the admin still receives the report even when
+        // the owner's own number is broken. Skip a recipient whose number is
+        // the owner's own number (they already received it above).
+        let ccDelivered = 0;
+        const ccFailures: Array<Record<string, unknown>> = [];
+        for (const cc of ccRecipients) {
+          if (cc.phone === phone) continue;
+          const ccSend = await sendWhatsAppDocumentTemplate({
+            to: cc.phone,
+            templateName: TEMPLATE_NAME,
+            languageCode: TEMPLATE_LANGUAGE,
+            bodyParameters,
+            documentLink: publicUrl,
+            filename,
+          });
+          if (ccSend.success) {
+            ccSent++;
+            ccDelivered++;
+          } else {
+            ccErrors++;
+            ccFailures.push({ phone: cc.phone, error: ccSend.error || "send_failed" });
+          }
+        }
 
         if (send.success) {
           sent++;
@@ -157,10 +209,19 @@ export async function runOwnerReports(
             transfersToOwner: report.transfersToOwner.length,
             transfersToCompany: report.transfersToCompany.length,
             balance: report.balance.balance,
+            ccDelivered,
+            ...(ccFailures.length > 0 ? { ccFailures } : {}),
           });
         } else {
           errors++;
-          perOwner.push({ ownerId, ownerName, phone, error: send.error || "send_failed" });
+          perOwner.push({
+            ownerId,
+            ownerName,
+            phone,
+            error: send.error || "send_failed",
+            ccDelivered,
+            ...(ccFailures.length > 0 ? { ccFailures } : {}),
+          });
         }
       } catch (err) {
         errors++;
@@ -175,12 +236,17 @@ export async function runOwnerReports(
     const summary: Record<string, unknown> = {
       trigger,
       eligibleOwners: eligible.length,
+      ccRecipients: ccRecipients.length,
       sent,
       errors,
+      ccSent,
+      ccErrors,
       perOwner,
     };
-    const status: "success" | "error" = sent > 0 ? "success" : "error";
-    console.log(`[${CRON_NAME}] Done: sent=${sent} errors=${errors}`);
+    const status: "success" | "error" = sent + ccSent > 0 ? "success" : "error";
+    console.log(
+      `[${CRON_NAME}] Done: sent=${sent} errors=${errors} ccSent=${ccSent} ccErrors=${ccErrors}`,
+    );
     await logCronRun(supabase, status, summary);
     return { status, summary };
   } catch (err) {
