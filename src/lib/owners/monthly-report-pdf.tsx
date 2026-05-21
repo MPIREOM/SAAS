@@ -10,7 +10,7 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 import { CURRENCY, formatCurrency } from "@/lib/currency";
-import type { MonthlyReport } from "./monthly-report-data";
+import type { MonthlyReport, MonthlyReportTransfer } from "./monthly-report-data";
 
 // Register Thmanyah Sans (Latin + Arabic). The default Helvetica that
 // ships with @react-pdf/renderer doesn't have Arabic glyphs, so tenant
@@ -173,6 +173,15 @@ function balanceColour(side: MonthlyReport["balance"]["side"]) {
   if (side === "company_owes_owner") return styles.balanceTotalValuePos;
   if (side === "owner_owes_company") return styles.balanceTotalValueNeg;
   return styles.balanceTotalValueZero;
+}
+
+function describeTransfer(t: MonthlyReportTransfer): string {
+  if (t.source === "rent_payment") {
+    const unit = t.unitNumber ? `Unit ${t.unitNumber}` : null;
+    const parts = ["Rent", t.tenantName || null, unit].filter(Boolean);
+    return parts.join(" · ");
+  }
+  return t.reference || "Settlement";
 }
 
 function balanceCaption(report: MonthlyReport): string {
@@ -382,7 +391,7 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
               <View style={styles.tableHeader}>
                 <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
                 <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Method</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Reference</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Description</Text>
                 <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
               </View>
               {report.transfersToOwner.map((s, i) => (
@@ -396,7 +405,7 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
                 >
                   <Text style={[styles.cellMuted, { flex: 1 }]}>{s.date}</Text>
                   <Text style={[styles.cell, { flex: 1 }]}>{s.method}</Text>
-                  <Text style={[styles.cellMuted, { flex: 2 }]}>{s.reference || "—"}</Text>
+                  <Text style={[styles.cellMuted, { flex: 2 }]}>{describeTransfer(s)}</Text>
                   <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(s.amount)}</Text>
                 </View>
               ))}
@@ -419,7 +428,7 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
               <View style={styles.tableHeader}>
                 <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
                 <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Method</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Reference</Text>
+                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Description</Text>
                 <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
               </View>
               {report.transfersToCompany.map((s, i) => (
@@ -433,7 +442,7 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
                 >
                   <Text style={[styles.cellMuted, { flex: 1 }]}>{s.date}</Text>
                   <Text style={[styles.cell, { flex: 1 }]}>{s.method}</Text>
-                  <Text style={[styles.cellMuted, { flex: 2 }]}>{s.reference || "—"}</Text>
+                  <Text style={[styles.cellMuted, { flex: 2 }]}>{describeTransfer(s)}</Text>
                   <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(s.amount)}</Text>
                 </View>
               ))}
