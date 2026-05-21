@@ -156,6 +156,24 @@ const styles = StyleSheet.create({
   totalLabel: { color: colors.text, fontSize: 9, fontWeight: 700 },
   totalValue: { color: colors.gold, fontSize: 9, fontWeight: 700, textAlign: "right" },
   empty: { color: colors.muted, fontStyle: "italic", fontSize: 9 },
+  groupHeading: {
+    color: colors.text,
+    fontSize: 9,
+    fontWeight: 700,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  groupHeadingFirst: {
+    color: colors.text,
+    fontSize: 9,
+    fontWeight: 700,
+    marginBottom: 4,
+  },
+  groupSubtotal: {
+    flexDirection: "row",
+    paddingTop: 3,
+    marginTop: 2,
+  },
   footer: {
     position: "absolute",
     bottom: 16,
@@ -182,6 +200,81 @@ function describeTransfer(t: MonthlyReportTransfer): string {
     return parts.join(" · ");
   }
   return t.reference || "Settlement";
+}
+
+// Group transfers by property name so the report shows a subheader + subtotal
+// per property within each Transfers card. Settlements (which have no
+// property) collapse into an "Owner-level" group rendered last.
+function groupByProperty(
+  rows: MonthlyReportTransfer[],
+): Array<{ propertyName: string; rows: MonthlyReportTransfer[]; subtotal: number }> {
+  const buckets = new Map<string, MonthlyReportTransfer[]>();
+  for (const r of rows) {
+    const key = r.propertyName || "Owner-level";
+    const arr = buckets.get(key) || [];
+    arr.push(r);
+    buckets.set(key, arr);
+  }
+  const properties = Array.from(buckets.keys())
+    .filter((k) => k !== "Owner-level")
+    .sort((a, b) => a.localeCompare(b));
+  if (buckets.has("Owner-level")) properties.push("Owner-level");
+  return properties.map((propertyName) => {
+    const rs = buckets.get(propertyName) || [];
+    return {
+      propertyName,
+      rows: rs,
+      subtotal: rs.reduce((s, r) => s + r.amount, 0),
+    };
+  });
+}
+
+function TransfersTable({
+  rows,
+  total,
+  totalLabel,
+}: {
+  rows: MonthlyReportTransfer[];
+  total: number;
+  totalLabel: string;
+}) {
+  const groups = groupByProperty(rows);
+  return (
+    <>
+      <View style={styles.tableHeader}>
+        <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
+        <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Method</Text>
+        <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Description</Text>
+        <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
+      </View>
+      {groups.map((g, gi) => (
+        <View key={g.propertyName} wrap={false}>
+          <Text style={gi === 0 ? styles.groupHeadingFirst : styles.groupHeading}>
+            {g.propertyName} · {g.rows.length}
+          </Text>
+          {g.rows.map((s, i) => (
+            <View
+              key={i}
+              style={i === g.rows.length - 1 ? styles.tableRowLast : styles.tableRow}
+            >
+              <Text style={[styles.cellMuted, { flex: 1 }]}>{s.date}</Text>
+              <Text style={[styles.cell, { flex: 1 }]}>{s.method}</Text>
+              <Text style={[styles.cellMuted, { flex: 2 }]}>{describeTransfer(s)}</Text>
+              <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(s.amount)}</Text>
+            </View>
+          ))}
+          <View style={styles.groupSubtotal}>
+            <Text style={[styles.cellMuted, { flex: 4 }]}>Subtotal — {g.propertyName}</Text>
+            <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(g.subtotal)}</Text>
+          </View>
+        </View>
+      ))}
+      <View style={styles.totalRow}>
+        <Text style={[styles.totalLabel, { flex: 4 }]}>{totalLabel}</Text>
+        <Text style={[styles.totalValue, { flex: 1 }]}>{fmt(total)}</Text>
+      </View>
+    </>
+  );
 }
 
 function balanceCaption(report: MonthlyReport): string {
@@ -387,33 +480,11 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
           {report.transfersToOwner.length === 0 ? (
             <Text style={styles.empty}>No transfers to owner this month.</Text>
           ) : (
-            <>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Method</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Description</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
-              </View>
-              {report.transfersToOwner.map((s, i) => (
-                <View
-                  key={i}
-                  style={
-                    i === report.transfersToOwner.length - 1
-                      ? styles.tableRowLast
-                      : styles.tableRow
-                  }
-                >
-                  <Text style={[styles.cellMuted, { flex: 1 }]}>{s.date}</Text>
-                  <Text style={[styles.cell, { flex: 1 }]}>{s.method}</Text>
-                  <Text style={[styles.cellMuted, { flex: 2 }]}>{describeTransfer(s)}</Text>
-                  <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(s.amount)}</Text>
-                </View>
-              ))}
-              <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { flex: 4 }]}>Total to owner</Text>
-                <Text style={[styles.totalValue, { flex: 1 }]}>{fmt(report.transfersToOwnerTotal)}</Text>
-              </View>
-            </>
+            <TransfersTable
+              rows={report.transfersToOwner}
+              total={report.transfersToOwnerTotal}
+              totalLabel="Total to owner"
+            />
           )}
         </View>
 
@@ -424,33 +495,11 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
           {report.transfersToCompany.length === 0 ? (
             <Text style={styles.empty}>No transfers to company this month.</Text>
           ) : (
-            <>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Method</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Description</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
-              </View>
-              {report.transfersToCompany.map((s, i) => (
-                <View
-                  key={i}
-                  style={
-                    i === report.transfersToCompany.length - 1
-                      ? styles.tableRowLast
-                      : styles.tableRow
-                  }
-                >
-                  <Text style={[styles.cellMuted, { flex: 1 }]}>{s.date}</Text>
-                  <Text style={[styles.cell, { flex: 1 }]}>{s.method}</Text>
-                  <Text style={[styles.cellMuted, { flex: 2 }]}>{describeTransfer(s)}</Text>
-                  <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(s.amount)}</Text>
-                </View>
-              ))}
-              <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { flex: 4 }]}>Total to company</Text>
-                <Text style={[styles.totalValue, { flex: 1 }]}>{fmt(report.transfersToCompanyTotal)}</Text>
-              </View>
-            </>
+            <TransfersTable
+              rows={report.transfersToCompany}
+              total={report.transfersToCompanyTotal}
+              totalLabel="Total to company"
+            />
           )}
         </View>
 

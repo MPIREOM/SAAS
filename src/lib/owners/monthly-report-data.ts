@@ -26,6 +26,8 @@ export type MonthlyReportTransfer = {
   source: "settlement" | "rent_payment";
   tenantName?: string | null;
   unitNumber?: string | null;
+  // Property the rent came from. Null for owner-level settlement rows.
+  propertyName?: string | null;
 };
 
 export type MonthlyReportDefaultedInvoice = {
@@ -180,17 +182,21 @@ export async function getOwnerMonthlyReport(
 
   // Rent payments on the owner's leases this month. Walk
   // properties → units → leases → payments, mirroring the rent walk in
-  // balance.ts. Pulls tenant + unit names so each row has context in the PDF.
+  // balance.ts. Each row carries tenant + unit + property context so the PDF
+  // can group transfers by property.
   if (propertyIds.length > 0) {
     const ownerUnitsRes = await supabase
       .from("units")
-      .select("id, unit_number")
+      .select("id, unit_number, property_id")
       .in("property_id", propertyIds);
-    const unitNumberById = new Map<string, string>();
+    const unitInfo = new Map<string, { unitNumber: string; propertyId: string }>();
     for (const u of ownerUnitsRes.data || []) {
-      unitNumberById.set(u.id as string, (u.unit_number as string) || "?");
+      unitInfo.set(u.id as string, {
+        unitNumber: (u.unit_number as string) || "?",
+        propertyId: u.property_id as string,
+      });
     }
-    const unitIds = (ownerUnitsRes.data || []).map((u) => u.id as string);
+    const unitIds = Array.from(unitInfo.keys());
     if (unitIds.length > 0) {
       const { data: leases } = await supabase
         .from("leases")
@@ -221,6 +227,7 @@ export async function getOwnerMonthlyReport(
           .order("payment_date", { ascending: true });
         for (const p of payments || []) {
           const ctx = leaseContext.get(p.lease_id as string);
+          const unit = ctx ? unitInfo.get(ctx.unitId) : undefined;
           const method = (p.method as string) || "cash";
           const entry: MonthlyReportTransfer = {
             date: p.payment_date as string,
@@ -232,7 +239,8 @@ export async function getOwnerMonthlyReport(
             reference: (p.reference_number as string) || null,
             source: "rent_payment",
             tenantName: ctx?.tenantName || null,
-            unitNumber: ctx ? unitNumberById.get(ctx.unitId) || null : null,
+            unitNumber: unit?.unitNumber || null,
+            propertyName: unit ? propertyNames.get(unit.propertyId) || null : null,
           };
           if (method === "cheque") transfersToOwner.push(entry);
           else transfersToCompany.push(entry);
