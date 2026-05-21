@@ -10,12 +10,22 @@ export type MonthlyReportExpense = {
   propertyName: string | null;
 };
 
-export type MonthlyReportSettlement = {
+// "Transfer" here means any movement of money this month between the company
+// and the owner — either a recorded owner_settlements row (the company
+// physically paid the owner, or vice versa) OR a tenant rent payment that
+// effectively flows to one side: cheques go direct to the owner (Transfer to
+// Owner), cash + bank-transfer land in the company account (Transfer to
+// Company). Rent rows carry tenant / unit context so the owner can see which
+// unit it relates to.
+export type MonthlyReportTransfer = {
   date: string;
   direction: "company_to_owner" | "owner_to_company";
   amount: number;
   method: string;
   reference: string | null;
+  source: "settlement" | "rent_payment";
+  tenantName?: string | null;
+  unitNumber?: string | null;
 };
 
 export type MonthlyReportDefaultedInvoice = {
@@ -42,9 +52,9 @@ export type MonthlyReport = {
   balance: OwnerBalanceResult;
   expenses: MonthlyReportExpense[];
   expensesTotal: number;
-  transfersToOwner: MonthlyReportSettlement[];
+  transfersToOwner: MonthlyReportTransfer[];
   transfersToOwnerTotal: number;
-  transfersToCompany: MonthlyReportSettlement[];
+  transfersToCompany: MonthlyReportTransfer[];
   transfersToCompanyTotal: number;
   defaultedInvoices: MonthlyReportDefaultedInvoice[];
   defaultedTotal: number;
@@ -140,7 +150,14 @@ export async function getOwnerMonthlyReport(
   }
   const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
 
-  // Settlements for this month, split by direction.
+  // Transfers this month, bucketed by which side ended up holding the money.
+  //   Transfers to Owner   — cheque rent (direct to owner) + company→owner settlements
+  //   Transfers to Company — cash/bank-transfer rent (to company) + owner→company settlements
+  // Both streams are listed in the same table so the owner sees a single
+  // chronological view of money movement per side.
+  const transfersToOwner: MonthlyReportTransfer[] = [];
+  const transfersToCompany: MonthlyReportTransfer[] = [];
+
   const settlementsRes = await supabase
     .from("owner_settlements")
     .select("amount, direction, method, settled_at, reference_number")
@@ -148,19 +165,84 @@ export async function getOwnerMonthlyReport(
     .gte("settled_at", monthStart)
     .lte("settled_at", asOf)
     .order("settled_at", { ascending: true });
-  const transfersToOwner: MonthlyReportSettlement[] = [];
-  const transfersToCompany: MonthlyReportSettlement[] = [];
   for (const row of (settlementsRes.data || []) as Record<string, unknown>[]) {
-    const entry: MonthlyReportSettlement = {
+    const entry: MonthlyReportTransfer = {
       date: row.settled_at as string,
-      direction: row.direction as MonthlyReportSettlement["direction"],
+      direction: row.direction as MonthlyReportTransfer["direction"],
       amount: Number(row.amount || 0),
       method: (row.method as string) || "cash",
       reference: (row.reference_number as string) || null,
+      source: "settlement",
     };
     if (entry.direction === "company_to_owner") transfersToOwner.push(entry);
     else transfersToCompany.push(entry);
   }
+
+  // Rent payments on the owner's leases this month. Walk
+  // properties → units → leases → payments, mirroring the rent walk in
+  // balance.ts. Pulls tenant + unit names so each row has context in the PDF.
+  if (propertyIds.length > 0) {
+    const ownerUnitsRes = await supabase
+      .from("units")
+      .select("id, unit_number")
+      .in("property_id", propertyIds);
+    const unitNumberById = new Map<string, string>();
+    for (const u of ownerUnitsRes.data || []) {
+      unitNumberById.set(u.id as string, (u.unit_number as string) || "?");
+    }
+    const unitIds = (ownerUnitsRes.data || []).map((u) => u.id as string);
+    if (unitIds.length > 0) {
+      const { data: leases } = await supabase
+        .from("leases")
+        .select("id, unit_id, tenants(full_name)")
+        .in("unit_id", unitIds);
+      const leaseContext = new Map<
+        string,
+        { unitId: string; tenantName: string }
+      >();
+      for (const l of leases || []) {
+        const tRaw = l.tenants as unknown;
+        const tenant = (Array.isArray(tRaw) ? tRaw[0] : tRaw) as
+          | { full_name?: string }
+          | null;
+        leaseContext.set(l.id as string, {
+          unitId: l.unit_id as string,
+          tenantName: tenant?.full_name || "Unknown",
+        });
+      }
+      const leaseIds = Array.from(leaseContext.keys());
+      if (leaseIds.length > 0) {
+        const { data: payments } = await supabase
+          .from("payments")
+          .select("amount, method, payment_date, reference_number, lease_id")
+          .in("lease_id", leaseIds)
+          .gte("payment_date", monthStart)
+          .lte("payment_date", asOf)
+          .order("payment_date", { ascending: true });
+        for (const p of payments || []) {
+          const ctx = leaseContext.get(p.lease_id as string);
+          const method = (p.method as string) || "cash";
+          const entry: MonthlyReportTransfer = {
+            date: p.payment_date as string,
+            // Cheque rent is direct-to-owner ⇒ company_to_owner conceptually;
+            // cash/transfer rent lands in the company ⇒ owner_to_company.
+            direction: method === "cheque" ? "company_to_owner" : "owner_to_company",
+            amount: Number(p.amount || 0),
+            method,
+            reference: (p.reference_number as string) || null,
+            source: "rent_payment",
+            tenantName: ctx?.tenantName || null,
+            unitNumber: ctx ? unitNumberById.get(ctx.unitId) || null : null,
+          };
+          if (method === "cheque") transfersToOwner.push(entry);
+          else transfersToCompany.push(entry);
+        }
+      }
+    }
+  }
+
+  transfersToOwner.sort((a, b) => a.date.localeCompare(b.date));
+  transfersToCompany.sort((a, b) => a.date.localeCompare(b.date));
   const transfersToOwnerTotal = transfersToOwner.reduce((s, e) => s + e.amount, 0);
   const transfersToCompanyTotal = transfersToCompany.reduce((s, e) => s + e.amount, 0);
 
