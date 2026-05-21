@@ -150,6 +150,13 @@ export async function getOwnerMonthlyReport(
         : null,
     });
   }
+  // Each underlying query is ordered by expense_date, but spreading
+  // [...prop, ...owner] interleaves them by query-source rather than date —
+  // so an owner-level expense from later in the month ends up after a
+  // property-scoped expense from earlier, and the visual "most recent"
+  // entry at the bottom of the table isn't actually the most recent. Sort
+  // here so the table reads chronologically end-to-end.
+  expenses.sort((a, b) => a.date.localeCompare(b.date));
   const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
 
   // Transfers this month, bucketed by which side ended up holding the money.
