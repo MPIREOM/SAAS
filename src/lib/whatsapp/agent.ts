@@ -2,7 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { getOwnerBalance, getDefaultOwnerBalance } from "@/lib/owners/balance";
 
-const anthropic = new Anthropic();
+const anthropic = new Anthropic({
+  // callClaude() below owns retry logic, so disable the SDK's built-in retries
+  // to avoid compounding backoff (SDK default is 2 → up to ~6 attempts when
+  // stacked with ours). A per-request timeout keeps a hung Claude call from
+  // stalling the WhatsApp webhook indefinitely.
+  maxRetries: 0,
+  timeout: 60_000,
+});
 
 const CLAUDE_MODEL = "claude-sonnet-4-6";
 const MAX_RETRIES = 3;
@@ -32,8 +39,13 @@ async function callClaude(
       const isRateLimit = status === 429;
       const isTransientServerError =
         typeof status === "number" && status >= 500 && status < 600;
+      // Network blips and our own 60s timeout surface as APIConnectionError
+      // (APIConnectionTimeoutError is a subclass). The SDK won't retry these
+      // anymore (maxRetries: 0), so we do.
+      const isConnectionError = error instanceof Anthropic.APIConnectionError;
       const shouldRetry =
-        (isRateLimit || isTransientServerError) && attempt < MAX_RETRIES - 1;
+        (isRateLimit || isTransientServerError || isConnectionError) &&
+        attempt < MAX_RETRIES - 1;
 
       if (shouldRetry) {
         const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
@@ -664,6 +676,11 @@ const tools: Anthropic.Tool[] = [
       },
       required: [],
     },
+    // Cache breakpoint: marking the LAST tool caches the entire tool-definition
+    // block (all 25 tools). They never change between calls, yet the agent loop
+    // re-sends them on every Claude request — caching cuts that input cost to
+    // ~10% on repeat reads within the 5-minute window.
+    cache_control: { type: "ephemeral" },
   },
 ];
 
@@ -2978,6 +2995,20 @@ BEHAVIOR RULES:
 - When checking a status, balance, or summary: ALWAYS call the tool first, then report what the tool returned. NEVER rely on what was said earlier in the conversation.
 - CRITICAL — ALWAYS REPLY WITH TEXT: After your final tool call, you MUST emit a short text answer for the user (e.g. "Done — 280 OMR recorded for unit 34 (Moza)"). Never end the turn with only tool_use blocks and no text. The user is on WhatsApp and only sees text.`;
 
+  // Prompt caching: the system prompt is large and stable for the duration of
+  // a conversation, yet the agent loop re-sends it on every Claude call (up to
+  // 25 per message). Wrapping it in a cached content block makes repeat reads
+  // ~10% of the input cost. The cache lives ~5 min, so it also spans the
+  // user's follow-up messages. (The dynamic name/date only change daily or
+  // per-user, so the cache prefix stays stable in practice.)
+  const systemBlocks: Anthropic.TextBlockParam[] = [
+    {
+      type: "text",
+      text: systemPrompt,
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+
   // Build messages: trimmed conversation history + the current user message
   // appended explicitly. We can't rely on the freshly-saved row showing up
   // in loadConversationHistory() because of read-after-write timing on
@@ -3043,7 +3074,7 @@ BEHAVIOR RULES:
     response = await callClaude({
       model: CLAUDE_MODEL,
       max_tokens: 2048,
-      system: systemPrompt,
+      system: systemBlocks,
       tools,
       messages,
     });
@@ -3065,11 +3096,34 @@ BEHAVIOR RULES:
             `[WhatsApp Agent] Tool call: ${block.name}`,
             JSON.stringify(block.input)
           );
-          const result = await executeTool(
-            block.name,
-            block.input as Record<string, unknown>,
-            user.id
-          );
+          // Isolate each tool: a handled failure already comes back as error
+          // JSON, but an UNEXPECTED throw (e.g. a Supabase outage) would
+          // otherwise bubble up and abort the whole turn with a generic
+          // fallback. Catching it here lets the model see the failure as a
+          // tool_result and recover / explain instead.
+          let result: string;
+          try {
+            result = await executeTool(
+              block.name,
+              block.input as Record<string, unknown>,
+              user.id
+            );
+          } catch (toolErr) {
+            console.error(
+              `[WhatsApp Agent] Tool "${block.name}" threw`,
+              toolErr instanceof Error ? toolErr.message : String(toolErr)
+            );
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              is_error: true,
+              content: JSON.stringify({
+                error:
+                  "That action failed unexpectedly. Tell the user briefly and suggest they try again in a moment.",
+              }),
+            });
+            continue;
+          }
           console.log(
             `[WhatsApp Agent] Tool result: ${result.substring(0, 200)}`
           );
@@ -3086,7 +3140,7 @@ BEHAVIOR RULES:
       response = await callClaude({
         model: CLAUDE_MODEL,
         max_tokens: 2048,
-        system: systemPrompt,
+        system: systemBlocks,
         tools,
         messages,
       });
@@ -3127,7 +3181,7 @@ BEHAVIOR RULES:
       const followUp = await callClaude({
         model: CLAUDE_MODEL,
         max_tokens: 1024,
-        system: systemPrompt,
+        system: systemBlocks,
         // Disable tools on the retry so we are guaranteed a text answer.
         messages,
       });
