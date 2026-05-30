@@ -536,8 +536,50 @@ const tools: Anthropic.Tool[] = [
           type: "string",
           description: "Optional free-text notes.",
         },
+        confirm_duplicate: {
+          type: "boolean",
+          description:
+            "Set to true ONLY after the user has explicitly confirmed they want to record a settlement that looks like a duplicate of an existing one. When omitted/false, the tool refuses to insert a near-identical settlement and returns the existing match so you can ask the user to confirm first.",
+        },
       },
       required: ["direction", "amount"],
+    },
+  },
+  {
+    name: "delete_owner_settlement",
+    description:
+      "Delete (permanently remove) an owner settlement that was recorded by mistake — e.g. a duplicate entry, or a wrong amount/direction. This is a hard delete; the row is removed from the ledger and the owner balance is recalculated. Prefer passing settlement_id when you know it (get it from list_recent_owner_activity). Otherwise pass the matching criteria (direction + amount + settled_at) and the tool will locate it. If several identical settlements match (a duplicate), exactly ONE is removed per call so the legitimate entry is kept.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        settlement_id: {
+          type: "string",
+          description:
+            "UUID of the specific settlement to delete. Get this from list_recent_owner_activity. Preferred when known.",
+        },
+        owner_id: {
+          type: "string",
+          description:
+            "Owner UUID. Omit when only one owner exists in the system.",
+        },
+        direction: {
+          type: "string",
+          enum: ["company_to_owner", "owner_to_company"],
+          description:
+            "Direction of the settlement to delete. Used to locate the row when settlement_id is not given.",
+        },
+        amount: {
+          type: "number",
+          description:
+            "Amount of the settlement to delete (OMR). Used to locate the row when settlement_id is not given.",
+        },
+        settled_at: {
+          type: "string",
+          description:
+            "Date (YYYY-MM-DD) of the settlement to delete. Used to locate the row when settlement_id is not given.",
+        },
+      },
+      required: [],
     },
   },
   {
@@ -1981,6 +2023,52 @@ async function executeTool(
         ownerId = owners[0].id as string;
       }
 
+      // Duplicate guard: refuse to silently record a settlement that looks
+      // identical to an existing one (same owner, direction, amount) within a
+      // few days, unless the user has explicitly confirmed. This is the root
+      // cause behind a "paid to owner expense recorded twice" complaint.
+      const confirmDuplicate = input.confirm_duplicate === true;
+      if (!confirmDuplicate) {
+        const windowDays = 3;
+        const lowerDate = new Date(
+          new Date(settledAt).getTime() - windowDays * 24 * 60 * 60 * 1000,
+        )
+          .toISOString()
+          .split("T")[0];
+        const upperDate = new Date(
+          new Date(settledAt).getTime() + windowDays * 24 * 60 * 60 * 1000,
+        )
+          .toISOString()
+          .split("T")[0];
+        const { data: existing } = await supabase
+          .from("owner_settlements")
+          .select("id, amount, direction, method, settled_at")
+          .eq("owner_id", ownerId)
+          .eq("direction", direction)
+          .eq("amount", amount)
+          .gte("settled_at", lowerDate)
+          .lte("settled_at", upperDate)
+          .order("settled_at", { ascending: false });
+
+        if (existing && existing.length > 0) {
+          return JSON.stringify({
+            requires_confirmation: true,
+            reason: "possible_duplicate",
+            message:
+              "A settlement with the same owner, direction and amount already exists near this date. This may be a duplicate. Ask the user to confirm before recording another one — and if it IS a duplicate, do NOT record a new entry; offer to delete the extra instead using delete_owner_settlement.",
+            existing_settlements: existing.map((s: Record<string, unknown>) => ({
+              settlement_id: s.id,
+              direction: s.direction,
+              amount: Number(s.amount || 0),
+              method: s.method,
+              settled_at: s.settled_at,
+            })),
+            to_record_anyway:
+              "Call record_owner_settlement again with confirm_duplicate=true once the user confirms it is a separate, legitimate payment.",
+          });
+        }
+      }
+
       const { data: settlement, error: insertErr } = await supabase
         .from("owner_settlements")
         .insert({
@@ -2023,6 +2111,125 @@ async function executeTool(
         amount,
         method,
         settled_at: settledAt,
+        new_balance: newBalance?.balance ?? null,
+        new_balance_side: newBalance?.side ?? null,
+      });
+    }
+
+    case "delete_owner_settlement": {
+      let ownerId = input.owner_id as string | undefined;
+      const settlementId = input.settlement_id as string | undefined;
+
+      // Resolve owner if not provided (needed for criteria-based lookups and
+      // for recalculating the balance afterwards).
+      if (!ownerId) {
+        const { data: owners } = await supabase
+          .from("owners")
+          .select("id")
+          .eq("is_active", true)
+          .limit(2);
+        if (!owners || owners.length === 0) {
+          return JSON.stringify({ error: "No active owner exists." });
+        }
+        if (owners.length > 1 && !settlementId) {
+          return JSON.stringify({
+            error:
+              "Multiple owners exist. Pass owner_id, or pass the settlement_id of the row to delete.",
+          });
+        }
+        if (owners.length === 1) ownerId = owners[0].id as string;
+      }
+
+      // Find the target row(s).
+      let target: { id: string; owner_id: string } | null = null;
+      let remainingMatches = 0;
+
+      if (settlementId) {
+        const { data: row, error: findErr } = await supabase
+          .from("owner_settlements")
+          .select("id, owner_id, amount, direction, settled_at")
+          .eq("id", settlementId)
+          .maybeSingle();
+        if (findErr) return JSON.stringify({ error: findErr.message });
+        if (!row) {
+          return JSON.stringify({
+            error: `No settlement found with id ${settlementId}.`,
+          });
+        }
+        target = { id: row.id as string, owner_id: row.owner_id as string };
+      } else {
+        // Criteria-based lookup. Require at least one distinguishing field so
+        // we never delete an arbitrary settlement.
+        const direction = input.direction as string | undefined;
+        const amount =
+          input.amount != null && Number.isFinite(Number(input.amount))
+            ? Number(input.amount)
+            : undefined;
+        const settledAt = input.settled_at as string | undefined;
+
+        if (!direction && amount == null && !settledAt) {
+          return JSON.stringify({
+            error:
+              "Provide settlement_id, or at least one of direction / amount / settled_at to locate the settlement to delete.",
+          });
+        }
+        if (!ownerId) {
+          return JSON.stringify({
+            error:
+              "Multiple owners exist. Pass owner_id (or settlement_id) to delete the right settlement.",
+          });
+        }
+
+        let q = supabase
+          .from("owner_settlements")
+          .select("id, owner_id, amount, direction, settled_at")
+          .eq("owner_id", ownerId)
+          .order("created_at", { ascending: false });
+        if (direction) q = q.eq("direction", direction);
+        if (amount != null) q = q.eq("amount", amount);
+        if (settledAt) q = q.eq("settled_at", settledAt);
+
+        const { data: matches, error: matchErr } = await q;
+        if (matchErr) return JSON.stringify({ error: matchErr.message });
+        if (!matches || matches.length === 0) {
+          return JSON.stringify({
+            error:
+              "No settlement matches those criteria. Use list_recent_owner_activity to find the right one.",
+          });
+        }
+        // Delete exactly ONE row — the most recently created — so that when a
+        // settlement was recorded twice, the original legitimate entry stays.
+        target = {
+          id: matches[0].id as string,
+          owner_id: matches[0].owner_id as string,
+        };
+        remainingMatches = matches.length - 1;
+      }
+
+      const { error: delErr } = await supabase
+        .from("owner_settlements")
+        .delete()
+        .eq("id", target.id);
+      if (delErr) return JSON.stringify({ error: delErr.message });
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "delete",
+        entity_type: "owner_settlement",
+        entity_id: target.id,
+        metadata: {
+          owner_id: target.owner_id,
+          source: "whatsapp_agent",
+        },
+      });
+
+      const newBalance = await getOwnerBalance(supabase, target.owner_id);
+
+      return JSON.stringify({
+        success: true,
+        deleted_settlement_id: target.id,
+        owner_id: target.owner_id,
+        remaining_identical_matches: remainingMatches,
         new_balance: newBalance?.balance ?? null,
         new_balance_side: newBalance?.side ?? null,
       });
@@ -2111,7 +2318,7 @@ async function executeTool(
           : Promise.resolve({ data: [], error: null }),
         supabase
           .from("owner_settlements")
-          .select("amount, direction, method, settled_at")
+          .select("id, amount, direction, method, settled_at")
           .eq("owner_id", ownerId)
           .gte("settled_at", since)
           .order("settled_at", { ascending: false }),
@@ -2143,6 +2350,7 @@ async function executeTool(
       }));
       const settlements = (settlementsRes.data || []).map(
         (s: Record<string, unknown>) => ({
+          settlement_id: s.id,
           date: s.settled_at,
           direction: s.direction,
           amount: Number(s.amount || 0),
@@ -2724,7 +2932,8 @@ YOU CAN:
 12. Owner ledger — "what's the owner balance?", "how much do I owe the owner?", "owner statement"
     - Use get_owner_balance for "what's the balance / how much do we owe / how much does owner owe".
     - Use record_owner_settlement when the user paid the owner ("I paid the owner 1500 cash" → company_to_owner) or the owner paid the company ("owner gave me 200" → owner_to_company).
-    - Use list_recent_owner_activity when the user wants to see recent rent / expenses / settlements feeding the balance.
+    - Use list_recent_owner_activity when the user wants to see recent rent / expenses / settlements feeding the balance. It returns a settlement_id for each settlement — use that id to delete the right one.
+    - Use delete_owner_settlement to remove a settlement recorded by mistake (duplicate, wrong amount, wrong direction) — e.g. "you recorded the payment to the owner twice", "delete that duplicate settlement", "remove the 1200 transfer I entered by accident". Pass settlement_id when you have it (from list_recent_owner_activity); otherwise pass direction + amount + settled_at and the tool will find it. If the same settlement was recorded twice, calling it once removes ONE copy and keeps the legitimate one.
 13. Look up cheques — "whose cheque is 12345?", "find cheque CHQ-001", "who gave me this cheque?", "cheque 9087 belongs to which tenant?"
     - Use search_cheques_by_number with the cheque number (partial matches work). Reply with the tenant name, bank, amount, status, and (if known) the linked invoice/unit/property.
 14. See HOW an invoice was paid — "how was Feb invoice paid?", "what method did Ahmad use?", "was unit 11 paid in cash or cheque?"
@@ -2752,6 +2961,8 @@ BEHAVIOR RULES:
 - When updating rent, search for the tenant first, get their lease ID, then use update_lease_rent.
 - When cancelling an invoice, search for the tenant and their invoices first, then cancel the right one.
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
+- CRITICAL — DUPLICATE SETTLEMENTS: If record_owner_settlement returns { requires_confirmation: true, reason: "possible_duplicate" }, do NOT record anything yet. Tell the user a matching settlement already exists (quote its amount/date/direction from existing_settlements) and ask whether this is a genuinely separate payment or a duplicate. If they say it is the SAME payment recorded twice, do NOT re-record — instead call delete_owner_settlement to remove the extra copy. Only call record_owner_settlement again with confirm_duplicate=true if they confirm it is a separate, legitimate payment.
+- When the user reports that a settlement / "paid to owner" entry was recorded twice or by mistake, you CAN fix it directly: find the settlement (list_recent_owner_activity gives settlement_id) and call delete_owner_settlement. Never tell the user you have no tool to delete or reverse a settlement, and never propose recording an opposite-direction settlement as a workaround — deleting the duplicate is the correct fix.
 - NEVER say "there are no invoices" without first calling the tool with the right filters. If the user asks about a specific month (e.g. "April"), use the month parameter (e.g. "2026-04") in get_overdue_summary or get_tenant_invoices.
 - When the user asks about invoices for a specific month, ALWAYS pass the month parameter in YYYY-MM format to filter results. Do NOT just scan through all results — use the filter.
 - CRITICAL — UNIT NUMBER LOOKUPS: Whenever the user mentions a unit number (e.g. "unit 27", "unit 66", "send me unit 28 invoices", "tenant in unit 5 paid"), you MUST call get_unit_by_number FIRST. Do NOT use search_tenants, get_property_units, or any other tool to figure out who lives in a unit — only get_unit_by_number is authoritative. NEVER reuse a tenant name from earlier in the conversation for a different unit number; always re-look it up. After get_unit_by_number returns, copy the tenant.full_name and unit.unit_number EXACTLY from the tool response — never substitute, abbreviate, or invent.
