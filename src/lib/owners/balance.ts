@@ -15,6 +15,11 @@ export type OwnerBalanceBreakdown = {
   settlementsPaidToOwner: number;      // company_to_owner
   settlementsReceivedFromOwner: number; // owner_to_company
   balance: number;                     // signed final number
+  // Per-lease early-termination catch-up entries that fall inside the
+  // reporting window, each dated to the lease's vacate_date. Only populated
+  // when getOwnerBalance is called with a `monthStart` (the monthly report);
+  // left undefined for the cumulative balance used elsewhere.
+  earlyTerminationItems?: Array<{ vacateDate: string; amount: number }>;
 };
 
 export type OwnerBalanceResult = {
@@ -29,11 +34,28 @@ export type OwnerBalanceResult = {
 // Query everything needed up to (and including) the asOf date, then sum.
 // Cheap on this scale — single-owner systems with O(1000) payments and
 // O(100) expenses fit comfortably in one round-trip per category.
+// `opts.monthStart` (YYYY-MM-DD, the 1st of the reporting month) switches the
+// returned `breakdown` from cumulative-since-genesis to a clean monthly view:
+//   - openingBalance becomes the rolling carry-forward (the full balance as of
+//     the day before monthStart), so every prior month's commission/charges
+//     are absorbed into the opening figure instead of re-appearing.
+//   - all activity fields (rent, commission, early-termination, BM fees,
+//     expenses, settlements) are scoped to [monthStart, asOf].
+//   - `balance` is unchanged — it is always the full cumulative figure as of
+//     asOf, so the monthly view still reconciles: opening + this-month = current.
+// Callers that omit monthStart (owners page, WhatsApp agent, admin summary)
+// keep the original cumulative breakdown.
 export async function getOwnerBalance(
   supabase: SupabaseClient,
   ownerId: string,
   asOf: string = new Date().toISOString().split("T")[0],
+  opts?: { monthStart?: string },
 ): Promise<OwnerBalanceResult | null> {
+  // When set, rows whose anchor date is >= monthStart count toward the
+  // current-month slice; everything before rolls into the opening balance.
+  const monthStart = opts?.monthStart ?? null;
+  const inCurrentMonth = (d: string | null | undefined): boolean =>
+    monthStart !== null && !!d && d >= monthStart;
   // 1. Owner record (opening balance + name).
   const { data: owner, error: ownerErr } = await supabase
     .from("owners")
@@ -122,6 +144,10 @@ export async function getOwnerBalance(
 
   let rentToCompany = 0;
   let rentDirectCheque = 0;
+  // Parallel accumulators for the current-month slice (only used when
+  // monthStart is provided).
+  let rentToCompanyCur = 0;
+  let rentDirectChequeCur = 0;
 
   // 3a. Rent collected. Walks the payments table because rent attribution
   // depends on payment method (cash/transfer enter the company account,
@@ -146,9 +172,13 @@ export async function getOwnerBalance(
       // Cash & bank transfer hit our account → we owe owner.
       // Cheques go direct to owner → no balance change for the rent itself.
       if (method === "cash" || method === "bank_transfer") {
-        if (!rentAlreadyInOpening) rentToCompany += amount;
+        if (!rentAlreadyInOpening) {
+          rentToCompany += amount;
+          if (inCurrentMonth(paymentDate)) rentToCompanyCur += amount;
+        }
       } else if (method === "cheque") {
         rentDirectCheque += amount;
+        if (inCurrentMonth(paymentDate)) rentDirectChequeCur += amount;
       }
     }
   }
@@ -163,6 +193,7 @@ export async function getOwnerBalance(
   // Restricted to commission_type='percentage' — units on
   // included_in_business_fee or none are unaffected.
   let commissionEarned = 0;
+  let commissionEarnedCur = 0;
   if (leaseIds.length > 0) {
     // Filter on the *positive* set of "billable" statuses rather than
     // .not("status", "in", '("cancelled","written_off")'). The earlier
@@ -204,7 +235,9 @@ export async function getOwnerBalance(
         unitOverride ?? (propId ? commissionByProperty.get(propId) : undefined);
       if (!config || config.type !== "percentage" || config.rate <= 0) continue;
 
-      commissionEarned += Number(inv.amount || 0) * (config.rate / 100);
+      const c = Number(inv.amount || 0) * (config.rate / 100);
+      commissionEarned += c;
+      if (inCurrentMonth(periodAnchor)) commissionEarnedCur += c;
     }
   }
 
@@ -221,6 +254,8 @@ export async function getOwnerBalance(
   // opening_balance_date — those are already baked into the opening
   // balance and shouldn't generate fresh catch-up after-the-fact.
   let earlyTerminationCatchUp = 0;
+  let earlyTerminationCatchUpCur = 0;
+  const earlyTerminationItems: Array<{ vacateDate: string; amount: number }> = [];
   if (leaseIds.length > 0) {
     const { data: vacatedLeases } = await supabase
       .from("leases")
@@ -250,10 +285,17 @@ export async function getOwnerBalance(
       const monthsRemaining = monthsInRange(vacateDate, endDate);
       if (monthsRemaining <= 0 || monthlyRent <= 0) continue;
 
-      earlyTerminationCatchUp +=
-        monthsRemaining * monthlyRent * (config.rate / 100);
+      const amt = monthsRemaining * monthlyRent * (config.rate / 100);
+      earlyTerminationCatchUp += amt;
+      // Scope the catch-up to the month the lease actually vacated, dated to
+      // vacate_date, so it shows once and then rolls into the opening balance.
+      if (inCurrentMonth(vacateDate) && vacateDate <= asOf) {
+        earlyTerminationCatchUpCur += amt;
+        earlyTerminationItems.push({ vacateDate, amount: round2(amt) });
+      }
     }
   }
+  earlyTerminationItems.sort((a, b) => a.vacateDate.localeCompare(b.vacateDate));
 
   // 4. Business-manager fees (one or more owner_business_fees rows).
   const { data: fees } = await supabase
@@ -262,10 +304,13 @@ export async function getOwnerBalance(
     .eq("owner_id", ownerId)
     .gt("period_month", openingDate)
     .lte("period_month", asOf);
-  const businessFees = (fees || []).reduce(
-    (s, f) => s + Number(f.amount || 0),
-    0,
-  );
+  let businessFees = 0;
+  let businessFeesCur = 0;
+  for (const f of fees || []) {
+    const amount = Number(f.amount || 0);
+    businessFees += amount;
+    if (inCurrentMonth(f.period_month as string | null)) businessFeesCur += amount;
+  }
 
   // 5. Expenses paid by the company. Two flavours:
   //   (a) tied to a specific property the owner owns
@@ -292,17 +337,22 @@ export async function getOwnerBalance(
   ]);
   // Dedup by id in case a row matches both predicates (unlikely — a row
   // is normally either property-scoped OR owner-scoped — but defensive).
-  const expenseMap = new Map<string, number>();
-  for (const e of propertyScopedRes.data || []) {
-    expenseMap.set(e.id as string, Number(e.amount || 0));
+  const expenseMap = new Map<string, { amount: number; date: string | null }>();
+  for (const e of [
+    ...(propertyScopedRes.data || []),
+    ...(ownerScopedRes.data || []),
+  ]) {
+    expenseMap.set(e.id as string, {
+      amount: Number(e.amount || 0),
+      date: (e.expense_date as string | null) ?? null,
+    });
   }
-  for (const e of ownerScopedRes.data || []) {
-    expenseMap.set(e.id as string, Number(e.amount || 0));
+  let expensesPaid = 0;
+  let expensesPaidCur = 0;
+  for (const { amount, date } of expenseMap.values()) {
+    expensesPaid += amount;
+    if (inCurrentMonth(date)) expensesPaidCur += amount;
   }
-  const expensesPaid = Array.from(expenseMap.values()).reduce(
-    (s, n) => s + n,
-    0,
-  );
 
   // 6. Settlements between company and owner.
   const { data: settlements } = await supabase
@@ -313,13 +363,23 @@ export async function getOwnerBalance(
     .lte("settled_at", asOf);
   let paidToOwner = 0;
   let receivedFromOwner = 0;
+  let paidToOwnerCur = 0;
+  let receivedFromOwnerCur = 0;
   for (const s of settlements || []) {
     const amount = Number(s.amount || 0);
-    if (s.direction === "company_to_owner") paidToOwner += amount;
-    else if (s.direction === "owner_to_company") receivedFromOwner += amount;
+    const current = inCurrentMonth(s.settled_at as string | null);
+    if (s.direction === "company_to_owner") {
+      paidToOwner += amount;
+      if (current) paidToOwnerCur += amount;
+    } else if (s.direction === "owner_to_company") {
+      receivedFromOwner += amount;
+      if (current) receivedFromOwnerCur += amount;
+    }
   }
 
   const opening = Number(owner.opening_balance || 0);
+  // `balance` is always the full cumulative figure as of asOf, regardless of
+  // monthStart — every caller relies on this for the true current balance.
   const balance =
     opening +
     rentToCompany -
@@ -330,13 +390,35 @@ export async function getOwnerBalance(
     paidToOwner +
     receivedFromOwner;
 
-  return {
-    ownerId: owner.id as string,
-    ownerName: owner.name as string,
-    asOf,
-    balance: round2(balance),
-    side: signedSide(balance),
-    breakdown: {
+  // Cumulative breakdown (default) vs. monthly breakdown with a rolling
+  // opening balance. The monthly form is derived so it always reconciles:
+  // openingForMonth + this-month net activity === full cumulative balance.
+  let breakdown: OwnerBalanceBreakdown;
+  if (monthStart !== null) {
+    const currentNet =
+      rentToCompanyCur -
+      commissionEarnedCur -
+      earlyTerminationCatchUpCur -
+      businessFeesCur -
+      expensesPaidCur -
+      paidToOwnerCur +
+      receivedFromOwnerCur;
+    const openingForMonth = round2(balance - currentNet);
+    breakdown = {
+      openingBalance: openingForMonth,
+      rentReceivedToCompany: round2(rentToCompanyCur),
+      rentReceivedDirectByCheque: round2(rentDirectChequeCur),
+      commissionEarned: round2(commissionEarnedCur),
+      earlyTerminationCommissionCatchUp: round2(earlyTerminationCatchUpCur),
+      businessManagerFees: round2(businessFeesCur),
+      expensesCoveredByCompany: round2(expensesPaidCur),
+      settlementsPaidToOwner: round2(paidToOwnerCur),
+      settlementsReceivedFromOwner: round2(receivedFromOwnerCur),
+      balance: round2(balance),
+      earlyTerminationItems,
+    };
+  } else {
+    breakdown = {
       openingBalance: round2(opening),
       rentReceivedToCompany: round2(rentToCompany),
       rentReceivedDirectByCheque: round2(rentDirectCheque),
@@ -347,7 +429,16 @@ export async function getOwnerBalance(
       settlementsPaidToOwner: round2(paidToOwner),
       settlementsReceivedFromOwner: round2(receivedFromOwner),
       balance: round2(balance),
-    },
+    };
+  }
+
+  return {
+    ownerId: owner.id as string,
+    ownerName: owner.name as string,
+    asOf,
+    balance: round2(balance),
+    side: signedSide(balance),
+    breakdown,
   };
 }
 

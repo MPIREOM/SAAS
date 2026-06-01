@@ -393,19 +393,25 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
           // Service charges are what the company is owed on top of pass-through
           // expenses. Surfacing them in the same section as the expense rows
           // gives the owner a single place to see every deduction this period.
-          // Commission + BM fees are cumulative (they live on the balance
-          // breakdown which is anchored on opening_balance_date), so they're
-          // explicitly labelled to avoid confusion with the month-to-date
-          // expense rows below.
-          const charges: Array<{ label: string; amount: number }> = [];
+          // Commission, early-termination catch-up and BM fees are now scoped
+          // to the current month (prior months roll into the opening balance),
+          // so they carry dates like the expense rows: commission and BM fees
+          // are dated to the reporting month; each early-termination catch-up
+          // is dated to the lease's actual vacate date.
+          const charges: Array<{ date: string | null; label: string; amount: number }> = [];
           if (b.commissionEarned > 0) {
-            charges.push({ label: "Commission earned (cumulative)", amount: b.commissionEarned });
+            charges.push({ date: report.monthStart, label: "Commission earned", amount: b.commissionEarned });
           }
-          if (b.earlyTerminationCommissionCatchUp > 0) {
-            charges.push({ label: "Early-termination commission catch-up", amount: b.earlyTerminationCommissionCatchUp });
+          const etItems = b.earlyTerminationItems ?? [];
+          if (etItems.length > 0) {
+            for (const it of etItems) {
+              charges.push({ date: it.vacateDate, label: "Early-termination commission catch-up", amount: it.amount });
+            }
+          } else if (b.earlyTerminationCommissionCatchUp > 0) {
+            charges.push({ date: null, label: "Early-termination commission catch-up", amount: b.earlyTerminationCommissionCatchUp });
           }
           if (b.businessManagerFees > 0) {
-            charges.push({ label: "Business manager fees (cumulative)", amount: b.businessManagerFees });
+            charges.push({ date: report.monthStart, label: "Business manager fees", amount: b.businessManagerFees });
           }
           const chargesTotal = charges.reduce((s, c) => s + c.amount, 0);
           const rowCount = charges.length + report.expenses.length;
@@ -435,7 +441,7 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
                           : styles.tableRow
                       }
                     >
-                      <Text style={[styles.cellMuted, { flex: 1 }]}>—</Text>
+                      <Text style={[styles.cellMuted, { flex: 1 }]}>{c.date || "—"}</Text>
                       <Text style={[styles.cell, { flex: 1.2 }]}>Service fee</Text>
                       <Text style={[styles.cell, { flex: 2.5 }]}>{c.label}</Text>
                       <Text style={[styles.cellMuted, { flex: 1.5 }]}>—</Text>
