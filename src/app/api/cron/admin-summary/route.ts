@@ -662,6 +662,18 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
+
+  // Vercel's cron dispatcher occasionally skips a scheduled fire window, which
+  // previously left the admin without their morning briefing until the 08:00
+  // UTC reminders-cron fallback re-sent it (~5h late). To harden delivery this
+  // cron is scheduled to fire several times across the 03:00–04:30 UTC window
+  // (see vercel.json). This guard makes the endpoint idempotent: once the
+  // briefing has gone out successfully today (Muscat date), the redundant
+  // fires return early instead of re-sending the summary.
+  if (await wasAdminSummaryRunToday(supabase)) {
+    return NextResponse.json({ status: "skipped", reason: "already_sent_today" });
+  }
+
   const result = await runAdminSummary(supabase, "scheduled");
   return NextResponse.json(result);
 }
