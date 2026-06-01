@@ -87,7 +87,10 @@ export async function getOwnerMonthlyReport(
   const asOf = ymd(muscatNow);
   const monthStart = firstOfMonth(muscatNow);
 
-  const balance = await getOwnerBalance(supabase, ownerId, asOf);
+  // Pass monthStart so the balance breakdown is scoped to the current month
+  // with a rolling opening balance (prior months' commission/charges are
+  // absorbed into the opening figure instead of re-appearing every month).
+  const balance = await getOwnerBalance(supabase, ownerId, asOf, { monthStart });
   if (!balance) return null;
 
   const { data: owner } = await supabase
