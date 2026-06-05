@@ -363,8 +363,49 @@ const tools: Anthropic.Tool[] = [
           description:
             "Optional: a receipt-attachment token from a prior image message in this conversation. The system surfaces these as 'PENDING_RECEIPT_TOKEN: <token>' in the user's message. Pass it here to attach the receipt photo to the new expense. If no such token was surfaced, omit this field.",
         },
+        confirm_duplicate: {
+          type: "boolean",
+          description:
+            "Set to true ONLY after the user has explicitly confirmed they want to record an expense that looks like a duplicate of an existing one. When omitted/false, the tool refuses to insert a near-identical expense (same owner/property, amount, category and date) and returns the existing match so you can ask the user to confirm first. Do NOT set this just because the same expense was mentioned again in the conversation — re-mentioning an already-recorded expense is the most common cause of accidental duplicates.",
+        },
       },
       required: ["category", "amount"],
+    },
+  },
+  {
+    name: "delete_expense",
+    description:
+      "Delete (permanently remove) an expense that was recorded by mistake — e.g. a duplicate entry, or a wrong amount. This is a hard delete; the row is removed and the owner balance is recalculated. Prefer passing expense_id when you know it (get it from list_recent_owner_activity). Otherwise pass the matching criteria (amount + expense_date, optionally category) and the tool will locate it. If several identical expenses match (a duplicate), exactly ONE is removed per call so the legitimate entry is kept.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        expense_id: {
+          type: "string",
+          description:
+            "UUID of the specific expense to delete. Get this from list_recent_owner_activity. Preferred when known.",
+        },
+        owner_id: {
+          type: "string",
+          description:
+            "Owner UUID. Omit when only one owner exists in the system.",
+        },
+        amount: {
+          type: "number",
+          description:
+            "Amount of the expense to delete (OMR). Used to locate the row when expense_id is not given.",
+        },
+        expense_date: {
+          type: "string",
+          description:
+            "Date (YYYY-MM-DD) of the expense to delete. Used to locate the row when expense_id is not given.",
+        },
+        category: {
+          type: "string",
+          description:
+            "Optional category of the expense to delete. Helps disambiguate when amount/date are not unique.",
+        },
+      },
+      required: [],
     },
   },
   {
@@ -1511,6 +1552,69 @@ async function executeTool(
         if (prop?.owner_id) resolvedOwnerId = prop.owner_id as string;
       }
 
+      // Duplicate guard: refuse to silently record an expense that looks
+      // identical to an existing one (same owner/property, amount, category)
+      // within a few days, unless the user has explicitly confirmed. This is
+      // the root cause behind a "balance is off — expenses counted twice"
+      // complaint: across turns the agent would re-record an expense it had
+      // already saved (e.g. listing it again in a "both expenses are now
+      // recorded" summary), inserting a second copy each time.
+      const amountNum = Number(input.amount);
+      const confirmDuplicateExpense = input.confirm_duplicate === true;
+      if (!confirmDuplicateExpense && Number.isFinite(amountNum)) {
+        const windowDays = 3;
+        const lowerDate = new Date(
+          new Date(expenseDate).getTime() - windowDays * 24 * 60 * 60 * 1000,
+        )
+          .toISOString()
+          .split("T")[0];
+        const upperDate = new Date(
+          new Date(expenseDate).getTime() + windowDays * 24 * 60 * 60 * 1000,
+        )
+          .toISOString()
+          .split("T")[0];
+
+        let dupQuery = supabase
+          .from("expenses")
+          .select("id, amount, category, description, vendor, expense_date")
+          .eq("amount", amountNum)
+          .eq("category", input.category)
+          .gte("expense_date", lowerDate)
+          .lte("expense_date", upperDate);
+        // Scope to the same ledger the new expense would land in so we don't
+        // cross-match unrelated owners/properties.
+        if (resolvedPropertyId) {
+          dupQuery = dupQuery.eq("property_id", resolvedPropertyId);
+        } else if (resolvedOwnerId) {
+          dupQuery = dupQuery.eq("owner_id", resolvedOwnerId);
+        }
+
+        const { data: existingExpenses } = await dupQuery.order("expense_date", {
+          ascending: false,
+        });
+
+        if (existingExpenses && existingExpenses.length > 0) {
+          return JSON.stringify({
+            requires_confirmation: true,
+            reason: "possible_duplicate",
+            message:
+              "An expense with the same ledger, amount, category and a nearby date already exists. This may be a duplicate. Ask the user to confirm before recording another one — and if it IS a duplicate (e.g. an expense already recorded earlier in this conversation), do NOT record a new entry; offer to delete the extra instead using delete_expense.",
+            existing_expenses: existingExpenses.map(
+              (e: Record<string, unknown>) => ({
+                expense_id: e.id,
+                amount: Number(e.amount || 0),
+                category: e.category,
+                description: e.description ?? null,
+                vendor: e.vendor ?? null,
+                expense_date: e.expense_date,
+              }),
+            ),
+            to_record_anyway:
+              "Call add_expense again with confirm_duplicate=true once the user confirms it is a separate, legitimate expense.",
+          });
+        }
+      }
+
       const payload: Record<string, unknown> = {
         category: input.category,
         amount: input.amount,
@@ -1568,6 +1672,152 @@ async function executeTool(
         date: expenseDate,
         receipt_attached: attachedReceipt ? true : false,
         receipt_path: attachedReceipt,
+      });
+    }
+
+    case "delete_expense": {
+      const expenseId = input.expense_id as string | undefined;
+      let ownerId = input.owner_id as string | undefined;
+
+      // Find the target row.
+      let target:
+        | { id: string; owner_id: string | null; property_id: string | null }
+        | null = null;
+      let remainingMatches = 0;
+
+      if (expenseId) {
+        const { data: row, error: findErr } = await supabase
+          .from("expenses")
+          .select("id, owner_id, property_id, amount, category, expense_date")
+          .eq("id", expenseId)
+          .maybeSingle();
+        if (findErr) return JSON.stringify({ error: findErr.message });
+        if (!row) {
+          return JSON.stringify({
+            error: `No expense found with id ${expenseId}.`,
+          });
+        }
+        target = {
+          id: row.id as string,
+          owner_id: (row.owner_id as string | null) ?? null,
+          property_id: (row.property_id as string | null) ?? null,
+        };
+      } else {
+        // Criteria-based lookup. Require at least one distinguishing field so
+        // we never delete an arbitrary expense.
+        const amount =
+          input.amount != null && Number.isFinite(Number(input.amount))
+            ? Number(input.amount)
+            : undefined;
+        const expenseDate = input.expense_date as string | undefined;
+        const category = input.category as string | undefined;
+
+        if (amount == null && !expenseDate && !category) {
+          return JSON.stringify({
+            error:
+              "Provide expense_id, or at least one of amount / expense_date / category to locate the expense to delete.",
+          });
+        }
+
+        // Resolve owner if not provided so we can scope the search.
+        if (!ownerId) {
+          const { data: owners } = await supabase
+            .from("owners")
+            .select("id")
+            .eq("is_active", true)
+            .limit(2);
+          if (!owners || owners.length === 0) {
+            return JSON.stringify({ error: "No active owner exists." });
+          }
+          if (owners.length > 1) {
+            return JSON.stringify({
+              error:
+                "Multiple owners exist. Pass owner_id (or expense_id) to delete the right expense.",
+            });
+          }
+          ownerId = owners[0].id as string;
+        }
+
+        // Match either owner-level expenses or expenses on a property the
+        // owner owns. Build the property id set for the OR branch.
+        const { data: ownerProps } = await supabase
+          .from("properties")
+          .select("id")
+          .eq("owner_id", ownerId);
+        const ownerPropIds = (ownerProps || []).map((p) => p.id as string);
+        const orClauses = [`owner_id.eq.${ownerId}`];
+        if (ownerPropIds.length > 0) {
+          orClauses.push(`property_id.in.(${ownerPropIds.join(",")})`);
+        }
+
+        let q = supabase
+          .from("expenses")
+          .select("id, owner_id, property_id, amount, category, expense_date")
+          .or(orClauses.join(","))
+          .order("created_at", { ascending: false });
+        if (amount != null) q = q.eq("amount", amount);
+        if (expenseDate) q = q.eq("expense_date", expenseDate);
+        if (category) q = q.eq("category", category);
+
+        const { data: matches, error: matchErr } = await q;
+        if (matchErr) return JSON.stringify({ error: matchErr.message });
+        if (!matches || matches.length === 0) {
+          return JSON.stringify({
+            error:
+              "No expense matches those criteria. Use list_recent_owner_activity to find the right one.",
+          });
+        }
+        // Delete exactly ONE row — the most recently created — so that when an
+        // expense was recorded twice, the original legitimate entry stays.
+        target = {
+          id: matches[0].id as string,
+          owner_id: (matches[0].owner_id as string | null) ?? null,
+          property_id: (matches[0].property_id as string | null) ?? null,
+        };
+        remainingMatches = matches.length - 1;
+      }
+
+      const { error: delErr } = await supabase
+        .from("expenses")
+        .delete()
+        .eq("id", target.id);
+      if (delErr) return JSON.stringify({ error: delErr.message });
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "delete",
+        entity_type: "expense",
+        entity_id: target.id,
+        metadata: {
+          owner_id: target.owner_id,
+          property_id: target.property_id,
+          source: "whatsapp_agent",
+        },
+      });
+
+      // Recalculate the balance for the affected owner so the agent can
+      // confirm the impact. Resolve the owner from the property when the
+      // expense was property-scoped without an owner_id.
+      let balanceOwnerId = target.owner_id;
+      if (!balanceOwnerId && target.property_id) {
+        const { data: prop } = await supabase
+          .from("properties")
+          .select("owner_id")
+          .eq("id", target.property_id)
+          .maybeSingle();
+        balanceOwnerId = (prop?.owner_id as string | null) ?? null;
+      }
+      const newBalance = balanceOwnerId
+        ? await getOwnerBalance(supabase, balanceOwnerId)
+        : null;
+
+      return JSON.stringify({
+        success: true,
+        deleted_expense_id: target.id,
+        owner_id: balanceOwnerId,
+        remaining_identical_matches: remainingMatches,
+        new_balance: newBalance?.balance ?? null,
+        new_balance_side: newBalance?.side ?? null,
       });
     }
 
@@ -2325,14 +2575,26 @@ async function executeTool(
               .gte("payment_date", since)
               .order("payment_date", { ascending: false })
           : Promise.resolve({ data: [], error: null }),
-        propertyIds.length > 0
-          ? supabase
-              .from("expenses")
-              .select("amount, category, description, expense_date, property_id, vendor")
-              .in("property_id", propertyIds)
-              .gte("expense_date", since)
-              .order("expense_date", { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
+        // Match both owner-level expenses (no property dimension — the common
+        // case for this portfolio) AND expenses tied to a property the owner
+        // owns. The previous version only queried property-scoped expenses, so
+        // owner-level expenses (and any duplicates among them) never surfaced
+        // here — which is exactly what the agent needs to see to delete a
+        // duplicate.
+        (() => {
+          const orClauses = [`owner_id.eq.${ownerId}`];
+          if (propertyIds.length > 0) {
+            orClauses.push(`property_id.in.(${propertyIds.join(",")})`);
+          }
+          return supabase
+            .from("expenses")
+            .select(
+              "id, amount, category, description, expense_date, property_id, vendor",
+            )
+            .or(orClauses.join(","))
+            .gte("expense_date", since)
+            .order("expense_date", { ascending: false });
+        })(),
         supabase
           .from("owner_settlements")
           .select("id, amount, direction, method, settled_at")
@@ -2358,8 +2620,11 @@ async function executeTool(
         };
       });
       const expenses = (expensesRes.data || []).map((e: Record<string, unknown>) => ({
+        expense_id: e.id,
         date: e.expense_date,
-        property: propertyNameById.get(e.property_id as string) || "?",
+        property: e.property_id
+          ? propertyNameById.get(e.property_id as string) || "?"
+          : "(owner-level)",
         category: e.category,
         amount: Number(e.amount || 0),
         vendor: e.vendor || null,
@@ -2937,6 +3202,8 @@ YOU CAN:
    - Call add_expense with category, amount, optional vendor/description/expense_date, AND attachment_token set to the token from the user message so the photo is saved with the expense.
    - If the amount is genuinely unreadable from BOTH the image and the caption, ask the user for the amount in one short message before calling add_expense — do not invent a number.
    - Default category to "other" only when no better match is obvious from the receipt (utility bill → utilities, plumber/AC/repair → maintenance, cleaning company → cleaning, etc.).
+   - ONE expense per add_expense call. Each distinct expense the user mentions is recorded EXACTLY ONCE. Do NOT re-record an expense you already saved earlier in this conversation — when you summarise ("both expenses are now recorded", "I've logged the pending expenses"), that is just a recap of expenses already saved, NOT a cue to call add_expense again. Re-recording is the #1 cause of the owner balance being off (expenses counted twice).
+   - Use delete_expense to remove an expense recorded by mistake (duplicate, wrong amount) — e.g. "you logged that expense twice", "delete the duplicate 300 expense". Pass expense_id when you have it (from list_recent_owner_activity); otherwise pass amount + expense_date (+ category). Calling it once removes ONE copy and keeps the legitimate one.
 3. Create invoices — "create invoice for Ahmad for April", "generate rent invoice", "create May and June invoices for all tenants"
 4. Check balances — "how much does Ahmad owe?", "check balance for unit 101"
 5. View unpaid/overdue — "who hasn't paid?", "show overdue invoices", "pending invoices for April", "show me April invoices"
@@ -2978,6 +3245,7 @@ BEHAVIOR RULES:
 - When updating rent, search for the tenant first, get their lease ID, then use update_lease_rent.
 - When cancelling an invoice, search for the tenant and their invoices first, then cancel the right one.
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
+- CRITICAL — DUPLICATE EXPENSES: If add_expense returns { requires_confirmation: true, reason: "possible_duplicate" }, do NOT record anything yet. Tell the user a matching expense already exists (quote its amount/category/date from existing_expenses) and ask whether this is a genuinely separate expense or one you already recorded. If it is the SAME expense, do NOT re-record — and if a duplicate is already in the ledger, call delete_expense to remove the extra copy. Only call add_expense again with confirm_duplicate=true if the user confirms it is a separate, legitimate expense. NEVER set confirm_duplicate=true just to clear the warning.
 - CRITICAL — DUPLICATE SETTLEMENTS: If record_owner_settlement returns { requires_confirmation: true, reason: "possible_duplicate" }, do NOT record anything yet. Tell the user a matching settlement already exists (quote its amount/date/direction from existing_settlements) and ask whether this is a genuinely separate payment or a duplicate. If they say it is the SAME payment recorded twice, do NOT re-record — instead call delete_owner_settlement to remove the extra copy. Only call record_owner_settlement again with confirm_duplicate=true if they confirm it is a separate, legitimate payment.
 - When the user reports that a settlement / "paid to owner" entry was recorded twice or by mistake, you CAN fix it directly: find the settlement (list_recent_owner_activity gives settlement_id) and call delete_owner_settlement. Never tell the user you have no tool to delete or reverse a settlement, and never propose recording an opposite-direction settlement as a workaround — deleting the duplicate is the correct fix.
 - NEVER say "there are no invoices" without first calling the tool with the right filters. If the user asks about a specific month (e.g. "April"), use the month parameter (e.g. "2026-04") in get_overdue_summary or get_tenant_invoices.
