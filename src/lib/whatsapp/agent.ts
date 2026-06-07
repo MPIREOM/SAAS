@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { getOwnerBalance, getDefaultOwnerBalance } from "@/lib/owners/balance";
+import { getExpensesSummary } from "@/lib/expenses/summary";
 
 const anthropic = new Anthropic({
   // callClaude() below owns retry logic, so disable the SDK's built-in retries
@@ -2050,60 +2051,20 @@ async function executeTool(
     }
 
     case "get_expenses_summary": {
-      // Use Muscat-local time (UTC+4) so "yesterday", "this month" and
-      // "this year" line up with the Oman business calendar — matching the
-      // monthly owner report (src/lib/owners/monthly-report-data.ts).
-      const muscatNow = new Date(Date.now() + 4 * 60 * 60 * 1000);
-      const ymd = (d: Date) => d.toISOString().split("T")[0];
-      const todayStr = ymd(muscatNow);
-      const yesterday = ymd(new Date(muscatNow.getTime() - 24 * 60 * 60 * 1000));
-      const year = muscatNow.getUTCFullYear();
-      const month = String(muscatNow.getUTCMonth() + 1).padStart(2, "0");
-      const monthStart = `${year}-${month}-01`;
-      const yearStart = `${year}-01-01`;
-
       // Business manager fees (owner_business_fees) and commission live in
       // their own tables / are computed on the fly — they are NOT rows in the
-      // expenses table, so querying expenses alone naturally excludes them.
+      // expenses table, so getExpensesSummary (which queries expenses only)
+      // naturally excludes them. Shared with the daily admin-summary cron so
+      // both report identical numbers.
       const propertyId = input.property_id as string | undefined;
 
-      // Pull every expense from the earliest date we need (year start, or
-      // yesterday if it precedes it — e.g. on Jan 1) up to today, then bucket
-      // in JS. One query instead of three round-trips.
-      const lowerBound = yesterday < yearStart ? yesterday : yearStart;
-      let query = supabase
-        .from("expenses")
-        .select("amount, category, expense_date, property_id")
-        .gte("expense_date", lowerBound)
-        .lte("expense_date", todayStr);
-      if (propertyId) query = query.eq("property_id", propertyId);
-
-      const { data: expenseRows, error: expensesError } = await query;
-      if (expensesError)
-        return JSON.stringify({ error: expensesError.message });
-
-      type Period = {
-        total: number;
-        count: number;
-        by_category: Record<string, number>;
-      };
-      const newPeriod = (): Period => ({ total: 0, count: 0, by_category: {} });
-      const previousDay = newPeriod();
-      const mtd = newPeriod();
-      const ytd = newPeriod();
-      const addTo = (p: Period, amount: number, category: string) => {
-        p.total += amount;
-        p.count += 1;
-        p.by_category[category] = (p.by_category[category] || 0) + amount;
-      };
-
-      for (const row of (expenseRows || []) as Record<string, unknown>[]) {
-        const amount = Number(row.amount || 0);
-        const category = (row.category as string) || "other";
-        const date = row.expense_date as string;
-        if (date === yesterday) addTo(previousDay, amount, category);
-        if (date >= monthStart && date <= todayStr) addTo(mtd, amount, category);
-        if (date >= yearStart && date <= todayStr) addTo(ytd, amount, category);
+      let summary;
+      try {
+        summary = await getExpensesSummary(supabase, { propertyId });
+      } catch (err) {
+        return JSON.stringify({
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
 
       // Resolve a friendly scope label for the reply.
@@ -2117,12 +2078,25 @@ async function executeTool(
         scope = (prop?.name as string) || "selected property";
       }
 
+      const fmt = (p: { total: number; count: number; byCategory: Record<string, number> }) => ({
+        total: p.total,
+        count: p.count,
+        by_category: p.byCategory,
+      });
       return JSON.stringify({
         scope,
         excludes: "business manager fees and commission (not counted as expenses)",
-        previous_day: { date: yesterday, ...previousDay },
-        month_to_date: { from: monthStart, to: todayStr, ...mtd },
-        year_to_date: { from: yearStart, to: todayStr, ...ytd },
+        previous_day: { date: summary.previousDay.date, ...fmt(summary.previousDay) },
+        month_to_date: {
+          from: summary.monthToDate.from,
+          to: summary.monthToDate.to,
+          ...fmt(summary.monthToDate),
+        },
+        year_to_date: {
+          from: summary.yearToDate.from,
+          to: summary.yearToDate.to,
+          ...fmt(summary.yearToDate),
+        },
       });
     }
 
