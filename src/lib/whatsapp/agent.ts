@@ -466,6 +466,22 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "get_expenses_summary",
+    description:
+      "Get total expenses for the PREVIOUS DAY, MONTH-TO-DATE (MTD) and YEAR-TO-DATE (YTD) in one call, each with a per-category breakdown. Use for 'what did we spend yesterday?', 'expenses this month', 'expenses YTD', or a general 'show me expenses'. IMPORTANT: business manager fees and commission are NOT expenses and are intentionally excluded — this reflects only the expenses ledger (maintenance, utilities, cleaning, etc.). Optionally scope to one building with property_id.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        property_id: {
+          type: "string",
+          description:
+            "Optional: a property UUID to scope expenses to a single building. Omit for company-wide expenses (all properties + owner-level).",
+        },
+      },
+      required: [],
+    },
+  },
+  {
     name: "update_lease_rent",
     description:
       "Update the monthly rent amount on a tenant's lease. Also updates the unit's rent_amount. Use when the user says rent changed, increased, decreased, or needs to be updated.",
@@ -2033,6 +2049,83 @@ async function executeTool(
       });
     }
 
+    case "get_expenses_summary": {
+      // Use Muscat-local time (UTC+4) so "yesterday", "this month" and
+      // "this year" line up with the Oman business calendar — matching the
+      // monthly owner report (src/lib/owners/monthly-report-data.ts).
+      const muscatNow = new Date(Date.now() + 4 * 60 * 60 * 1000);
+      const ymd = (d: Date) => d.toISOString().split("T")[0];
+      const todayStr = ymd(muscatNow);
+      const yesterday = ymd(new Date(muscatNow.getTime() - 24 * 60 * 60 * 1000));
+      const year = muscatNow.getUTCFullYear();
+      const month = String(muscatNow.getUTCMonth() + 1).padStart(2, "0");
+      const monthStart = `${year}-${month}-01`;
+      const yearStart = `${year}-01-01`;
+
+      // Business manager fees (owner_business_fees) and commission live in
+      // their own tables / are computed on the fly — they are NOT rows in the
+      // expenses table, so querying expenses alone naturally excludes them.
+      const propertyId = input.property_id as string | undefined;
+
+      // Pull every expense from the earliest date we need (year start, or
+      // yesterday if it precedes it — e.g. on Jan 1) up to today, then bucket
+      // in JS. One query instead of three round-trips.
+      const lowerBound = yesterday < yearStart ? yesterday : yearStart;
+      let query = supabase
+        .from("expenses")
+        .select("amount, category, expense_date, property_id")
+        .gte("expense_date", lowerBound)
+        .lte("expense_date", todayStr);
+      if (propertyId) query = query.eq("property_id", propertyId);
+
+      const { data: expenseRows, error: expensesError } = await query;
+      if (expensesError)
+        return JSON.stringify({ error: expensesError.message });
+
+      type Period = {
+        total: number;
+        count: number;
+        by_category: Record<string, number>;
+      };
+      const newPeriod = (): Period => ({ total: 0, count: 0, by_category: {} });
+      const previousDay = newPeriod();
+      const mtd = newPeriod();
+      const ytd = newPeriod();
+      const addTo = (p: Period, amount: number, category: string) => {
+        p.total += amount;
+        p.count += 1;
+        p.by_category[category] = (p.by_category[category] || 0) + amount;
+      };
+
+      for (const row of (expenseRows || []) as Record<string, unknown>[]) {
+        const amount = Number(row.amount || 0);
+        const category = (row.category as string) || "other";
+        const date = row.expense_date as string;
+        if (date === yesterday) addTo(previousDay, amount, category);
+        if (date >= monthStart && date <= todayStr) addTo(mtd, amount, category);
+        if (date >= yearStart && date <= todayStr) addTo(ytd, amount, category);
+      }
+
+      // Resolve a friendly scope label for the reply.
+      let scope = "all properties (company-wide)";
+      if (propertyId) {
+        const { data: prop } = await supabase
+          .from("properties")
+          .select("name")
+          .eq("id", propertyId)
+          .single();
+        scope = (prop?.name as string) || "selected property";
+      }
+
+      return JSON.stringify({
+        scope,
+        excludes: "business manager fees and commission (not counted as expenses)",
+        previous_day: { date: yesterday, ...previousDay },
+        month_to_date: { from: monthStart, to: todayStr, ...mtd },
+        year_to_date: { from: yearStart, to: todayStr, ...ytd },
+      });
+    }
+
     case "update_lease_rent": {
       const leaseId = input.lease_id as string;
       const newRent = Number(input.new_rent);
@@ -3229,6 +3322,11 @@ YOU CAN:
     - Then call update_payment_method with payment_id and new_method.
     - If multiple payments exist for the invoice, ask the user WHICH one (show date + amount) before updating.
     - After a change involving 'cheque' (to or from), tell the user the owner balance was recalculated, and if changing TO cheque, remind them the cheque record (number, bank) is tracked separately on the cheques screen.
+16. Expenses summary — "how much did we spend yesterday?", "expenses this month", "expenses MTD", "expenses year to date / YTD", "show me expenses"
+    - Use get_expenses_summary. It returns totals + a per-category breakdown for the PREVIOUS DAY, MONTH-TO-DATE (MTD) and YEAR-TO-DATE (YTD) in a single call.
+    - Report only the period(s) the user asked for; if they just say "expenses" with no period, give all three.
+    - CRITICAL: business manager fees and commission are NOT expenses and are deliberately excluded from these figures — never add them into an expenses total, and if asked, clarify they are tracked separately on the owner ledger.
+    - Pass property_id ONLY when the user scopes it to a specific building (search_properties first); otherwise omit it for company-wide totals.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
