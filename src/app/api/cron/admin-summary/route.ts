@@ -8,6 +8,7 @@ import {
   sanitiseTemplateParam,
 } from "@/lib/notifications/admin-notify";
 import { getDefaultOwnerBalance } from "@/lib/owners/balance";
+import { getExpensesSummary } from "@/lib/expenses/summary";
 
 export const maxDuration = 60;
 
@@ -240,6 +241,23 @@ export async function runAdminSummary(
       console.error("[admin-summary] owner balance computation failed:", err);
     }
 
+    // Expenses spent previous day / month-to-date / year-to-date. Business
+    // manager fees and commission are NOT expenses (they live in their own
+    // tables / are computed on the fly), so getExpensesSummary excludes them
+    // by design — these figures are pure operating spend.
+    let expensesLine: string | null = null;
+    let expensesSummary: Awaited<ReturnType<typeof getExpensesSummary>> | null =
+      null;
+    try {
+      expensesSummary = await getExpensesSummary(supabase);
+      expensesLine =
+        `🧾 *Expenses:* yesterday ${expensesSummary.previousDay.total.toFixed(2)} | ` +
+        `MTD ${expensesSummary.monthToDate.total.toFixed(2)} | ` +
+        `YTD ${expensesSummary.yearToDate.total.toFixed(2)} ${CURRENCY.code}`;
+    } catch (err) {
+      console.error("[admin-summary] expenses summary computation failed:", err);
+    }
+
     // Outstanding balance = billed amount minus any payments already recorded.
     // For status="pending" invoices paid_amount is typically 0, so this is a
     // no-op; for "partial" invoices it correctly excludes the paid portion.
@@ -372,6 +390,17 @@ export async function runAdminSummary(
       });
     }
 
+    if (expensesSummary) {
+      emailSections.push({
+        heading: `🧾 Expenses (excl. business fees & commission)`,
+        items: [
+          `Previous day: <strong>${expensesSummary.previousDay.total.toFixed(2)} ${CURRENCY.code}</strong> (${expensesSummary.previousDay.count} item${expensesSummary.previousDay.count !== 1 ? "s" : ""})`,
+          `Month to date: <strong>${expensesSummary.monthToDate.total.toFixed(2)} ${CURRENCY.code}</strong> (${expensesSummary.monthToDate.count} item${expensesSummary.monthToDate.count !== 1 ? "s" : ""})`,
+          `Year to date: <strong>${expensesSummary.yearToDate.total.toFixed(2)} ${CURRENCY.code}</strong> (${expensesSummary.yearToDate.count} item${expensesSummary.yearToDate.count !== 1 ? "s" : ""})`,
+        ],
+      });
+    }
+
     // Per-property overdue breakdown — rendered into the plaintext
     // WhatsApp fallback and email. Multi-line form.
     const overdueBreakdownLines = overdueByPropertySorted.map(([name, { count, total }]) =>
@@ -417,6 +446,7 @@ export async function runAdminSummary(
       `🔧 *New Maintenance (24h):* ${newMaintenance.length}`,
       `📊 *Open Maintenance:* ${openMaintenance.length}`,
       ...(ownerBalanceLine ? [ownerBalanceLine] : []),
+      ...(expensesLine ? [expensesLine] : []),
     ];
 
     if (invoicesPending.length > 0) {
@@ -470,8 +500,13 @@ export async function runAdminSummary(
           String(openMaintenance.length),
           // {{10}} — per-property pending + overdue breakdown, single-line.
           outstandingBreakdownInline,
-          // {{11}} — owner running balance line.
-          ownerBalanceLine || "—",
+          // {{11}} — owner running balance + expenses folded into the same
+          // parameter so the WhatsApp template message gains the expenses
+          // figures without adding a new placeholder (which would require Meta
+          // re-approval of the daily_briefs template). sanitiseTemplateParam
+          // collapses any stray whitespace; the emoji prefixes keep the two
+          // halves visually distinct on one line.
+          [ownerBalanceLine, expensesLine].filter(Boolean).join(" ") || "—",
         ].map(sanitiseTemplateParam),
       },
     });
@@ -492,6 +527,9 @@ export async function runAdminSummary(
       totalCheques,
       newMaintenance: newMaintenance.length,
       openMaintenance: openMaintenance.length,
+      expensesPreviousDay: expensesSummary?.previousDay.total ?? null,
+      expensesMtd: expensesSummary?.monthToDate.total ?? null,
+      expensesYtd: expensesSummary?.yearToDate.total ?? null,
     };
     // Persist per-recipient failure detail so Meta rejection codes are
     // visible from SQL — Vercel function logs only return the first stdout

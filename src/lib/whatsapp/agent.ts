@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { getOwnerBalance, getDefaultOwnerBalance } from "@/lib/owners/balance";
+import { getExpensesSummary } from "@/lib/expenses/summary";
 
 const anthropic = new Anthropic({
   // callClaude() below owns retry logic, so disable the SDK's built-in retries
@@ -462,6 +463,22 @@ const tools: Anthropic.Tool[] = [
     input_schema: {
       type: "object" as const,
       properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_expenses_summary",
+    description:
+      "Get total expenses for the PREVIOUS DAY, MONTH-TO-DATE (MTD) and YEAR-TO-DATE (YTD) in one call, each with a per-category breakdown. Use for 'what did we spend yesterday?', 'expenses this month', 'expenses YTD', or a general 'show me expenses'. IMPORTANT: business manager fees and commission are NOT expenses and are intentionally excluded — this reflects only the expenses ledger (maintenance, utilities, cleaning, etc.). Optionally scope to one building with property_id.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        property_id: {
+          type: "string",
+          description:
+            "Optional: a property UUID to scope expenses to a single building. Omit for company-wide expenses (all properties + owner-level).",
+        },
+      },
       required: [],
     },
   },
@@ -2033,6 +2050,56 @@ async function executeTool(
       });
     }
 
+    case "get_expenses_summary": {
+      // Business manager fees (owner_business_fees) and commission live in
+      // their own tables / are computed on the fly — they are NOT rows in the
+      // expenses table, so getExpensesSummary (which queries expenses only)
+      // naturally excludes them. Shared with the daily admin-summary cron so
+      // both report identical numbers.
+      const propertyId = input.property_id as string | undefined;
+
+      let summary;
+      try {
+        summary = await getExpensesSummary(supabase, { propertyId });
+      } catch (err) {
+        return JSON.stringify({
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
+      // Resolve a friendly scope label for the reply.
+      let scope = "all properties (company-wide)";
+      if (propertyId) {
+        const { data: prop } = await supabase
+          .from("properties")
+          .select("name")
+          .eq("id", propertyId)
+          .single();
+        scope = (prop?.name as string) || "selected property";
+      }
+
+      const fmt = (p: { total: number; count: number; byCategory: Record<string, number> }) => ({
+        total: p.total,
+        count: p.count,
+        by_category: p.byCategory,
+      });
+      return JSON.stringify({
+        scope,
+        excludes: "business manager fees and commission (not counted as expenses)",
+        previous_day: { date: summary.previousDay.date, ...fmt(summary.previousDay) },
+        month_to_date: {
+          from: summary.monthToDate.from,
+          to: summary.monthToDate.to,
+          ...fmt(summary.monthToDate),
+        },
+        year_to_date: {
+          from: summary.yearToDate.from,
+          to: summary.yearToDate.to,
+          ...fmt(summary.yearToDate),
+        },
+      });
+    }
+
     case "update_lease_rent": {
       const leaseId = input.lease_id as string;
       const newRent = Number(input.new_rent);
@@ -3229,6 +3296,11 @@ YOU CAN:
     - Then call update_payment_method with payment_id and new_method.
     - If multiple payments exist for the invoice, ask the user WHICH one (show date + amount) before updating.
     - After a change involving 'cheque' (to or from), tell the user the owner balance was recalculated, and if changing TO cheque, remind them the cheque record (number, bank) is tracked separately on the cheques screen.
+16. Expenses summary — "how much did we spend yesterday?", "expenses this month", "expenses MTD", "expenses year to date / YTD", "show me expenses"
+    - Use get_expenses_summary. It returns totals + a per-category breakdown for the PREVIOUS DAY, MONTH-TO-DATE (MTD) and YEAR-TO-DATE (YTD) in a single call.
+    - Report only the period(s) the user asked for; if they just say "expenses" with no period, give all three.
+    - CRITICAL: business manager fees and commission are NOT expenses and are deliberately excluded from these figures — never add them into an expenses total, and if asked, clarify they are tracked separately on the owner ledger.
+    - Pass property_id ONLY when the user scopes it to a specific building (search_properties first); otherwise omit it for company-wide totals.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
