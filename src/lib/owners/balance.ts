@@ -194,6 +194,10 @@ export async function getOwnerBalance(
   // included_in_business_fee or none are unaffected.
   let commissionEarned = 0;
   let commissionEarnedCur = 0;
+  // Per-lease billed commission, consumed by the early-termination catch-up
+  // below so it only charges commission on contract months that were NOT
+  // invoiced (avoids double-counting an already-billed month).
+  const billedCommissionByLease = new Map<string, number>();
   if (leaseIds.length > 0) {
     // Filter on the *positive* set of "billable" statuses rather than
     // .not("status", "in", '("cancelled","written_off")'). The earlier
@@ -204,10 +208,16 @@ export async function getOwnerBalance(
     // and the Supabase JS client returned { data: null, error: ... }.
     // Because the calling code only destructured `data`, the error was
     // silently dropped and commissionEarned ended up at 0.
+    //
+    // invoice_type = 'rent' only: move-out invoices carry cleaning / painting /
+    // early-termination fees (the early-termination fee is the owner's 3%
+    // municipality tax + the company's 9%, billed to the tenant) — they must
+    // NOT generate management commission on top.
     const { data: invoices, error: invErr } = await supabase
       .from("invoices")
       .select("amount, lease_id, status, period_start, due_date")
       .in("lease_id", leaseIds)
+      .eq("invoice_type", "rent")
       .in("status", ["pending", "paid", "overdue", "partial"]);
     if (invErr) {
       // Surface in the server log so a future enum mismatch isn't silent.
@@ -237,17 +247,26 @@ export async function getOwnerBalance(
 
       const c = Number(inv.amount || 0) * (config.rate / 100);
       commissionEarned += c;
+      billedCommissionByLease.set(
+        leaseId,
+        (billedCommissionByLease.get(leaseId) || 0) + c,
+      );
       if (inCurrentMonth(periodAnchor)) commissionEarnedCur += c;
     }
   }
 
   // 3b. Early-termination commission catch-up.
   // When a tenant on a percentage-commission unit vacates before their
-  // contract end_date, the owner is still owed commission on the
-  // *remaining* months of the contract (months from vacate_date through
-  // end_date). Per-payment commission already covers months actually paid;
-  // this just catches the unpaid tail.
-  //   catch_up_per_lease = months_remaining × monthly_rent × rate
+  // contract end_date, the owner is still owed commission on the FULL
+  // contract. Per-invoice commission (above) already captured the months
+  // that were billed, so the catch-up is the commission on the contract
+  // months that were NEVER invoiced (cancelled on move-out, written off, or
+  // simply never billed):
+  //   catch_up_per_lease = max(0, contract_commission − billed_commission)
+  // where contract_commission spans max(start_date, opening_balance_date) →
+  // end_date. This is the "commission on every unbilled month" rule and
+  // replaces the old months-from-vacate estimate, which double-counted the
+  // already-billed vacate month (and rounded partial months up).
   // Restricted to commission_type='percentage' — units on
   // included_in_business_fee or none are unaffected.
   // Skips leases whose vacate_date is on/before the owner's
@@ -267,6 +286,7 @@ export async function getOwnerBalance(
 
     for (const lease of vacatedLeases || []) {
       const leaseId = lease.id as string;
+      const startDate = lease.start_date as string;
       const endDate = lease.end_date as string;
       const vacateDate = lease.vacate_date as string;
       const monthlyRent = Number(lease.monthly_rent || 0);
@@ -274,6 +294,7 @@ export async function getOwnerBalance(
       // Only counts as an early termination if the tenant left before the
       // original contract end_date. End-of-lease moves don't trigger.
       if (!(vacateDate < endDate)) continue;
+      if (monthlyRent <= 0) continue;
 
       const unitId = lease.unit_id as string;
       const propId = leasePropertyMap.get(leaseId);
@@ -282,10 +303,14 @@ export async function getOwnerBalance(
         unitOverride ?? (propId ? commissionByProperty.get(propId) : undefined);
       if (!config || config.type !== "percentage" || config.rate <= 0) continue;
 
-      const monthsRemaining = monthsInRange(vacateDate, endDate);
-      if (monthsRemaining <= 0 || monthlyRent <= 0) continue;
-
-      const amt = monthsRemaining * monthlyRent * (config.rate / 100);
+      // Commission on the full contract, scoped to after the opening-balance
+      // date so months already inside the opening figure aren't re-charged.
+      const effectiveStart = startDate > openingDate ? startDate : openingDate;
+      const contractCommission =
+        monthsInRange(effectiveStart, endDate) * monthlyRent * (config.rate / 100);
+      const billed = billedCommissionByLease.get(leaseId) || 0;
+      const amt = Math.max(0, contractCommission - billed);
+      if (amt <= 0) continue;
       earlyTerminationCatchUp += amt;
       // Scope the catch-up to the month the lease actually vacated, dated to
       // vacate_date, so it shows once and then rolls into the opening balance.
