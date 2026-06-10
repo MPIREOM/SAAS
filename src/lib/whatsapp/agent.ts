@@ -716,6 +716,87 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "update_lease",
+    description:
+      "Update a lease's dates or payment due day. Use when the user says things like 'change the lease end date to 15 June', 'extend Stephen's lease to December', 'lease starts 1 March', or 'rent is due on the 5th'. Pass only the fields that change. For rent AMOUNT use update_lease_rent instead. To end a tenancy / record a move-out use move_out_tenant.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        lease_id: {
+          type: "string",
+          description:
+            "The lease UUID. Get it from search_tenants, get_unit_by_number, or get_property_units.",
+        },
+        end_date: {
+          type: "string",
+          description: "New lease end date in YYYY-MM-DD format.",
+        },
+        start_date: {
+          type: "string",
+          description: "New lease start date in YYYY-MM-DD format.",
+        },
+        payment_due_day: {
+          type: "number",
+          description:
+            "Day of the month rent is due (1-28).",
+        },
+      },
+      required: ["lease_id"],
+    },
+  },
+  {
+    name: "update_tenant",
+    description:
+      "Update a tenant's contact or profile details — phone, email, full name, national ID, nationality, emergency contact, or language preference. Use when the user says 'update Ahmad's phone to ...', 'change the email for unit 12's tenant', 'fix the spelling of the name', etc. Pass only the fields that change.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        tenant_id: {
+          type: "string",
+          description:
+            "The tenant UUID. Get it from search_tenants or get_unit_by_number.",
+        },
+        full_name: { type: "string", description: "Corrected full name." },
+        phone: { type: "string", description: "New phone number." },
+        email: { type: "string", description: "New email address." },
+        national_id: { type: "string", description: "National ID / civil number." },
+        nationality: { type: "string", description: "Nationality." },
+        emergency_contact: { type: "string", description: "Emergency contact." },
+        language_preference: {
+          type: "string",
+          enum: ["en", "ar"],
+          description: "Preferred language for reminders (en or ar).",
+        },
+      },
+      required: ["tenant_id"],
+    },
+  },
+  {
+    name: "move_out_tenant",
+    description:
+      "Record a tenant move-out: ends the active lease (sets the vacate date), frees the unit (marks it vacant), and archives the tenant. Use when the user says 'Stephen moved out', 'tenant in unit 12 is vacating on 15 June', 'process move-out'. This does NOT settle finances — it returns the tenant's outstanding balance so you can remind the user to create a pro-rated final invoice (create_invoice) and record final payments (mark_invoice_paid) separately. If there is an outstanding balance, mention it. Always confirm the unit/tenant (via get_unit_by_number) before calling.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        lease_id: {
+          type: "string",
+          description:
+            "The lease UUID to end. Get it from get_unit_by_number or search_tenants.",
+        },
+        vacate_date: {
+          type: "string",
+          description:
+            "Move-out date in YYYY-MM-DD format. Defaults to today if omitted.",
+        },
+        reason: {
+          type: "string",
+          description: "Optional reason for the move-out.",
+        },
+      },
+      required: ["lease_id"],
+    },
+  },
+  {
     name: "list_recent_owner_activity",
     description:
       "List recent ledger activity for an owner — payments received, expenses logged, commissions, business fees, and settlements — within a window (default 14 days). Useful for sanity-checking the running balance.",
@@ -735,7 +816,7 @@ const tools: Anthropic.Tool[] = [
       required: [],
     },
     // Cache breakpoint: marking the LAST tool caches the entire tool-definition
-    // block (all 25 tools). They never change between calls, yet the agent loop
+    // block (all tools). They never change between calls, yet the agent loop
     // re-sends them on every Claude request — caching cuts that input cost to
     // ~10% on repeat reads within the 5-minute window.
     cache_control: { type: "ephemeral" },
@@ -2165,6 +2246,266 @@ async function executeTool(
       });
     }
 
+    case "update_lease": {
+      const leaseId = input.lease_id as string;
+
+      const updates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      const isYmd = (v: unknown) =>
+        typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+      if (input.end_date !== undefined) {
+        if (!isYmd(input.end_date))
+          return JSON.stringify({ error: "end_date must be YYYY-MM-DD" });
+        updates.end_date = input.end_date;
+      }
+      if (input.start_date !== undefined) {
+        if (!isYmd(input.start_date))
+          return JSON.stringify({ error: "start_date must be YYYY-MM-DD" });
+        updates.start_date = input.start_date;
+      }
+      if (input.payment_due_day !== undefined) {
+        const day = Number(input.payment_due_day);
+        if (!Number.isInteger(day) || day < 1 || day > 28)
+          return JSON.stringify({
+            error: "payment_due_day must be an integer between 1 and 28",
+          });
+        updates.payment_due_day = day;
+      }
+
+      if (Object.keys(updates).length === 1) {
+        return JSON.stringify({
+          error:
+            "Nothing to update. Provide at least one of end_date, start_date, or payment_due_day.",
+        });
+      }
+
+      // Fetch current lease for context + validation
+      const { data: lease, error: fetchError } = await supabase
+        .from("leases")
+        .select(
+          "id, start_date, end_date, payment_due_day, tenant_id, tenants(full_name), units(unit_number)"
+        )
+        .eq("id", leaseId)
+        .single();
+
+      if (fetchError || !lease)
+        return JSON.stringify({ error: "Lease not found" });
+
+      // Guard against an end date that precedes the (possibly new) start date.
+      const effectiveStart =
+        (updates.start_date as string) || (lease.start_date as string);
+      const effectiveEnd =
+        (updates.end_date as string) || (lease.end_date as string);
+      if (effectiveStart && effectiveEnd && effectiveEnd < effectiveStart) {
+        return JSON.stringify({
+          error: `End date (${effectiveEnd}) cannot be before the start date (${effectiveStart}).`,
+        });
+      }
+
+      const { error: updateError } = await supabase
+        .from("leases")
+        .update(updates)
+        .eq("id", leaseId);
+
+      if (updateError) return JSON.stringify({ error: updateError.message });
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "update",
+        entity_type: "lease",
+        entity_id: leaseId,
+        metadata: { changes: updates, source: "whatsapp_agent" },
+      });
+
+      const tenant = lease.tenants as unknown as Record<string, unknown> | null;
+      const unit = lease.units as unknown as Record<string, unknown> | null;
+
+      return JSON.stringify({
+        success: true,
+        lease_id: leaseId,
+        tenant_name: tenant?.full_name,
+        unit_number: unit?.unit_number,
+        start_date: effectiveStart,
+        end_date: effectiveEnd,
+        payment_due_day: updates.payment_due_day ?? lease.payment_due_day,
+      });
+    }
+
+    case "update_tenant": {
+      const tenantId = input.tenant_id as string;
+
+      const allowed = [
+        "full_name",
+        "phone",
+        "email",
+        "national_id",
+        "nationality",
+        "emergency_contact",
+        "language_preference",
+      ] as const;
+
+      const updates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+      for (const field of allowed) {
+        if (input[field] !== undefined) {
+          const value = input[field];
+          updates[field] =
+            typeof value === "string" ? value.trim() : value;
+        }
+      }
+
+      if (
+        updates.language_preference !== undefined &&
+        updates.language_preference !== "en" &&
+        updates.language_preference !== "ar"
+      ) {
+        return JSON.stringify({
+          error: "language_preference must be 'en' or 'ar'",
+        });
+      }
+
+      if (Object.keys(updates).length === 1) {
+        return JSON.stringify({
+          error: "Nothing to update. Provide at least one field to change.",
+        });
+      }
+
+      const { data: existing, error: fetchError } = await supabase
+        .from("tenants")
+        .select("id, full_name")
+        .eq("id", tenantId)
+        .single();
+
+      if (fetchError || !existing)
+        return JSON.stringify({ error: "Tenant not found" });
+
+      const { error: updateError } = await supabase
+        .from("tenants")
+        .update(updates)
+        .eq("id", tenantId);
+
+      if (updateError) return JSON.stringify({ error: updateError.message });
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "update",
+        entity_type: "tenant",
+        entity_id: tenantId,
+        metadata: {
+          changes: Object.keys(updates).filter((k) => k !== "updated_at"),
+          source: "whatsapp_agent",
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        tenant_id: tenantId,
+        tenant_name: updates.full_name ?? existing.full_name,
+        updated_fields: Object.keys(updates).filter((k) => k !== "updated_at"),
+      });
+    }
+
+    case "move_out_tenant": {
+      const leaseId = input.lease_id as string;
+      const vacateDate =
+        (input.vacate_date as string) ||
+        new Date().toISOString().split("T")[0];
+      const reason = (input.reason as string) || null;
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(vacateDate))
+        return JSON.stringify({ error: "vacate_date must be YYYY-MM-DD" });
+
+      const { data: lease, error: fetchError } = await supabase
+        .from("leases")
+        .select(
+          "id, is_active, unit_id, tenant_id, tenants(full_name), units(unit_number)"
+        )
+        .eq("id", leaseId)
+        .single();
+
+      if (fetchError || !lease)
+        return JSON.stringify({ error: "Lease not found" });
+
+      if (lease.is_active === false)
+        return JSON.stringify({
+          error: "This lease is already ended (tenant has moved out).",
+        });
+
+      // Compute the tenant's outstanding balance so we can surface it — the
+      // move-out itself does not settle money.
+      const { data: invoices } = await supabase
+        .from("invoices")
+        .select("amount, paid_amount, status")
+        .eq("tenant_id", lease.tenant_id)
+        .not("status", "in", '("cancelled","written_off")');
+
+      let outstanding = 0;
+      for (const inv of invoices || []) {
+        outstanding +=
+          Number(inv.amount || 0) - Number(inv.paid_amount || 0);
+      }
+      outstanding = Math.max(0, Number(outstanding.toFixed(2)));
+
+      // End the lease.
+      const { error: leaseError } = await supabase
+        .from("leases")
+        .update({
+          is_active: false,
+          vacate_date: vacateDate,
+          vacate_reason: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", leaseId);
+
+      if (leaseError) return JSON.stringify({ error: leaseError.message });
+
+      // Free the unit (a DB trigger also syncs this, but set it explicitly to
+      // mirror the dashboard move-out flow).
+      await supabase
+        .from("units")
+        .update({ status: "vacant", updated_at: new Date().toISOString() })
+        .eq("id", lease.unit_id);
+
+      // Archive the tenant.
+      await supabase
+        .from("tenants")
+        .update({ status: "archived", updated_at: new Date().toISOString() })
+        .eq("id", lease.tenant_id);
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "move_out",
+        entity_type: "lease",
+        entity_id: leaseId,
+        metadata: {
+          vacate_date: vacateDate,
+          reason,
+          outstanding_balance: outstanding,
+          source: "whatsapp_agent",
+        },
+      });
+
+      const tenant = lease.tenants as unknown as Record<string, unknown> | null;
+      const unit = lease.units as unknown as Record<string, unknown> | null;
+
+      return JSON.stringify({
+        success: true,
+        lease_id: leaseId,
+        tenant_name: tenant?.full_name,
+        unit_number: unit?.unit_number,
+        vacate_date: vacateDate,
+        outstanding_balance: outstanding,
+        next_steps:
+          outstanding > 0
+            ? `Tenant has an outstanding balance of ${outstanding} OMR. Offer to create a pro-rated final invoice (create_invoice) and/or record final payments (mark_invoice_paid).`
+            : "No outstanding balance. Offer a pro-rated final invoice only if the move-out is mid-period.",
+      });
+    }
+
     case "update_invoice": {
       const invoiceId = input.invoice_id as string;
 
@@ -3301,6 +3642,13 @@ YOU CAN:
     - Report only the period(s) the user asked for; if they just say "expenses" with no period, give all three.
     - CRITICAL: business manager fees and commission are NOT expenses and are deliberately excluded from these figures — never add them into an expenses total, and if asked, clarify they are tracked separately on the owner ledger.
     - Pass property_id ONLY when the user scopes it to a specific building (search_properties first); otherwise omit it for company-wide totals.
+17. Update lease dates — "change the lease end date to 15 June", "extend Stephen's lease to December", "lease starts 1 March", "rent is due on the 5th"
+    - Use update_lease with the lease_id (get it from get_unit_by_number or search_tenants) and only the field(s) that changed (end_date, start_date, payment_due_day). For the rent AMOUNT use update_lease_rent instead.
+18. Update tenant details — "update Ahmad's phone to ...", "change the email for unit 12's tenant", "fix the spelling of the tenant's name", "set their language to Arabic"
+    - Use update_tenant with the tenant_id and only the changed fields (full_name, phone, email, national_id, nationality, emergency_contact, language_preference).
+19. Move a tenant out — "Stephen moved out", "process move-out for unit 12", "tenant in unit 5 is vacating on 15 June"
+    - First call get_unit_by_number to confirm the tenant/lease, then call move_out_tenant with the lease_id (and vacate_date if given). It ends the lease, frees the unit, and archives the tenant.
+    - move_out_tenant does NOT settle money. After it succeeds, look at outstanding_balance in the result: if it's > 0, tell the user the amount and offer to create a pro-rated final invoice (create_invoice) and record final payments (mark_invoice_paid). Never claim finances were settled unless you actually called those tools.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
