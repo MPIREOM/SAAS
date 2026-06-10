@@ -4,6 +4,41 @@ import { z } from "zod";
 
 export const maxDuration = 60;
 
+// This endpoint is UNAUTHENTICATED (public tenant form), so the upload path is
+// an anonymous write primitive. Bound it: cap the number/size of files and
+// allow only image/video MIME types so it can't be abused to host arbitrary
+// content under the app's storage domain.
+const MAX_FILES = 5;
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB per file
+const ALLOWED_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/3gpp",
+]);
+
+// Escape user-supplied values before embedding them in notification email
+// HTML. The maintenance description/unit/filename are attacker-controlled on
+// this public endpoint, so without escaping they allow HTML/link injection
+// (phishing) into the admin inbox.
+function escapeHtml(value: unknown): string {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[c]!,
+  );
+}
+
 const submitSchema = z.object({
   token: z.string().min(1),
   unit_number: z.string().min(1, "Unit number is required"),
@@ -109,12 +144,24 @@ export async function POST(request: NextRequest) {
 
   // Upload files. Paths are namespaced by property now (since tenant_id
   // may be null for vacant-unit submissions).
-  const files = formData.getAll("files") as File[];
+  const files = (formData.getAll("files") as File[])
+    .filter((f) => f && f.size > 0)
+    .slice(0, MAX_FILES);
   const attachments: { file_url: string; file_name: string; file_type: string; file_size: number }[] = [];
   const uploadErrors: string[] = [];
 
   for (const file of files) {
     if (!file || file.size === 0) continue;
+
+    // Reject oversized files and disallowed types rather than uploading them.
+    if (file.size > MAX_FILE_SIZE) {
+      uploadErrors.push(`${file.name}: file exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`);
+      continue;
+    }
+    if (!ALLOWED_MIME.has(file.type)) {
+      uploadErrors.push(`${file.name}: unsupported file type`);
+      continue;
+    }
 
     const ext = file.name.split(".").pop() || "bin";
     const isVideo = file.type.startsWith("video/");
@@ -211,7 +258,10 @@ export async function POST(request: NextRequest) {
           : "🔧 New Maintenance Request";
       const alertTitle = `${urgencyEmoji} New Maintenance Request`;
 
-      const origin = request.headers.get("origin") || request.nextUrl.origin;
+      // Use the server-known origin, NOT the client-supplied Origin header,
+      // which is attacker-controlled on this public endpoint and would let a
+      // submitter plant a phishing link in the admin notification.
+      const origin = request.nextUrl.origin;
       const dashboardLink = `${origin}/en/maintenance/${maintenanceRequest.id}`;
 
       const submittedAt = new Date().toLocaleString("en-GB", {
@@ -232,27 +282,27 @@ export async function POST(request: NextRequest) {
       // linked (most email clients won't render <video>) with a thumbnail
       // placeholder.
       const emailItems = [
-        `<strong>Property:</strong> ${propertyName} — Unit ${unitNumber}`,
-        `<strong>Tenant:</strong> ${tenantName}${tenantPhone ? ` (${tenantPhone})` : ""}`,
-        `<strong>Category:</strong> ${category}`,
-        `<strong>Urgency:</strong> ${urgency.toUpperCase()}`,
-        `<strong>Submitted:</strong> ${submittedAt}`,
-        `<strong>Attachments:</strong> ${attachmentSummary}`,
-        `<strong>Description:</strong><br>${description.replace(/\n/g, "<br>")}`,
+        `<strong>Property:</strong> ${escapeHtml(propertyName)} — Unit ${escapeHtml(unitNumber)}`,
+        `<strong>Tenant:</strong> ${escapeHtml(tenantName)}${tenantPhone ? ` (${escapeHtml(tenantPhone)})` : ""}`,
+        `<strong>Category:</strong> ${escapeHtml(category)}`,
+        `<strong>Urgency:</strong> ${escapeHtml(urgency.toUpperCase())}`,
+        `<strong>Submitted:</strong> ${escapeHtml(submittedAt)}`,
+        `<strong>Attachments:</strong> ${escapeHtml(attachmentSummary)}`,
+        `<strong>Description:</strong><br>${escapeHtml(description).replace(/\n/g, "<br>")}`,
       ];
       if (attachments.length > 0) {
         const photoThumbs = attachments
           .filter((a) => a.file_type === "photo")
           .map(
             (a) =>
-              `<a href="${a.file_url}" style="display:inline-block;margin:4px;"><img src="${a.file_url}" alt="${a.file_name}" style="max-width:180px;max-height:180px;border-radius:8px;border:1px solid #2A293A;display:block;" /></a>`
+              `<a href="${encodeURI(a.file_url)}" style="display:inline-block;margin:4px;"><img src="${encodeURI(a.file_url)}" alt="${escapeHtml(a.file_name)}" style="max-width:180px;max-height:180px;border-radius:8px;border:1px solid #2A293A;display:block;" /></a>`
           )
           .join("");
         const videoLinks = attachments
           .filter((a) => a.file_type === "video")
           .map(
             (a) =>
-              `<div style="margin:4px 0;"><a href="${a.file_url}" style="color:#C9A84C;">▶ ${a.file_name}</a></div>`
+              `<div style="margin:4px 0;"><a href="${encodeURI(a.file_url)}" style="color:#C9A84C;">▶ ${escapeHtml(a.file_name)}</a></div>`
           )
           .join("");
         if (photoThumbs) emailItems.push(`<strong>Photos:</strong><br>${photoThumbs}`);

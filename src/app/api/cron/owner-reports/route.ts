@@ -9,6 +9,7 @@ import {
 import { CURRENCY } from "@/lib/currency";
 import { getOwnerMonthlyReport } from "@/lib/owners/monthly-report-data";
 import { renderMonthlyReportPdf } from "@/lib/owners/monthly-report-pdf";
+import { checkBearer } from "@/lib/crypto/safe-compare";
 
 // PDF rendering takes a few seconds per owner; keep the function generous so
 // we can serve a portfolio of 10–20 owners without hitting Vercel's default
@@ -259,7 +260,7 @@ export async function runOwnerReports(
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!checkBearer(authHeader, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

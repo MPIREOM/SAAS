@@ -68,7 +68,18 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const escaped = q.replace(/[%_]/g, (m) => `\\${m}`);
+  // Sanitise the term for use inside PostgREST filter strings. Beyond the LIKE
+  // wildcards (% _), strip the characters that are significant in the
+  // `.or()` / `.ilike()` filter grammar — comma, parentheses, colon, dot,
+  // backslash, and the PostgREST wildcard `*` — so a crafted query can't
+  // inject additional filter clauses.
+  const escaped = q
+    .replace(/[,()*:.\\]/g, " ")
+    .replace(/[%_]/g, (m) => `\\${m}`)
+    .trim();
+  if (escaped.length < 2) {
+    return NextResponse.json({ results: [] satisfies SearchHit[] });
+  }
 
   // ─── Tenants ──────────────────────────────────────────────────────
   let tenantQ = supabase

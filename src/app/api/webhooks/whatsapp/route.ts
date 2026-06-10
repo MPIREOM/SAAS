@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import { safeEqual } from "@/lib/crypto/safe-compare";
 import { processWhatsAppMessage, type InlineImage } from "@/lib/whatsapp/agent";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp/client";
 import {
@@ -18,10 +19,14 @@ function verifySignature(body: string, signature: string | null): boolean {
     "sha256=" +
     crypto.createHmac("sha256", appSecret).update(body).digest("hex");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSig)
-  );
+  // timingSafeEqual throws on differing buffer lengths — guard it so an
+  // attacker-supplied short signature can't crash the route (500) and so we
+  // don't leak length information. Constant-time only matters for equal
+  // lengths anyway.
+  const sigBuf = Buffer.from(signature, "utf8");
+  const expBuf = Buffer.from(expectedSig, "utf8");
+  if (sigBuf.length !== expBuf.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
 // Download an inbound image, drop it into the expense-receipts bucket
@@ -115,7 +120,8 @@ export async function GET(request: NextRequest) {
 
   if (
     mode === "subscribe" &&
-    token === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
+    token != null &&
+    safeEqual(token, process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ?? "")
   ) {
     return new NextResponse(challenge, { status: 200 });
   }

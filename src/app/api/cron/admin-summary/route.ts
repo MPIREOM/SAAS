@@ -9,6 +9,7 @@ import {
 } from "@/lib/notifications/admin-notify";
 import { getDefaultOwnerBalance } from "@/lib/owners/balance";
 import { getExpensesSummary } from "@/lib/expenses/summary";
+import { checkBearer } from "@/lib/crypto/safe-compare";
 
 export const maxDuration = 60;
 
@@ -695,7 +696,7 @@ export async function wasAdminSummaryRunToday(
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!checkBearer(authHeader, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
