@@ -5,6 +5,7 @@ import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, parseISO } from "date-fns";
 import { runAdminSummary, wasAdminSummaryRunToday } from "@/app/api/cron/admin-summary/route";
+import { checkBearer } from "@/lib/crypto/safe-compare";
 
 // Vercel Cron: runs daily at 8:00 AM (configured in vercel.json)
 export const maxDuration = 300;
@@ -23,9 +24,9 @@ function createSupabaseAdmin() {
 }
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret
+  // Verify cron secret (constant-time)
   const authHeader = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!checkBearer(authHeader, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

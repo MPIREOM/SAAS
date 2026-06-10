@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { format, lastDayOfMonth, startOfMonth, addDays } from "date-fns";
+import { checkBearer } from "@/lib/crypto/safe-compare";
 
 // Vercel Cron: runs daily at 00:05 AM
 export const maxDuration = 60;
@@ -19,9 +20,9 @@ function createSupabaseAdmin() {
 }
 
 export async function GET(request: Request) {
-  // Verify cron secret to prevent unauthorized invocations
+  // Verify cron secret to prevent unauthorized invocations (constant-time)
   const authHeader = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!checkBearer(authHeader, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

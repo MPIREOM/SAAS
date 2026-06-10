@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
+import { checkBearer } from "@/lib/crypto/safe-compare";
 
 // One-shot import endpoint for migrating historical expenses out of the
 // operator's Excel sheet (`weekly expenses report DATA.xlsx`) into the
@@ -92,7 +93,7 @@ type RowResult = {
 
 export async function POST(request: NextRequest) {
   const auth = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!checkBearer(auth, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

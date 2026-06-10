@@ -19,7 +19,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "tenant_id is required" }, { status: 400 });
   }
 
-  const token = randomBytes(16).toString("base64url");
+  // Authorization: the caller must be able to see this tenant. tenants RLS is
+  // property-scoped (migration 034), so a tenant outside the caller's assigned
+  // properties returns nothing here — preventing minting a portal link (and
+  // thus full-record disclosure) for an arbitrary tenant.
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("id")
+    .eq("id", tenant_id)
+    .maybeSingle();
+
+  if (!tenant) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const token = randomBytes(32).toString("base64url");
 
   const { data, error } = await supabase
     .from("tenant_portal_tokens")
@@ -27,7 +41,8 @@ export async function POST(request: NextRequest) {
       token,
       tenant_id,
       created_by: user.id,
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      // 7-day lifetime keeps the bearer link (carried in the URL) short-lived.
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
     .select("id, token")
     .single();

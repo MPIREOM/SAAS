@@ -28,6 +28,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Authorization: the caller must have access to this property. properties
+  // RLS scopes SELECT to assigned properties (super_admin sees all), so an
+  // unassigned property returns nothing here.
+  const { data: property } = await supabase
+    .from("properties")
+    .select("id")
+    .eq("id", property_id)
+    .maybeSingle();
+
+  if (!property) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // Return existing active token if there is one
   const { data: existing } = await supabase
     .from("maintenance_tokens")
