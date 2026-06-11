@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
     "/api/owners/*/monthly-report/pdf": ["./public/fonts/**/*"],
     "/api/owners/[id]/monthly-report/pdf": ["./public/fonts/**/*"],
     "/api/cron/owner-reports": ["./public/fonts/**/*"],
+    "/api/cron/owner-reports-monthly": ["./public/fonts/**/*"],
   },
   // Baseline security headers. `Referrer-Policy: strict-origin-when-cross-origin`
   // also stops the bearer token in portal/maintenance URLs from leaking (only
