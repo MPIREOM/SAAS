@@ -74,6 +74,20 @@ function ymd(d: Date): string {
 // report: cumulative balance + all unpaid invoices on their properties
 // (the "defaulted tenants" — drops off the report once paid) + this
 // month's expenses and settlements (resets at month rollover).
+// @react-pdf/renderer's text engine throws "Cannot read properties of
+// undefined (reading 'offset')" when a string contains glyphs the embedded
+// font can't shape — most often Arabic *presentation forms* (U+FB50–FEFF,
+// produced by some copy/paste sources) or emoji. NFKC folds presentation forms
+// back to the standard Arabic the font renders; we also drop emoji/symbols and
+// variation selectors so one stray glyph can't crash the whole report.
+function cleanText(s: string | null | undefined): string {
+  if (s == null) return "";
+  return String(s)
+    .normalize("NFKC")
+    .replace(/[︀-️]/g, "")
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu, "");
+}
+
 export async function getOwnerMonthlyReport(
   supabase: SupabaseClient,
   ownerId: string,
@@ -106,7 +120,7 @@ export async function getOwnerMonthlyReport(
   const propertyIds = (ownerProps.data || []).map((p) => p.id as string);
   const propertyNames = new Map<string, string>();
   for (const p of ownerProps.data || []) {
-    propertyNames.set(p.id as string, (p.name as string) || "?");
+    propertyNames.set(p.id as string, cleanText(p.name as string) || "?");
   }
 
   // Expenses for this month — owner-level OR on one of their properties.
@@ -145,9 +159,9 @@ export async function getOwnerMonthlyReport(
     expenses.push({
       date: row.expense_date as string,
       category: (row.category as string) || "other",
-      description: (row.description as string) || "",
+      description: cleanText(row.description as string),
       amount: Number(row.amount || 0),
-      vendor: (row.vendor as string) || null,
+      vendor: row.vendor ? cleanText(row.vendor as string) : null,
       propertyName: row.property_id
         ? propertyNames.get(row.property_id as string) || null
         : null,
@@ -223,7 +237,7 @@ export async function getOwnerMonthlyReport(
           | null;
         leaseContext.set(l.id as string, {
           unitId: l.unit_id as string,
-          tenantName: tenant?.full_name || "Unknown",
+          tenantName: cleanText(tenant?.full_name) || "Unknown",
         });
       }
       const leaseIds = Array.from(leaseContext.keys());
@@ -306,9 +320,9 @@ export async function getOwnerMonthlyReport(
         // collectable as normal and shouldn't be flagged to the owner.
         if (days <= 30) continue;
         defaultedInvoices.push({
-          tenantName: (tenant?.full_name as string) || "Unknown",
-          propertyName: (property?.name as string) || "?",
-          unitNumber: (unit?.unit_number as string) || "?",
+          tenantName: cleanText(tenant?.full_name as string) || "Unknown",
+          propertyName: cleanText(property?.name as string) || "?",
+          unitNumber: cleanText(unit?.unit_number as string) || "?",
           dueDate,
           amount,
           paidAmount: paid,
@@ -328,7 +342,7 @@ export async function getOwnerMonthlyReport(
 
   return {
     ownerId,
-    ownerName: (owner?.name as string) || balance.ownerName,
+    ownerName: cleanText(owner?.name as string) || balance.ownerName,
     whatsappPhone: (owner?.whatsapp_phone as string) || null,
     email: (owner?.email as string) || null,
     generatedAt: new Date().toISOString(),
