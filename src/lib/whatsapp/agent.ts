@@ -776,6 +776,68 @@ const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "register_tenant",
+    description:
+      "Register a NEW tenant. Use when the user sends a tenant's details — often with a PHOTO of their ID/passport (read the full name, nationality and national ID off the card image yourself) — and asks to add/register them. full_name and phone are required; everything else is optional. If the message included an ID photo, a 'PENDING_RECEIPT_TOKEN: <token>' line is surfaced — pass that token as id_document_token to save the ID image to the tenant's file. If the user also gives a unit, monthly rent, and lease start/end dates, pass unit_id + monthly_rent + lease_start_date + lease_end_date to create the lease and mark the unit occupied in the same call. An ID card does NOT contain the phone, rent or lease dates — ask the user for those if a lease should be created and they weren't provided.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        full_name: { type: "string", description: "Tenant's full name (read it off the ID if a photo was sent)." },
+        phone: { type: "string", description: "Tenant's phone number. Required — not on the ID card, so ask the user." },
+        nationality: { type: "string", description: "Nationality (from the ID)." },
+        national_id: { type: "string", description: "National / civil ID number (from the ID)." },
+        email: { type: "string", description: "Email address (optional)." },
+        language_preference: {
+          type: "string",
+          enum: ["en", "ar"],
+          description: "Preferred reminder language. Defaults to en.",
+        },
+        id_document_token: {
+          type: "string",
+          description:
+            "The image token surfaced as 'PENDING_RECEIPT_TOKEN' when the user sent an ID/passport photo. Saves that photo to the tenant's documents.",
+        },
+        document_type: {
+          type: "string",
+          enum: ["id_copy", "passport", "visa", "lease_agreement", "custom"],
+          description: "Type of the attached document. Defaults to id_copy.",
+        },
+        unit_id: {
+          type: "string",
+          description:
+            "Optional. The unit UUID (from get_unit_by_number or get_property_units) to create a lease for. Required together with monthly_rent + lease dates to create a lease.",
+        },
+        monthly_rent: { type: "number", description: "Monthly rent in OMR (for the lease)." },
+        lease_start_date: { type: "string", description: "Lease start date YYYY-MM-DD." },
+        lease_end_date: { type: "string", description: "Lease end date YYYY-MM-DD." },
+        payment_due_day: { type: "number", description: "Rent due day of month (1-28). Defaults to 1." },
+        security_deposit: { type: "number", description: "Security deposit in OMR (optional)." },
+      },
+      required: ["full_name", "phone"],
+    },
+  },
+  {
+    name: "attach_tenant_document",
+    description:
+      "Save a photo the user sent (ID card, passport, lease, etc.) to an EXISTING tenant's documents. Use when the user sends an image for a tenant already in the system ('here's Ahmad's passport', 'save this ID for unit 5's tenant'). Resolve the tenant first (search_tenants / get_unit_by_number) to get the tenant_id, then pass it with the image token (PENDING_RECEIPT_TOKEN from the user's message).",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        tenant_id: { type: "string", description: "The tenant UUID to attach the document to." },
+        attachment_token: {
+          type: "string",
+          description: "The 'PENDING_RECEIPT_TOKEN' value from the user's message (the photo they sent).",
+        },
+        document_type: {
+          type: "string",
+          enum: ["id_copy", "passport", "visa", "lease_agreement", "custom"],
+          description: "Type of document. Defaults to id_copy.",
+        },
+      },
+      required: ["tenant_id", "attachment_token"],
+    },
+  },
+  {
     name: "renew_lease",
     description:
       "Renew a tenant's lease for a NEW term. Ends the current lease (kept on record, no move-out / no early-termination) and creates a new active lease for the same tenant and unit, starting the day after the current term ends (or a start date you give), optionally at a new rent. Use for 'renew Stephen for another year', 'renew unit 12 to Dec 2027 at 350 OMR', 'extend the contract a year and bump rent to 300'. To only edit dates on the EXISTING lease (a correction, not a new term) use update_lease instead.",
@@ -2500,6 +2562,158 @@ async function executeTool(
       });
     }
 
+    case "register_tenant": {
+      const fullName = (input.full_name as string)?.trim();
+      const phone = (input.phone as string)?.trim();
+      if (!fullName) return JSON.stringify({ error: "full_name is required" });
+      if (!phone) return JSON.stringify({ error: "phone is required" });
+
+      const { data: tenant, error: tErr } = await supabase
+        .from("tenants")
+        .insert({
+          full_name: fullName,
+          phone,
+          nationality: (input.nationality as string)?.trim() || null,
+          national_id: (input.national_id as string)?.trim() || null,
+          email: (input.email as string)?.trim() || null,
+          language_preference: input.language_preference === "ar" ? "ar" : "en",
+          status: "active",
+          created_by: userId,
+        })
+        .select("id, full_name")
+        .single();
+      if (tErr || !tenant)
+        return JSON.stringify({ error: tErr?.message || "Failed to create tenant" });
+
+      const tenantId = tenant.id as string;
+      const result: Record<string, unknown> = {
+        success: true,
+        tenant_id: tenantId,
+        tenant_name: tenant.full_name,
+      };
+
+      // Save the ID photo to the tenant's documents, if one was sent.
+      if (input.id_document_token) {
+        const saved = await saveTenantDocumentFromPending(
+          supabase,
+          input.id_document_token as string,
+          tenantId,
+          (input.document_type as string) || "id_copy",
+          userId,
+        );
+        result.id_document_saved = saved.ok;
+        if (!saved.ok) result.id_document_error = saved.error;
+      }
+
+      // Create a lease when the unit + rent + dates are all provided.
+      const unitId = input.unit_id as string | undefined;
+      const monthlyRent =
+        input.monthly_rent !== undefined ? Number(input.monthly_rent) : undefined;
+      const startDate = input.lease_start_date as string | undefined;
+      const endDate = input.lease_end_date as string | undefined;
+      if (unitId && monthlyRent && startDate && endDate) {
+        if (
+          !/^\d{4}-\d{2}-\d{2}$/.test(startDate) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(endDate)
+        ) {
+          result.lease_warning = "Lease not created — dates must be YYYY-MM-DD.";
+        } else if (endDate <= startDate) {
+          result.lease_warning =
+            "Lease not created — end date must be after start date.";
+        } else if (!(monthlyRent > 0)) {
+          result.lease_warning = "Lease not created — monthly_rent must be > 0.";
+        } else {
+          const { data: lease, error: lErr } = await supabase
+            .from("leases")
+            .insert({
+              tenant_id: tenantId,
+              unit_id: unitId,
+              start_date: startDate,
+              end_date: endDate,
+              monthly_rent: monthlyRent,
+              security_deposit:
+                input.security_deposit !== undefined
+                  ? Number(input.security_deposit)
+                  : null,
+              payment_due_day:
+                input.payment_due_day !== undefined
+                  ? Number(input.payment_due_day)
+                  : 1,
+              is_active: true,
+              created_by: userId,
+            })
+            .select("id")
+            .single();
+          if (lErr) {
+            result.lease_warning = `Tenant created but lease failed: ${lErr.message}`;
+          } else {
+            result.lease_id = lease?.id;
+            await supabase
+              .from("units")
+              .update({ status: "occupied", updated_at: new Date().toISOString() })
+              .eq("id", unitId);
+          }
+        }
+      }
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "create",
+        entity_type: "tenant",
+        entity_id: tenantId,
+        metadata: {
+          source: "whatsapp_agent",
+          has_id_document: !!input.id_document_token,
+          lease_created: !!result.lease_id,
+        },
+      });
+
+      return JSON.stringify(result);
+    }
+
+    case "attach_tenant_document": {
+      const tenantId = input.tenant_id as string;
+      const token = input.attachment_token as string;
+      const docType = (input.document_type as string) || "id_copy";
+      if (!tenantId) return JSON.stringify({ error: "tenant_id is required" });
+      if (!token)
+        return JSON.stringify({
+          error:
+            "attachment_token is required — it's the PENDING_RECEIPT_TOKEN from the user's photo message.",
+        });
+
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("id, full_name")
+        .eq("id", tenantId)
+        .maybeSingle();
+      if (!tenant) return JSON.stringify({ error: "Tenant not found" });
+
+      const saved = await saveTenantDocumentFromPending(
+        supabase,
+        token,
+        tenantId,
+        docType,
+        userId,
+      );
+      if (!saved.ok) return JSON.stringify({ error: saved.error });
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "create",
+        entity_type: "document",
+        entity_id: tenantId,
+        metadata: { source: "whatsapp_agent", document_type: docType },
+      });
+
+      return JSON.stringify({
+        success: true,
+        tenant_id: tenantId,
+        tenant_name: tenant.full_name,
+        document_type: docType,
+      });
+    }
+
     case "renew_lease": {
       const leaseId = input.lease_id as string;
       const newEnd = input.new_end_date as string;
@@ -3921,6 +4135,78 @@ async function attachReceiptToExpense(
   return finalPath;
 }
 
+// Valid document_type enum values (src/db/schema/documents.ts).
+const TENANT_DOC_TYPES = new Set([
+  "lease_agreement",
+  "id_copy",
+  "passport",
+  "visa",
+  "noc",
+  "title_deed",
+  "permit",
+  "insurance",
+  "custom",
+]);
+
+// Move a pending WhatsApp image (stashed by the webhook in the expense-receipts
+// staging bucket) into the private `documents` bucket and create a documents
+// row linked to a tenant. Used for ID cards / passports / lease docs the user
+// sends over WhatsApp. Returns { ok } so the caller can surface a clear status.
+async function saveTenantDocumentFromPending(
+  supabase: ReturnType<typeof getAdminSupabase>,
+  token: string,
+  tenantId: string,
+  documentType: string,
+  userId: string,
+): Promise<{ ok: boolean; error?: string; path?: string }> {
+  const docType = TENANT_DOC_TYPES.has(documentType) ? documentType : "id_copy";
+
+  const { data: pending } = await supabase
+    .from("pending_receipt_attachments")
+    .select("id, storage_path, mime_type, file_size")
+    .eq("token", token)
+    .maybeSingle();
+  if (!pending) {
+    return { ok: false, error: "attachment not found (the image token may have expired)" };
+  }
+
+  const oldPath = pending.storage_path as string;
+  const ext = oldPath.split(".").pop() || "jpg";
+  const mime = (pending.mime_type as string) || "image/jpeg";
+
+  // Pull the stashed bytes out of the staging bucket.
+  const { data: file, error: dlErr } = await supabase.storage
+    .from("expense-receipts")
+    .download(oldPath);
+  if (dlErr || !file) {
+    return { ok: false, error: dlErr?.message || "could not read the uploaded image" };
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  // Upload into the private documents bucket, namespaced by tenant.
+  const newPath = `tenant/${tenantId}/${Date.now()}-${docType}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from("documents")
+    .upload(newPath, bytes, { contentType: mime, upsert: false });
+  if (upErr) return { ok: false, error: upErr.message };
+
+  const { error: insErr } = await supabase.from("documents").insert({
+    entity_type: "tenant",
+    entity_id: tenantId,
+    document_type: docType,
+    file_url: newPath,
+    file_name: `${docType}.${ext}`,
+    uploaded_by: userId,
+  });
+  if (insErr) return { ok: false, error: insErr.message };
+
+  // Clean up the staging object + pending row (best effort).
+  await supabase.storage.from("expense-receipts").remove([oldPath]);
+  await supabase.from("pending_receipt_attachments").delete().eq("id", pending.id);
+
+  return { ok: true, path: newPath };
+}
+
 // ── Conversation history ──────────────────────────────────────────────────
 
 const MAX_HISTORY_MESSAGES = 12; // Last 12 messages (~6 exchanges)
@@ -4055,8 +4341,10 @@ CURRENCY: OMR (Omani Rial)
 YOU CAN:
 1. Record payments — "Ahmad paid", "register payment for Fatma", "tenant in unit 101 paid 200 OMR"
 2. Add expenses — "add expense 50 OMR plumbing at Sunset Tower", "electricity bill 30 OMR"
-   - RECEIPT PHOTOS: When the user's message contains "PENDING_RECEIPT_TOKEN: <token>" it means they sent a photo of a receipt/invoice. You MUST treat this as a request to record an expense — that's the only thing receipt photos are used for here. Do not just acknowledge the photo; record it.
-   - If a photo is attached to this turn, READ the receipt yourself: extract amount (total payable in OMR), vendor, date, and pick the best category. The caption text is supplementary — the image is the source of truth.
+   - PHOTOS: When the user's message contains "PENDING_RECEIPT_TOKEN: <token>" they sent a photo and the image IS attached to this turn — you can SEE it. LOOK at the image and decide what it is, then act (never say you can't view images):
+       • A receipt / invoice → record an expense (this bullet) with add_expense, passing attachment_token = that token.
+       • An ID card / passport / civil ID → it's for a tenant. Read the full name, nationality and national ID off the card yourself. If adding a NEW tenant, call register_tenant with id_document_token = that token (it saves the photo to the tenant's file). If the user named an EXISTING tenant, call attach_tenant_document with that tenant's id and attachment_token = that token. An ID does NOT show the phone, rent or lease dates — ask the user for those if a lease is needed and they weren't given.
+   - For a receipt, READ it yourself: extract amount (total payable in OMR), vendor, date, and pick the best category. The caption text is supplementary — the image is the source of truth.
    - Call add_expense with category, amount, optional vendor/description/expense_date, AND attachment_token set to the token from the user message so the photo is saved with the expense.
    - If the amount is genuinely unreadable from BOTH the image and the caption, ask the user for the amount in one short message before calling add_expense — do not invent a number.
    - Default category to "other" only when no better match is obvious from the receipt (utility bill → utilities, plumber/AC/repair → maintenance, cleaning company → cleaning, etc.).
@@ -4103,6 +4391,9 @@ YOU CAN:
     - The owner's early-termination commission is applied AUTOMATICALLY by setting the vacate date (the ledger is computed on read). NEVER record an owner settlement or expense for it. If the user wants to collect the move-out fees, after move_out_tenant returns you can mark_invoice_paid against the new move-out invoice.
 20. Renew a lease — "renew Stephen for another year", "renew unit 12 to Dec 2027 at 350 OMR", "extend the contract a year and raise rent to 300"
     - Use renew_lease with the current lease_id and new_end_date (and new_start_date / new_rent if given). It closes the current term and opens a new active one — it does NOT count as a move-out. For a simple date correction on the existing term use update_lease instead.
+21. Register a tenant / save their ID — "add this tenant", "register him", "here's his ID", "save this passport for Ahmad"
+    - Use register_tenant for a NEW tenant. Read name/nationality/national ID off any ID photo yourself; ask the user for the phone (always) and, if they want a lease, the unit, monthly rent and start/end dates. If an ID photo was sent, pass id_document_token so the photo is saved to the tenant's file. Pass unit_id + monthly_rent + lease_start_date + lease_end_date to create the lease in the same call.
+    - Use attach_tenant_document to save a photo (ID, passport, lease) to an EXISTING tenant — resolve the tenant first, then pass tenant_id + attachment_token.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
