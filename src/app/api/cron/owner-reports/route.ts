@@ -270,6 +270,17 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
+
+  // The 1st of the month is covered by the monthly previous-month report
+  // (/api/cron/owner-reports-monthly). When the weekly Thursday run lands on
+  // the 1st, skip it so owners don't receive two reports the same day.
+  const muscatNow = new Date(Date.now() + 4 * 60 * 60 * 1000);
+  if (muscatNow.getUTCDate() === 1) {
+    const summary = { reason: "first_of_month_handled_by_monthly_report" };
+    await logCronRun(supabase, "skipped", summary);
+    return NextResponse.json({ status: "skipped", summary });
+  }
+
   const result = await runOwnerReports(supabase, "scheduled");
   return NextResponse.json(result);
 }
