@@ -61,6 +61,10 @@ function balanceCaption(
 export async function runOwnerReports(
   supabase: ReturnType<typeof createSupabaseAdmin>,
   trigger: "scheduled" | "manual" = "scheduled",
+  // When provided, the report covers the month containing this date (used by
+  // the monthly "previous full month" cron). Omit for the current
+  // month-to-date snapshot (the weekly run).
+  asOf?: Date,
 ) {
   const startedAt = new Date();
   console.log(`[${CRON_NAME}] Starting (${trigger}) at ${startedAt.toISOString()}`);
@@ -120,7 +124,7 @@ export async function runOwnerReports(
       const ownerId = owner.id as string;
       const ownerName = (owner.name as string) || "Owner";
       try {
-        const report = await getOwnerMonthlyReport(supabase, ownerId);
+        const report = await getOwnerMonthlyReport(supabase, ownerId, asOf);
         if (!report) {
           errors++;
           perOwner.push({ ownerId, ownerName, error: "report_data_unavailable" });
@@ -236,6 +240,7 @@ export async function runOwnerReports(
 
     const summary: Record<string, unknown> = {
       trigger,
+      reportPeriod: asOf ? asOf.toISOString().slice(0, 10) : "current_month_to_date",
       eligibleOwners: eligible.length,
       ccRecipients: ccRecipients.length,
       sent,

@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/owner-reports",
       "schedule": "0 13 * * 4"
+    },
+    {
+      "path": "/api/cron/owner-reports-monthly",
+      "schedule": "0 13 1 * *"
     }
   ]
 }
