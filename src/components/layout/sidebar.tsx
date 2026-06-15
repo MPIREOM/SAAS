@@ -95,7 +95,13 @@ export function Sidebar({ locale }: SidebarProps) {
       <nav className="flex-1 py-4 overflow-y-auto">
         <ul className="space-y-1 px-3">
           {navItems.map((item) => {
-            const isActive = pathname.includes(item.href);
+            // Exact match or a nested route under this item (e.g.
+            // /properties/123). A bare substring check (`includes`) is
+            // fragile — it can light up the wrong item once route names
+            // start sharing substrings.
+            const fullHref = `/${locale}${item.href}`;
+            const isActive =
+              pathname === fullHref || pathname.startsWith(`${fullHref}/`);
             const Icon = item.icon;
             return (
               <li key={item.key}>
