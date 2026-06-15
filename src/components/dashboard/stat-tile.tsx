@@ -27,43 +27,58 @@ type Tone =
 
 const toneClasses: Record<
   Tone,
-  { ring: string; iconBg: string; iconText: string; valueText: string }
+  {
+    ring: string;
+    iconBg: string;
+    iconText: string;
+    valueText: string;
+    // Thin gradient line revealed along the top edge on hover — gives each
+    // tile a tone-coloured "premium dashboard" accent without adding chrome
+    // at rest.
+    sheen: string;
+  }
 > = {
   default: {
     ring: "hover:border-accent/40",
     iconBg: "bg-surface-elevated",
     iconText: "text-text-secondary",
     valueText: "text-text-primary",
+    sheen: "via-accent/60",
   },
   accent: {
     ring: "hover:border-accent/40",
     iconBg: "bg-accent/12",
     iconText: "text-accent",
     valueText: "text-text-primary",
+    sheen: "via-accent/60",
   },
   success: {
     ring: "hover:border-success/40",
     iconBg: "bg-success/12",
     iconText: "text-success",
     valueText: "text-success",
+    sheen: "via-success/60",
   },
   warning: {
     ring: "hover:border-warning/40",
     iconBg: "bg-warning/12",
     iconText: "text-warning",
     valueText: "text-warning",
+    sheen: "via-warning/60",
   },
   destructive: {
     ring: "hover:border-destructive/40",
     iconBg: "bg-destructive/12",
     iconText: "text-destructive",
     valueText: "text-destructive",
+    sheen: "via-destructive/60",
   },
   info: {
     ring: "hover:border-info/40",
     iconBg: "bg-info/12",
     iconText: "text-info",
     valueText: "text-info",
+    sheen: "via-info/60",
   },
 };
 
@@ -87,6 +102,13 @@ export function StatTilePrimary({
   const cls = toneClasses[tone];
   const inner = (
     <>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100",
+          cls.sheen
+        )}
+      />
       <div className="flex items-start justify-between gap-3">
         <span className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary">
           {label}
@@ -115,6 +137,9 @@ export function StatTilePrimary({
   );
   const baseClasses = cn(
     "group relative block overflow-hidden rounded-xl border border-border/60 bg-surface p-5 transition-all duration-300",
+    // Subtle lift only when the tile is a link (interactive) — static tiles
+    // shouldn't invite a click that does nothing.
+    href && "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 active:translate-y-0",
     cls.ring,
     href && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
   );
@@ -165,6 +190,7 @@ export function StatTileSecondary({
   );
   const baseClasses = cn(
     "group block rounded-xl border border-border/60 bg-surface p-3.5 transition-all duration-200",
+    href && "hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/20 active:translate-y-0",
     cls.ring,
     href && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
   );
