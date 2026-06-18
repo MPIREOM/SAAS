@@ -257,8 +257,10 @@ export async function getOwnerMonthlyReport(
     }
   }
 
-  transfersToOwner.sort((a, b) => a.date.localeCompare(b.date));
-  transfersToCompany.sort((a, b) => a.date.localeCompare(b.date));
+  // Descending so each Transfers table reads most-recent first, matching the
+  // expenses table above.
+  transfersToOwner.sort((a, b) => b.date.localeCompare(a.date));
+  transfersToCompany.sort((a, b) => b.date.localeCompare(a.date));
   const transfersToOwnerTotal = transfersToOwner.reduce((s, e) => s + e.amount, 0);
   const transfersToCompanyTotal = transfersToCompany.reduce((s, e) => s + e.amount, 0);
 
@@ -283,7 +285,8 @@ export async function getOwnerMonthlyReport(
         )
         .in("unit_id", unitIds)
         .in("status", ["pending", "partial", "overdue"])
-        .order("due_date", { ascending: true });
+        // Most-recent due date first so the outstanding table reads newest → oldest.
+        .order("due_date", { ascending: false });
       for (const row of (invRes.data as unknown as Record<string, unknown>[] | null) || []) {
         const amount = Number(row.amount || 0);
         const paid = Number(row.paid_amount || 0);
