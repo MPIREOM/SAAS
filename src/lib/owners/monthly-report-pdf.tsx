@@ -413,15 +413,45 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
           if (b.businessManagerFees > 0) {
             charges.push({ date: report.monthStart, label: "Business manager fees", amount: b.businessManagerFees });
           }
-          const chargesTotal = charges.reduce((s, c) => s + c.amount, 0);
-          const rowCount = charges.length + report.expenses.length;
-          const grandTotal = chargesTotal + report.expensesTotal;
+          // Merge service charges and pass-through expenses into one list so
+          // the whole table can be ordered by date. Both are deductions from
+          // the owner's balance, so a single chronological view reads cleanly.
+          type ChargeExpenseRow = {
+            date: string | null;
+            category: string;
+            description: string;
+            property: string;
+            amount: number;
+          };
+          const rows: ChargeExpenseRow[] = [
+            ...charges.map((c) => ({
+              date: c.date,
+              category: "Service fee",
+              description: c.label,
+              property: "—",
+              amount: c.amount,
+            })),
+            ...report.expenses.map((e) => {
+              const descBase = e.description || "—";
+              return {
+                date: e.date,
+                category: e.category,
+                description: e.vendor ? `${descBase} · ${e.vendor}` : descBase,
+                property: e.propertyName || "Owner-level",
+                amount: e.amount,
+              };
+            }),
+          ];
+          // Most-recent first (newest at the top, oldest at the bottom).
+          // Undated charges (no vacate date) sort to the bottom.
+          rows.sort((a, c) => (c.date || "").localeCompare(a.date || ""));
+          const grandTotal = rows.reduce((s, r) => s + r.amount, 0);
           return (
             <View style={styles.card}>
               <Text style={styles.sectionHeading}>
-                Expenses & Charges · {report.monthLabel} ({rowCount})
+                Expenses & Charges · {report.monthLabel} ({rows.length})
               </Text>
-              {rowCount === 0 ? (
+              {rows.length === 0 ? (
                 <Text style={styles.empty}>No charges or expenses this period.</Text>
               ) : (
                 <>
@@ -432,41 +462,16 @@ function MonthlyReportDocument({ report }: { report: MonthlyReport }) {
                     <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Property</Text>
                     <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
                   </View>
-                  {charges.map((c, i) => (
+                  {rows.map((r, i) => (
                     <View
-                      key={`charge-${i}`}
-                      style={
-                        i === charges.length - 1 && report.expenses.length === 0
-                          ? styles.tableRowLast
-                          : styles.tableRow
-                      }
+                      key={i}
+                      style={i === rows.length - 1 ? styles.tableRowLast : styles.tableRow}
                     >
-                      <Text style={[styles.cellMuted, { flex: 1 }]}>{c.date || "—"}</Text>
-                      <Text style={[styles.cell, { flex: 1.2 }]}>Service fee</Text>
-                      <Text style={[styles.cell, { flex: 2.5 }]}>{c.label}</Text>
-                      <Text style={[styles.cellMuted, { flex: 1.5 }]}>—</Text>
-                      <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(c.amount)}</Text>
-                    </View>
-                  ))}
-                  {report.expenses.map((e, i) => (
-                    <View
-                      key={`exp-${i}`}
-                      style={
-                        i === report.expenses.length - 1
-                          ? styles.tableRowLast
-                          : styles.tableRow
-                      }
-                    >
-                      <Text style={[styles.cellMuted, { flex: 1 }]}>{e.date}</Text>
-                      <Text style={[styles.cell, { flex: 1.2 }]}>{e.category}</Text>
-                      <Text style={[styles.cell, { flex: 2.5 }]}>
-                        {e.description || "—"}
-                        {e.vendor ? ` · ${e.vendor}` : ""}
-                      </Text>
-                      <Text style={[styles.cellMuted, { flex: 1.5 }]}>
-                        {e.propertyName || "Owner-level"}
-                      </Text>
-                      <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(e.amount)}</Text>
+                      <Text style={[styles.cellMuted, { flex: 1 }]}>{r.date || "—"}</Text>
+                      <Text style={[styles.cell, { flex: 1.2 }]}>{r.category}</Text>
+                      <Text style={[styles.cell, { flex: 2.5 }]}>{r.description}</Text>
+                      <Text style={[styles.cellMuted, { flex: 1.5 }]}>{r.property}</Text>
+                      <Text style={[styles.cellRight, { flex: 1 }]}>{fmt(r.amount)}</Text>
                     </View>
                   ))}
                   <View style={styles.totalRow}>
