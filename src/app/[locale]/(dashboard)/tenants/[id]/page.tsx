@@ -47,6 +47,7 @@ export default async function TenantDetailPage({
   const tch = await getTranslations("cheques");
   const ti = await getTranslations("invoices");
   const tm = await getTranslations("maintenance");
+  const tl = await getTranslations("leases");
   const supabase = await createClient();
 
   const { data: tenant } = await supabase
@@ -174,7 +175,7 @@ export default async function TenantDetailPage({
               className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <RefreshCw aria-hidden="true" className="h-4 w-4" />
-              Renew Lease
+              {tl("renewLease")}
             </Link>
             <Link
               href={`/${locale}/tenants/${id}/move-out`}

@@ -32,6 +32,7 @@ import {
   LogOut,
   FileDown,
   Receipt,
+  RefreshCw,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
@@ -52,6 +53,7 @@ export default async function UnitDetailPage({
   const tch = await getTranslations("cheques");
   const tm = await getTranslations("maintenance");
   const ti = await getTranslations("invoices");
+  const tl = await getTranslations("leases");
   const supabase = await createClient();
 
   const { data: unit } = await supabase
@@ -394,6 +396,15 @@ export default async function UnitDetailPage({
                     <FileDown className="h-3.5 w-3.5" />
                     {ti("downloadUnpaidPDF")}
                   </Link>
+                  {currentTenant.status === "active" && (
+                    <Link
+                      href={`/${locale}/tenants/${currentTenant.id}/renew-lease`}
+                      className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border text-text-secondary text-xs rounded-md hover:border-accent/30 hover:text-accent transition-colors"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      {tl("renewLease")}
+                    </Link>
+                  )}
                   <Link
                     href={`/${locale}/tenants/${currentTenant.id}/move-out`}
                     className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border text-text-secondary text-xs rounded-md hover:bg-border/30 hover:text-text-primary transition-colors"
