@@ -28,6 +28,25 @@ export async function GET(request: Request) {
 
   const supabase = createSupabaseAdmin();
 
+  // Rent is owed once per unit per month. A unit can briefly be covered by two
+  // leases for the same month (e.g. an early renewal that overlaps the
+  // outgoing lease), so we must dedupe by unit+period, not just by lease.
+  // Returns true if a non-cancelled invoice already exists for this unit/month.
+  async function unitPeriodAlreadyInvoiced(
+    unitId: string,
+    periodStartStr: string
+  ): Promise<boolean> {
+    const { data } = await supabase
+      .from("invoices")
+      .select("id")
+      .eq("unit_id", unitId)
+      .eq("period_start", periodStartStr)
+      .neq("status", "cancelled")
+      .limit(1)
+      .maybeSingle();
+    return !!data;
+  }
+
   // Load invoice settings
   const { data: settings } = await supabase
     .from("invoice_settings")
@@ -50,24 +69,37 @@ export async function GET(request: Request) {
   const omanToday = new Date(today.getTime() + 4 * 60 * 60 * 1000);
   const currentDay = omanToday.getDate();
 
+  const periodStart = format(startOfMonth(omanToday), "yyyy-MM-dd");
+  const periodEnd = format(lastDayOfMonth(omanToday), "yyyy-MM-dd");
+
   // --- Generate invoices for the CURRENT month ---
-  // Get active leases whose payment_due_day has already passed this month
+  // Get active leases whose payment_due_day has already passed this month.
+  // Guard on the lease term: the lease must have started on/before the end of
+  // this month and must not have ended before it begins. Without this guard a
+  // freshly-renewed lease that starts next month is still billed for the
+  // current (pre-start) month — the root cause of phantom invoices showing up
+  // for a unit that was already paid up under its previous lease.
   const { data: currentMonthLeases, error: currentError } = await supabase
     .from("leases")
     .select("id, tenant_id, unit_id, monthly_rent, payment_due_day")
     .eq("is_active", true)
-    .lte("payment_due_day", currentDay);
+    .lte("payment_due_day", currentDay)
+    .lte("start_date", periodEnd)
+    .gte("end_date", periodStart);
 
   if (currentError) {
     return NextResponse.json({ error: currentError.message }, { status: 500 });
   }
 
-  const periodStart = format(startOfMonth(omanToday), "yyyy-MM-dd");
-  const periodEnd = format(lastDayOfMonth(omanToday), "yyyy-MM-dd");
   let created = 0;
   let skipped = 0;
 
   for (const lease of currentMonthLeases || []) {
+    if (await unitPeriodAlreadyInvoiced(lease.unit_id, periodStart)) {
+      skipped++;
+      continue;
+    }
+
     const dueDay = Math.min(lease.payment_due_day, lastDayOfMonth(omanToday).getDate());
     const dueDate = format(new Date(omanToday.getFullYear(), omanToday.getMonth(), dueDay), "yyyy-MM-dd");
 
@@ -98,18 +130,24 @@ export async function GET(request: Request) {
   let advanceSkipped = 0;
 
   if (daysBefore > 0) {
-    // For each active lease, check if we're within the advance window for next month
+    // Calculate next month's dates up front so we can scope the lease query to
+    // the next period's term.
+    const nextMonth = new Date(omanToday.getFullYear(), omanToday.getMonth() + 1, 1);
+    const nextPeriodStart = format(startOfMonth(nextMonth), "yyyy-MM-dd");
+    const nextPeriodEnd = format(lastDayOfMonth(nextMonth), "yyyy-MM-dd");
+
+    // For each active lease whose term covers next month, check if we're within
+    // the advance window. The start_date/end_date guard prevents pre-billing a
+    // lease for a month outside its term (e.g. a renewal that ends before, or
+    // starts after, the next period).
     const { data: allLeases, error: allError } = await supabase
       .from("leases")
       .select("id, tenant_id, unit_id, monthly_rent, payment_due_day")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .lte("start_date", nextPeriodEnd)
+      .gte("end_date", nextPeriodStart);
 
     if (!allError && allLeases) {
-      // Calculate next month's dates
-      const nextMonth = new Date(omanToday.getFullYear(), omanToday.getMonth() + 1, 1);
-      const nextPeriodStart = format(startOfMonth(nextMonth), "yyyy-MM-dd");
-      const nextPeriodEnd = format(lastDayOfMonth(nextMonth), "yyyy-MM-dd");
-
       for (const lease of allLeases) {
         // Calculate the actual due date in next month
         const nextDueDay = Math.min(lease.payment_due_day, lastDayOfMonth(nextMonth).getDate());
@@ -118,6 +156,11 @@ export async function GET(request: Request) {
         // Check if today is within the advance window
         const advanceDate = addDays(nextDueDate, -daysBefore);
         if (today >= advanceDate) {
+          if (await unitPeriodAlreadyInvoiced(lease.unit_id, nextPeriodStart)) {
+            advanceSkipped++;
+            continue;
+          }
+
           const dueDateStr = format(nextDueDate, "yyyy-MM-dd");
 
           const { error: insertError } = await supabase.from("invoices").upsert(

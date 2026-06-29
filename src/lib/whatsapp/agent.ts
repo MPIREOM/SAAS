@@ -1327,17 +1327,21 @@ async function executeTool(
           .toISOString()
           .split("T")[0];
 
-      // Check for duplicate
+      // Check for duplicate. Match on unit+period (not just lease) so an early
+      // renewal that overlaps the outgoing lease can't double-bill the same
+      // unit for the same month. Cancelled invoices don't block re-creation.
       const { data: existing } = await supabase
         .from("invoices")
         .select("id, status")
-        .eq("lease_id", leaseId)
+        .eq("unit_id", unitId)
         .eq("period_start", periodStart)
+        .neq("status", "cancelled")
+        .limit(1)
         .maybeSingle();
 
       if (existing)
         return JSON.stringify({
-          error: `An invoice already exists for this period (status: ${existing.status}). Invoice ID: ${existing.id}`,
+          error: `An invoice already exists for this unit and period (status: ${existing.status}). Invoice ID: ${existing.id}`,
         });
 
       const { data: invoice, error } = await supabase
@@ -1453,12 +1457,15 @@ async function executeTool(
         const dueDate = periodStart; // Due on 1st of month
 
         for (const unit of activeUnits) {
-          // Check for duplicate
+          // Check for duplicate by unit+period (not just lease) so overlapping
+          // renewal leases can't double-bill the same unit for the same month.
           const { data: existing } = await supabase
             .from("invoices")
             .select("id, status")
-            .eq("lease_id", unit.lease_id)
+            .eq("unit_id", unit.unit_id)
             .eq("period_start", periodStart)
+            .neq("status", "cancelled")
+            .limit(1)
             .maybeSingle();
 
           if (existing) {
