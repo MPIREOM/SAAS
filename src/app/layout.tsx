@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Syne, Manrope, JetBrains_Mono } from "next/font/google";
+import { Syne, Manrope, JetBrains_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 
 const syne = Syne({
@@ -23,6 +23,13 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
+const ibmPlexArabic = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic"],
+  variable: "--font-ibm-plex-arabic",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -44,7 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${syne.variable} ${manrope.variable} ${jetbrainsMono.variable} antialiased font-sans`}
+        className={`${syne.variable} ${manrope.variable} ${jetbrainsMono.variable} ${ibmPlexArabic.variable} antialiased font-sans`}
       >
         {children}
       </body>

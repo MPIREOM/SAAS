@@ -84,6 +84,18 @@ body {
   letter-spacing: -0.02em;
 }
 
+/* Arabic text uses IBM Plex Arabic instead of the Latin display/body
+   faces, which have no Arabic glyphs and would otherwise silently fall
+   back to the browser's generic serif/sans-serif. */
+[dir="rtl"] body {
+  font-family: var(--font-arabic), var(--font-sans), sans-serif;
+}
+
+[dir="rtl"] .font-display {
+  font-family: var(--font-arabic), ui-serif, serif;
+  letter-spacing: normal;
+}
+
 /* ─── Noise Texture Overlay ────────────────────────────── */
 
 .noise-overlay::before {
