@@ -5,8 +5,18 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogBody,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface AddChequeDialogProps {
   tenantId: string;
@@ -56,106 +66,78 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
     setSaving(false);
   }
 
-  const inputClass =
-    "w-full h-9 bg-surface-elevated border border-border rounded-lg px-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent transition-colors";
-  const labelClass = "block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5";
-
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-8 px-3 bg-warning/10 text-warning text-xs font-semibold rounded-lg hover:bg-warning/20 transition-colors"
+        className="inline-flex items-center gap-1.5 h-8 px-3 bg-warning/10 text-warning text-xs font-semibold rounded-lg border border-warning/20 cursor-pointer hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus aria-hidden="true" className="h-3.5 w-3.5" />
         {t("addCheque")}
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <div className="relative bg-surface border border-border rounded-xl p-6 w-full max-w-md shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-text-primary font-display">
-                {t("addCheque")}
-              </h3>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-1 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent maxWidth="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("addCheque")}</DialogTitle>
+            <DialogDescription>{t("subtitle")}</DialogDescription>
+          </DialogHeader>
 
+          <DialogBody className="pt-4">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className={labelClass}>{t("chequeNumber")}</label>
-                <input
-                  name="cheque_number"
-                  type="text"
-                  required
-                  placeholder="000000"
-                  className={`${inputClass} font-mono`}
-                />
-              </div>
+              <Input
+                name="cheque_number"
+                type="text"
+                required
+                label={t("chequeNumber")}
+                placeholder="000000"
+                className="font-mono ltr-nums"
+              />
 
-              <div>
-                <label className={labelClass}>{t("bankName")}</label>
-                <input
-                  name="bank_name"
-                  type="text"
-                  required
-                  placeholder={t("bankNamePlaceholder")}
-                  className={inputClass}
-                />
-              </div>
+              <Input
+                name="bank_name"
+                type="text"
+                required
+                label={t("bankName")}
+                placeholder={t("bankNamePlaceholder")}
+              />
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>{t("chequeDate")}</label>
-                  <input
-                    name="cheque_date"
-                    type="date"
-                    required
-                    className={`${inputClass} font-mono`}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>{t("amount")} ({CURRENCY.code})</label>
-                  <input
-                    name="amount"
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="0.00"
-                    className={`${inputClass} font-mono`}
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  name="cheque_date"
+                  type="date"
+                  required
+                  label={t("chequeDate")}
+                  className="font-mono ltr-nums"
+                />
+                <Input
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  required
+                  label={`${t("amount")} (${CURRENCY.code})`}
+                  placeholder="0.00"
+                  className="font-mono ltr-nums tabular-nums"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={() => setOpen(false)}
-                  className="h-9 px-4 text-sm text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
                 >
                   {tc("cancel")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                >
-                  {saving && <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />}
+                </Button>
+                <Button type="submit" loading={saving}>
                   {saving ? t("saving") : t("addCheque")}
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

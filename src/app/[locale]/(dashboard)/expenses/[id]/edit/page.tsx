@@ -6,7 +6,13 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
+import { PageHeader } from "@/components/ui/page-header";
+import { Trash2 } from "lucide-react";
 
 interface PropertyOption {
   id: string;
@@ -107,7 +113,7 @@ export default function EditExpensePage({
 
       const propertyId = formData.get("property_id") as string;
       if (!propertyId) {
-        setError(t("property") + " is required.");
+        setError(t("propertyRequired"));
         setLoading(false);
         return;
       }
@@ -146,9 +152,7 @@ export default function EditExpensePage({
       router.push(`/${locale}/expenses`);
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred."
-      );
+      setError(err instanceof Error ? err.message : t("unexpectedError"));
       setLoading(false);
     }
   };
@@ -181,173 +185,120 @@ export default function EditExpensePage({
       router.push(`/${locale}/expenses`);
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred."
-      );
+      setError(err instanceof Error ? err.message : t("unexpectedError"));
       setDeleting(false);
     }
   };
 
-  const inputClass =
-    "w-full h-10 bg-surface-elevated/50 border border-border/60 rounded-lg px-3 text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 focus:bg-surface-elevated transition-all duration-200";
-
-  const labelClass =
-    "block text-sm font-medium text-text-secondary mb-1.5 tracking-tight";
-
   return (
-    <div className="max-w-2xl animate-fade-in-up">
-      <div className="mb-8">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-accent transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {tc("back")}
-        </button>
-        <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">
-          {t("editExpense")}
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">{t("subtitle")}</p>
-      </div>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <PageHeader
+        title={t("editExpense")}
+        description={t("subtitle")}
+        breadcrumbs={[
+          { label: t("title"), href: `/${locale}/expenses` },
+          { label: t("editExpense") },
+        ]}
+      />
 
       {optionsLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-5 w-5 text-accent animate-spin" />
+        <div className="flex items-center justify-center py-20" aria-busy="true">
+          <Spinner sizeClassName="h-5 w-5" label={tc("loading")} />
         </div>
       ) : !expense ? (
-        <div className="flex items-center justify-center py-20">
-          <p className="text-sm text-text-secondary">{error || "Expense not found."}</p>
-        </div>
+        <Alert variant="destructive">{error || "Expense not found."}</Alert>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="bg-surface border border-border/40 rounded-xl p-6 space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  {t("property")} <span className="text-destructive">*</span>
-                </label>
-                <select
-                  name="property_id"
-                  required
-                  className={inputClass}
-                  value={selectedProperty}
-                  onChange={(e) => setSelectedProperty(e.target.value)}
-                >
-                  <option value="">Select property...</option>
-                  {properties.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                name="property_id"
+                required
+                label={`${t("property")} *`}
+                value={selectedProperty}
+                onChange={(e) => setSelectedProperty(e.target.value)}
+              >
+                <option value="">{t("selectProperty")}</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
 
-              <div>
-                <label className={labelClass}>
-                  {t("unit")} ({tc("optional")})
-                </label>
-                <select
-                  name="unit_id"
-                  className={inputClass}
-                  defaultValue={expense.unit_id || ""}
-                >
-                  <option value="">Select unit...</option>
-                  {filteredUnits.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.unit_number}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                name="unit_id"
+                label={`${t("unit")} (${tc("optional")})`}
+                defaultValue={expense.unit_id || ""}
+              >
+                <option value="">{t("selectUnit")}</option>
+                {filteredUnits.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.unit_number}
+                  </option>
+                ))}
+              </Select>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  {t("category")} <span className="text-destructive">*</span>
-                </label>
-                <select
-                  name="category"
-                  required
-                  className={inputClass}
-                  defaultValue={expense.category}
-                >
-                  <option value="maintenance">{t("categories.maintenance")}</option>
-                  <option value="insurance">{t("categories.insurance")}</option>
-                  <option value="utilities">{t("categories.utilities")}</option>
-                  <option value="cleaning">{t("categories.cleaning")}</option>
-                  <option value="legal">{t("categories.legal")}</option>
-                  <option value="taxes">{t("categories.taxes")}</option>
-                  <option value="management_fees">{t("categories.management_fees")}</option>
-                  <option value="other">{t("categories.other")}</option>
-                </select>
-              </div>
+              <Select
+                name="category"
+                required
+                label={`${t("category")} *`}
+                defaultValue={expense.category}
+              >
+                <option value="maintenance">{t("categories.maintenance")}</option>
+                <option value="insurance">{t("categories.insurance")}</option>
+                <option value="utilities">{t("categories.utilities")}</option>
+                <option value="cleaning">{t("categories.cleaning")}</option>
+                <option value="legal">{t("categories.legal")}</option>
+                <option value="taxes">{t("categories.taxes")}</option>
+                <option value="management_fees">{t("categories.management_fees")}</option>
+                <option value="other">{t("categories.other")}</option>
+              </Select>
 
-              <div>
-                <label className={labelClass}>
-                  {t("date")} <span className="text-destructive">*</span>
-                </label>
-                <input
-                  name="expense_date"
-                  type="date"
-                  required
-                  defaultValue={expense.expense_date}
-                  className={`${inputClass} font-mono`}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className={labelClass}>
-                {t("description")}
-              </label>
-              <textarea
-                name="description"
-                rows={3}
-                className="w-full bg-surface-elevated/50 border border-border/60 rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 focus:bg-surface-elevated transition-all duration-200 resize-none"
-                placeholder={t("description") + "..."}
-                defaultValue={expense.description || ""}
+              <Input
+                name="expense_date"
+                type="date"
+                required
+                defaultValue={expense.expense_date}
+                label={`${t("date")} *`}
+                className="font-mono ltr-nums"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  {t("amount")} (OMR) <span className="text-destructive">*</span>
-                </label>
-                <input
-                  name="amount"
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  className={`${inputClass} font-mono`}
-                  placeholder="0.00"
-                  defaultValue={expense.amount}
-                />
-              </div>
+            <Textarea
+              name="description"
+              rows={3}
+              label={t("description")}
+              placeholder={`${t("description")}…`}
+              defaultValue={expense.description || ""}
+            />
 
-              <div>
-                <label className={labelClass}>
-                  {t("vendor")}
-                </label>
-                <input
-                  name="vendor"
-                  className={inputClass}
-                  placeholder={t("vendor") + "..."}
-                  defaultValue={expense.vendor || ""}
-                />
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                name="amount"
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                label={`${t("amount")} (OMR) *`}
+                placeholder="0.00"
+                defaultValue={expense.amount}
+                className="font-mono ltr-nums tabular-nums"
+              />
+              <Input
+                name="vendor"
+                label={t("vendor")}
+                placeholder={`${t("vendor")}…`}
+                defaultValue={expense.vendor || ""}
+              />
             </div>
           </div>
 
-          {error && (
-            <div className="flex items-center gap-2 p-3.5 rounded-lg bg-destructive/10 border border-destructive/20">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
+          {error && <Alert variant="destructive">{error}</Alert>}
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <Button type="submit" loading={loading}>
                 {tc("submit")}
@@ -365,9 +316,9 @@ export default function EditExpensePage({
               variant="outline"
               onClick={handleDelete}
               loading={deleting}
-              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive/40"
             >
-              <Trash2 className="h-4 w-4 me-1.5" />
+              <Trash2 aria-hidden="true" className="h-4 w-4" />
               {t("deleteExpense")}
             </Button>
           </div>

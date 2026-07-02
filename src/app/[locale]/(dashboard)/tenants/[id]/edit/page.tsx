@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
-import { FileText } from "lucide-react";
+import { FileText, Users } from "lucide-react";
 import {
   ChequeFormRows,
   ChequeEntry,
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { PageHeader } from "@/components/ui/page-header";
 
 interface Tenant {
@@ -246,7 +248,7 @@ export default function EditTenantPage({
   if (!tenant) {
     return (
       <div className="flex items-center justify-center py-20" aria-busy="true">
-        <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <Spinner sizeClassName="h-5 w-5" label={tc("loading")} />
       </div>
     );
   }
@@ -264,7 +266,16 @@ export default function EditTenantPage({
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Tenant fields */}
-        <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
+        <div className="bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+              <Users aria-hidden="true" className="h-4 w-4 text-accent" />
+            </span>
+            <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight">
+              {t("personalInfo")}
+            </h2>
+          </div>
+
           <Input
             name="full_name"
             required
@@ -278,6 +289,7 @@ export default function EditTenantPage({
               required
               label={`${t("phone")} *`}
               defaultValue={tenant.phone}
+              className="font-mono ltr-nums"
             />
             <Input
               name="email"
@@ -297,7 +309,7 @@ export default function EditTenantPage({
               name="national_id"
               label={t("nationalId")}
               defaultValue={tenant.national_id || ""}
-              className="font-mono"
+              className="font-mono ltr-nums"
             />
           </div>
 
@@ -330,18 +342,22 @@ export default function EditTenantPage({
 
         {/* Lease Section */}
         {leases.length > 0 && (
-          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
-            <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
-              {t("leaseInfo")}
-            </h2>
+          <div className="bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+                <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
+              </span>
+              <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight">
+                {t("leaseInfo")}
+              </h2>
+            </div>
             {leases.map((lease, idx) => (
               <div
                 key={lease.id}
-                className="border border-border/60 rounded-md p-4 space-y-4"
+                className="border border-border/60 rounded-xl p-4 space-y-4 bg-surface-elevated/20"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-text-secondary">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-text-secondary truncate">
                     {lease.property_name} — {t("unit")} {lease.unit_number}
                   </span>
                   <Badge variant={lease.is_active ? "success" : "secondary"}>
@@ -358,7 +374,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], start_date: e.target.value };
                       setLeases(updated);
                     }}
-                    className="font-mono"
+                    className="font-mono ltr-nums"
                   />
                   <Input
                     type="date"
@@ -369,7 +385,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], end_date: e.target.value };
                       setLeases(updated);
                     }}
-                    className="font-mono"
+                    className="font-mono ltr-nums"
                   />
                   <Input
                     type="number"
@@ -382,7 +398,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], monthly_rent: Number(e.target.value) };
                       setLeases(updated);
                     }}
-                    className="font-mono"
+                    className="font-mono ltr-nums tabular-nums"
                   />
                   <Input
                     type="number"
@@ -394,7 +410,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], security_deposit: e.target.value ? Number(e.target.value) : null };
                       setLeases(updated);
                     }}
-                    className="font-mono"
+                    className="font-mono ltr-nums tabular-nums"
                   />
                   <Input
                     type="number"
@@ -407,7 +423,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], payment_due_day: Number(e.target.value) };
                       setLeases(updated);
                     }}
-                    className="font-mono"
+                    className="font-mono ltr-nums"
                   />
                 </div>
               </div>
@@ -417,17 +433,23 @@ export default function EditTenantPage({
 
         {/* Cheques Section */}
         {chequesLoaded && (
-          <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
-            <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
-              {tch("title")}
-              {cheques.filter((c) => c.id).length > 0 && (
-                <Badge variant="secondary">
-                  {cheques.filter((c) => c.id).length}
-                </Badge>
-              )}
-            </h2>
-            <p className="text-xs text-text-secondary">{tch("subtitle")}</p>
+          <div className="bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+                <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight flex items-center gap-2">
+                  {tch("title")}
+                  {cheques.filter((c) => c.id).length > 0 && (
+                    <Badge variant="secondary">
+                      {cheques.filter((c) => c.id).length}
+                    </Badge>
+                  )}
+                </h2>
+                <p className="text-xs text-text-secondary mt-0.5">{tch("subtitle")}</p>
+              </div>
+            </div>
             <ChequeFormRows
               cheques={cheques}
               onChange={setCheques}
@@ -436,9 +458,7 @@ export default function EditTenantPage({
           </div>
         )}
 
-        {error && (
-          <p role="alert" className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <Alert variant="destructive">{error}</Alert>}
 
         <div className="flex items-center gap-3">
           <Button type="submit" loading={loading}>
