@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils/cn";
-import { Lock } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function UpdatePasswordPage({
   params,
@@ -14,6 +16,7 @@ export default function UpdatePasswordPage({
 }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -72,86 +75,93 @@ export default function UpdatePasswordPage({
   };
 
   return (
-    <div className="min-h-screen bg-background noise-overlay flex items-center justify-center p-6">
-      <div className="w-full max-w-sm animate-fade-in-up">
-        <div className="text-center mb-10">
+    <div className="relative min-h-screen bg-background noise-overlay flex items-center justify-center overflow-hidden p-6">
+      {/* Gold glows */}
+      <div
+        aria-hidden="true"
+        className="absolute -top-24 end-1/4 h-80 w-80 rounded-full bg-accent/6 blur-[120px]"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute -bottom-24 start-1/4 h-72 w-72 rounded-full bg-accent/4 blur-[100px]"
+      />
+
+      <div className="relative w-full max-w-sm animate-fade-in-up">
+        <div className="mb-8 text-center">
           <h1 className="text-3xl font-display font-bold gold-shimmer tracking-tight">
             MPIRE
           </h1>
         </div>
 
-        <div className="mb-8">
-          <h2 className="text-2xl font-display font-bold text-text-primary tracking-tight">
-            {t("updatePassword")}
-          </h2>
-          <p className="text-sm text-text-secondary mt-2">
-            {t("updatePasswordSubtitle")}
-          </p>
-        </div>
-
-        {success ? (
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-accent/10 border border-accent/20">
-            <Lock className="h-5 w-5 text-accent shrink-0" />
-            <p className="text-sm text-text-primary">
-              {t("passwordUpdated")}
+        <div className="rounded-2xl border border-border/40 bg-surface/80 p-8 shadow-2xl backdrop-blur-sm">
+          <div className="mb-8">
+            <h2 className="text-2xl font-display font-bold tracking-tight text-text-primary">
+              {t("updatePassword")}
+            </h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              {t("updatePasswordSubtitle")}
             </p>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-text-secondary">
-                {t("newPassword")}
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-lg px-4 text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 focus:bg-surface-elevated transition-all duration-200"
-                placeholder="••••••••"
-              />
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-text-secondary">
-                {t("confirmPassword")}
-              </label>
-              <input
-                type="password"
+          {success ? (
+            <Alert variant="success">{t("passwordUpdated")}</Alert>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="new-password"
+                  className="text-sm font-medium tracking-tight text-foreground"
+                >
+                  {t("newPassword")}
+                </label>
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="h-11 pe-11"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={t("newPassword")}
+                    aria-pressed={showPassword}
+                    className="absolute end-1 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <Input
+                label={t("confirmPassword")}
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={8}
-                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-lg px-4 text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 focus:bg-surface-elevated transition-all duration-200"
+                className="h-11"
                 placeholder="••••••••"
               />
-            </div>
 
-            {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                <p className="text-sm text-destructive">{error}</p>
-              </div>
-            )}
+              {error && <Alert variant="destructive">{error}</Alert>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={cn(
-                "group w-full h-11 bg-accent hover:bg-accent-hover text-accent-foreground font-semibold rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2",
-                "shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30",
-                "active:scale-[0.98]",
-                loading && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              {loading ? (
-                <div className="h-4 w-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
-              ) : (
-                t("updatePassword")
-              )}
-            </button>
-          </form>
-        )}
+              <Button type="submit" loading={loading} className="h-11 w-full">
+                {t("updatePassword")}
+              </Button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

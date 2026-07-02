@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils/cn";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function ForgotPasswordPage({
   params,
@@ -44,75 +46,63 @@ export default function ForgotPasswordPage({
   };
 
   return (
-    <div className="min-h-screen bg-background noise-overlay flex items-center justify-center p-6">
-      <div className="w-full max-w-sm animate-fade-in-up">
-        <div className="text-center mb-10">
+    <div className="relative min-h-screen bg-background noise-overlay flex items-center justify-center overflow-hidden p-6">
+      {/* Gold glows */}
+      <div
+        aria-hidden="true"
+        className="absolute -top-24 end-1/4 h-80 w-80 rounded-full bg-accent/6 blur-[120px]"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute -bottom-24 start-1/4 h-72 w-72 rounded-full bg-accent/4 blur-[100px]"
+      />
+
+      <div className="relative w-full max-w-sm animate-fade-in-up">
+        <div className="mb-8 text-center">
           <h1 className="text-3xl font-display font-bold gold-shimmer tracking-tight">
             MPIRE
           </h1>
         </div>
 
-        <div className="mb-8">
-          <h2 className="text-2xl font-display font-bold text-text-primary tracking-tight">
-            {t("resetPassword")}
-          </h2>
-          <p className="text-sm text-text-secondary mt-2">
-            {t("forgotPasswordSubtitle")}
-          </p>
-        </div>
-
-        {sent ? (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-accent/10 border border-accent/20">
-              <Mail className="h-5 w-5 text-accent shrink-0" />
-              <p className="text-sm text-text-primary">
-                {t("resetPasswordSent")}
-              </p>
-            </div>
-            <LinkButton params={params} t={t} />
+        <div className="rounded-2xl border border-border/40 bg-surface/80 p-8 shadow-2xl backdrop-blur-sm">
+          <div className="mb-8">
+            <h2 className="text-2xl font-display font-bold tracking-tight text-text-primary">
+              {t("resetPassword")}
+            </h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              {t("forgotPasswordSubtitle")}
+            </p>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-text-secondary">
-                {t("email")}
-              </label>
-              <input
+
+          {sent ? (
+            <div className="space-y-6">
+              <Alert variant="success">{t("resetPasswordSent")}</Alert>
+              <LinkButton params={params} t={t} />
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input
+                label={t("email")}
                 type="email"
+                dir="ltr"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full h-11 bg-surface-elevated/50 border border-border/60 rounded-lg px-4 text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 focus:bg-surface-elevated transition-all duration-200"
+                className="h-11"
                 placeholder="admin@mpire.om"
               />
-            </div>
 
-            {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                <p className="text-sm text-destructive">{error}</p>
-              </div>
-            )}
+              {error && <Alert variant="destructive">{error}</Alert>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={cn(
-                "group w-full h-11 bg-accent hover:bg-accent-hover text-accent-foreground font-semibold rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2",
-                "shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30",
-                "active:scale-[0.98]",
-                loading && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              {loading ? (
-                <div className="h-4 w-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
-              ) : (
-                t("sendResetLink")
-              )}
-            </button>
+              <Button type="submit" loading={loading} className="h-11 w-full">
+                {t("sendResetLink")}
+              </Button>
 
-            <LinkButton params={params} t={t} />
-          </form>
-        )}
+              <LinkButton params={params} t={t} />
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -125,15 +115,14 @@ function LinkButton({
   params: Promise<{ locale: string }>;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const [locale, setLocale] = useState("en");
-  params.then((p) => setLocale(p.locale));
+  const { locale } = use(params);
 
   return (
     <Link
       href={`/${locale}/auth/login`}
-      className="flex items-center justify-center gap-2 text-sm text-text-secondary hover:text-accent transition-colors"
+      className="flex items-center justify-center gap-2 rounded-md p-1 text-sm text-text-secondary transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
     >
-      <ArrowLeft className="h-4 w-4" />
+      <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
       {t("backToLogin")}
     </Link>
   );
