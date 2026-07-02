@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Camera, Video, X, ImagePlus } from "lucide-react";
 
 interface MediaUploadProps {
@@ -18,6 +19,8 @@ export function MediaUpload({
   onVideoChange,
   t,
 }: MediaUploadProps) {
+  const tc = useTranslations("common");
+  const tm = useTranslations("maintenance");
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
@@ -97,15 +100,15 @@ export function MediaUpload({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Photos */}
       <div>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-1">
           <Camera className="h-4 w-4 text-accent" aria-hidden="true" />
-          <label className="text-sm font-medium text-text-primary">
+          <span className="text-sm font-medium text-text-primary tracking-tight">
             {t("addPhotos")}
-          </label>
-          <span className="text-xs text-text-secondary">
+          </span>
+          <span className="text-xs text-text-secondary font-mono ltr-nums">
             ({photos.length}/5)
           </span>
         </div>
@@ -115,18 +118,23 @@ export function MediaUpload({
         {photoPreviews.length > 0 && (
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
             {photoPreviews.map((src, i) => (
-              <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
+              <div
+                key={i}
+                className="relative group aspect-square rounded-lg overflow-hidden border border-border/60 bg-surface-elevated transition-all duration-200 hover:border-accent/40"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- local FileReader data-URL preview; next/image cannot optimize blob/data URLs */}
                 <img
                   src={src}
-                  alt={`Photo ${i + 1}`}
+                  alt={`${tm("photos")} ${i + 1}`}
                   className="w-full h-full object-cover"
                 />
                 <button
                   type="button"
                   onClick={() => removePhoto(i)}
-                  className="absolute top-1 end-1 h-5 w-5 bg-surface/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label={tc("delete")}
+                  className="absolute top-1 end-1 h-6 w-6 bg-background/70 backdrop-blur-sm border border-border/60 rounded-full flex items-center justify-center cursor-pointer opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-opacity"
                 >
-                  <X className="h-3 w-3 text-text-primary" />
+                  <X aria-hidden="true" className="h-3 w-3 text-text-primary" />
                 </button>
               </div>
             ))}
@@ -141,9 +149,11 @@ export function MediaUpload({
             onDragOver={(e) => e.preventDefault()}
             onClick={() => photoInputRef.current?.click()}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); photoInputRef.current?.click(); } }}
-            className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
+            className="border-2 border-dashed border-border/70 rounded-xl p-6 text-center cursor-pointer bg-surface-elevated/20 hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-all duration-200"
           >
-            <ImagePlus className="h-6 w-6 text-text-secondary/50 mx-auto mb-1.5" />
+            <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10" aria-hidden="true">
+              <ImagePlus className="h-4 w-4 text-accent" />
+            </div>
             <p className="text-xs text-text-secondary">{t("dragPhotos")}</p>
           </div>
         )}
@@ -161,16 +171,16 @@ export function MediaUpload({
 
       {/* Video */}
       <div>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-1">
           <Video className="h-4 w-4 text-accent" aria-hidden="true" />
-          <label className="text-sm font-medium text-text-primary">
+          <span className="text-sm font-medium text-text-primary tracking-tight">
             {t("addVideo")}
-          </label>
+          </span>
         </div>
         <p className="text-xs text-text-secondary mb-3">{t("videoHelp")}</p>
 
         {videoPreview ? (
-          <div className="relative rounded-lg overflow-hidden border border-border">
+          <div className="relative rounded-xl overflow-hidden border border-border/60">
             <video
               src={videoPreview}
               controls
@@ -179,13 +189,16 @@ export function MediaUpload({
             <button
               type="button"
               onClick={removeVideo}
-              className="absolute top-2 end-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
+              aria-label={tc("delete")}
+              className="absolute top-2 end-2 h-7 w-7 bg-background/70 backdrop-blur-sm border border-border/60 rounded-full flex items-center justify-center cursor-pointer hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
             >
-              <X className="h-3 w-3 text-text-secondary" />
+              <X aria-hidden="true" className="h-3.5 w-3.5 text-text-primary" />
             </button>
-            <div className="px-3 py-2 bg-surface-elevated text-xs text-text-secondary flex items-center justify-between">
-              <span>{video?.name}</span>
-              <span>{video ? `${(video.size / 1024 / 1024).toFixed(1)} MB` : ""}</span>
+            <div className="px-3 py-2 bg-surface-elevated text-xs text-text-secondary flex items-center justify-between gap-3">
+              <span className="min-w-0 truncate">{video?.name}</span>
+              <span className="shrink-0 font-mono ltr-nums">
+                {video ? `${(video.size / 1024 / 1024).toFixed(1)} MB` : ""}
+              </span>
             </div>
           </div>
         ) : (
@@ -196,9 +209,11 @@ export function MediaUpload({
             onDragOver={(e) => e.preventDefault()}
             onClick={() => videoInputRef.current?.click()}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); videoInputRef.current?.click(); } }}
-            className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
+            className="border-2 border-dashed border-border/70 rounded-xl p-6 text-center cursor-pointer bg-surface-elevated/20 hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-all duration-200"
           >
-            <Video className="h-6 w-6 text-text-secondary/50 mx-auto mb-1.5" />
+            <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10" aria-hidden="true">
+              <Video className="h-4 w-4 text-accent" />
+            </div>
             <p className="text-xs text-text-secondary">{t("dragVideo")}</p>
           </div>
         )}
