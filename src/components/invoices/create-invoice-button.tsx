@@ -1,12 +1,24 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert } from "@/components/ui/alert";
 
 // An occupied unit: the "pickable" row in the property → unit selector.
 // Every row has exactly one active lease (filtered at query time), so the
@@ -25,6 +37,8 @@ interface UnitWithLease {
 
 export function CreateInvoiceButton() {
   const t = useTranslations("invoices");
+  const tc = useTranslations("common");
+  const te = useTranslations("expenses");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -241,205 +255,184 @@ export function CreateInvoiceButton() {
 
   return (
     <>
-      <button
+      <Button
         onClick={() => {
           if (units.length === 0) setLoadingUnits(true);
           setOpen(true);
         }}
-        className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-lg transition-colors"
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="h-4 w-4" aria-hidden="true" />
         {t("createInvoice")}
-      </button>
+      </Button>
 
-      {open && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => { setOpen(false); resetForm(); }}
-          />
-          <div className="relative bg-surface border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between rounded-t-xl">
-              <h2 className="text-base font-semibold text-text-primary font-display">
-                {t("createInvoice")}
-              </h2>
-              <button
-                onClick={() => { setOpen(false); resetForm(); }}
-                className="p-1 rounded-md hover:bg-surface-elevated text-text-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) resetForm();
+        }}
+      >
+        <DialogContent maxWidth="max-w-lg" className="flex max-h-[90vh] flex-col">
+          <DialogHeader>
+            <DialogTitle>{t("createInvoice")}</DialogTitle>
+          </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <DialogBody className="overflow-y-auto">
+            <form
+              id="create-invoice-form"
+              onSubmit={handleSubmit}
+              className="space-y-4"
+            >
               {/* Property picker */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1.5">
-                  Property <span className="text-destructive">*</span>
-                </label>
-                <select
-                  value={selectedPropertyId}
-                  onChange={(e) => {
-                    setSelectedPropertyId(e.target.value);
-                    setSelectedUnitId("");
-                  }}
-                  disabled={loadingUnits}
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors disabled:opacity-50"
-                >
-                  <option value="">
-                    {loadingUnits ? "Loading..." : "Select a property"}
+              <Select
+                label={`${t("property")} *`}
+                value={selectedPropertyId}
+                onChange={(e) => {
+                  setSelectedPropertyId(e.target.value);
+                  setSelectedUnitId("");
+                }}
+                disabled={loadingUnits}
+                helperText={
+                  !loadingUnits && properties.length === 0
+                    ? "No occupied units found."
+                    : undefined
+                }
+              >
+                <option value="">
+                  {loadingUnits ? tc("loading") : te("selectProperty")}
+                </option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
                   </option>
-                  {properties.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                {!loadingUnits && properties.length === 0 && (
-                  <p className="text-xs text-text-secondary mt-1">
-                    No occupied units found.
-                  </p>
-                )}
-              </div>
+                ))}
+              </Select>
 
               {/* Unit picker — only shown after a property is chosen */}
               {selectedPropertyId && (
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1.5">
-                    Unit <span className="text-destructive">*</span>
-                  </label>
-                  <select
+                <div className="animate-fade-in-up">
+                  <Select
+                    label={`${t("unit")} *`}
                     value={selectedUnitId}
                     onChange={(e) => handleUnitChange(e.target.value)}
-                    className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
                   >
-                    <option value="">Select a unit</option>
+                    <option value="">{te("selectUnit")}</option>
                     {unitsForProperty.map((u) => (
                       <option key={u.unit_id} value={u.unit_id}>
                         {u.unit_number} — {u.tenant_name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
 
               {selectedUnit && (
                 <>
                   {/* Resolved tenant summary */}
-                  <div className="bg-surface-elevated border border-border rounded-md px-4 py-3">
-                    <p className="text-xs text-text-secondary">Tenant</p>
-                    <p className="text-sm font-medium text-text-primary mt-0.5">
+                  <div className="rounded-xl border border-border/40 bg-surface-elevated/50 px-4 py-3 animate-fade-in-up">
+                    <p className="text-xs font-medium uppercase tracking-wider text-text-secondary">
+                      {t("tenant")}
+                    </p>
+                    <p className="mt-0.5 text-sm font-semibold text-text-primary">
                       {selectedUnit.tenant_name}
                     </p>
-                    <p className="text-xs text-text-secondary mt-1">
+                    <p className="mt-1 text-xs text-text-secondary">
                       {selectedUnit.property_name} / {selectedUnit.unit_number}
                       {" — "}
-                      {selectedUnit.monthly_rent} {CURRENCY.code}/mo
+                      <span className="font-mono ltr-nums">
+                        {selectedUnit.monthly_rent} {CURRENCY.code}/mo
+                      </span>
                     </p>
                   </div>
 
                   {/* Amount */}
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1.5">
-                      {t("amount")} ({CURRENCY.code}) <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                    />
-                  </div>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    required
+                    label={`${t("amount")} (${CURRENCY.code}) *`}
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="font-mono ltr-nums"
+                  />
 
                   {/* Due Date */}
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1.5">
-                      {t("dueDate")} <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={dueDate}
-                      onChange={(e) => applyDueDate(e.target.value)}
-                      className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                    />
-                  </div>
+                  <Input
+                    type="date"
+                    required
+                    label={`${t("dueDate")} *`}
+                    value={dueDate}
+                    onChange={(e) => applyDueDate(e.target.value)}
+                    className="font-mono ltr-nums"
+                  />
 
                   {/* Billing Period */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm text-text-secondary mb-1.5">
-                        {t("periodStart")}
-                      </label>
-                      <input
-                        type="date"
-                        value={periodStart}
-                        onChange={(e) => setPeriodStart(e.target.value)}
-                        className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-text-secondary mb-1.5">
-                        {t("periodEnd")}
-                      </label>
-                      <input
-                        type="date"
-                        value={periodEnd}
-                        onChange={(e) => setPeriodEnd(e.target.value)}
-                        className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-                      />
-                    </div>
+                    <Input
+                      type="date"
+                      label={t("periodStart")}
+                      value={periodStart}
+                      onChange={(e) => setPeriodStart(e.target.value)}
+                      className="font-mono ltr-nums"
+                    />
+                    <Input
+                      type="date"
+                      label={t("periodEnd")}
+                      value={periodEnd}
+                      onChange={(e) => setPeriodEnd(e.target.value)}
+                      className="font-mono ltr-nums"
+                    />
                   </div>
 
                   {/* Notes */}
-                  <div>
-                    <label className="block text-sm text-text-secondary mb-1.5">
-                      {t("notes")}
-                    </label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={2}
-                      placeholder="Optional notes..."
-                      className="w-full bg-surface-elevated border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors resize-none"
-                    />
-                  </div>
+                  <Textarea
+                    label={t("notes")}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    placeholder={t("optionalNotes")}
+                    className="min-h-0 resize-none"
+                  />
                 </>
               )}
 
               {error && (
-                <p className="text-sm text-destructive">{error}</p>
+                <Alert variant="destructive" className="animate-fade-in-up">
+                  {error}
+                </Alert>
               )}
               {success && (
-                <p className="text-sm text-success">{success}</p>
-              )}
-
-              {selectedUnit && (
-                <div className="flex items-center gap-3 pt-2">
-                  <button
-                    type="submit"
-                    disabled={loading || !amount || !dueDate}
-                    className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    {t("createInvoice")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setOpen(false); resetForm(); }}
-                    className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                <Alert variant="success" className="animate-fade-in-up">
+                  {success}
+                </Alert>
               )}
             </form>
-          </div>
-        </div>,
-        document.body
-      )}
+          </DialogBody>
+
+          {selectedUnit && (
+            <DialogFooter className="pt-4 border-t border-border/40">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setOpen(false);
+                  resetForm();
+                }}
+              >
+                {tc("cancel")}
+              </Button>
+              <Button
+                type="submit"
+                form="create-invoice-form"
+                loading={loading}
+                disabled={!amount || !dueDate}
+              >
+                {t("createInvoice")}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
