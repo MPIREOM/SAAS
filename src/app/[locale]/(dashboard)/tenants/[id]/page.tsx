@@ -19,13 +19,10 @@ import {
   Pencil,
   Upload,
   ExternalLink,
-  AlertTriangle,
   CheckCircle2,
-  Clock,
   XCircle,
   Calendar,
   Banknote,
-  Hash,
   Shield,
   RefreshCw,
   ScrollText,
@@ -34,6 +31,48 @@ import {
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "warning"
+  | "destructive"
+  | "success";
+
+const CHEQUE_STATUS_VARIANTS: Record<string, BadgeVariant> = {
+  cleared: "success",
+  pending: "warning",
+  bounced: "destructive",
+};
+
+const DEPOSIT_STATUS_VARIANTS: Record<string, BadgeVariant> = {
+  refunded: "success",
+  pending: "warning",
+  deducted: "destructive",
+};
+
+const MAINTENANCE_STATUS_VARIANTS: Record<string, BadgeVariant> = {
+  open: "warning",
+  in_progress: "default",
+  resolved: "success",
+  closed: "secondary",
+};
+
+const URGENCY_VARIANTS: Record<string, BadgeVariant> = {
+  emergency: "destructive",
+  high: "warning",
+  medium: "default",
+  low: "secondary",
+};
 
 export default async function TenantDetailPage({
   params,
@@ -130,8 +169,16 @@ export default async function TenantDetailPage({
         ) || leases.find((l: Record<string, unknown>) => !l.is_active) || null
       : null;
 
+  const chequeStatusLabel = (status: string) =>
+    ["pending", "cleared", "bounced", "cancelled"].includes(status)
+      ? tch(`statuses.${status}`)
+      : status;
+
+  const formatMoney = (value: unknown) =>
+    Number(value || 0).toLocaleString("en-OM", { minimumFractionDigits: 2 });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title={tenant.full_name}
         breadcrumbs={[
@@ -141,7 +188,7 @@ export default async function TenantDetailPage({
       >
         <Link
           href={`/${locale}/tenants/${id}/edit`}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
           <Pencil aria-hidden="true" className="h-4 w-4" />
           {t("editTenant")}
@@ -154,15 +201,15 @@ export default async function TenantDetailPage({
         />
         <Link
           href={`/${locale}/tenants/${id}/statement`}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
           <ScrollText aria-hidden="true" className="h-4 w-4" />
-          Statement
+          {t("statement")}
         </Link>
         <Link
           href={`/api/tenants/${id}/unpaid-invoices/pdf`}
           target="_blank"
-          className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           title={ti("downloadUnpaidPDFDescription")}
         >
           <FileDown aria-hidden="true" className="h-4 w-4" />
@@ -172,14 +219,14 @@ export default async function TenantDetailPage({
           <>
             <Link
               href={`/${locale}/tenants/${id}/renew-lease`}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <RefreshCw aria-hidden="true" className="h-4 w-4" />
               {tl("renewLease")}
             </Link>
             <Link
               href={`/${locale}/tenants/${id}/move-out`}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:bg-border/30 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <LogOut aria-hidden="true" className="h-4 w-4" />
               {t("moveOut")}
@@ -188,196 +235,199 @@ export default async function TenantDetailPage({
         )}
       </PageHeader>
 
-      {/* Status + tenant ID strip */}
-      <div className="-mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary">
-        <Badge variant={tenant.status === "archived" ? "secondary" : "success"}>
-          {t(tenant.status || "active")}
-        </Badge>
-        <span className="text-xs">
-          {t("tenantId")}: <span className="font-mono">{tenant.id}</span>
-        </span>
-      </div>
+      {/* Identity card */}
+      <section className="bg-surface border border-border/60 rounded-xl overflow-hidden animate-fade-in-up">
+        <div className="p-5 bg-gradient-to-r from-accent/5 to-transparent border-b border-border/40">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
+              <User aria-hidden="true" className="h-6 w-6 text-accent" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-text-primary font-display truncate">
+                {tenant.full_name}
+              </h2>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <Badge
+                  variant={tenant.status === "archived" ? "secondary" : "success"}
+                >
+                  {t(tenant.status || "active")}
+                </Badge>
+                <span className="text-[11px] text-text-secondary">
+                  {t("tenantId")}:{" "}
+                  <span className="font-mono ltr-nums">{tenant.id}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <dl className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5">
+          <div className="min-w-0">
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Phone aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("phone")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums truncate">
+              {tenant.phone || "—"}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Mail aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("email")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary truncate">
+              {tenant.email || "—"}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Globe aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("nationality")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary truncate">
+              {tenant.nationality || "—"}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Shield aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("nationalId")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums truncate">
+              {tenant.national_id || "—"}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Phone aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("emergencyContact")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary truncate">
+              {tenant.emergency_contact || "—"}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Globe aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("languagePreference")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary truncate">
+              {tenant.language_preference === "ar"
+                ? t("languages.ar")
+                : t("languages.en")}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       {/* Move-out Summary (archived tenants only) */}
       {tenant.status === "archived" && moveOutLease && (
-        <div className="bg-surface border border-destructive/30 rounded-lg p-6">
-          <h2 className="text-lg font-medium text-text-primary mb-4 font-display flex items-center gap-2">
-            <LogOut className="h-5 w-5 text-destructive" />
-            {t("moveOutSummary")}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <section className="bg-surface border border-destructive/30 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="p-1.5 rounded-lg bg-destructive/10 border border-destructive/15">
+              <LogOut aria-hidden="true" className="h-4 w-4 text-destructive" />
+            </div>
+            <h2 className="text-base font-semibold text-text-primary font-display">
+              {t("moveOutSummary")}
+            </h2>
+          </div>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5">
             <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
+              <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                <Calendar aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
                 {t("vacateDate")}
-              </span>
-              <p className="text-sm text-text-primary mt-1 font-mono ltr-nums flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-text-secondary" />
+              </dt>
+              <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
                 {moveOutLease.vacate_date
                   ? new Date(
                       moveOutLease.vacate_date as string
                     ).toLocaleDateString()
                   : "—"}
-              </p>
+              </dd>
             </div>
             <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
+              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                 {t("vacateReason")}
-              </span>
-              <p className="text-sm text-text-primary mt-1">
+              </dt>
+              <dd className="mt-1 text-sm text-text-primary">
                 {moveOutLease.vacate_reason
                   ? t(`reasons.${moveOutLease.vacate_reason}`)
                   : "—"}
-              </p>
+              </dd>
             </div>
             <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
+              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                 {t("depositStatus")}
-              </span>
-              <p className="mt-1">
+              </dt>
+              <dd className="mt-1">
                 {moveOutLease.deposit_status ? (
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                      moveOutLease.deposit_status === "refunded"
-                        ? "bg-success/10 text-success"
-                        : moveOutLease.deposit_status === "pending"
-                          ? "bg-warning/10 text-warning"
-                          : moveOutLease.deposit_status === "deducted"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-text-secondary/10 text-text-secondary"
-                    }`}
+                  <Badge
+                    variant={
+                      DEPOSIT_STATUS_VARIANTS[
+                        moveOutLease.deposit_status as string
+                      ] ?? "secondary"
+                    }
                   >
                     {t(`depositStatuses.${moveOutLease.deposit_status}`)}
-                  </span>
+                  </Badge>
                 ) : (
                   <span className="text-sm text-text-primary">—</span>
                 )}
-              </p>
+              </dd>
             </div>
             <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
+              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                 {t("finalInspection")}
-              </span>
-              <p className="text-sm text-text-primary mt-1 flex items-center gap-1.5">
+              </dt>
+              <dd className="mt-1 text-sm text-text-primary flex items-center gap-1.5">
                 {moveOutLease.final_inspection ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-success" />
                     {tc("yes")}
                   </>
                 ) : (
                   <>
-                    <XCircle className="h-4 w-4 text-destructive" />
+                    <XCircle aria-hidden="true" className="h-4 w-4 text-destructive" />
                     {tc("no")}
                   </>
                 )}
-              </p>
+              </dd>
             </div>
             <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
+              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                 {t("keysReturned")}
-              </span>
-              <p className="text-sm text-text-primary mt-1 flex items-center gap-1.5">
+              </dt>
+              <dd className="mt-1 text-sm text-text-primary flex items-center gap-1.5">
                 {moveOutLease.keys_returned ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-success" />
                     {tc("yes")}
                   </>
                 ) : (
                   <>
-                    <XCircle className="h-4 w-4 text-destructive" />
+                    <XCircle aria-hidden="true" className="h-4 w-4 text-destructive" />
                     {tc("no")}
                   </>
                 )}
-              </p>
+              </dd>
             </div>
             {moveOutLease.vacate_notes && (
               <div className="sm:col-span-2 lg:col-span-3">
-                <span className="text-xs text-text-secondary uppercase tracking-wider">
+                <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                   {t("vacateNotes")}
-                </span>
-                <p className="text-sm text-text-primary mt-1">
+                </dt>
+                <dd className="mt-1 text-sm text-text-primary">
                   {moveOutLease.vacate_notes as string}
-                </p>
+                </dd>
               </div>
             )}
-          </div>
-        </div>
+          </dl>
+        </section>
       )}
 
-      {/* Profile Section */}
-      <div>
-        <h2 className="text-lg font-medium text-text-primary mb-3 font-display flex items-center gap-2">
-          <User className="h-5 w-5 text-text-secondary" />
-          {t("profile")}
-        </h2>
-        <div className="bg-surface border border-border rounded-lg p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
-                {t("fullName")}
-              </span>
-              <p className="text-sm text-text-primary mt-1">{tenant.full_name}</p>
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
-                {t("nationality")}
-              </span>
-              <p className="text-sm text-text-primary mt-1">
-                {tenant.nationality || "—"}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
-                {t("nationalId")}
-              </span>
-              <p className="text-sm text-text-primary mt-1 font-mono">
-                {tenant.national_id || "—"}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
-                {t("phone")}
-              </span>
-              <p className="text-sm text-text-primary mt-1 font-mono ltr-nums flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5 text-text-secondary" />
-                {tenant.phone}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
-                {t("email")}
-              </span>
-              <p className="text-sm text-text-primary mt-1 flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5 text-text-secondary" />
-                {tenant.email || "—"}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
-                {t("emergencyContact")}
-              </span>
-              <p className="text-sm text-text-primary mt-1">
-                {tenant.emergency_contact || "—"}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary uppercase tracking-wider">
-                {t("languagePreference")}
-              </span>
-              <p className="text-sm text-text-primary mt-1 flex items-center gap-1.5">
-                <Globe className="h-3.5 w-3.5 text-text-secondary" />
-                {tenant.language_preference === "ar" ? t("languages.ar") : t("languages.en")}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Lease Info Section */}
-      <div>
-        <h2 className="text-lg font-medium text-text-primary mb-3 font-display flex items-center gap-2">
-          <FileText className="h-5 w-5 text-text-secondary" />
-          {t("leaseInfo")}
-        </h2>
+      <section>
+        <SectionHeading icon={FileText} title={t("leaseInfo")} count={leases?.length} />
         {leases && leases.length > 0 ? (
           <div className="space-y-3">
             {leases.map((lease: Record<string, unknown>) => {
@@ -392,480 +442,648 @@ export default async function TenantDetailPage({
               return (
                 <div
                   key={lease.id as string}
-                  className="bg-surface border border-border rounded-lg p-6"
+                  className="bg-surface border border-border/60 rounded-xl p-5"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        lease.is_active
-                          ? "bg-success/10 text-success"
-                          : "bg-text-secondary/10 text-text-secondary"
-                      }`}
-                    >
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <Badge variant={lease.is_active ? "success" : "secondary"}>
                       {lease.is_active ? t("leaseActive") : t("leaseExpired")}
-                    </span>
+                    </Badge>
                     {Boolean(lease.is_active) && daysRemaining > 0 && (
                       <span className="text-xs text-text-secondary">
-                        {daysRemaining} {t("daysRemaining")}
+                        <span className="font-mono ltr-nums font-semibold text-text-primary">
+                          {daysRemaining}
+                        </span>{" "}
+                        {t("daysRemaining")}
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                    <div>
-                      <span className="text-xs text-text-secondary uppercase tracking-wider">
+                  <dl className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-x-4 gap-y-5">
+                    <div className="min-w-0">
+                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                         {t("property")}
-                      </span>
-                      <p className="text-sm text-text-primary mt-1">
+                      </dt>
+                      <dd className="mt-1 text-sm text-text-primary truncate">
                         {(property?.name as string) || "—"}
-                      </p>
+                      </dd>
                     </div>
-                    <div>
-                      <span className="text-xs text-text-secondary uppercase tracking-wider">
+                    <div className="min-w-0">
+                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                         {t("unit")}
-                      </span>
-                      <p className="text-sm text-text-primary mt-1 font-mono">
+                      </dt>
+                      <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums truncate">
                         {(unit?.unit_number as string) || "—"}
-                      </p>
+                      </dd>
                     </div>
                     <div>
-                      <span className="text-xs text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                         {t("startDate")}
-                      </span>
-                      <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
+                      </dt>
+                      <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
                         {startDate.toLocaleDateString()}
-                      </p>
+                      </dd>
                     </div>
                     <div>
-                      <span className="text-xs text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                         {t("endDate")}
-                      </span>
-                      <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
+                      </dt>
+                      <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
                         {endDate.toLocaleDateString()}
-                      </p>
+                      </dd>
                     </div>
                     <div>
-                      <span className="text-xs text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                         {t("monthlyRent")}
-                      </span>
-                      <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
-                        {lease.monthly_rent as number} {CURRENCY.code}
-                      </p>
+                      </dt>
+                      <dd className="mt-1 text-sm font-semibold text-text-primary font-mono ltr-nums">
+                        {formatMoney(lease.monthly_rent)}{" "}
+                        <span className="text-[10px] font-sans font-normal text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </dd>
                     </div>
                     <div>
-                      <span className="text-xs text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
                         {t("securityDeposit")}
-                      </span>
-                      <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
-                        {(lease.security_deposit as number) || 0} {CURRENCY.code}
-                      </p>
+                      </dt>
+                      <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+                        {formatMoney(lease.security_deposit)}{" "}
+                        <span className="text-[10px] font-sans text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </dd>
                     </div>
-                  </div>
+                  </dl>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-lg p-8 text-center">
-            <FileText className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">{t("noLeases")}</p>
-          </div>
+          <EmptyState
+            icon={<FileText className="h-5 w-5" />}
+            title={t("noLeases")}
+          />
         )}
-      </div>
+      </section>
 
       {/* Payments Section */}
-      <div>
-        <h2 className="text-lg font-medium text-text-primary mb-3 font-display flex items-center gap-2">
-          <CreditCard className="h-5 w-5 text-text-secondary" />
-          {t("payments")}
-        </h2>
+      <section>
+        <SectionHeading icon={CreditCard} title={t("payments")} count={payments?.length} />
         {payments && payments.length > 0 ? (
-          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
-            <table className="w-full min-w-[550px]">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("paymentDate")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("amount")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("paymentMethod")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("reference")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("notes")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {payments.map((payment: Record<string, unknown>) => (
-                  <tr
-                    key={payment.id as string}
-                    className="hover:bg-surface-elevated/50 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary font-mono ltr-nums">
+          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table className="min-w-[640px]">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-4">{t("paymentDate")}</TableHead>
+                    <TableHead className="px-4 text-end">{t("amount")}</TableHead>
+                    <TableHead className="px-4">{t("paymentMethod")}</TableHead>
+                    <TableHead className="px-4">{t("reference")}</TableHead>
+                    <TableHead className="px-4">{t("notes")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((payment: Record<string, unknown>) => (
+                    <TableRow key={payment.id as string}>
+                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
                         {new Date(payment.payment_date as string).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary font-mono ltr-nums">
-                        {payment.amount as number} {CURRENCY.code}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <EditPaymentMethod
-                        paymentId={payment.id as string}
-                        currentMethod={
-                          (payment.method as
-                            | "cash"
-                            | "bank_transfer"
-                            | "cheque"
-                            | null) ?? null
-                        }
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      {payment.method === "cheque" && payment.reference_number ? (
-                        <a
-                          href="#cheques-section"
-                          className="text-sm text-accent font-mono font-medium hover:underline"
-                        >
-                          {payment.reference_number as string}
-                        </a>
-                      ) : (
-                        <span className="text-sm text-text-secondary font-mono">
-                          {(payment.reference_number as string) || "—"}
+                      </TableCell>
+                      <TableCell className="px-4 text-end font-semibold text-text-primary font-mono ltr-nums">
+                        {formatMoney(payment.amount)}{" "}
+                        <span className="text-[10px] font-sans font-normal text-text-secondary">
+                          {CURRENCY.code}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary">
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <EditPaymentMethod
+                          paymentId={payment.id as string}
+                          currentMethod={
+                            (payment.method as
+                              | "cash"
+                              | "bank_transfer"
+                              | "cheque"
+                              | null) ?? null
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="px-4">
+                        {payment.method === "cheque" && payment.reference_number ? (
+                          <a
+                            href="#cheques-section"
+                            className="text-sm text-accent font-mono ltr-nums font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                          >
+                            {payment.reference_number as string}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-text-secondary font-mono ltr-nums">
+                            {(payment.reference_number as string) || "—"}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4 text-text-secondary">
                         {(payment.notes as string) || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Mobile card list */}
+            <ul className="md:hidden divide-y divide-border/40">
+              {payments.map((payment: Record<string, unknown>) => (
+                <li key={`m-${payment.id as string}`} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs text-text-secondary font-mono ltr-nums">
+                      {new Date(payment.payment_date as string).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm font-semibold text-text-primary font-mono ltr-nums text-end shrink-0">
+                      {formatMoney(payment.amount)}{" "}
+                      <span className="text-[10px] font-normal text-text-secondary">
+                        {CURRENCY.code}
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </p>
+                  </div>
+                  <div className="mt-2">
+                    <EditPaymentMethod
+                      paymentId={payment.id as string}
+                      currentMethod={
+                        (payment.method as
+                          | "cash"
+                          | "bank_transfer"
+                          | "cheque"
+                          | null) ?? null
+                      }
+                    />
+                  </div>
+                  {Boolean(payment.reference_number) && (
+                    <p className="mt-1.5 text-xs text-text-secondary truncate">
+                      {t("reference")} ·{" "}
+                      <span className="font-mono ltr-nums">
+                        {payment.reference_number as string}
+                      </span>
+                    </p>
+                  )}
+                  {Boolean(payment.notes) && (
+                    <p className="mt-1 text-xs text-text-secondary truncate">
+                      {payment.notes as string}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-lg p-8 text-center">
-            <CreditCard className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">{t("noPayments")}</p>
-          </div>
+          <EmptyState
+            icon={<CreditCard className="h-5 w-5" />}
+            title={t("noPayments")}
+          />
         )}
-      </div>
+      </section>
 
       {/* Cheques Section */}
-      <div id="cheques-section">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-text-secondary" />
-            {tch("title")}
-            {cheques && cheques.length > 0 && (
-              <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
-                {cheques.length}
-              </span>
-            )}
-          </h2>
-        </div>
+      <section id="cheques-section">
+        <SectionHeading icon={Banknote} title={tch("title")} count={cheques?.length} />
         {cheques && cheques.length > 0 ? (
-          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {tch("chequeNumber")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {tch("bankName")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {tch("chequeDate")}
-                  </th>
-                  <th className="text-end text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {tch("amount")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {tch("status")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {cheques.map((cheque: Record<string, unknown>) => (
-                  <tr
-                    key={cheque.id as string}
-                    className="hover:bg-surface-elevated/50 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary font-mono font-medium">
+          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table className="min-w-[600px]">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-4">{tch("chequeNumber")}</TableHead>
+                    <TableHead className="px-4">{tch("bankName")}</TableHead>
+                    <TableHead className="px-4">{tch("chequeDate")}</TableHead>
+                    <TableHead className="px-4 text-end">{tch("amount")}</TableHead>
+                    <TableHead className="px-4">{tch("status")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cheques.map((cheque: Record<string, unknown>) => (
+                    <TableRow
+                      key={cheque.id as string}
+                      className={
+                        (cheque.status as string) === "bounced"
+                          ? "bg-destructive/5"
+                          : ""
+                      }
+                    >
+                      <TableCell className="px-4 font-medium text-text-primary font-mono ltr-nums">
                         #{cheque.cheque_number as string}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary">
+                      </TableCell>
+                      <TableCell className="px-4 text-text-secondary">
                         {cheque.bank_name as string}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary font-mono ltr-nums">
+                      </TableCell>
+                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
                         {new Date(
                           cheque.cheque_date as string
                         ).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-end">
-                      <span className="text-sm font-bold text-text-primary font-mono ltr-nums">
-                        {Number(cheque.amount).toLocaleString("en-OM", {
-                          minimumFractionDigits: 2,
-                        })}
-                        <span className="text-[10px] font-normal text-text-secondary ms-1">
+                      </TableCell>
+                      <TableCell className="px-4 text-end font-semibold text-text-primary font-mono ltr-nums">
+                        {formatMoney(cheque.amount)}{" "}
+                        <span className="text-[10px] font-sans font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <Badge
+                          variant={
+                            CHEQUE_STATUS_VARIANTS[cheque.status as string] ??
+                            "secondary"
+                          }
+                        >
+                          {chequeStatusLabel(cheque.status as string)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Mobile card list */}
+            <ul className="md:hidden divide-y divide-border/40">
+              {cheques.map((cheque: Record<string, unknown>) => (
+                <li
+                  key={`m-${cheque.id as string}`}
+                  className={`p-4 ${
+                    (cheque.status as string) === "bounced"
+                      ? "bg-destructive/5"
+                      : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text-primary font-mono ltr-nums truncate">
+                        #{cheque.cheque_number as string}
+                      </p>
+                      <p className="text-xs text-text-secondary truncate mt-0.5">
+                        {cheque.bank_name as string}
+                        {" · "}
+                        <span className="font-mono ltr-nums">
+                          {new Date(
+                            cheque.cheque_date as string
+                          ).toLocaleDateString()}
+                        </span>
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-text-primary font-mono ltr-nums text-end shrink-0">
+                      {formatMoney(cheque.amount)}{" "}
+                      <span className="text-[10px] font-normal text-text-secondary">
+                        {CURRENCY.code}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
-                          cheque.status === "cleared"
-                            ? "bg-success/10 text-success"
-                            : cheque.status === "pending"
-                              ? "bg-warning/10 text-warning"
-                              : cheque.status === "bounced"
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-text-secondary/10 text-text-secondary"
-                        }`}
-                      >
-                        {cheque.status === "cleared" ? (
-                          <CheckCircle2 className="h-3 w-3" />
-                        ) : cheque.status === "pending" ? (
-                          <Clock className="h-3 w-3" />
-                        ) : cheque.status === "bounced" ? (
-                          <XCircle className="h-3 w-3" />
-                        ) : null}
-                        {cheque.status as string}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </p>
+                  </div>
+                  <div className="mt-2.5">
+                    <Badge
+                      variant={
+                        CHEQUE_STATUS_VARIANTS[cheque.status as string] ??
+                        "secondary"
+                      }
+                    >
+                      {chequeStatusLabel(cheque.status as string)}
+                    </Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-lg p-8 text-center">
-            <Banknote className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">{tch("noCheques")}</p>
-          </div>
+          <EmptyState
+            icon={<Banknote className="h-5 w-5" />}
+            title={tch("noCheques")}
+          />
         )}
-      </div>
+      </section>
 
       {/* Documents Section */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
-            <Folder className="h-5 w-5 text-text-secondary" />
-            {td("title")}
-            {documents && documents.length > 0 && (
-              <span className="text-xs font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md">
-                {documents.length}
-              </span>
-            )}
-          </h2>
+      <section>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <SectionHeading
+            icon={Folder}
+            title={td("title")}
+            count={documents?.length}
+            className="mb-0"
+          />
           <Link
             href={`/${locale}/documents/upload?entity_type=tenant&entity_id=${id}`}
-            className="inline-flex items-center gap-2 h-8 px-3 bg-accent hover:bg-accent-hover text-background text-xs font-medium rounded-md transition-colors"
+            className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent/10 text-accent text-xs font-semibold rounded-lg hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
-            <Upload className="h-3.5 w-3.5" />
+            <Upload aria-hidden="true" className="h-3.5 w-3.5" />
             {td("upload")}
           </Link>
         </div>
         {documents && documents.length > 0 ? (
-          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
-            <table className="w-full min-w-[550px]">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {td("fileName")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {td("documentType")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {td("expiryDate")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {td("uploadDate")}
-                  </th>
-                  <th className="w-10"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {documents.map((doc: Record<string, unknown>) => {
-                  const expiryDate = doc.expiry_date
-                    ? new Date(doc.expiry_date as string)
-                    : null;
-                  const isExpiringSoon =
-                    expiryDate &&
-                    expiryDate <= thirtyDaysFromNow &&
-                    expiryDate >= now;
-                  const isExpired = expiryDate && expiryDate < now;
+          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table className="min-w-[560px]">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-4">{td("fileName")}</TableHead>
+                    <TableHead className="px-4">{td("documentType")}</TableHead>
+                    <TableHead className="px-4">{td("expiryDate")}</TableHead>
+                    <TableHead className="px-4">{td("uploadDate")}</TableHead>
+                    <TableHead className="w-12 px-4 text-end">
+                      <span className="sr-only">{tc("actions")}</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {documents.map((doc: Record<string, unknown>) => {
+                    const expiryDate = doc.expiry_date
+                      ? new Date(doc.expiry_date as string)
+                      : null;
+                    const isExpiringSoon =
+                      expiryDate &&
+                      expiryDate <= thirtyDaysFromNow &&
+                      expiryDate >= now;
+                    const isExpired = expiryDate && expiryDate < now;
 
-                  return (
-                    <tr
-                      key={doc.id as string}
-                      className="hover:bg-surface-elevated/50 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-text-primary">
+                    return (
+                      <TableRow key={doc.id as string}>
+                        <TableCell className="px-4 font-medium text-text-primary">
                           {(doc.file_name as string) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent capitalize">
-                          {((doc.document_type as string) || "").replace(
-                            /_/g,
-                            " "
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`text-sm font-mono ltr-nums ${
-                              isExpired
-                                ? "text-destructive font-medium"
-                                : isExpiringSoon
-                                  ? "text-warning font-medium"
-                                  : "text-text-secondary"
-                            }`}
-                          >
-                            {expiryDate
-                              ? expiryDate.toLocaleDateString()
-                              : "—"}
-                          </span>
-                          {isExpired && (
-                            <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                          )}
-                          {isExpiringSoon && !isExpired && (
-                            <AlertTriangle className="h-3.5 w-3.5 text-warning" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary font-mono ltr-nums">
+                        </TableCell>
+                        <TableCell className="px-4">
+                          <Badge variant="default" className="capitalize">
+                            {((doc.document_type as string) || "").replace(
+                              /_/g,
+                              " "
+                            )}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-4">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`text-sm font-mono ltr-nums ${
+                                isExpired
+                                  ? "text-destructive font-medium"
+                                  : isExpiringSoon
+                                    ? "text-warning font-medium"
+                                    : "text-text-secondary"
+                              }`}
+                            >
+                              {expiryDate
+                                ? expiryDate.toLocaleDateString()
+                                : "—"}
+                            </span>
+                            {isExpired && (
+                              <Badge variant="destructive" className="text-[10px] px-1.5">
+                                {td("expired")}
+                              </Badge>
+                            )}
+                            {isExpiringSoon && !isExpired && (
+                              <Badge variant="warning" className="text-[10px] px-1.5">
+                                {td("expiringSoon")}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 text-text-secondary font-mono ltr-nums">
                           {new Date(
                             doc.uploaded_at as string
                           ).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="px-4 text-end">
+                          {Boolean(doc.file_url) && docUrlMap.get(doc.file_url as string) ? (
+                            <a
+                              href={docUrlMap.get(doc.file_url as string)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={td("preview")}
+                              className="p-1.5 rounded-lg text-accent hover:bg-accent/10 transition-colors inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                            >
+                              <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                            </a>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Mobile card list */}
+            <ul className="md:hidden divide-y divide-border/40">
+              {documents.map((doc: Record<string, unknown>) => {
+                const expiryDate = doc.expiry_date
+                  ? new Date(doc.expiry_date as string)
+                  : null;
+                const isExpiringSoon =
+                  expiryDate &&
+                  expiryDate <= thirtyDaysFromNow &&
+                  expiryDate >= now;
+                const isExpired = expiryDate && expiryDate < now;
+
+                return (
+                  <li key={`m-${doc.id as string}`} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">
+                          {(doc.file_name as string) || "—"}
+                        </p>
+                        <p className="text-xs text-text-secondary font-mono ltr-nums mt-0.5">
+                          {new Date(
+                            doc.uploaded_at as string
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {Boolean(doc.file_url) && docUrlMap.get(doc.file_url as string) ? (
+                        <a
+                          href={docUrlMap.get(doc.file_url as string)!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={td("preview")}
+                          className="p-2 -m-0.5 rounded-lg text-accent hover:bg-accent/10 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                        >
+                          <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                        </a>
+                      ) : null}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Badge variant="default" className="capitalize text-[10px] px-1.5">
+                        {((doc.document_type as string) || "").replace(/_/g, " ")}
+                      </Badge>
+                      {isExpired && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5">
+                          {td("expired")}
+                        </Badge>
+                      )}
+                      {isExpiringSoon && !isExpired && (
+                        <Badge variant="warning" className="text-[10px] px-1.5">
+                          {td("expiringSoon")}
+                        </Badge>
+                      )}
+                      {expiryDate && (
+                        <span className="text-xs text-text-secondary font-mono ltr-nums">
+                          {expiryDate.toLocaleDateString()}
                         </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {Boolean(doc.file_url) && docUrlMap.get(doc.file_url as string) ? (
-                          <a
-                            href={docUrlMap.get(doc.file_url as string)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg text-accent hover:bg-accent/10 transition-colors inline-flex"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-lg p-8 text-center">
-            <Folder className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">{t("noDocuments")}</p>
-          </div>
+          <EmptyState
+            icon={<Folder className="h-5 w-5" />}
+            title={t("noDocuments")}
+            description={td("noDocumentsDescription")}
+            action={
+              <Link
+                href={`/${locale}/documents/upload?entity_type=tenant&entity_id=${id}`}
+                className="inline-flex items-center gap-1.5 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                <Upload aria-hidden="true" className="h-3.5 w-3.5" />
+                {td("upload")}
+              </Link>
+            }
+          />
         )}
-      </div>
+      </section>
 
       {/* Maintenance Section */}
-      <div>
-        <h2 className="text-lg font-medium text-text-primary mb-3 font-display flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-text-secondary" />
-          {t("maintenance")}
-        </h2>
+      <section>
+        <SectionHeading icon={Wrench} title={t("maintenance")} count={maintenance?.length} />
         {maintenance && maintenance.length > 0 ? (
-          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
-            <table className="w-full min-w-[500px]">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("maintenanceDate")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("maintenanceTitle")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("maintenancePriority")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("status")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {maintenance.map((req: Record<string, unknown>) => (
-                  <tr
-                    key={req.id as string}
-                    className="hover:bg-surface-elevated/50 transition-colors"
+          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table className="min-w-[560px]">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-4">{t("maintenanceDate")}</TableHead>
+                    <TableHead className="px-4">{t("maintenanceTitle")}</TableHead>
+                    <TableHead className="px-4">{t("maintenancePriority")}</TableHead>
+                    <TableHead className="px-4">{t("status")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {maintenance.map((req: Record<string, unknown>) => (
+                    <TableRow key={req.id as string}>
+                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                        <Link
+                          href={`/${locale}/maintenance/${req.id}`}
+                          className="hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                        >
+                          {new Date(req.created_at as string).toLocaleDateString()}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <Link
+                          href={`/${locale}/maintenance/${req.id}`}
+                          className="text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                        >
+                          {(req.description as string)?.slice(0, 60) || "—"}
+                          {(req.description as string)?.length > 60 ? "…" : ""}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <Badge
+                          variant={
+                            URGENCY_VARIANTS[(req.urgency as string) || "low"] ??
+                            "secondary"
+                          }
+                          className="capitalize"
+                        >
+                          {req.urgency ? tm(`urgencies.${req.urgency}`) : "—"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <Badge
+                          variant={
+                            MAINTENANCE_STATUS_VARIANTS[
+                              (req.status as string) || "open"
+                            ] ?? "secondary"
+                          }
+                          className="capitalize"
+                        >
+                          {req.status ? tm(`statuses.${req.status}`) : ""}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Mobile card list */}
+            <ul className="md:hidden divide-y divide-border/40">
+              {maintenance.map((req: Record<string, unknown>) => (
+                <li key={`m-${req.id as string}`}>
+                  <Link
+                    href={`/${locale}/maintenance/${req.id}`}
+                    className="block p-4 hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   >
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary font-mono ltr-nums">
-                        {new Date(req.created_at as string).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary">
-                        {req.title as string}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary capitalize">
-                        {(req.priority as string) || "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold capitalize ${
-                          req.status === "resolved"
-                            ? "bg-success/10 text-success"
-                            : req.status === "in_progress"
-                              ? "bg-warning/10 text-warning"
-                              : "bg-accent/10 text-accent"
-                        }`}
+                    <p className="text-sm font-medium text-text-primary leading-snug">
+                      {(req.description as string)?.slice(0, 60) || "—"}
+                      {(req.description as string)?.length > 60 ? "…" : ""}
+                    </p>
+                    <p className="text-xs text-text-secondary font-mono ltr-nums mt-1">
+                      {new Date(req.created_at as string).toLocaleDateString()}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Badge
+                        variant={
+                          URGENCY_VARIANTS[(req.urgency as string) || "low"] ??
+                          "secondary"
+                        }
+                        className="capitalize text-[10px] px-1.5"
                       >
-                        {req.status === "resolved" ? (
-                          <CheckCircle2 className="h-3 w-3" />
-                        ) : req.status === "in_progress" ? (
-                          <Clock className="h-3 w-3" />
-                        ) : (
-                          <AlertTriangle className="h-3 w-3" />
-                        )}
+                        {req.urgency ? tm(`urgencies.${req.urgency}`) : "—"}
+                      </Badge>
+                      <Badge
+                        variant={
+                          MAINTENANCE_STATUS_VARIANTS[
+                            (req.status as string) || "open"
+                          ] ?? "secondary"
+                        }
+                        className="capitalize text-[10px] px-1.5"
+                      >
                         {req.status ? tm(`statuses.${req.status}`) : ""}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </Badge>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-lg p-8 text-center">
-            <Wrench className="h-8 w-8 text-text-secondary/40 mx-auto mb-2" />
-            <p className="text-sm text-text-secondary">{t("noMaintenance")}</p>
-          </div>
+          <EmptyState
+            icon={<Wrench className="h-5 w-5" />}
+            title={t("noMaintenance")}
+          />
         )}
+      </section>
+    </div>
+  );
+}
+
+/* ------------------------- Section heading helper ------------------------- */
+
+function SectionHeading({
+  icon: Icon,
+  title,
+  count,
+  className,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  title: string;
+  count?: number;
+  className?: string;
+}) {
+  return (
+    <div className={`flex items-center gap-2 ${className ?? "mb-4"}`}>
+      <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/15">
+        <Icon aria-hidden className="h-4 w-4 text-accent" />
       </div>
+      <h2 className="text-base font-semibold text-text-primary font-display tracking-tight">
+        {title}
+      </h2>
+      {count !== undefined && count > 0 && (
+        <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+          {count}
+        </span>
+      )}
     </div>
   );
 }
