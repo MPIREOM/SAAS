@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Pencil, Wallet, Building2, Banknote, Receipt, Activity, FileText } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
+import { cn } from "@/lib/utils/cn";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { EditOwnerDialog } from "@/components/owners/edit-owner-dialog";
 import { OwnerActivityPanel } from "@/components/owners/owner-activity-panel";
 import { OwnerPropertiesPanel } from "@/components/owners/owner-properties-panel";
@@ -33,9 +35,9 @@ export function OwnerDetailView(props: OwnerDetailProps) {
       ? `${owner.name} owes the company`
       : "Settled";
   const sideTone = balanceNumber > 0.005
-    ? "text-emerald-400"
+    ? "text-success"
     : balanceNumber < -0.005
-      ? "text-amber-400"
+      ? "text-destructive"
       : "text-text-secondary";
 
   return (
@@ -45,51 +47,65 @@ export function OwnerDetailView(props: OwnerDetailProps) {
           href={`/api/owners/${owner.id}/monthly-report/pdf`}
           target="_blank"
           rel="noopener"
-          className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated/80 border border-border/60 hover:border-accent/40 text-sm font-medium rounded-xl transition-colors"
+          className={cn(buttonVariants({ variant: "secondary" }))}
         >
-          <FileText className="h-4 w-4" />
+          <FileText aria-hidden="true" className="h-4 w-4" />
           Preview report
         </a>
-        <button
+        <Button
+          type="button"
+          variant="secondary"
           onClick={() => setEditOwnerOpen(true)}
-          className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated/80 border border-border/60 hover:border-accent/40 text-sm font-medium rounded-xl transition-colors"
         >
-          <Pencil className="h-4 w-4" />
+          <Pencil aria-hidden="true" className="h-4 w-4" />
           Edit owner
-        </button>
+        </Button>
       </PageHeader>
 
       {/* Headline balance card */}
-      <div className="rounded-2xl border border-border/60 bg-surface-elevated/40 p-6">
-        <div className="flex items-center gap-3 text-text-secondary text-xs uppercase tracking-wider font-medium mb-2">
-          <Wallet className="h-4 w-4" /> Current balance
+      <section
+        aria-label="Current balance"
+        className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/40 p-6"
+      >
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <Wallet aria-hidden="true" className="h-4 w-4 text-accent" />
+          Current balance
         </div>
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className={`text-4xl font-bold font-mono tabular-nums ${sideTone}`}>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <span
+            className={cn(
+              "font-mono text-4xl font-bold tabular-nums ltr-nums",
+              sideTone,
+            )}
+          >
             {balanceNumber > 0 ? "+" : ""}
             {balanceNumber.toLocaleString("en-OM", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </span>
-          <span className="text-base text-text-secondary font-medium">
+          <span className="text-base font-medium text-text-secondary">
             {CURRENCY.code}
           </span>
         </div>
-        <div className={`text-sm mt-2 ${sideTone}`}>{sideLabel}</div>
-        <div className="text-xs text-text-secondary mt-1">
-          As of {balance?.asOf ?? new Date().toISOString().split("T")[0]}
+        <div className={cn("mt-2 text-sm font-medium", sideTone)}>{sideLabel}</div>
+        <div className="mt-1 text-xs text-text-secondary">
+          As of{" "}
+          <span className="font-mono ltr-nums">
+            {balance?.asOf ?? new Date().toISOString().split("T")[0]}
+          </span>
         </div>
-      </div>
+      </section>
 
       {/* Breakdown card */}
       {balance && <BalanceBreakdownCard breakdown={balance.breakdown} />}
 
       {/* Owner profile grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ProfileTile
           label="WhatsApp"
           value={owner.whatsapp_phone ? `+${owner.whatsapp_phone}` : "—"}
+          mono
         />
         <ProfileTile label="Language" value={owner.language_preference.toUpperCase()} />
         <ProfileTile
@@ -98,29 +114,42 @@ export function OwnerDetailView(props: OwnerDetailProps) {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })} ${CURRENCY.code}`}
+          mono
         />
         <ProfileTile
           label="Opening date"
           value={formatDate(owner.opening_balance_date)}
+          mono
         />
       </div>
 
       {/* Tab nav */}
-      <div className="flex flex-wrap gap-2 border-b border-border/60 -mb-px overflow-x-auto">
+      <div
+        role="tablist"
+        aria-label="Owner ledger sections"
+        className="-mb-px flex flex-wrap gap-2 overflow-x-auto border-b border-border/60"
+      >
         {TABS.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.key;
           return (
             <button
               key={t.key}
+              type="button"
+              role="tab"
+              id={`owner-tab-${t.key}`}
+              aria-selected={isActive}
+              aria-controls={`owner-panel-${t.key}`}
               onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-inset",
                 isActive
                   ? "border-accent text-accent"
-                  : "border-transparent text-text-secondary hover:text-text-primary"
-              }`}
+                  : "border-transparent text-text-secondary hover:text-text-primary",
+              )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon aria-hidden="true" className="h-4 w-4" />
               {t.label}
             </button>
           );
@@ -128,7 +157,11 @@ export function OwnerDetailView(props: OwnerDetailProps) {
       </div>
 
       {/* Tab content */}
-      <div>
+      <div
+        role="tabpanel"
+        id={`owner-panel-${tab}`}
+        aria-labelledby={`owner-tab-${tab}`}
+      >
         {tab === "activity" && <OwnerActivityPanel {...props} />}
         {tab === "properties" && <OwnerPropertiesPanel {...props} />}
         {tab === "settlements" && <OwnerSettlementsPanel {...props} />}
@@ -170,55 +203,85 @@ function BalanceBreakdownCard({
     { label: "Settlements received from owner", value: breakdown.settlementsReceivedFromOwner, sign: "+" },
   ];
   return (
-    <div className="rounded-2xl border border-border/60 bg-surface-elevated/30 p-6">
-      <div className="text-xs uppercase tracking-wider text-text-secondary font-medium mb-4">
+    <section
+      aria-label="Balance breakdown"
+      className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/30 p-6"
+    >
+      <h2 className="mb-4 font-display text-xs font-semibold uppercase tracking-wider text-text-secondary">
         Breakdown
-      </div>
-      <div className="divide-y divide-border/40">
+      </h2>
+      <dl className="divide-y divide-border/30">
         {rows.map((r) => (
           <div
             key={r.label}
-            className={`flex items-center justify-between py-2.5 text-sm ${r.muted ? "opacity-60" : ""}`}
+            className={cn(
+              "flex items-center justify-between gap-4 py-2.5 text-sm",
+              r.muted && "opacity-60",
+            )}
           >
-            <span className="text-text-secondary">
-              {r.sign && <span className="font-mono mr-1">{r.sign}</span>}
+            <dt className="min-w-0 text-text-secondary">
               {r.label}
               {r.muted && (
                 <span className="ms-2 text-[10px] uppercase tracking-wider text-text-secondary">
                   Reference only
                 </span>
               )}
-            </span>
-            <span className="font-mono tabular-nums text-text-primary">
+            </dt>
+            <dd
+              className={cn(
+                "shrink-0 font-mono tabular-nums ltr-nums text-end",
+                r.sign === "+" && "text-success",
+                r.sign === "-" && "text-destructive",
+                r.sign === "" && "text-text-primary",
+              )}
+            >
+              {r.sign && <span className="me-1">{r.sign}</span>}
               {r.value.toLocaleString("en-OM", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
-            </span>
+            </dd>
           </div>
         ))}
-        <div className="flex items-center justify-between pt-4 mt-2 text-base font-semibold">
-          <span>= Current balance</span>
-          <span className="font-mono tabular-nums text-accent">
+        <div className="mt-2 flex items-center justify-between gap-4 pt-4 text-base font-semibold">
+          <dt className="font-display tracking-tight text-text-primary">
+            = Current balance
+          </dt>
+          <dd className="shrink-0 font-mono tabular-nums ltr-nums text-end text-accent">
             {breakdown.balance.toLocaleString("en-OM", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}{" "}
             {CURRENCY.code}
-          </span>
+          </dd>
         </div>
-      </div>
-    </div>
+      </dl>
+    </section>
   );
 }
 
-function ProfileTile({ label, value }: { label: string; value: string }) {
+function ProfileTile({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
-    <div className="rounded-xl border border-border/60 bg-surface-elevated/30 p-4">
-      <div className="text-[10px] uppercase tracking-wider text-text-secondary font-medium mb-1.5">
+    <div className="rounded-xl border border-border/60 bg-surface-elevated/30 p-4 transition-colors hover:border-border">
+      <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
         {label}
       </div>
-      <div className="text-sm font-medium text-text-primary truncate">{value}</div>
+      <div
+        className={cn(
+          "truncate text-sm font-medium text-text-primary",
+          mono && "font-mono ltr-nums",
+        )}
+      >
+        {value}
+      </div>
     </div>
   );
 }

@@ -14,6 +14,9 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { BusinessFeeRow } from "@/components/owners/types";
 
 export function BusinessFeeDialog({
@@ -134,72 +137,46 @@ function BusinessFeeDialogForm({
         </DialogDescription>
       </DialogHeader>
 
-        <DialogBody>
-          <form id="business-fee-form" onSubmit={handleSubmit} className="space-y-4">
-            <Field label="Month">
-              <input
-                type="month"
-                value={periodMonth.slice(0, 7)}
-                onChange={(e) => setPeriodMonth(e.target.value + "-01")}
-                required
-                className={INPUT_CLASS}
-              />
-            </Field>
-            <Field label="Amount (OMR)">
-              <input
-                type="number"
-                min={0}
-                step={0.001}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-                className={INPUT_CLASS}
-              />
-            </Field>
-            <Field label="Notes">
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                className={INPUT_CLASS + " resize-none"}
-                placeholder="Optional"
-              />
-            </Field>
-          </form>
-        </DialogBody>
+      <DialogBody>
+        <form id="business-fee-form" onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="month"
+            label="Month"
+            value={periodMonth.slice(0, 7)}
+            onChange={(e) => setPeriodMonth(e.target.value + "-01")}
+            required
+            className="font-mono ltr-nums"
+          />
+          <Input
+            type="number"
+            label="Amount (OMR)"
+            min={0}
+            step={0.001}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+            className="font-mono ltr-nums"
+          />
+          <Textarea
+            label="Notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Optional"
+            className="resize-none"
+          />
+        </form>
+      </DialogBody>
 
       <DialogFooter>
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-10 px-5 bg-surface-elevated border border-border/60 text-text-primary text-sm font-medium rounded-xl hover:bg-surface-hover transition-colors"
-        >
+        <Button type="button" variant="secondary" onClick={onClose}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          form="business-fee-form"
-          disabled={saving}
-          className="h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-colors disabled:opacity-40"
-        >
+        </Button>
+        <Button type="submit" form="business-fee-form" loading={saving}>
           {saving ? "Saving…" : editing ? "Save changes" : "Add"}
-        </button>
+        </Button>
       </DialogFooter>
     </>
-  );
-}
-
-const INPUT_CLASS =
-  "w-full h-10 bg-surface-elevated/50 border border-border/60 rounded-xl px-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-colors";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }
 

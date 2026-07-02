@@ -7,6 +7,15 @@ import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
 import { CURRENCY } from "@/lib/currency";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BusinessFeeDialog } from "@/components/owners/business-fee-dialog";
 import type { OwnerDetailProps, BusinessFeeRow } from "@/components/owners/types";
@@ -53,20 +62,17 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 animate-fade-in-up">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-secondary">
           Flat monthly fee charged to the owner&apos;s ledger. The cron creates
           one row per month automatically; edit or delete here when the
           arrangement changes.
         </p>
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors"
-        >
-          <Plus className="h-4 w-4" />
+        <Button type="button" size="sm" onClick={openCreate} className="sm:shrink-0">
+          <Plus aria-hidden="true" className="h-4 w-4" />
           New fee
-        </button>
+        </Button>
       </div>
 
       {businessFees.length === 0 ? (
@@ -74,55 +80,91 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
           icon={<FileText className="h-6 w-6" />}
           title="No fees yet"
           description="The daily cron auto-creates a row each month for owners with included_in_business_fee properties."
+          action={
+            <Button type="button" size="sm" onClick={openCreate}>
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              New fee
+            </Button>
+          }
         />
       ) : (
-        <div className="rounded-2xl border border-border/60 bg-surface-elevated/30 divide-y divide-border/40 overflow-hidden">
-          {businessFees.map((f) => (
-            <div key={f.id} className="flex items-start gap-3 px-4 py-3">
-              <div className="text-text-secondary mt-0.5">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-text-primary">
-                  {formatMonth(f.period_month)}
-                </div>
-                {f.notes && (
-                  <div className="text-xs text-text-secondary mt-0.5 truncate">
-                    {f.notes}
+        <>
+          {/* Desktop statement table */}
+          <div className="hidden overflow-hidden rounded-xl border border-border/50 md:block">
+            <Table className="min-w-[520px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-44">Month</TableHead>
+                  <TableHead>Notes</TableHead>
+                  <TableHead className="w-40 text-end">
+                    Amount ({CURRENCY.code})
+                  </TableHead>
+                  <TableHead className="w-20 text-end">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {businessFees.map((f) => (
+                  <TableRow key={f.id}>
+                    <TableCell>
+                      <span className="text-sm font-medium text-text-primary">
+                        {formatMonth(f.period_month)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs text-text-secondary">
+                        {f.notes || "—"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <FeeAmount fee={f} />
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <RowActions
+                        onEdit={() => openEdit(f)}
+                        onDelete={() => deleteOne(f)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile card list */}
+          <ul className="space-y-2 md:hidden">
+            {businessFees.map((f) => (
+              <li
+                key={`m-${f.id}`}
+                className="rounded-xl border border-border/50 bg-surface-elevated/40 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text-primary">
+                      {formatMonth(f.period_month)}
+                    </p>
+                    {f.notes && (
+                      <p className="mt-0.5 truncate text-xs text-text-secondary">
+                        {f.notes}
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="text-end shrink-0">
-                <div className="text-sm font-mono tabular-nums font-semibold text-amber-400">
-                  −
-                  {Number(f.amount).toLocaleString("en-OM", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{" "}
-                  <span className="text-[10px] text-text-secondary font-sans">
+                  <RowActions
+                    onEdit={() => openEdit(f)}
+                    onDelete={() => deleteOne(f)}
+                  />
+                </div>
+                <div className="mt-3 text-end">
+                  <FeeAmount fee={f} />
+                  <span className="ms-1 text-[10px] text-text-secondary">
                     {CURRENCY.code}
                   </span>
                 </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => openEdit(f)}
-                  className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
-                  aria-label="Edit"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => deleteOne(f)}
-                  className="p-2 rounded-lg text-text-secondary hover:text-rose-400 hover:bg-rose-500/10"
-                  aria-label="Delete"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <BusinessFeeDialog
@@ -131,6 +173,53 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
         ownerId={owner.id}
         editing={editing}
       />
+    </div>
+  );
+}
+
+function FeeAmount({ fee }: { fee: BusinessFeeRow }) {
+  return (
+    <span className="font-mono text-sm font-semibold tabular-nums ltr-nums text-destructive">
+      −
+      {Number(fee.amount).toLocaleString("en-OM", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}
+    </span>
+  );
+}
+
+function RowActions({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={onEdit}
+        aria-label="Edit"
+        title="Edit"
+        className="h-8 w-8 p-0 text-text-secondary hover:text-accent"
+      >
+        <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={onDelete}
+        aria-label="Delete"
+        title="Delete"
+        className="h-8 w-8 p-0 text-text-secondary hover:bg-destructive/10 hover:text-destructive"
+      >
+        <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
