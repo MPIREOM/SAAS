@@ -4,7 +4,19 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Home, Layers, Ruler, DollarSign, ArrowLeft, BedDouble } from "lucide-react";
+import { CURRENCY } from "@/lib/currency";
+import { PageHeader } from "@/components/ui/page-header";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
 
 const unitCategories = ["penthouse", "office", "shop", "warehouse"];
 const unitStatuses = ["vacant", "occupied", "maintenance"];
@@ -16,6 +28,7 @@ export default function EditUnitPage() {
   const propertyId = params.id as string;
   const unitId = params.unitId as string;
   const t = useTranslations("units");
+  const tp = useTranslations("properties");
   const tc = useTranslations("common");
 
   const [loading, setLoading] = useState(true);
@@ -102,162 +115,135 @@ export default function EditUnitPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <div className="mx-auto max-w-2xl">
+        <Spinner className="py-20" label={tc("loading")} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-display font-bold text-text-primary">{t("editUnit")}</h1>
-        </div>
-      </div>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <PageHeader
+        title={t("editUnit")}
+        breadcrumbs={[
+          { label: tp("title"), href: `/${locale}/properties` },
+          { label: tp("details"), href: `/${locale}/properties/${propertyId}` },
+          { label: t("editUnit") },
+        ]}
+      />
 
-      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-xl p-6 space-y-5">
-        {error && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
-
-        {/* Unit Number */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("unitNumber")} *</label>
-          <div className="relative">
-            <Home className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-            <input
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Unit details */}
+        <Card className="animate-fade-in-up">
+          <CardHeader className="pb-5">
+            <CardTitle className="text-base">{t("unitInfo")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <Input
               type="text"
+              required
               value={unitNumber}
               onChange={(e) => setUnitNumber(e.target.value)}
-              className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
+              label={`${t("unitNumber")} *`}
               placeholder={t("unitNumberPlaceholder")}
-              required
+              className="font-mono"
             />
-          </div>
-        </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={floor}
+                onChange={(e) => setFloor(e.target.value)}
+                label={t("floor")}
+                placeholder={t("floorPlaceholder")}
+                className="font-mono tabular-nums"
+              />
+              <Input
+                type="number"
+                step={0.01}
+                value={sizeSqm}
+                onChange={(e) => setSizeSqm(e.target.value)}
+                label={t("sizeSqm")}
+                placeholder={t("sizePlaceholder")}
+                className="font-mono tabular-nums"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                type="number"
+                step={0.01}
+                min={0.01}
+                required
+                value={rentAmount}
+                onChange={(e) => setRentAmount(e.target.value)}
+                label={`${t("rentAmount")} (${CURRENCY.code}) *`}
+                placeholder={t("rentPlaceholder")}
+                className="font-mono tabular-nums"
+              />
+              <Select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                label={t("status")}
+              >
+                {unitStatuses.map((s) => (
+                  <option key={s} value={s}>
+                    {t(s)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Floor */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("floor")}</label>
-          <div className="relative">
-            <Layers className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-            <input
+        {/* Bedrooms & category */}
+        <Card className="animate-fade-in-up">
+          <CardHeader className="pb-5">
+            <CardTitle className="text-base">{t("type")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <Input
               type="number"
-              value={floor}
-              onChange={(e) => setFloor(e.target.value)}
-              className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
-              placeholder={t("floorPlaceholder")}
-            />
-          </div>
-        </div>
-
-        {/* Bedrooms */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("bedrooms")}</label>
-          <div className="relative">
-            <BedDouble className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-            <input
-              type="number"
-              min="0"
-              step="1"
+              min={0}
+              step={1}
+              inputMode="numeric"
               value={bedrooms}
               onChange={(e) => setBedrooms(e.target.value)}
-              className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent font-mono tabular-nums"
+              label={t("bedrooms")}
               placeholder={t("bedroomsPlaceholder")}
+              helperText={t("bedroomsHint")}
+              className="font-mono tabular-nums"
             />
-          </div>
-          <p className="text-[10px] text-text-secondary mt-1">{t("bedroomsHint")}</p>
-        </div>
+            <Select
+              value={unitType}
+              onChange={(e) => setUnitType(e.target.value)}
+              label={t("unitCategory")}
+              helperText={t("unitCategoryHint")}
+            >
+              <option value="">{t("noneResidential")}</option>
+              {unitCategories.map((type) => (
+                <option key={type} value={type}>
+                  {t(`types.${type}`)}
+                </option>
+              ))}
+            </Select>
+          </CardContent>
+        </Card>
 
-        {/* Unit Category */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("unitCategory")}</label>
-          <select
-            value={unitType}
-            onChange={(e) => setUnitType(e.target.value)}
-            className="w-full px-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
-          >
-            <option value="">{t("noneResidential")}</option>
-            {unitCategories.map((type) => (
-              <option key={type} value={type}>{t(`types.${type}`)}</option>
-            ))}
-          </select>
-          <p className="text-[10px] text-text-secondary mt-1">{t("unitCategoryHint")}</p>
-        </div>
-
-        {/* Size */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("sizeSqm")}</label>
-          <div className="relative">
-            <Ruler className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-            <input
-              type="number"
-              step="0.01"
-              value={sizeSqm}
-              onChange={(e) => setSizeSqm(e.target.value)}
-              className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
-              placeholder={t("sizePlaceholder")}
-            />
-          </div>
-        </div>
-
-        {/* Rent Amount */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("rentAmount")} *</label>
-          <div className="relative">
-            <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={rentAmount}
-              onChange={(e) => setRentAmount(e.target.value)}
-              className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
-              placeholder={t("rentPlaceholder")}
-              required
-            />
-          </div>
-        </div>
-
-        {/* Status */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">{t("status")}</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="w-full px-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
-          >
-            {unitStatuses.map((s) => (
-              <option key={s} value={s}>{t(s)}</option>
-            ))}
-          </select>
-        </div>
+        {/* Form-level error */}
+        {error && <Alert variant="destructive">{error}</Alert>}
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="h-10 px-6 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-          >
-            {saving ? tc("loading") : tc("save")}
-          </button>
-          <button
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => router.back()}
-            className="h-10 px-6 bg-surface-elevated border border-border text-text-secondary text-sm font-medium rounded-lg hover:text-text-primary transition-colors"
           >
             {tc("cancel")}
-          </button>
+          </Button>
+          <Button type="submit" loading={saving}>
+            {saving ? tc("loading") : tc("save")}
+          </Button>
         </div>
       </form>
     </div>

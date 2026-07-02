@@ -4,10 +4,17 @@ import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Building2, Home, Loader2 } from "lucide-react";
+import { Building2, Home } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
 
 export default function NewPropertyPage({
@@ -73,7 +80,7 @@ export default function NewPropertyPage({
   ];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
         title={t("createProperty")}
         description={t("subtitle")}
@@ -84,93 +91,96 @@ export default function NewPropertyPage({
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Property Name + location + units */}
-        <div className="bg-surface border border-border rounded-xl p-6 space-y-5">
-          <Input
-            name="name"
-            required
-            label={t("name")}
-            placeholder={t("namePlaceholder")}
-            error={nameError}
-          />
-          <Input
-            name="location"
-            label={t("location")}
-            placeholder={t("locationPlaceholder")}
-          />
-          <Input
-            name="total_units"
-            type="number"
-            min={0}
-            label={t("totalUnits")}
-            placeholder="0"
-            className="font-mono tabular-nums"
-          />
-        </div>
+        {/* Property name + location + units */}
+        <Card className="animate-fade-in-up">
+          <CardHeader className="pb-5">
+            <CardTitle className="text-base">{t("details")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <Input
+              name="name"
+              required
+              label={`${t("name")} *`}
+              placeholder={t("namePlaceholder")}
+              error={nameError}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                name="location"
+                label={t("location")}
+                placeholder={t("locationPlaceholder")}
+              />
+              <Input
+                name="total_units"
+                type="number"
+                min={0}
+                inputMode="numeric"
+                label={t("totalUnits")}
+                placeholder="0"
+                className="font-mono tabular-nums"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Property Type Selector */}
-        <div className="bg-surface border border-border rounded-xl p-6">
-          <span className="block text-sm font-medium text-foreground tracking-tight mb-3">
-            {t("propertyType")}
-          </span>
-          <input type="hidden" name="property_type" value={selectedType} />
-          <div role="radiogroup" aria-label={t("propertyType")} className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {propertyTypes.map((pt) => {
-              const Icon = pt.icon;
-              const isActive = selectedType === pt.value;
-              return (
-                <button
-                  key={pt.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={isActive}
-                  onClick={() => setSelectedType(pt.value)}
-                  className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-xl border text-xs font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
-                    isActive
-                      ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
-                      : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
-                  )}
-                >
-                  <Icon
-                    aria-hidden="true"
+        {/* Property type selector */}
+        <Card className="animate-fade-in-up">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">{t("propertyType")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <input type="hidden" name="property_type" value={selectedType} />
+            <div
+              role="group"
+              aria-label={t("propertyType")}
+              className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+            >
+              {propertyTypes.map((pt) => {
+                const Icon = pt.icon;
+                const isActive = selectedType === pt.value;
+                return (
+                  <button
+                    key={pt.value}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setSelectedType(pt.value)}
                     className={cn(
-                      "h-5 w-5",
-                      isActive ? "text-accent" : "text-text-secondary"
+                      "flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-4 text-xs font-medium transition-all duration-200",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      isActive
+                        ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
+                        : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:bg-surface-elevated hover:text-text-primary"
                     )}
-                  />
-                  {t(`types.${pt.value}`)}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  >
+                    <Icon
+                      aria-hidden="true"
+                      className={cn(
+                        "h-5 w-5",
+                        isActive ? "text-accent" : "text-text-secondary"
+                      )}
+                    />
+                    {t(`types.${pt.value}`)}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Error */}
-        {error && (
-          <div role="alert" className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+        {/* Form-level error */}
+        {error && <Alert variant="destructive">{error}</Alert>}
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-2">
-          <Button type="submit" loading={loading}>
-            {loading ? (
-              <>
-                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-                {tc("loading")}
-              </>
-            ) : (
-              tc("save")
-            )}
-          </Button>
+        <div className="flex items-center justify-end gap-3 pt-2">
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
             onClick={() => router.back()}
           >
             {tc("cancel")}
+          </Button>
+          <Button type="submit" loading={loading}>
+            {loading ? tc("loading") : tc("save")}
           </Button>
         </div>
       </form>
