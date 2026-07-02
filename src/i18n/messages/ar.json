@@ -76,7 +76,9 @@
     "monthSep": "سبتمبر",
     "monthOct": "أكتوبر",
     "monthNov": "نوفمبر",
-    "monthDec": "ديسمبر"
+    "monthDec": "ديسمبر",
+    "add": "إضافة",
+    "stepOf": "الخطوة {current} من {total}"
   },
   "nav": {
     "dashboard": "لوحة القيادة",
@@ -230,7 +232,10 @@
     "paymentHistory": "سجل المدفوعات",
     "previousTenants": "المستأجرون السابقون",
     "vacateDate": "تاريخ الإخلاء",
-    "vacateReason": "السبب"
+    "vacateReason": "السبب",
+    "markVacant": "تحديد كشاغرة",
+    "markMaintenance": "تحديد كتحت الصيانة",
+    "statusUpdated": "تم تحديث حالة الوحدة إلى {status}"
   },
   "tenants": {
     "title": "المستأجرين",
@@ -445,7 +450,8 @@
     "importParseFailed": "تعذّرت قراءة الملف",
     "importProcessFailed": "تعذّرت معالجة الملف. تحقق من التنسيق وحاول مرة أخرى.",
     "importFailed": "فشل الاستيراد",
-    "importFailedRetry": "فشل الاستيراد. حاول مرة أخرى."
+    "importFailedRetry": "فشل الاستيراد. حاول مرة أخرى.",
+    "notFound": "المستأجر غير موجود"
   },
   "leases": {
     "title": "العقود",
@@ -673,7 +679,10 @@
     "markInProgress": "تعيين قيد التنفيذ",
     "markResolved": "تعيين تم الحل",
     "closeRequest": "إغلاق الطلب",
-    "actualCostInput": "التكلفة الفعلية"
+    "actualCostInput": "التكلفة الفعلية",
+    "requestNumber": "طلب رقم #{id}",
+    "attachments": "المرفقات",
+    "noAttachments": "لم تُرفق أي ملفات بهذا الطلب."
   },
   "documents": {
     "title": "المستندات",
@@ -788,7 +797,13 @@
     "rulesStartAfterDays": "بدء الإرسال بعد (أيام)",
     "rulesRepeatEvery": "ثم التكرار كل",
     "rulesDay": "يوم",
-    "rulesDays": "أيام"
+    "rulesDays": "أيام",
+    "subject": "الموضوع",
+    "deleteTemplateConfirm": "هل أنت متأكد من حذف هذا القالب؟ لا يمكن التراجع عن هذا الإجراء.",
+    "availableVariables": "المتغيرات المتاحة",
+    "emailOnly": "للبريد الإلكتروني فقط",
+    "whatsappOnly": "لواتساب فقط",
+    "outstandingInvoices": "الفواتير المستحقة"
   },
   "settings": {
     "title": "الإعدادات",
@@ -1038,7 +1053,9 @@
     "collectedLabel": "المحصّل",
     "expenses": "المصروفات",
     "net": "الصافي",
-    "exportReports": "تصدير التقارير"
+    "exportReports": "تصدير التقارير",
+    "printHint": "استخدم Ctrl+P / Cmd+P للطباعة",
+    "invoicedLabel": "المفوتر"
   },
   "expenses": {
     "title": "المصروفات",
@@ -1081,7 +1098,9 @@
     "receiptUploadCta": "رفع إيصال (PDF أو صورة)",
     "receiptUploadHint": "الحد الأقصى 10 ميجابايت",
     "receiptRemove": "إزالة",
-    "receiptLabel": "إيصال / فاتورة"
+    "receiptLabel": "إيصال / فاتورة",
+    "expenseNotFound": "لم يتم العثور على المصروف.",
+    "loadFailed": "فشل تحميل بيانات المصروف."
   },
   "maintenanceRequest": {
     "title": "تقديم طلب صيانة",
@@ -1171,5 +1190,27 @@
     },
     "whatsappMessage": "مرحباً! يمكنك استخدام هذا الرابط لعرض تفاصيل إيجارك والمستندات وسجل المدفوعات:",
     "openDocument": "فتح المستند"
+  },
+  "owners": {
+    "title": "دفتر المالك",
+    "currentBalance": "الرصيد الحالي",
+    "companyOwesOwner": "الشركة مدينة لـ {name}",
+    "ownerOwesCompany": "{name} مدين للشركة",
+    "settled": "مسدد",
+    "breakdown": "التفصيل",
+    "tabs": {
+      "activity": "النشاط",
+      "properties": "العقارات",
+      "settlements": "التسويات",
+      "fees": "رسوم الإدارة"
+    },
+    "newSettlement": "تسوية جديدة",
+    "paidToOwner": "مدفوع للمالك",
+    "receivedFromOwner": "مستلم من المالك",
+    "newFee": "رسم جديد",
+    "noActivity": "لا يوجد نشاط في هذه الفترة",
+    "editOwner": "تعديل المالك",
+    "previewReport": "معاينة التقرير",
+    "noOwnersConfigured": "لا يوجد ملاك مسجلون"
   }
 }
