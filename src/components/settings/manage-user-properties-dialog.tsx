@@ -13,6 +13,8 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 
 interface Property {
   id: string;
@@ -114,67 +116,63 @@ export function ManageUserPropertiesDialog({
 
         <DialogBody>
           {isSuperAdmin ? (
-            <div className="bg-accent/5 border border-accent/20 rounded-md p-3">
-              <p className="text-sm text-accent">
-                {t("superAdminAllAccess")}
-              </p>
-            </div>
+            <Alert variant="info">{t("superAdminAllAccess")}</Alert>
           ) : allProperties.length === 0 ? (
-            <div className="bg-surface-elevated border border-border rounded-md p-3">
-              <p className="text-sm text-text-secondary">
-                {t("noPropertiesAvailable")}
-              </p>
-            </div>
+            <Alert variant="warning">{t("noPropertiesAvailable")}</Alert>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={selectAll}
-                  className="text-xs text-accent hover:text-accent-hover transition-colors"
+                  className="cursor-pointer rounded text-xs font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   {t("selectAll")}
                 </button>
-                <span className="text-text-secondary text-xs">/</span>
+                <span aria-hidden="true" className="text-xs text-text-secondary/50">
+                  /
+                </span>
                 <button
                   type="button"
                   onClick={selectNone}
-                  className="text-xs text-text-secondary hover:text-text-primary transition-colors"
+                  className="cursor-pointer rounded text-xs font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   {t("selectNone")}
                 </button>
-                <span className="text-xs text-text-secondary ms-auto">
+                <span className="ltr-nums ms-auto font-mono text-xs text-text-secondary">
                   {selected.size} / {allProperties.length}
                 </span>
               </div>
 
-              <div className="max-h-64 overflow-y-auto rounded-md border border-border divide-y divide-border">
+              <div className="max-h-64 divide-y divide-border/40 overflow-y-auto rounded-lg border border-border/60">
                 {allProperties.map((property) => {
                   const isSelected = selected.has(property.id);
                   return (
                     <button
                       key={property.id}
                       type="button"
+                      role="checkbox"
+                      aria-checked={isSelected}
                       onClick={() => toggle(property.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 text-start transition-colors ${
-                        isSelected
-                          ? "bg-accent/5"
-                          : "hover:bg-surface-elevated/50"
+                      className={`flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40 ${
+                        isSelected ? "bg-accent/5" : "hover:bg-surface-elevated/50"
                       }`}
                     >
-                      <div
-                        className={`flex-shrink-0 h-4 w-4 rounded border flex items-center justify-center transition-colors ${
-                          isSelected
-                            ? "bg-accent border-accent"
-                            : "border-border"
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
+                          isSelected ? "border-accent bg-accent" : "border-border"
                         }`}
                       >
                         {isSelected && (
                           <Check className="h-3 w-3 text-background" />
                         )}
-                      </div>
-                      <Building2 className="h-4 w-4 text-text-secondary flex-shrink-0" />
-                      <span className="text-sm text-text-primary truncate">
+                      </span>
+                      <Building2
+                        aria-hidden="true"
+                        className="h-4 w-4 flex-shrink-0 text-text-secondary"
+                      />
+                      <span className="truncate text-sm text-text-primary">
                         {property.name}
                       </span>
                     </button>
@@ -185,27 +183,25 @@ export function ManageUserPropertiesDialog({
           )}
 
           {error && (
-            <p className="text-xs text-destructive mt-3">{error}</p>
+            <Alert variant="destructive" className="mt-3">
+              {error}
+            </Alert>
           )}
         </DialogBody>
 
         <DialogFooter>
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={() => onOpenChange(false)}
-            className="h-8 px-3 bg-surface border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
           >
             {tc("cancel")}
-          </button>
+          </Button>
           {!isSuperAdmin && (
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={loading}
-              className="h-8 px-3 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-            >
-              {loading ? tc("loading") : tc("save")}
-            </button>
+            <Button type="button" size="sm" onClick={handleSave} loading={loading}>
+              {tc("save")}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

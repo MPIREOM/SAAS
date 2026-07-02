@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Check, Loader2, Plus, Smartphone, Trash2, X } from "lucide-react";
 
 interface WhatsAppAgentSetupProps {
@@ -152,23 +154,24 @@ export function WhatsAppAgentSetup({
   return (
     <div className="space-y-4">
       {currentPhone ? (
-        <div className="flex items-center gap-3 p-3 bg-success/5 border border-success/20 rounded-lg">
-          <div className="p-1.5 bg-success/10 rounded-md">
+        <div className="flex items-center gap-3 rounded-lg border border-success/25 bg-success/10 p-3">
+          <div className="rounded-md bg-success/10 p-1.5">
             <Check aria-hidden="true" className="h-4 w-4 text-success" />
           </div>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-text-primary">
               {t("whatsappAgentActive")}
             </p>
-            <p className="text-xs text-text-secondary font-mono">
+            <p className="ltr-nums truncate font-mono text-xs text-text-secondary">
               +{currentPhone}
             </p>
           </div>
           <button
+            type="button"
             onClick={handleRemove}
             disabled={removing}
             aria-label={t("whatsappCcRemoveLabel")}
-            className="text-xs text-text-secondary hover:text-destructive transition-colors p-1.5 rounded-md hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+            className="cursor-pointer rounded-md p-1.5 text-xs text-text-secondary transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:opacity-40"
           >
             {removing ? (
               <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
@@ -181,46 +184,38 @@ export function WhatsAppAgentSetup({
 
       <form onSubmit={handleSave} className="space-y-3">
         <div>
-          <label htmlFor="whatsapp-phone" className="block text-sm font-medium text-text-primary mb-1.5">
-            {t("whatsappYourNumber")}
-          </label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Smartphone aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
-              <input
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <Input
                 id="whatsapp-phone"
                 type="tel"
+                label={t("whatsappYourNumber")}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="968XXXXXXXX"
-                className="w-full h-10 ps-9 pe-3 bg-surface-elevated/50 border border-border/60 rounded-lg text-sm text-text-primary font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+                helperText={t("whatsappNumberHint")}
+                className="ltr-nums font-mono"
               />
             </div>
-            <button
+            <Button
               type="submit"
               disabled={loading || !phone}
-              className="h-10 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-40 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              loading={loading}
+              className="mt-[26px] shrink-0"
             >
-              {loading ? (
-                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-              ) : (
-                currentPhone ? t("whatsappUpdate") : t("whatsappRegister")
-              )}
-            </button>
+              {currentPhone ? t("whatsappUpdate") : t("whatsappRegister")}
+            </Button>
           </div>
-          <p className="text-xs text-text-secondary mt-1.5">
-            {t("whatsappNumberHint")}
-          </p>
         </div>
       </form>
 
       {/* Additional notification numbers (e.g. owner) */}
-      <div className="pt-4 border-t border-border/40 space-y-3">
+      <div className="space-y-3 border-t border-border/40 pt-4">
         <div>
-          <label className="block text-sm font-medium text-text-primary">
+          <p className="text-sm font-medium tracking-tight text-text-primary">
             {t("whatsappCcLabel")}
-          </label>
-          <p className="text-xs text-text-secondary mt-0.5">
+          </p>
+          <p className="mt-0.5 text-xs text-text-secondary">
             {t("whatsappCcDescription")}
           </p>
         </div>
@@ -230,17 +225,20 @@ export function WhatsAppAgentSetup({
             {extraPhones.map((p, i) => (
               <li
                 key={`${p}-${i}`}
-                className="flex items-center gap-3 p-2.5 bg-surface-elevated/50 border border-border/40 rounded-lg"
+                className="flex items-center gap-3 rounded-lg border border-border/40 bg-surface-elevated/50 p-2.5 transition-colors hover:border-border"
               >
-                <Smartphone aria-hidden="true" className="h-4 w-4 text-text-secondary/60 ms-1" />
-                <span className="flex-1 text-sm text-text-primary font-mono">
+                <Smartphone
+                  aria-hidden="true"
+                  className="ms-1 h-4 w-4 text-text-secondary/60"
+                />
+                <span className="ltr-nums flex-1 truncate font-mono text-sm text-text-primary">
                   +{p}
                 </span>
                 <button
                   type="button"
                   onClick={() => handleRemoveExtra(i)}
                   disabled={removingIndex === i}
-                  className="text-xs text-text-secondary hover:text-destructive transition-colors p-1.5 rounded-md hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+                  className="cursor-pointer rounded-md p-1.5 text-xs text-text-secondary transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:opacity-40"
                   aria-label={t("whatsappCcRemoveLabel")}
                 >
                   {removingIndex === i ? (
@@ -254,50 +252,49 @@ export function WhatsAppAgentSetup({
           </ul>
         )}
 
-        <form onSubmit={handleAddExtra} className="flex gap-2">
+        <form onSubmit={handleAddExtra} className="flex items-start gap-2">
           <div className="relative flex-1">
-            <Smartphone aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary/50" />
-            <input
+            <Smartphone
+              aria-hidden="true"
+              className="pointer-events-none absolute start-3 top-3 h-4 w-4 text-text-secondary/50"
+            />
+            <Input
               type="tel"
               value={newExtraPhone}
               onChange={(e) => setNewExtraPhone(e.target.value)}
               placeholder="968XXXXXXXX"
               aria-label={t("whatsappCcLabel")}
-              className="w-full h-10 ps-9 pe-3 bg-surface-elevated/50 border border-border/60 rounded-lg text-sm text-text-primary font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+              className="ltr-nums ps-9 font-mono"
             />
           </div>
-          <button
+          <Button
             type="submit"
+            variant="secondary"
             disabled={savingExtra || !newExtraPhone}
-            className="h-10 px-4 bg-surface-elevated border border-border/60 hover:border-accent/50 hover:text-accent text-text-primary text-sm font-semibold rounded-lg transition-all duration-200 disabled:opacity-40 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            loading={savingExtra}
+            className="shrink-0"
           >
-            {savingExtra ? (
-              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Plus aria-hidden="true" className="h-4 w-4" />
-                {t("whatsappCcAdd")}
-              </>
-            )}
-          </button>
+            {!savingExtra && <Plus aria-hidden="true" className="h-4 w-4" />}
+            {t("whatsappCcAdd")}
+          </Button>
         </form>
       </div>
 
-      <div className="p-3 bg-surface-elevated/50 border border-border/40 rounded-lg space-y-2">
-        <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+      <div className="space-y-2 rounded-lg border border-border/40 bg-surface-elevated/50 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
           {t("whatsappCapabilitiesTitle")}
         </p>
-        <ul className="text-xs text-text-secondary space-y-1.5">
+        <ul className="space-y-1.5 text-xs text-text-secondary">
           <li className="flex items-start gap-2">
-            <span aria-hidden="true" className="text-accent mt-0.5">•</span>
+            <span aria-hidden="true" className="mt-0.5 text-accent">•</span>
             <span>{t("whatsappCapabilityPay")}</span>
           </li>
           <li className="flex items-start gap-2">
-            <span aria-hidden="true" className="text-accent mt-0.5">•</span>
+            <span aria-hidden="true" className="mt-0.5 text-accent">•</span>
             <span>{t("whatsappCapabilityExpense")}</span>
           </li>
           <li className="flex items-start gap-2">
-            <span aria-hidden="true" className="text-accent mt-0.5">•</span>
+            <span aria-hidden="true" className="mt-0.5 text-accent">•</span>
             <span>{t("whatsappCapabilityPartial")}</span>
           </li>
         </ul>
