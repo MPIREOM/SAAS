@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, Check, X, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 
 interface ProfileEditFormProps {
   userId: string;
@@ -73,48 +76,63 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
 
   return (
     <div className="space-y-4">
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
-      )}
+      {error && <Alert variant="destructive">{error}</Alert>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Name field */}
         <div>
-          <span className="text-xs text-text-secondary uppercase tracking-wider">{t("name")}</span>
+          <span className="text-xs uppercase tracking-wider text-text-secondary">
+            {t("name")}
+          </span>
           {editingName ? (
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="flex-1 px-3 py-1.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
-                autoFocus
-              />
-              <button
+            <div className="mt-1.5 flex items-center gap-2">
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  aria-label={t("name")}
+                  className="h-9"
+                  autoFocus
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
                 onClick={handleSaveName}
-                disabled={savingName}
-                className="p-1.5 rounded-md bg-accent text-background hover:bg-accent-hover transition-colors"
+                loading={savingName}
+                aria-label={tc("save")}
+                className="h-9 w-9 shrink-0 p-0"
               >
-                <Check className="h-3.5 w-3.5" />
-              </button>
-              <button
+                {!savingName && <Check aria-hidden="true" className="h-3.5 w-3.5" />}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => { setEditingName(false); setName(currentName); }}
-                className="p-1.5 rounded-md bg-surface-elevated text-text-secondary hover:text-text-primary transition-colors"
+                aria-label={tc("cancel")}
+                className="h-9 w-9 shrink-0 p-0 text-text-secondary hover:text-text-primary"
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
+                <X aria-hidden="true" className="h-3.5 w-3.5" />
+              </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 mt-1">
+            <div className="mt-1.5 flex items-center gap-2">
               <p className="text-sm text-text-primary">{name || "—"}</p>
-              {nameSuccess && <Check className="h-3.5 w-3.5 text-success" />}
+              {nameSuccess && (
+                <Check
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 text-success"
+                />
+              )}
               <button
+                type="button"
                 onClick={() => setEditingName(true)}
-                className="p-1 rounded text-text-secondary hover:text-accent transition-colors"
+                aria-label={tc("edit")}
+                className="cursor-pointer rounded p-1 text-text-secondary transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
-                <Pencil className="h-3 w-3" />
+                <Pencil aria-hidden="true" className="h-3 w-3" />
               </button>
             </div>
           )}
@@ -122,58 +140,71 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
 
         {/* Email field (read-only) */}
         <div>
-          <span className="text-xs text-text-secondary uppercase tracking-wider">{t("email")}</span>
-          <p className="text-sm text-text-primary mt-1 font-mono">{currentEmail || "—"}</p>
+          <span className="text-xs uppercase tracking-wider text-text-secondary">
+            {t("email")}
+          </span>
+          <p className="mt-1.5 font-mono text-sm text-text-primary">
+            {currentEmail || "—"}
+          </p>
         </div>
 
         {/* Password change */}
         <div className="sm:col-span-2">
           {editingPassword ? (
-            <div className="space-y-3 p-4 bg-surface-elevated/50 border border-border/50 rounded-lg">
+            <div className="space-y-3 rounded-lg border border-border/50 bg-surface-elevated/50 p-4">
               <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-text-secondary" aria-hidden="true" />
-                <span className="text-sm font-medium text-text-primary">{t("changePassword")}</span>
+                <Lock aria-hidden="true" className="h-4 w-4 text-accent" />
+                <span className="font-display text-sm font-medium text-text-primary">
+                  {t("changePassword")}
+                </span>
               </div>
-              <input
+              <Input
                 type="password"
+                label={t("newPassword")}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New password (min 8 characters)"
-                className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
+                helperText={t("passwordMinLength")}
               />
-              <input
+              <Input
                 type="password"
+                label={t("confirmNewPassword")}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
-                className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
               />
-              <div className="flex items-center gap-2">
-                <button
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
                   onClick={handleSavePassword}
-                  disabled={savingPassword}
-                  className="h-8 px-4 bg-accent hover:bg-accent-hover text-background text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                  loading={savingPassword}
                 >
-                  {savingPassword ? tc("loading") : t("updatePassword")}
-                </button>
-                <button
+                  {t("updatePassword")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => { setEditingPassword(false); setNewPassword(""); setConfirmPassword(""); }}
-                  className="h-8 px-4 bg-surface border border-border text-text-secondary text-xs rounded-lg hover:text-text-primary transition-colors"
                 >
                   {tc("cancel")}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setEditingPassword(true)}
-                className="inline-flex items-center gap-1.5 text-xs text-text-secondary hover:text-accent transition-colors"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded text-xs text-text-secondary transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
-                <Lock className="h-3 w-3" aria-hidden="true" />
+                <Lock aria-hidden="true" className="h-3 w-3" />
                 {t("changePassword")}
               </button>
-              {passwordSuccess && <span className="text-xs text-success">{t("passwordUpdated")}</span>}
+              {passwordSuccess && (
+                <span role="status" className="text-xs text-success">
+                  {t("passwordUpdated")}
+                </span>
+              )}
             </div>
           )}
         </div>

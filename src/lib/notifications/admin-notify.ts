@@ -1,5 +1,4 @@
 import { sendEmail } from "@/lib/email/client";
-import { CURRENCY } from "@/lib/currency";
 
 const WHATSAPP_API_URL = "https://graph.facebook.com/v21.0";
 

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquare, Send, CheckCircle2, XCircle, Loader2, Info } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { MessageSquare, Send } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 const templateLanguageMap: Record<string, string> = {
   hello_world: "en_US",
@@ -52,6 +58,7 @@ const templateParamConfig: Record<string, { fields: ParamFieldConfig[]; defaults
 };
 
 export default function WhatsAppTestPage() {
+  const t = useTranslations("settings");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [templateName, setTemplateName] = useState("hello_world");
   const [languageCode, setLanguageCode] = useState("en_US");
@@ -107,45 +114,45 @@ export default function WhatsAppTestPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-2xl stagger-children">
-      <div className="animate-fade-in-up">
-        <h1 className="text-2xl font-semibold text-text-primary font-display">
-          WhatsApp Test
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Send a test message via Meta WhatsApp Cloud API
-        </p>
-      </div>
+    <div className="max-w-2xl space-y-6 stagger-children">
+      <PageHeader
+        title={t("whatsappTestTitle")}
+        description={t("whatsappTestSubtitle")}
+      />
 
-      {/* Info Card */}
-      <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <Info className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-          <div className="text-sm text-text-secondary space-y-1">
-            <p>
-              <strong className="text-text-primary">hello_world</strong> is
-              Meta&apos;s pre-approved test template. Use it to verify your API
-              connection without creating custom templates.
-            </p>
-            <p>
-              The recipient must have a WhatsApp account and the phone number
-              must include the country code (e.g. +968XXXXXXXX).
-            </p>
-          </div>
+      {/* Info banner */}
+      <Alert variant="info" className="animate-fade-in-up">
+        <div className="space-y-1 text-text-secondary">
+          <p>
+            <strong className="text-text-primary">hello_world</strong> is
+            Meta&apos;s pre-approved test template. Use it to verify your API
+            connection without creating custom templates.
+          </p>
+          <p>
+            The recipient must have a WhatsApp account and the phone number
+            must include the country code (e.g.{" "}
+            <span className="ltr-nums font-mono">+968XXXXXXXX</span>).
+          </p>
         </div>
-      </div>
+      </Alert>
 
       {/* Form */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-accent/10 rounded-md">
+      <section
+        aria-labelledby="whatsapp-test-heading"
+        className="rounded-xl border border-border/60 bg-surface p-5 sm:p-6"
+      >
+        <div className="mb-6 flex items-start gap-3">
+          <div className="shrink-0 rounded-lg bg-accent/10 p-2" aria-hidden="true">
             <MessageSquare className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
+            <h2
+              id="whatsapp-test-heading"
+              className="font-display text-base font-semibold tracking-tight text-text-primary"
+            >
               Send Test Message
             </h2>
-            <p className="text-xs text-text-secondary">
+            <p className="mt-0.5 text-xs text-text-secondary">
               Test your Meta WhatsApp Business API credentials
             </p>
           </div>
@@ -153,172 +160,130 @@ export default function WhatsAppTestPage() {
 
         <div className="space-y-4">
           {/* Phone Number */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">
-              Phone Number <span className="text-destructive">*</span>
-            </label>
-            <input
-              type="tel"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="+968XXXXXXXX"
-              className="w-full px-3 py-2 rounded-md border border-border bg-background text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent font-mono"
-            />
-            <p className="text-xs text-text-secondary mt-1">
-              Include country code (e.g. +968 for Oman)
-            </p>
-          </div>
+          <Input
+            type="tel"
+            label={`${t("whatsappTestPhoneLabel")} *`}
+            required
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            placeholder="+968XXXXXXXX"
+            helperText={t("whatsappTestPhoneHelp")}
+            className="ltr-nums font-mono"
+          />
 
           {/* Template Name */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">
-              Template Name
-            </label>
-            <select
-              value={templateName}
-              onChange={(e) => handleTemplateChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-md border border-border bg-background text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-            >
-              <option value="hello_world">hello_world (Meta default)</option>
-              <option value="daily_briefs">daily_briefs (Daily Summary)</option>
-              <option value="mpire_rent_upcoming_en">mpire_rent_upcoming_en (English)</option>
-              <option value="mpire_rent_upcoming_ar">mpire_rent_upcoming_ar (Arabic)</option>
-              <option value="mpire_rent_overdue_en">mpire_rent_overdue_en (English)</option>
-              <option value="mpire_rent_overdue_ar">mpire_rent_overdue_ar (Arabic)</option>
-              <option value="mpire_lease_expiry_en">mpire_lease_expiry_en (English)</option>
-              <option value="mpire_lease_expiry_ar">mpire_lease_expiry_ar (Arabic)</option>
-            </select>
-            <p className="text-xs text-text-secondary mt-1">
-              Use hello_world to test API connectivity first
-            </p>
-          </div>
+          <Select
+            label="Template Name"
+            value={templateName}
+            onChange={(e) => handleTemplateChange(e.target.value)}
+            helperText="Use hello_world to test API connectivity first"
+          >
+            <option value="hello_world">hello_world (Meta default)</option>
+            <option value="daily_briefs">daily_briefs (Daily Summary)</option>
+            <option value="mpire_rent_upcoming_en">mpire_rent_upcoming_en (English)</option>
+            <option value="mpire_rent_upcoming_ar">mpire_rent_upcoming_ar (Arabic)</option>
+            <option value="mpire_rent_overdue_en">mpire_rent_overdue_en (English)</option>
+            <option value="mpire_rent_overdue_ar">mpire_rent_overdue_ar (Arabic)</option>
+            <option value="mpire_lease_expiry_en">mpire_lease_expiry_en (English)</option>
+            <option value="mpire_lease_expiry_ar">mpire_lease_expiry_ar (Arabic)</option>
+          </Select>
 
           {/* Language Code */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">
-              Language Code
-            </label>
-            <select
-              value={languageCode}
-              onChange={(e) => setLanguageCode(e.target.value)}
-              className="w-full px-3 py-2 rounded-md border border-border bg-background text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-            >
-              <option value="en_US">en_US (English US)</option>
-              <option value="en">en (English)</option>
-              <option value="ar">ar (Arabic)</option>
-            </select>
-          </div>
+          <Select
+            label="Language Code"
+            value={languageCode}
+            onChange={(e) => setLanguageCode(e.target.value)}
+          >
+            <option value="en_US">en_US (English US)</option>
+            <option value="en">en (English)</option>
+            <option value="ar">ar (Arabic)</option>
+          </Select>
 
           {/* Template Parameters */}
           {paramFields.length > 0 && (
-            <div className="border border-border/50 rounded-md p-4 space-y-3 bg-surface-elevated/50">
-              <p className="text-sm font-medium text-text-primary">
-                Template Parameters
-              </p>
-              <p className="text-xs text-text-secondary -mt-1">
-                These values will be inserted into the template placeholders
-              </p>
+            <div className="space-y-3 rounded-lg border border-border/50 bg-surface-elevated/50 p-4">
+              <div>
+                <p className="text-sm font-medium text-text-primary">
+                  Template Parameters
+                </p>
+                <p className="mt-0.5 text-xs text-text-secondary">
+                  These values will be inserted into the template placeholders
+                </p>
+              </div>
               {paramFields.map((field) => (
-                <div key={field.key}>
-                  <label className="block text-xs font-medium text-text-secondary mb-1">
-                    {field.label}
-                  </label>
-                  <input
-                    type="text"
-                    value={params[field.key] || ""}
-                    onChange={(e) =>
-                      setParams((prev) => ({ ...prev, [field.key]: e.target.value }))
-                    }
-                    placeholder={field.placeholder}
-                    className="w-full px-3 py-1.5 rounded-md border border-border bg-background text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-                  />
-                </div>
+                <Input
+                  key={field.key}
+                  type="text"
+                  label={field.label}
+                  value={params[field.key] || ""}
+                  onChange={(e) =>
+                    setParams((prev) => ({ ...prev, [field.key]: e.target.value }))
+                  }
+                  placeholder={field.placeholder}
+                  className="h-9"
+                />
               ))}
             </div>
           )}
 
           {/* Send Button */}
-          <button
+          <Button
+            type="button"
             onClick={handleSend}
             disabled={!phoneNumber || loading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            loading={loading}
+            className="w-full"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4" />
-                Send Test Message
-              </>
-            )}
-          </button>
+            {!loading && <Send aria-hidden="true" className="h-4 w-4" />}
+            {loading ? "Sending..." : t("whatsappTestSend")}
+          </Button>
         </div>
-      </div>
+      </section>
 
       {/* Result */}
       {result && (
-        <div
-          className={`border rounded-lg p-6 ${
-            result.success
-              ? "bg-success/5 border-success/20"
-              : "bg-destructive/5 border-destructive/20"
-          }`}
+        <Alert
+          variant={result.success ? "success" : "destructive"}
+          title={result.success ? "Message Sent Successfully" : "Failed to Send"}
+          className="animate-fade-in-up"
         >
-          <div className="flex items-center gap-3 mb-4">
-            {result.success ? (
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            ) : (
-              <XCircle className="h-5 w-5 text-destructive" />
-            )}
-            <h3
-              className={`text-base font-medium ${
-                result.success ? "text-success" : "text-destructive"
-              }`}
-            >
-              {result.success ? "Message Sent Successfully" : "Failed to Send"}
-            </h3>
-          </div>
-
-          <div className="space-y-2 text-sm font-mono">
+          <div className="mt-1 space-y-2 font-mono text-sm text-text-primary">
             {result.success && (
               <>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className="text-text-secondary">Message ID:</span>
-                  <span className="text-text-primary break-all">{result.messageId}</span>
+                  <span className="ltr-nums break-all">{result.messageId}</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className="text-text-secondary">Sent to:</span>
-                  <span className="text-text-primary">{result.sentTo}</span>
+                  <span className="ltr-nums">{result.sentTo}</span>
                 </div>
               </>
             )}
             {!result.success && (
               <>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className="text-text-secondary">Error:</span>
                   <span className="text-destructive">{result.error}</span>
                 </div>
                 {result.errorCode && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <span className="text-text-secondary">Code:</span>
-                    <span className="text-text-primary">{result.errorCode}</span>
+                    <span className="ltr-nums">{result.errorCode}</span>
                   </div>
                 )}
                 {result.errorType && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <span className="text-text-secondary">Type:</span>
-                    <span className="text-text-primary">{result.errorType}</span>
+                    <span>{result.errorType}</span>
                   </div>
                 )}
                 {result.details && (
                   <details className="mt-2">
-                    <summary className="text-text-secondary cursor-pointer hover:text-text-primary text-xs">
+                    <summary className="cursor-pointer rounded text-xs text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
                       Full error details
                     </summary>
-                    <pre className="mt-2 p-3 bg-background rounded-md text-xs overflow-auto max-h-48">
+                    <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border/60 bg-surface p-3 text-xs">
                       {JSON.stringify(result.details, null, 2)}
                     </pre>
                   </details>
@@ -326,7 +291,7 @@ export default function WhatsAppTestPage() {
               </>
             )}
           </div>
-        </div>
+        </Alert>
       )}
     </div>
   );

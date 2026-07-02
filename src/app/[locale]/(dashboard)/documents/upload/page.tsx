@@ -5,6 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Upload, X, FileText, Sparkles, Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 // Document types that typically have expiry dates
 const EXPIRY_TYPES = new Set([
@@ -194,35 +199,33 @@ export default function UploadDocumentPage() {
     : null;
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary font-display">
-          {t("upload")}
-        </h1>
-      </div>
+    <div className="max-w-2xl space-y-6">
+      <PageHeader title={t("upload")} description={t("subtitle")} />
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5 animate-fade-in-up">
         {/* File Upload */}
-        <div className="bg-surface border border-border rounded-lg p-6">
+        <div className="rounded-xl border border-border/60 bg-surface p-6">
           {file ? (
             <div className="relative">
               {filePreview ? (
                 <img
                   src={filePreview}
-                  alt="Preview"
-                  className="w-full max-h-48 object-contain rounded-md border border-border"
+                  alt={file.name}
+                  className="w-full max-h-48 rounded-lg border border-border/60 object-contain"
                 />
               ) : (
-                <div className="w-full h-32 rounded-md border border-border bg-surface-elevated flex flex-col items-center justify-center gap-2">
-                  <FileText className="h-10 w-10 text-text-secondary/50" />
-                  <span className="text-sm text-text-secondary">{file.name}</span>
+                <div className="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border border-border/60 bg-surface-elevated">
+                  <FileText aria-hidden="true" className="h-10 w-10 text-text-secondary/50" />
+                  <span className="max-w-full truncate px-4 text-sm text-text-secondary">
+                    {file.name}
+                  </span>
                 </div>
               )}
               <button
                 type="button"
                 onClick={clearFile}
                 aria-label={tc("close")}
-                className="absolute top-2 end-2 h-6 w-6 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center hover:bg-surface transition-colors"
+                className="absolute top-2 end-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-border bg-surface/80 backdrop-blur-sm transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 <X className="h-3 w-3 text-text-secondary" aria-hidden="true" />
               </button>
@@ -235,15 +238,19 @@ export default function UploadDocumentPage() {
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
-              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
+              className="cursor-pointer rounded-lg border-2 border-dashed border-border p-8 text-center transition-colors hover:border-accent/50 hover:bg-surface-elevated/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
-              <Upload className="h-8 w-8 text-text-secondary/50 mx-auto mb-2" aria-hidden="true" />
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 border border-accent/15">
+                <Upload className="h-5 w-5 text-accent" aria-hidden="true" />
+              </div>
               <p className="text-sm text-text-secondary">
                 {tc("dragAndDrop")}
               </p>
-              <p className="text-xs text-text-secondary/70 mt-1">
+              <p className="mt-1 text-xs text-text-secondary/70">
                 {tc("or")}{" "}
-                <span className="text-accent underline">{tc("browseFiles")}</span>
+                <span className="font-medium text-accent underline underline-offset-2">
+                  {tc("browseFiles")}
+                </span>
               </p>
             </div>
           )}
@@ -257,103 +264,78 @@ export default function UploadDocumentPage() {
         </div>
 
         {/* Document Details */}
-        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("documentType")} <span className="text-destructive">*</span>
-            </label>
-            <select
-              name="document_type"
-              required
-              value={documentType}
-              onChange={(e) => handleDocumentTypeChange(e.target.value)}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-            >
-              {documentTypes.map((dt) => (
-                <option key={dt.value} value={dt.value}>
-                  {dt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="rounded-xl border border-border/60 bg-surface p-6 space-y-5">
+          <Select
+            name="document_type"
+            required
+            value={documentType}
+            onChange={(e) => handleDocumentTypeChange(e.target.value)}
+            label={`${t("documentType")} *`}
+          >
+            {documentTypes.map((dt) => (
+              <option key={dt.value} value={dt.value}>
+                {dt.label}
+              </option>
+            ))}
+          </Select>
 
           {prefilled ? (
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-foreground tracking-tight">
                 {entityType === "tenant" ? tc("tenant") : tc("property")}
-              </label>
-              <div className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 flex items-center text-sm text-text-primary">
+              </span>
+              <div className="flex h-10 w-full items-center rounded-lg border border-border/60 bg-surface-elevated/50 px-3 text-sm text-text-primary">
                 {prefilledLabel || entityId}
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-text-secondary mb-1.5">
-                  {t("entityType")} <span className="text-destructive">*</span>
-                </label>
-                <select
-                  value={entityType}
-                  onChange={(e) => {
-                    setEntityType(e.target.value as "tenant" | "property");
-                    setEntityId("");
-                  }}
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-                >
-                  <option value="tenant">{tc("tenant")}</option>
-                  <option value="property">{tc("property")}</option>
-                </select>
-              </div>
+              <Select
+                value={entityType}
+                onChange={(e) => {
+                  setEntityType(e.target.value as "tenant" | "property");
+                  setEntityId("");
+                }}
+                label={`${t("entityType")} *`}
+              >
+                <option value="tenant">{tc("tenant")}</option>
+                <option value="property">{tc("property")}</option>
+              </Select>
 
-              <div>
-                <label className="block text-sm text-text-secondary mb-1.5">
-                  {entityType === "tenant" ? tc("tenant") : tc("property")}{" "}
-                  <span className="text-destructive">*</span>
-                </label>
-                <select
-                  name="entity_id"
-                  required
-                  value={entityId}
-                  onChange={(e) => setEntityId(e.target.value)}
-                  className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-                >
-                  <option value="">--</option>
-                  {entities.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                name="entity_id"
+                required
+                value={entityId}
+                onChange={(e) => setEntityId(e.target.value)}
+                label={`${entityType === "tenant" ? tc("tenant") : tc("property")} *`}
+              >
+                <option value="">--</option>
+                {entities.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.label}
+                  </option>
+                ))}
+              </Select>
             </div>
           )}
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("expiryDate")}
-            </label>
-            <div className="relative">
-              <input
-                name="expiry_date"
-                type="date"
-                value={expiryDate}
-                onChange={(e) => { setExpiryDate(e.target.value); setAutoExtracted(false); }}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              />
-              {extracting && (
-                <div className="absolute inset-y-0 end-10 flex items-center">
-                  <Loader2 className="h-4 w-4 text-accent animate-spin" aria-hidden="true" />
-                </div>
-              )}
-            </div>
+          <div className="space-y-1.5">
+            <Input
+              name="expiry_date"
+              type="date"
+              value={expiryDate}
+              onChange={(e) => { setExpiryDate(e.target.value); setAutoExtracted(false); }}
+              label={t("expiryDate")}
+              className="font-mono ltr-nums"
+            />
             {extracting && (
-              <p className="text-xs text-accent mt-1 flex items-center gap-1">
-                <Sparkles className="h-3 w-3" aria-hidden="true" />
+              <p className="flex items-center gap-1.5 text-xs text-accent" role="status">
+                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                 {t("extractingExpiry")}
               </p>
             )}
             {autoExtracted && !extracting && (
-              <p className="text-xs text-success mt-1 flex items-center gap-1">
+              <p className="flex items-center gap-1.5 text-xs text-success" role="status">
                 <Sparkles className="h-3 w-3" aria-hidden="true" />
                 {t("expiryExtracted")}
               </p>
@@ -361,25 +343,16 @@ export default function UploadDocumentPage() {
           </div>
         </div>
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <Alert variant="destructive">{error}</Alert>}
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading || !file}
-            className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-          >
-            {loading ? tc("loading") : t("upload")}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
-          >
+          <Button type="submit" loading={loading} disabled={loading || !file}>
+            {!loading && <Upload aria-hidden="true" className="h-4 w-4" />}
+            {t("upload")}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => router.back()}>
             {tc("cancel")}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

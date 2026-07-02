@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Activity, ChevronDown, ChevronUp } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
 
 interface AuditLog {
   id: string;
@@ -18,6 +22,7 @@ interface AuditLog {
 
 export function AuditLogViewer() {
   const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -25,58 +30,54 @@ export function AuditLogViewer() {
   const [page, setPage] = useState(0);
   const pageSize = 25;
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
+  // Fetch the current page of audit logs. All setState calls happen after
+  // the awaited query resolves, never synchronously inside the effect.
+  useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
-    try {
-      const { data, error: fetchError } = await supabase
-        .from("audit_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      if (fetchError) {
-        if (fetchError.message.includes("does not exist") || fetchError.code === "42P01") {
-          setError(t("auditNotConfigured"));
+    supabase
+      .from("audit_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1)
+      .then(({ data, error: fetchError }) => {
+        if (cancelled) return;
+        if (fetchError) {
+          if (fetchError.message.includes("does not exist") || fetchError.code === "42P01") {
+            setError(t("auditNotConfigured"));
+          } else {
+            setError(fetchError.message);
+          }
+          setLogs([]);
         } else {
-          setError(fetchError.message);
+          setLogs(data || []);
         }
-        setLogs([]);
-      } else {
-        setLogs(data || []);
-      }
-    } catch {
-      setError(t("auditLoadFailed"));
-    }
-    setLoading(false);
+        setLoading(false);
+      }, () => {
+        if (cancelled) return;
+        setError(t("auditLoadFailed"));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [page, t]);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="h-6 w-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <Spinner className="py-8" label={tc("loading")} />;
   }
 
   if (error) {
-    return (
-      <div className="bg-surface-elevated border border-border rounded-md p-4">
-        <p className="text-sm text-text-secondary">{error}</p>
-      </div>
-    );
+    return <Alert variant="destructive">{error}</Alert>;
   }
 
   if (logs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-text-secondary">
-        <Activity aria-hidden="true" className="h-8 w-8 opacity-30 mb-2" />
-        <p className="text-sm">{t("auditNoActivity")}</p>
-      </div>
+      <EmptyState
+        icon={<Activity className="h-5 w-5" />}
+        title={t("auditNoActivity")}
+        className="py-10"
+      />
     );
   }
 
@@ -85,34 +86,41 @@ export function AuditLogViewer() {
       {logs.map((log) => (
         <div
           key={log.id}
-          className="bg-surface-elevated/50 border border-border/30 rounded-lg p-3 hover:border-border transition-colors"
+          className="rounded-lg border border-border/40 bg-surface-elevated/50 transition-colors hover:border-border"
         >
-          <div
-            className="flex items-center justify-between cursor-pointer"
+          <button
+            type="button"
             onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+            aria-expanded={expandedId === log.id}
+            className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-2 w-2 rounded-full bg-accent shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm text-text-primary font-medium truncate">
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 shrink-0 rounded-full bg-accent"
+              />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-text-primary">
                   {log.action}
-                </p>
-                <p className="text-xs text-text-secondary">
-                  {new Date(log.created_at).toLocaleString()}
+                </span>
+                <span className="block text-xs text-text-secondary">
+                  <span className="ltr-nums font-mono">
+                    {new Date(log.created_at).toLocaleString()}
+                  </span>
                   {log.entity_type && (
                     <span className="ms-2 text-accent/70">{log.entity_type}</span>
                   )}
-                </p>
-              </div>
+                </span>
+              </span>
             </div>
             {log.metadata && (
               expandedId === log.id
-                ? <ChevronUp className="h-4 w-4 text-text-secondary shrink-0" />
-                : <ChevronDown className="h-4 w-4 text-text-secondary shrink-0" />
+                ? <ChevronUp aria-hidden="true" className="h-4 w-4 shrink-0 text-text-secondary" />
+                : <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-text-secondary" />
             )}
-          </div>
+          </button>
           {expandedId === log.id && log.metadata && (
-            <pre className="mt-2 p-2 bg-surface border border-border rounded text-xs text-text-secondary overflow-x-auto font-mono">
+            <pre className="mx-3 mb-3 overflow-x-auto rounded-md border border-border/60 bg-surface p-2 font-mono text-xs text-text-secondary">
               {JSON.stringify(log.metadata, null, 2)}
             </pre>
           )}
@@ -121,21 +129,34 @@ export function AuditLogViewer() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between pt-2">
-        <button
-          onClick={() => setPage(Math.max(0, page - 1))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setLoading(true);
+            setPage(Math.max(0, page - 1));
+          }}
           disabled={page === 0}
-          className="text-xs px-3 py-1.5 rounded-md border border-border text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
         >
-          Previous
-        </button>
-        <span className="text-xs text-text-secondary">Page {page + 1}</span>
-        <button
-          onClick={() => setPage(page + 1)}
+          {tc("previous")}
+        </Button>
+        <span className="text-xs text-text-secondary">
+          {tc("page")}{" "}
+          <span className="ltr-nums font-mono text-text-primary">{page + 1}</span>
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setLoading(true);
+            setPage(page + 1);
+          }}
           disabled={logs.length < pageSize}
-          className="text-xs px-3 py-1.5 rounded-md border border-border text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
         >
-          Next
-        </button>
+          {tc("next")}
+        </Button>
       </div>
     </div>
   );

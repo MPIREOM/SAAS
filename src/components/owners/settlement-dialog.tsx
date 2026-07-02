@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils/cn";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,10 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { SettlementRow } from "@/components/owners/types";
 
 type Direction = "company_to_owner" | "owner_to_company";
@@ -141,134 +146,110 @@ function SettlementDialogForm({
         </DialogDescription>
       </DialogHeader>
 
-        <DialogBody>
-          <form id="settlement-form" onSubmit={handleSubmit} className="space-y-4">
-            {/* Direction toggle */}
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                Direction
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDirection("company_to_owner")}
-                  className={`p-3 rounded-xl border text-xs font-medium transition-colors ${
-                    direction === "company_to_owner"
-                      ? "bg-accent/10 border-accent/40 text-accent"
-                      : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border"
-                  }`}
-                >
-                  Company → Owner
-                  <div className="text-[10px] mt-1 opacity-70">decreases balance</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDirection("owner_to_company")}
-                  className={`p-3 rounded-xl border text-xs font-medium transition-colors ${
-                    direction === "owner_to_company"
-                      ? "bg-accent/10 border-accent/40 text-accent"
-                      : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border"
-                  }`}
-                >
-                  Owner → Company
-                  <div className="text-[10px] mt-1 opacity-70">increases balance</div>
-                </button>
-              </div>
-            </div>
-
-            {/* Amount */}
-            <Field label="Amount (OMR)">
-              <input
-                type="number"
-                min={0.001}
-                step={0.001}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-                placeholder="e.g. 1500.000"
-                className={INPUT_CLASS}
-              />
-            </Field>
-
-            {/* Method */}
-            <Field label="Method">
-              <select
-                value={method}
-                onChange={(e) => setMethod(e.target.value as Method)}
-                className={INPUT_CLASS}
+      <DialogBody>
+        <form id="settlement-form" onSubmit={handleSubmit} className="space-y-4">
+          {/* Direction toggle */}
+          <fieldset>
+            <legend className="mb-1.5 text-sm font-medium tracking-tight text-foreground">
+              Direction
+            </legend>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setDirection("company_to_owner")}
+                aria-pressed={direction === "company_to_owner"}
+                className={cn(
+                  "cursor-pointer rounded-lg border p-3 text-xs font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                  direction === "company_to_owner"
+                    ? "border-accent/40 bg-accent/10 text-accent"
+                    : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border",
+                )}
               >
-                <option value="cash">Cash</option>
-                <option value="bank_transfer">Bank transfer</option>
-                <option value="cheque">Cheque</option>
-              </select>
-            </Field>
+                Company → Owner
+                <span className="mt-1 block text-[10px] opacity-70">
+                  decreases balance
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDirection("owner_to_company")}
+                aria-pressed={direction === "owner_to_company"}
+                className={cn(
+                  "cursor-pointer rounded-lg border p-3 text-xs font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                  direction === "owner_to_company"
+                    ? "border-accent/40 bg-accent/10 text-accent"
+                    : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border",
+                )}
+              >
+                Owner → Company
+                <span className="mt-1 block text-[10px] opacity-70">
+                  increases balance
+                </span>
+              </button>
+            </div>
+          </fieldset>
 
-            {/* Date */}
-            <Field label="Date">
-              <input
-                type="date"
-                value={settledAt}
-                onChange={(e) => setSettledAt(e.target.value)}
-                required
-                className={INPUT_CLASS}
-              />
-            </Field>
+          <Input
+            type="number"
+            label="Amount (OMR)"
+            min={0.001}
+            step={0.001}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+            placeholder="e.g. 1500.000"
+            className="font-mono ltr-nums"
+          />
 
-            {/* Reference */}
-            <Field label="Reference (optional)">
-              <input
-                type="text"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder="Cheque number, transfer reference, etc."
-                className={INPUT_CLASS}
-              />
-            </Field>
+          <Select
+            label="Method"
+            value={method}
+            onChange={(e) => setMethod(e.target.value as Method)}
+          >
+            <option value="cash">Cash</option>
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="cheque">Cheque</option>
+          </Select>
 
-            {/* Notes */}
-            <Field label="Notes">
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                className={INPUT_CLASS + " resize-none"}
-                placeholder="Optional"
-              />
-            </Field>
-          </form>
-        </DialogBody>
+          <Input
+            type="date"
+            label="Date"
+            value={settledAt}
+            onChange={(e) => setSettledAt(e.target.value)}
+            required
+            className="font-mono ltr-nums"
+          />
+
+          <Input
+            type="text"
+            label="Reference (optional)"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            placeholder="Cheque number, transfer reference, etc."
+            className="font-mono ltr-nums"
+          />
+
+          <Textarea
+            label="Notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Optional"
+            className="resize-none"
+          />
+        </form>
+      </DialogBody>
 
       <DialogFooter>
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-10 px-5 bg-surface-elevated border border-border/60 text-text-primary text-sm font-medium rounded-xl hover:bg-surface-hover transition-colors"
-        >
+        <Button type="button" variant="secondary" onClick={onClose}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          form="settlement-form"
-          disabled={saving}
-          className="h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-colors disabled:opacity-40"
-        >
+        </Button>
+        <Button type="submit" form="settlement-form" loading={saving}>
           {saving ? "Saving…" : editing ? "Save changes" : "Record"}
-        </button>
+        </Button>
       </DialogFooter>
     </>
-  );
-}
-
-const INPUT_CLASS =
-  "w-full h-10 bg-surface-elevated/50 border border-border/60 rounded-xl px-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-colors";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }

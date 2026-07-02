@@ -2,11 +2,16 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, Pencil } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
 import { CURRENCY } from "@/lib/currency";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { OwnerDetailProps, PropertyRow, UnitRow } from "@/components/owners/types";
 
 const COMMISSION_OPTIONS = [
@@ -87,16 +92,16 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
 
   if (properties.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/60 bg-surface-elevated/30 p-6 text-sm text-text-secondary">
-        No properties linked to this owner yet. Use the SQL seed in
-        <code className="mx-1">supabase/seed/owner_setup.sql</code>
-        to assign properties.
-      </div>
+      <EmptyState
+        icon={<Building2 className="h-6 w-6" />}
+        title="No properties linked to this owner yet"
+        description="Use the SQL seed in supabase/seed/owner_setup.sql to assign properties."
+      />
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 animate-fade-in-up">
       <p className="text-xs text-text-secondary">
         Set the commission arrangement for each property. Use a per-unit
         override only when units inside the same property have different
@@ -110,7 +115,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
         return (
           <div
             key={p.id}
-            className="rounded-2xl border border-border/60 bg-surface-elevated/30 overflow-hidden"
+            className="overflow-hidden rounded-xl border border-border/60 bg-surface-elevated/30 transition-colors hover:border-border"
           >
             <PropertyRowEditor
               property={p}
@@ -124,7 +129,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
 
             {isExpanded && (
               <div className="border-t border-border/40 bg-surface/40">
-                <div className="px-4 py-3 text-[10px] uppercase tracking-wider text-text-secondary font-medium">
+                <div className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
                   Per-unit overrides
                 </div>
                 <div className="divide-y divide-border/40">
@@ -174,57 +179,71 @@ function PropertyRowEditor({
   const dirty = type !== property.commission_type || Number(rate) !== Number(property.commission_rate);
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
-      <button
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
         onClick={onToggleUnits}
-        className="text-text-secondary hover:text-text-primary"
         title="Show units / per-unit overrides"
+        aria-label="Show units / per-unit overrides"
+        aria-expanded={isExpanded}
+        className="h-8 w-8 p-0 text-text-secondary hover:text-text-primary"
       >
-        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </button>
+        {isExpanded ? (
+          <ChevronDown aria-hidden="true" className="h-4 w-4" />
+        ) : (
+          <ChevronRight aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />
+        )}
+      </Button>
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-text-primary truncate">{property.name}</div>
-        <div className="text-xs text-text-secondary truncate">
-          {unitCount} {unitCount === 1 ? "unit" : "units"}
+        <div className="truncate text-sm font-medium text-text-primary">{property.name}</div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+          <span className="font-mono ltr-nums">{unitCount}</span>
+          <span>{unitCount === 1 ? "unit" : "units"}</span>
           {hasOverrides && (
-            <span className="ms-2 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Badge variant="warning" className="text-[10px] uppercase tracking-wider">
               has unit overrides
-            </span>
+            </Badge>
           )}
         </div>
       </div>
-      <select
+      <Select
         value={type}
         onChange={(e) => setType(e.target.value as PropertyRow["commission_type"])}
-        className="h-9 bg-surface-elevated border border-border/60 rounded-lg px-2 text-xs"
+        aria-label="Commission arrangement"
+        className="h-9 w-52 text-xs"
       >
         {COMMISSION_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
       {type === "percentage" && (
         <div className="flex items-center gap-1">
-          <input
+          <Input
             type="number"
             min={0}
             max={100}
             step={0.01}
             value={rate}
             onChange={(e) => setRate(e.target.value)}
-            className="h-9 w-20 bg-surface-elevated border border-border/60 rounded-lg px-2 text-xs font-mono text-end"
+            aria-label="Commission rate (%)"
+            className="h-9 w-20 font-mono ltr-nums text-xs text-end"
           />
           <span className="text-xs text-text-secondary">%</span>
         </div>
       )}
-      <button
+      <Button
+        type="button"
+        size="sm"
         onClick={() => onSave(property, type, Number(rate))}
         disabled={!dirty || saving}
-        className="h-9 px-3 text-xs font-semibold rounded-lg bg-accent text-accent-foreground hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed"
+        loading={saving}
       >
         {saving ? "Saving…" : "Save"}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -253,25 +272,28 @@ function UnitRowEditor({
       Number(rate) !== Number(unit.commission_rate || 0));
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 flex-wrap">
-      <Pencil className="h-3.5 w-3.5 text-text-secondary opacity-50" />
+    <div className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+      <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-text-secondary/50" />
       <div className="min-w-0 flex-1 text-xs">
-        <span className="font-medium font-mono">Unit {unit.unit_number}</span>
-        <span className="text-text-secondary ms-2">
-          {Number(unit.rent_amount).toLocaleString("en-OM", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{" "}
+        <span className="font-mono font-medium ltr-nums">Unit {unit.unit_number}</span>
+        <span className="ms-2 text-text-secondary">
+          <span className="font-mono ltr-nums">
+            {Number(unit.rent_amount).toLocaleString("en-OM", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </span>{" "}
           {CURRENCY.code}/mo · {unit.status}
         </span>
       </div>
-      <select
+      <Select
         value={type ?? ""}
         onChange={(e) => {
           const v = e.target.value;
           setType((v ? v : null) as UnitRow["commission_type"]);
         }}
-        className="h-9 bg-surface-elevated border border-border/60 rounded-lg px-2 text-xs"
+        aria-label="Unit commission override"
+        className="h-9 w-52 text-xs"
       >
         <option value="">Inherit from property</option>
         {COMMISSION_OPTIONS.map((o) => (
@@ -279,30 +301,33 @@ function UnitRowEditor({
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
       {type === "percentage" && (
         <div className="flex items-center gap-1">
-          <input
+          <Input
             type="number"
             min={0}
             max={100}
             step={0.01}
             value={rate}
             onChange={(e) => setRate(e.target.value)}
-            className="h-9 w-20 bg-surface-elevated border border-border/60 rounded-lg px-2 text-xs font-mono text-end"
+            aria-label="Unit commission rate (%)"
+            className="h-9 w-20 font-mono ltr-nums text-xs text-end"
           />
           <span className="text-xs text-text-secondary">%</span>
         </div>
       )}
-      <button
+      <Button
+        type="button"
+        size="sm"
         onClick={() =>
           onSave(unit, type, type === "percentage" ? Number(rate) : null)
         }
         disabled={!dirty || saving}
-        className="h-9 px-3 text-xs font-semibold rounded-lg bg-accent text-accent-foreground hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed"
+        loading={saving}
       >
         {saving ? "Saving…" : "Save"}
-      </button>
+      </Button>
     </div>
   );
 }

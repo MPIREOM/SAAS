@@ -12,6 +12,10 @@ import {
   FileText,
   Wrench,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { InviteUserForm } from "@/components/settings/invite-user-form";
 import { NotificationPreferences } from "@/components/settings/notification-preferences";
 import { UserManagementTable } from "@/components/settings/user-management-table";
@@ -22,6 +26,50 @@ import { TenantNotificationToggles } from "@/components/settings/tenant-notifica
 import { WhatsAppAgentSetup } from "@/components/settings/whatsapp-agent-setup";
 import { AutoInvoiceSettings } from "@/components/settings/auto-invoice-settings";
 import { PropertyMaintenanceLinks } from "@/components/settings/property-maintenance-links";
+
+/** Presentational section card shared by every settings block. */
+function SettingsSection({
+  id,
+  icon,
+  title,
+  description,
+  action,
+  children,
+}: {
+  id: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      aria-labelledby={`${id}-heading`}
+      className="scroll-mt-24 rounded-xl border border-border/60 bg-surface p-5 sm:p-6"
+    >
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="shrink-0 rounded-lg bg-accent/10 p-2" aria-hidden="true">
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <h2
+              id={`${id}-heading`}
+              className="font-display text-base font-semibold tracking-tight text-text-primary"
+            >
+              {title}
+            </h2>
+            <p className="mt-0.5 text-xs text-text-secondary">{description}</p>
+          </div>
+        </div>
+        {action && <div className="sm:shrink-0">{action}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export default async function SettingsPage({
   params,
@@ -112,96 +160,102 @@ export default async function SettingsPage({
     };
   });
 
-  return (
-    <div className="space-y-8 max-w-4xl stagger-children">
-      <div className="animate-fade-in-up">
-        <h1 className="text-2xl font-semibold text-text-primary font-display">
-          {t("title")}
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          {t("subtitle")}
-        </p>
-      </div>
+  const roleLabel =
+    profile?.role === "super_admin"
+      ? t("superAdmin")
+      : profile?.role === "property_manager"
+        ? t("propertyManager")
+        : (profile?.role as string) || null;
 
-      {/* Profile Section */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <User className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
-              {t("profile")}
-            </h2>
-            <p className="text-xs text-text-secondary">
-              {t("profileDescription")}
-            </p>
-          </div>
-        </div>
+  // Purely presentational in-page anchors (hash links only, no routing).
+  const anchors: Array<{ id: string; label: string }> = [
+    { id: "profile", label: t("profile") },
+    { id: "notifications", label: t("notifications") },
+    { id: "users", label: t("users") },
+    { id: "whatsapp-agent", label: t("whatsappNotification") },
+    ...(isSuperAdmin
+      ? [{ id: "activity", label: t("activityLogTitle") }]
+      : []),
+  ];
+
+  return (
+    <div className="max-w-4xl space-y-6 stagger-children">
+      <PageHeader title={t("title")} description={t("subtitle")} />
+
+      {/* Section shortcuts (presentational hash anchors) */}
+      <nav
+        aria-label={t("title")}
+        className="animate-fade-in-up -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+      >
+        {anchors.map((anchor) => (
+          <a
+            key={anchor.id}
+            href={`#${anchor.id}`}
+            className="shrink-0 whitespace-nowrap rounded-full border border-border/60 bg-surface px-3.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            {anchor.label}
+          </a>
+        ))}
+      </nav>
+
+      {/* Profile */}
+      <SettingsSection
+        id="profile"
+        icon={<User className="h-5 w-5 text-accent" />}
+        title={t("profile")}
+        description={t("profileDescription")}
+      >
         <ProfileEditForm
           userId={user?.id || ""}
           currentName={(profile?.full_name as string) || ""}
           currentEmail={user?.email || ""}
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-border/50">
+        <div className="mt-5 grid grid-cols-1 gap-4 border-t border-border/40 pt-5 sm:grid-cols-2">
           <div>
-            <span className="text-xs text-text-secondary uppercase tracking-wider">
+            <span className="text-xs uppercase tracking-wider text-text-secondary">
               {t("role")}
             </span>
-            <p className="text-sm text-text-primary mt-1 capitalize">
-              {(profile?.role as string) || "—"}
-            </p>
+            <div className="mt-1.5">
+              {roleLabel ? (
+                <Badge variant={isSuperAdmin ? "default" : "secondary"}>
+                  {roleLabel}
+                </Badge>
+              ) : (
+                <p className="text-sm text-text-primary">—</p>
+              )}
+            </div>
           </div>
           <div>
-            <span className="text-xs text-text-secondary uppercase tracking-wider">
+            <span className="text-xs uppercase tracking-wider text-text-secondary">
               {t("memberSince")}
             </span>
-            <p className="text-sm text-text-primary mt-1 font-mono ltr-nums">
+            <p className="ltr-nums mt-1.5 font-mono text-sm text-text-primary">
               {user?.created_at
                 ? new Date(user.created_at).toLocaleDateString()
                 : "—"}
             </p>
           </div>
         </div>
-      </div>
+      </SettingsSection>
 
       {/* Notification Preferences */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <Bell className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
-              {t("notificationPreferences")}
-            </h2>
-            <p className="text-xs text-text-secondary">
-              {t("notificationPreferencesDescription")}
-            </p>
-          </div>
-        </div>
+      <SettingsSection
+        id="notifications"
+        icon={<Bell className="h-5 w-5 text-accent" />}
+        title={t("notificationPreferences")}
+        description={t("notificationPreferencesDescription")}
+      >
         <NotificationPreferences />
-      </div>
+      </SettingsSection>
 
       {/* User Management */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-accent/10 rounded-md">
-              <Users className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <h2 className="text-base font-medium text-text-primary font-display">
-                {t("userManagement")}
-              </h2>
-              <p className="text-xs text-text-secondary">
-                {t("userManagementDescription")}
-              </p>
-            </div>
-          </div>
-          <InviteUserForm properties={propertiesList} />
-        </div>
-
+      <SettingsSection
+        id="users"
+        icon={<Users className="h-5 w-5 text-accent" />}
+        title={t("userManagement")}
+        description={t("userManagementDescription")}
+        action={<InviteUserForm properties={propertiesList} />}
+      >
         {allUsers && allUsers.length > 0 ? (
           <UserManagementTable
             users={(allUsers as Array<{
@@ -227,27 +281,21 @@ export default async function SettingsPage({
             currentUserId={user?.id || ""}
           />
         ) : (
-          <div className="bg-surface-elevated border border-border rounded-md p-4">
-            <p className="text-sm text-text-secondary">{t("noUsersFound")}</p>
-          </div>
+          <EmptyState
+            icon={<Users className="h-5 w-5" />}
+            title={t("noUsersFound")}
+            className="py-10"
+          />
         )}
-      </div>
+      </SettingsSection>
 
       {/* Property Notifications */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <MessageSquare className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
-              {t("propertyNotifications")}
-            </h2>
-            <p className="text-xs text-text-secondary">
-              {t("propertyNotificationsDescription")}
-            </p>
-          </div>
-        </div>
+      <SettingsSection
+        id="property-notifications"
+        icon={<MessageSquare className="h-5 w-5 text-accent" />}
+        title={t("propertyNotifications")}
+        description={t("propertyNotificationsDescription")}
+      >
         <PropertyNotificationToggles
           properties={(allProperties || []).map((p) => ({
             id: p.id as string,
@@ -255,97 +303,57 @@ export default async function SettingsPage({
             notifications_enabled: p.notifications_enabled as boolean,
           }))}
         />
-      </div>
+      </SettingsSection>
 
       {/* Tenant Notifications */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <Users className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
-              {t("tenantNotifications")}
-            </h2>
-            <p className="text-xs text-text-secondary">
-              {t("tenantNotificationsDescription")}
-            </p>
-          </div>
-        </div>
+      <SettingsSection
+        id="tenant-notifications"
+        icon={<Users className="h-5 w-5 text-accent" />}
+        title={t("tenantNotifications")}
+        description={t("tenantNotificationsDescription")}
+      >
         <TenantNotificationToggles tenants={tenantsList} />
-      </div>
+      </SettingsSection>
 
       {/* Property Maintenance Links */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <Wrench className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
-              {tMaint("propertyLinks")}
-            </h2>
-            <p className="text-xs text-text-secondary">
-              {tMaint("propertyLinksDescription")}
-            </p>
-          </div>
-        </div>
+      <SettingsSection
+        id="maintenance-links"
+        icon={<Wrench className="h-5 w-5 text-accent" />}
+        title={tMaint("propertyLinks")}
+        description={tMaint("propertyLinksDescription")}
+      >
         <PropertyMaintenanceLinks properties={propertiesList} locale={locale} />
-      </div>
+      </SettingsSection>
 
       {/* Activity Log */}
       {isSuperAdmin && (
-        <div className="bg-surface border border-border rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-accent/10 rounded-md">
-              <Activity className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <h2 className="text-base font-medium text-text-primary font-display">
-                {t("activityLogTitle")}
-              </h2>
-              <p className="text-xs text-text-secondary">
-                {t("activityLogDescription")}
-              </p>
-            </div>
-          </div>
+        <SettingsSection
+          id="activity"
+          icon={<Activity className="h-5 w-5 text-accent" />}
+          title={t("activityLogTitle")}
+          description={t("activityLogDescription")}
+        >
           <AuditLogViewer />
-        </div>
+        </SettingsSection>
       )}
 
       {/* Auto Invoice Settings */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <FileText className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
-              {t("autoInvoiceTitle")}
-            </h2>
-            <p className="text-xs text-text-secondary">
-              {t("autoInvoiceDescription")}
-            </p>
-          </div>
-        </div>
+      <SettingsSection
+        id="auto-invoice"
+        icon={<FileText className="h-5 w-5 text-accent" />}
+        title={t("autoInvoiceTitle")}
+        description={t("autoInvoiceDescription")}
+      >
         <AutoInvoiceSettings />
-      </div>
+      </SettingsSection>
 
       {/* WhatsApp AI Agent */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <Bot className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
-              {t("whatsappAgentTitle")}
-            </h2>
-            <p className="text-xs text-text-secondary">
-              {t("whatsappAgentDescription")}
-            </p>
-          </div>
-        </div>
+      <SettingsSection
+        id="whatsapp-agent"
+        icon={<Bot className="h-5 w-5 text-accent" />}
+        title={t("whatsappAgentTitle")}
+        description={t("whatsappAgentDescription")}
+      >
         <WhatsAppAgentSetup
           userId={user?.id || ""}
           currentPhone={(profile?.whatsapp_phone as string) || null}
@@ -353,58 +361,38 @@ export default async function SettingsPage({
             (profile?.notification_phones as string[] | null) || []
           }
         />
-      </div>
+      </SettingsSection>
 
       {/* WhatsApp Test */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-accent/10 rounded-md">
-              <MessageSquare className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <h2 className="text-base font-medium text-text-primary font-display">
-                {t("whatsappConfig")}
-              </h2>
-              <p className="text-xs text-text-secondary">
-                {t("whatsappConfigDescription")}
-              </p>
-            </div>
-          </div>
+      <SettingsSection
+        id="whatsapp-test"
+        icon={<MessageSquare className="h-5 w-5 text-accent" />}
+        title={t("whatsappConfig")}
+        description={t("whatsappConfigDescription")}
+        action={
           <a
             href={`/${locale}/settings/whatsapp-test`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition-all duration-200 hover:border-accent/30 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
-            <MessageSquare aria-hidden="true" className="h-4 w-4" />
+            <MessageSquare aria-hidden="true" className="h-4 w-4 text-accent" />
             {t("testWhatsapp")}
           </a>
-        </div>
+        }
+      >
         <p className="text-sm text-text-secondary">
           {t("whatsappTestDescription")}
         </p>
-      </div>
+      </SettingsSection>
 
       {/* Email Configuration */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-accent/10 rounded-md">
-            <Mail className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-text-primary font-display">
-              {t("emailConfig")}
-            </h2>
-            <p className="text-xs text-text-secondary">
-              {t("emailConfigDescription")}
-            </p>
-          </div>
-        </div>
-        <div className="bg-surface-elevated border border-border rounded-md p-4">
-          <p className="text-sm text-text-secondary">
-            {t("emailComingSoon")}
-          </p>
-        </div>
-      </div>
+      <SettingsSection
+        id="email"
+        icon={<Mail className="h-5 w-5 text-accent" />}
+        title={t("emailConfig")}
+        description={t("emailConfigDescription")}
+      >
+        <Alert variant="info">{t("emailComingSoon")}</Alert>
+      </SettingsSection>
     </div>
   );
 }

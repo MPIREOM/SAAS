@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { CURRENCY } from "@/lib/currency";
+import { PageHeader } from "@/components/ui/page-header";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function NewTemplatePage({
   params,
@@ -13,6 +19,8 @@ export default function NewTemplatePage({
 }) {
   const t = useTranslations("reminders");
   const tc = useTranslations("common");
+  const ts = useTranslations("settings");
+  const tt = useTranslations("tenants");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,133 +58,74 @@ export default function NewTemplatePage({
   };
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary font-display">
-          {t("newTemplate") || "New Template"}
-        </h1>
-      </div>
+    <div className="max-w-2xl space-y-6">
+      <PageHeader title={t("newTemplate")} description={t("noTemplatesDescription")} />
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("templateName") || "Template Name"}{" "}
-              <span className="text-destructive">*</span>
-            </label>
-            <input
-              name="name"
-              required
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              placeholder="e.g. Rent Reminder - WhatsApp"
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-5 animate-fade-in-up">
+        <div className="rounded-xl border border-border/60 bg-surface p-6 space-y-5">
+          <Input
+            name="name"
+            required
+            label={`${t("templateName")} *`}
+            placeholder="e.g. Rent Reminder - WhatsApp"
+          />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("type")} <span className="text-destructive">*</span>
-              </label>
-              <select
-                name="reminder_type"
-                required
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="rent_upcoming">Rent Upcoming</option>
-                <option value="rent_overdue">Rent Overdue</option>
-                <option value="cheque_due">Cheque Due</option>
-                <option value="lease_expiry">Lease Expiry</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("channel")} <span className="text-destructive">*</span>
-              </label>
-              <select
-                name="channel"
-                required
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="whatsapp">WhatsApp</option>
-                <option value="email">Email</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                Language <span className="text-destructive">*</span>
-              </label>
-              <select
-                name="language"
-                required
-                defaultValue="en"
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="en">English</option>
-                <option value="ar">Arabic</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("subject") || "Subject"} (email only)
-            </label>
-            <input
-              name="subject"
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              placeholder="e.g. Rent Reminder for {{month}}"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("whatsappTemplateName")} (WhatsApp only)
-            </label>
-            <input
-              name="whatsapp_template_name"
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-              placeholder="e.g. mpire_rent_upcoming_en"
-            />
-            <p className="text-xs text-text-secondary mt-1.5">
-              {t("whatsappTemplateNameHint")}
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("body") || "Message Body"}{" "}
-              <span className="text-destructive">*</span>
-            </label>
-            <textarea
-              name="body_template"
+            <Select name="reminder_type" required label={`${t("type")} *`}>
+              <option value="rent_upcoming">{t("types.rent_upcoming")}</option>
+              <option value="rent_overdue">{t("types.rent_overdue")}</option>
+              <option value="cheque_due">{t("types.cheque_due")}</option>
+              <option value="lease_expiry">{t("types.lease_expiry")}</option>
+            </Select>
+            <Select name="channel" required label={`${t("channel")} *`}>
+              <option value="whatsapp">{t("channels.whatsapp")}</option>
+              <option value="email">{t("channels.email")}</option>
+            </Select>
+            <Select
+              name="language"
               required
-              rows={6}
-              className="w-full bg-surface-elevated border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors resize-none"
-              placeholder={`Dear {{tenant_name}},\n\nThis is a reminder that your rent of {{amount}} ${CURRENCY.code} is due on {{due_date}}.\n\nThank you.`}
-            />
-            <p className="text-xs text-text-secondary mt-1.5">
-              Available variables: {"{{tenant_name}}"}, {"{{amount}}"}, {"{{due_date}}"}, {"{{property_name}}"}, {"{{unit_number}}"}, {"{{total_overdue}}"}, {"{{overdue_details}}"}
-            </p>
+              defaultValue="en"
+              label={`${ts("language")} *`}
+            >
+              <option value="en">{tt("languages.en")}</option>
+              <option value="ar">{tt("languages.ar")}</option>
+            </Select>
           </div>
+
+          <Input
+            name="subject"
+            label={`${t("subject")} (${t("emailOnly")})`}
+            placeholder="e.g. Rent Reminder for {{month}}"
+          />
+
+          <Input
+            name="whatsapp_template_name"
+            label={`${t("whatsappTemplateName")} (${t("whatsappOnly")})`}
+            helperText={t("whatsappTemplateNameHint")}
+            placeholder="e.g. mpire_rent_upcoming_en"
+            className="font-mono"
+          />
+
+          <Textarea
+            name="body_template"
+            required
+            rows={6}
+            label={`${t("messageBody")} *`}
+            placeholder={`Dear {{tenant_name}},\n\nThis is a reminder that your rent of {{amount}} ${CURRENCY.code} is due on {{due_date}}.\n\nThank you.`}
+            helperText={`${t("availableVariables")}: {{tenant_name}}, {{amount}}, {{due_date}}, {{property_name}}, {{unit_number}}, {{total_overdue}}, {{overdue_details}}`}
+            className="resize-none"
+          />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <Alert variant="destructive">{error}</Alert>}
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-          >
-            {loading ? tc("loading") : tc("save")}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
-          >
+          <Button type="submit" loading={loading}>
+            {tc("save")}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => router.back()}>
             {tc("cancel")}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

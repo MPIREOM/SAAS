@@ -1,9 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { ArrowLeft, FileText, Printer } from "lucide-react";
+import { FileText, Printer, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { CURRENCY } from "@/lib/currency";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 interface LedgerEntry {
   date: string;
@@ -21,6 +31,8 @@ export default async function TenantStatementPage({
 }) {
   const { locale, id: tenantId } = await params;
   const t = await getTranslations("tenants");
+  const tc = await getTranslations("common");
+  const tr = await getTranslations("reports");
   const supabase = await createClient();
 
   // Fetch tenant
@@ -32,9 +44,11 @@ export default async function TenantStatementPage({
 
   if (!tenant) {
     return (
-      <div className="text-center py-16">
-        <p className="text-text-secondary">Tenant not found</p>
-      </div>
+      <EmptyState
+        icon={<FileText className="h-5 w-5" />}
+        title={t("notFound")}
+        className="my-8"
+      />
     );
   }
 
@@ -101,112 +115,238 @@ export default async function TenantStatementPage({
   const totalPayments = entries.reduce((sum, e) => sum + e.payment, 0);
   const outstandingBalance = Math.round((totalCharges - totalPayments) * 100) / 100;
 
+  const summaryCards = [
+    {
+      label: t("totalCharges"),
+      value: totalCharges,
+      icon: TrendingUp,
+      valueClass: "text-text-primary",
+      cardClass: "border-border/60",
+      iconClass: "text-text-secondary bg-surface-elevated",
+    },
+    {
+      label: t("totalPayments"),
+      value: totalPayments,
+      icon: TrendingDown,
+      valueClass: "text-success",
+      cardClass: "border-border/60",
+      iconClass: "text-success bg-success/10",
+    },
+    {
+      label: t("outstandingBalance"),
+      value: outstandingBalance,
+      icon: Scale,
+      valueClass: outstandingBalance > 0 ? "text-destructive" : "text-success",
+      cardClass:
+        outstandingBalance > 0 ? "border-destructive/30" : "border-success/30",
+      iconClass:
+        outstandingBalance > 0
+          ? "text-destructive bg-destructive/10"
+          : "text-success bg-success/10",
+    },
+  ];
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/${locale}/tenants/${tenantId}`}
-            className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-display font-bold text-text-primary">Statement of Account</h1>
-            <p className="text-sm text-text-secondary">{tenant.full_name}</p>
-          </div>
-        </div>
+      <PageHeader
+        title={t("statement")}
+        description={tenant.full_name}
+        breadcrumbs={[
+          { label: t("title"), href: `/${locale}/tenants` },
+          { label: tenant.full_name, href: `/${locale}/tenants/${tenantId}` },
+          { label: t("statement") },
+        ]}
+      >
         <Link
           href="#"
-          className="inline-flex items-center gap-2 h-9 px-4 bg-surface border border-border/50 rounded-lg text-sm text-text-secondary hover:text-accent hover:border-accent/30 transition-all print:hidden"
-          title="Use Ctrl+P / Cmd+P to print"
+          className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 print:hidden"
+          title={tr("printHint")}
         >
-          <Printer className="h-3.5 w-3.5" />
-          Print
+          <Printer aria-hidden="true" className="h-4 w-4" />
+          {tr("printReport")}
         </Link>
-      </div>
+      </PageHeader>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <p className="text-xs text-text-secondary uppercase tracking-widest font-semibold">Total Charges</p>
-          <p className="text-2xl font-bold font-mono text-text-primary mt-1">{totalCharges.toLocaleString()} {CURRENCY.code}</p>
-        </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <p className="text-xs text-text-secondary uppercase tracking-widest font-semibold">Total Payments</p>
-          <p className="text-2xl font-bold font-mono text-success mt-1">{totalPayments.toLocaleString()} {CURRENCY.code}</p>
-        </div>
-        <div className={`bg-surface border rounded-xl p-4 ${outstandingBalance > 0 ? "border-destructive/30" : "border-success/30"}`}>
-          <p className="text-xs text-text-secondary uppercase tracking-widest font-semibold">Outstanding Balance</p>
-          <p className={`text-2xl font-bold font-mono mt-1 ${outstandingBalance > 0 ? "text-destructive" : "text-success"}`}>
-            {outstandingBalance.toLocaleString()} {CURRENCY.code}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-children">
+        {summaryCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.label}
+              className={`bg-surface border rounded-xl p-4 ${card.cardClass}`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                  {card.label}
+                </p>
+                <div className={`p-1.5 rounded-lg ${card.iconClass}`}>
+                  <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+                </div>
+              </div>
+              <p
+                className={`text-2xl font-bold font-mono tabular-nums ltr-nums ${card.valueClass}`}
+              >
+                {card.value.toLocaleString()}
+                <span className="text-xs font-sans font-normal text-text-secondary ms-1.5">
+                  {CURRENCY.code}
+                </span>
+              </p>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Ledger Table */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        {entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-text-secondary">
-            <div className="h-14 w-14 rounded-2xl bg-surface-elevated flex items-center justify-center mb-4">
-              <FileText className="h-6 w-6 opacity-40" />
-            </div>
-            <p className="text-sm">No transactions found</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-elevated/30">
-                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">Date</th>
-                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">Description</th>
-                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">Charge</th>
-                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">Payment</th>
-                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
+      {/* Ledger */}
+      {entries.length === 0 ? (
+        <EmptyState
+          icon={<FileText className="h-5 w-5" />}
+          title={t("noTransactions")}
+        />
+      ) : (
+        <div className="bg-surface border border-border/60 rounded-xl overflow-hidden animate-fade-in-up">
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <Table className="min-w-[640px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="px-4">{tc("date")}</TableHead>
+                  <TableHead className="px-4">{tc("description")}</TableHead>
+                  <TableHead className="px-4 text-end">{t("charge")}</TableHead>
+                  <TableHead className="px-4 text-end">{t("payment")}</TableHead>
+                  <TableHead className="px-4 text-end">{t("balance")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {entries.map((entry, i) => (
-                  <tr key={i} className="border-b border-border/20 hover:bg-surface-elevated/30 transition-colors">
-                    <td className="py-3 px-4 font-mono text-xs text-text-secondary">
+                  <TableRow key={i}>
+                    <TableCell className="px-4 whitespace-nowrap font-mono ltr-nums text-xs text-text-secondary">
                       {format(new Date(entry.date), "dd MMM yyyy")}
-                    </td>
-                    <td className="py-3 px-4 text-text-primary">{entry.description}</td>
-                    <td className="py-3 px-4 text-end font-mono">
+                    </TableCell>
+                    <TableCell className="px-4 text-text-primary">
+                      {entry.description}
+                    </TableCell>
+                    <TableCell className="px-4 text-end font-mono ltr-nums">
                       {entry.charge > 0 ? (
-                        <span className="text-text-primary">{entry.charge.toLocaleString()} {CURRENCY.code}</span>
-                      ) : "\u2014"}
-                    </td>
-                    <td className="py-3 px-4 text-end font-mono">
+                        <span className="text-text-primary">
+                          {entry.charge.toLocaleString()}{" "}
+                          <span className="text-[10px] font-sans text-text-secondary">
+                            {CURRENCY.code}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-text-secondary/50">{"—"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 text-end font-mono ltr-nums">
                       {entry.payment > 0 ? (
-                        <span className="text-success">{entry.payment.toLocaleString()} {CURRENCY.code}</span>
-                      ) : "\u2014"}
-                    </td>
-                    <td className={`py-3 px-4 text-end font-mono font-medium ${entry.balance > 0 ? "text-destructive" : "text-success"}`}>
-                      {entry.balance.toLocaleString()} {CURRENCY.code}
-                    </td>
-                  </tr>
+                        <span className="text-success">
+                          {entry.payment.toLocaleString()}{" "}
+                          <span className="text-[10px] font-sans text-text-secondary">
+                            {CURRENCY.code}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-text-secondary/50">{"—"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell
+                      className={`px-4 text-end font-mono ltr-nums font-semibold ${
+                        entry.balance > 0 ? "text-destructive" : "text-success"
+                      }`}
+                    >
+                      {entry.balance.toLocaleString()}{" "}
+                      <span className="text-[10px] font-sans font-normal text-text-secondary">
+                        {CURRENCY.code}
+                      </span>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-border bg-surface-elevated/50">
-                  <td className="py-3 px-4 font-semibold text-text-primary" colSpan={2}>Total</td>
-                  <td className="py-3 px-4 text-end font-mono font-bold text-text-primary">
-                    {totalCharges.toLocaleString()} {CURRENCY.code}
-                  </td>
-                  <td className="py-3 px-4 text-end font-mono font-bold text-success">
-                    {totalPayments.toLocaleString()} {CURRENCY.code}
-                  </td>
-                  <td className={`py-3 px-4 text-end font-mono font-bold ${outstandingBalance > 0 ? "text-destructive" : "text-success"}`}>
-                    {outstandingBalance.toLocaleString()} {CURRENCY.code}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                <TableRow className="border-t-2 border-border bg-surface-elevated/50 hover:bg-surface-elevated/50">
+                  <TableCell className="px-4 font-semibold text-text-primary" colSpan={2}>
+                    {tc("total")}
+                  </TableCell>
+                  <TableCell className="px-4 text-end font-mono ltr-nums font-bold text-text-primary">
+                    {totalCharges.toLocaleString()}{" "}
+                    <span className="text-[10px] font-sans font-normal text-text-secondary">
+                      {CURRENCY.code}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 text-end font-mono ltr-nums font-bold text-success">
+                    {totalPayments.toLocaleString()}{" "}
+                    <span className="text-[10px] font-sans font-normal text-text-secondary">
+                      {CURRENCY.code}
+                    </span>
+                  </TableCell>
+                  <TableCell
+                    className={`px-4 text-end font-mono ltr-nums font-bold ${
+                      outstandingBalance > 0 ? "text-destructive" : "text-success"
+                    }`}
+                  >
+                    {outstandingBalance.toLocaleString()}{" "}
+                    <span className="text-[10px] font-sans font-normal text-text-secondary">
+                      {CURRENCY.code}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </div>
+
+          {/* Mobile card list */}
+          <ul className="md:hidden divide-y divide-border/40">
+            {entries.map((entry, i) => (
+              <li key={`m-${i}`} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm text-text-primary leading-snug">
+                      {entry.description}
+                    </p>
+                    <p className="text-xs text-text-secondary font-mono ltr-nums mt-1">
+                      {format(new Date(entry.date), "dd MMM yyyy")}
+                    </p>
+                  </div>
+                  <p
+                    className={`text-sm font-semibold font-mono ltr-nums text-end shrink-0 ${
+                      entry.type === "payment" ? "text-success" : "text-text-primary"
+                    }`}
+                  >
+                    {entry.type === "payment"
+                      ? entry.payment.toLocaleString()
+                      : entry.charge.toLocaleString()}{" "}
+                    <span className="text-[10px] font-normal text-text-secondary">
+                      {CURRENCY.code}
+                    </span>
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-text-secondary">
+                  {t("balance")} ·{" "}
+                  <span
+                    className={`font-mono ltr-nums font-semibold ${
+                      entry.balance > 0 ? "text-destructive" : "text-success"
+                    }`}
+                  >
+                    {entry.balance.toLocaleString()} {CURRENCY.code}
+                  </span>
+                </p>
+              </li>
+            ))}
+            <li className="p-4 bg-surface-elevated/50 flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-text-primary">
+                {tc("total")}
+              </p>
+              <p
+                className={`text-sm font-bold font-mono ltr-nums text-end ${
+                  outstandingBalance > 0 ? "text-destructive" : "text-success"
+                }`}
+              >
+                {outstandingBalance.toLocaleString()} {CURRENCY.code}
+              </p>
+            </li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

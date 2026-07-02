@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Settings2,
-  Loader2,
-  CheckCircle2,
-  AlertTriangle,
-  Plus,
-  X,
-} from "lucide-react";
+import { Settings2, CheckCircle2, Plus, X } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 interface ReminderSetting {
   id: string;
@@ -123,42 +120,31 @@ export function ReminderRules() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />
-      </div>
-    );
+    return <Spinner label={tc("loading")} className="py-12" />;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
-          <Settings2 className="h-5 w-5 text-text-secondary" />
-          {t("rules")}
-        </h2>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-medium rounded-xl transition-all duration-200 disabled:opacity-50"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : saved ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : null}
+    <section className="space-y-4 animate-fade-in-up">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 border border-accent/15">
+            <Settings2 aria-hidden="true" className="h-4 w-4 text-accent" />
+          </span>
+          <h2 className="text-lg font-semibold text-text-primary font-display">
+            {t("rules")}
+          </h2>
+        </div>
+        <Button type="button" onClick={handleSave} loading={saving}>
+          {!saving && saved && (
+            <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
+          )}
           {saved ? t("rulesSaved") : tc("save")}
-        </button>
+        </Button>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
+      {error && <Alert variant="destructive">{error}</Alert>}
 
-      <div className="space-y-3">
+      <div className="space-y-3 stagger-children">
         {settings.map((setting) => {
           // Look up the localized label and description for this rule
           // type. The DB stores snake_case keys (rent_upcoming, etc.) so
@@ -170,29 +156,30 @@ export function ReminderRules() {
           return (
             <div
               key={setting.id}
-              className={`bg-surface border rounded-lg p-5 transition-colors ${
+              className={`rounded-xl border bg-surface p-5 transition-all duration-200 ${
                 setting.is_enabled
-                  ? "border-border"
-                  : "border-border/50 opacity-60"
+                  ? "border-border/60"
+                  : "border-border/40 opacity-60"
               }`}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <h3 className="text-sm font-medium text-text-primary font-display">
                     {label}
                   </h3>
-                  <p className="text-xs text-text-secondary mt-0.5">
+                  <p className="mt-0.5 text-xs text-text-secondary">
                     {description}
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="relative inline-flex shrink-0 cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={setting.is_enabled}
                     onChange={() => toggleEnabled(setting.reminder_type)}
                     className="sr-only peer"
                   />
-                  <div className="w-9 h-5 bg-border rounded-full peer peer-checked:bg-accent transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                  <span className="sr-only">{label}</span>
+                  <div className="w-9 h-5 bg-border rounded-full peer transition-colors peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent/40 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
                 </label>
               </div>
 
@@ -200,29 +187,29 @@ export function ReminderRules() {
                 <div className="space-y-3">
                   {/* Days chips */}
                   <div>
-                    <label className="text-xs text-text-secondary mb-1.5 block">
+                    <p className="mb-1.5 block text-xs text-text-secondary">
                       {isOverdue ? t("rulesStartAfterDays") : t("rulesDaysBefore")}
-                    </label>
+                    </p>
                     <div className="flex flex-wrap items-center gap-2">
                       {setting.days_before.map((day, i) => (
                         <span
                           key={i}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 bg-accent/10 text-accent text-xs font-medium rounded-lg"
+                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-accent/20 bg-accent/10 px-2.5 text-xs font-medium text-accent"
                         >
-                          {day} {day === 1 ? t("rulesDay") : t("rulesDays")}
+                          <span className="font-mono ltr-nums">{day}</span>{" "}
+                          {day === 1 ? t("rulesDay") : t("rulesDays")}
                           <button
                             type="button"
-                            onClick={() =>
-                              removeDay(setting.reminder_type, i)
-                            }
-                            className="hover:text-destructive transition-colors ms-0.5"
+                            onClick={() => removeDay(setting.reminder_type, i)}
+                            aria-label={tc("delete")}
+                            className="ms-0.5 cursor-pointer rounded transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                           >
-                            <X className="h-3 w-3" />
+                            <X aria-hidden="true" className="h-3 w-3" />
                           </button>
                         </span>
                       ))}
                       <div className="inline-flex items-center gap-1">
-                        <input
+                        <Input
                           type="number"
                           min="0"
                           value={newDayInputs[setting.reminder_type] || ""}
@@ -239,15 +226,21 @@ export function ReminderRules() {
                             }
                           }}
                           placeholder="0"
-                          className="w-16 h-7 bg-surface-elevated border border-border rounded-md px-2 text-xs text-text-primary focus:outline-none focus:border-accent transition-colors"
+                          aria-label={
+                            isOverdue ? t("rulesStartAfterDays") : t("rulesDaysBefore")
+                          }
+                          className="h-7 w-16 px-2 py-0 text-xs font-mono ltr-nums"
                         />
-                        <button
+                        <Button
                           type="button"
+                          variant="secondary"
+                          size="sm"
                           onClick={() => addDay(setting.reminder_type)}
-                          className="h-7 w-7 inline-flex items-center justify-center bg-surface-elevated border border-border rounded-md hover:border-accent text-text-secondary hover:text-accent transition-colors"
+                          aria-label={tc("create")}
+                          className="h-7 w-7 p-0"
                         >
-                          <Plus className="h-3.5 w-3.5" />
-                        </button>
+                          <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -255,11 +248,11 @@ export function ReminderRules() {
                   {/* Repeat interval (only for overdue) */}
                   {isOverdue && (
                     <div>
-                      <label className="text-xs text-text-secondary mb-1.5 block">
+                      <p className="mb-1.5 block text-xs text-text-secondary">
                         {t("rulesRepeatEvery")}
-                      </label>
+                      </p>
                       <div className="flex items-center gap-2">
-                        <input
+                        <Input
                           type="number"
                           min="1"
                           value={setting.repeat_interval_days ?? ""}
@@ -270,7 +263,8 @@ export function ReminderRules() {
                             )
                           }
                           placeholder="—"
-                          className="w-20 h-8 bg-surface-elevated border border-border rounded-md px-2 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                          aria-label={t("rulesRepeatEvery")}
+                          className="h-8 w-20 px-2 py-0 font-mono ltr-nums"
                         />
                         <span className="text-xs text-text-secondary">
                           {t("rulesDays")}
@@ -284,6 +278,6 @@ export function ReminderRules() {
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

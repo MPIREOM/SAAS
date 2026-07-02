@@ -2,12 +2,20 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
-import { Bell, FileText, Plus } from "lucide-react";
+import { Bell, FileText, Plus, Pencil } from "lucide-react";
 import { ReminderTriggerButton } from "@/components/reminders/trigger-button";
 import { ReminderRules } from "@/components/reminders/reminder-rules";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 export default async function RemindersPage({
   params,
@@ -16,6 +24,7 @@ export default async function RemindersPage({
 }) {
   const { locale } = await params;
   const t = await getTranslations("reminders");
+  const tc = await getTranslations("common");
   const supabase = await createClient();
 
   // Property-level access control
@@ -58,6 +67,12 @@ export default async function RemindersPage({
     return "default";
   };
 
+  const messageExcerpt = (content: unknown) => {
+    const text = (content as string) || "";
+    if (!text) return "—";
+    return text.length > 60 ? `${text.slice(0, 60)}...` : text;
+  };
+
   return (
     <div className="space-y-8">
       <PageHeader title={t("title")} description={t("subtitle")}>
@@ -65,92 +80,122 @@ export default async function RemindersPage({
       </PageHeader>
 
       {/* Reminder Log Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
-            <Bell className="h-5 w-5 text-text-secondary" />
+      <section className="space-y-4 animate-fade-in-up">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 border border-accent/15">
+            <Bell aria-hidden="true" className="h-4 w-4 text-accent" />
+          </span>
+          <h2 className="text-lg font-semibold text-text-primary font-display">
             {t("log")}
           </h2>
+          {reminders && reminders.length > 0 && (
+            <span className="rounded-md border border-border/40 bg-surface-elevated px-2 py-0.5 font-mono text-xs font-medium text-text-secondary ltr-nums">
+              {reminders.length}
+            </span>
+          )}
         </div>
 
         {reminders && reminders.length > 0 ? (
-          <div className="bg-surface border border-border rounded-lg overflow-x-auto animate-fade-in">
-            <table className="w-full min-w-[650px]">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("date")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("tenant")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("type")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("channel")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("status")}
-                  </th>
-                  <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                    {t("message")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {reminders.map((reminder: Record<string, unknown>) => {
-                  const tenant = reminder.tenants as Record<string, unknown> | null;
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-surface">
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table className="min-w-[720px]">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-4">{t("date")}</TableHead>
+                    <TableHead className="px-4">{t("tenant")}</TableHead>
+                    <TableHead className="px-4">{t("type")}</TableHead>
+                    <TableHead className="px-4">{t("channel")}</TableHead>
+                    <TableHead className="px-4">{t("status")}</TableHead>
+                    <TableHead className="px-4">{t("message")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reminders.map((reminder: Record<string, unknown>) => {
+                    const tenant = reminder.tenants as Record<string, unknown> | null;
 
-                  return (
-                    <tr
-                      key={reminder.id as string}
-                      className="hover:bg-surface-elevated/50 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary font-mono ltr-nums">
+                    return (
+                      <TableRow key={reminder.id as string}>
+                        <TableCell className="px-4 whitespace-nowrap font-mono text-text-secondary ltr-nums">
                           {new Date(reminder.created_at as string).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-text-primary">
+                        </TableCell>
+                        <TableCell className="px-4 font-medium text-text-primary">
                           {(tenant?.full_name as string) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary">
+                        </TableCell>
+                        <TableCell className="px-4 text-text-secondary">
                           {reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {reminder.channel ? (
-                          <Badge variant={channelVariant(reminder.channel as string)}>
-                            {t(`channels.${reminder.channel}`)}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-text-secondary">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {reminder.status ? (
-                          <Badge variant={statusVariant(reminder.status as string)}>
-                            {t(`statuses.${reminder.status}`)}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-text-secondary">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary max-w-[250px] truncate block">
-                          {(reminder.message_content as string)?.slice(0, 60) || "—"}
-                          {(reminder.message_content as string)?.length > 60 ? "..." : ""}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </TableCell>
+                        <TableCell className="px-4">
+                          {reminder.channel ? (
+                            <Badge variant={channelVariant(reminder.channel as string)}>
+                              {t(`channels.${reminder.channel}`)}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-text-secondary">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4">
+                          {reminder.status ? (
+                            <Badge variant={statusVariant(reminder.status as string)}>
+                              {t(`statuses.${reminder.status}`)}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-text-secondary">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4">
+                          <span className="block max-w-[250px] truncate text-text-secondary">
+                            {messageExcerpt(reminder.message_content)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile card list */}
+            <ul className="md:hidden divide-y divide-border/40">
+              {reminders.map((reminder: Record<string, unknown>) => {
+                const tenant = reminder.tenants as Record<string, unknown> | null;
+
+                return (
+                  <li key={`m-${reminder.id as string}`} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-text-primary">
+                          {(tenant?.full_name as string) || "—"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-text-secondary">
+                          {reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—"}
+                        </p>
+                      </div>
+                      <span className="shrink-0 font-mono text-xs text-text-secondary ltr-nums">
+                        {new Date(reminder.created_at as string).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      {Boolean(reminder.channel) && (
+                        <Badge variant={channelVariant(reminder.channel as string)}>
+                          {t(`channels.${reminder.channel}`)}
+                        </Badge>
+                      )}
+                      {Boolean(reminder.status) && (
+                        <Badge variant={statusVariant(reminder.status as string)}>
+                          {t(`statuses.${reminder.status}`)}
+                        </Badge>
+                      )}
+                    </div>
+                    {Boolean(reminder.message_content) && (
+                      <p className="mt-2 truncate text-xs text-text-secondary">
+                        {messageExcerpt(reminder.message_content)}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ) : (
           <EmptyState
@@ -159,42 +204,51 @@ export default async function RemindersPage({
             description={t("noRemindersSentDescription")}
           />
         )}
-      </div>
+      </section>
 
       {/* Reminder Rules Section */}
       <ReminderRules />
 
       {/* Templates Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-text-primary font-display flex items-center gap-2">
-            <FileText className="h-5 w-5 text-text-secondary" />
-            {t("notificationTemplates")}
-          </h2>
+      <section className="space-y-4 animate-fade-in-up">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 border border-accent/15">
+              <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
+            </span>
+            <h2 className="text-lg font-semibold text-text-primary font-display">
+              {t("notificationTemplates")}
+            </h2>
+            {templates && templates.length > 0 && (
+              <span className="rounded-md border border-border/40 bg-surface-elevated px-2 py-0.5 font-mono text-xs font-medium text-text-secondary ltr-nums">
+                {templates.length}
+              </span>
+            )}
+          </div>
           <Link
             href={`/${locale}/reminders/templates/new`}
-            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98]"
+            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
-            <Plus className="h-4 w-4" />
+            <Plus aria-hidden="true" className="h-4 w-4" />
             {t("newTemplate")}
           </Link>
         </div>
 
         {templates && templates.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
             {templates.map((template: Record<string, unknown>) => (
               <Link
                 key={template.id as string}
                 href={`/${locale}/reminders/templates/${template.id}`}
-                className="bg-surface border border-border rounded-lg p-5 hover:border-accent/30 transition-colors group"
+                className="group flex flex-col rounded-xl border border-border/60 bg-surface p-5 transition-all duration-200 hover:border-accent/30 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
-                <div className="flex items-start justify-between mb-2 gap-3">
-                  <h3 className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors font-display">
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <h3 className="text-sm font-medium text-text-primary font-display transition-colors group-hover:text-accent">
                     {template.name as string}
                   </h3>
                   <Badge
                     variant={channelVariant((template.channel as string) || "email")}
-                    className="capitalize"
+                    className="capitalize shrink-0"
                   >
                     {(template.channel as string) || "email"}
                   </Badge>
@@ -203,9 +257,13 @@ export default async function RemindersPage({
                   {(template.body_template as string)?.slice(0, 120) || "—"}
                   {(template.body_template as string)?.length > 120 ? "..." : ""}
                 </p>
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+                <div className="mt-3 flex items-center gap-2 border-t border-border/40 pt-3">
                   <span className="text-xs text-text-secondary capitalize">
                     {t("type")}: {template.reminder_type ? t(`types.${template.reminder_type}`) : "—"}
+                  </span>
+                  <span className="ms-auto inline-flex items-center gap-1 text-xs font-medium text-text-secondary transition-colors group-hover:text-accent">
+                    <Pencil aria-hidden="true" className="h-3 w-3" />
+                    {tc("edit")}
                   </span>
                 </div>
               </Link>
@@ -227,7 +285,7 @@ export default async function RemindersPage({
             }
           />
         )}
-      </div>
+      </section>
     </div>
   );
 }

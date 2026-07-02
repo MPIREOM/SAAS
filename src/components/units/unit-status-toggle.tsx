@@ -3,8 +3,11 @@
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Wrench, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 
 export function UnitStatusToggle({
   unitId,
@@ -16,12 +19,13 @@ export function UnitStatusToggle({
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("units");
 
   if (currentStatus === "occupied") return null; // Can't toggle occupied units
 
   const isMaintenance = currentStatus === "maintenance";
   const nextStatus = isMaintenance ? "vacant" : "maintenance";
-  const label = isMaintenance ? "Mark as Vacant" : "Mark as Under Maintenance";
+  const label = isMaintenance ? t("markVacant") : t("markMaintenance");
   const Icon = isMaintenance ? CheckCircle2 : Wrench;
 
   async function handleToggle() {
@@ -35,24 +39,28 @@ export function UnitStatusToggle({
     if (error) {
       toast({ title: error.message, variant: "destructive" });
     } else {
-      toast({ title: `Unit marked as ${nextStatus}`, variant: "success" });
+      toast({ title: t("statusUpdated", { status: t(nextStatus) }), variant: "success" });
       router.refresh();
     }
     setLoading(false);
   }
 
   return (
-    <button
+    <Button
+      type="button"
+      size="sm"
+      variant="secondary"
       onClick={handleToggle}
-      disabled={loading}
-      className={`inline-flex items-center gap-2 h-8 px-3 text-xs rounded-md border transition-colors ${
+      loading={loading}
+      className={cn(
+        "gap-1.5",
         isMaintenance
-          ? "bg-success/10 border-success/20 text-success hover:bg-success/20"
-          : "bg-warning/10 border-warning/20 text-warning hover:bg-warning/20"
-      } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+          ? "border-success/25 bg-success/10 text-success hover:border-success/40 hover:bg-success/20"
+          : "border-warning/25 bg-warning/10 text-warning hover:border-warning/40 hover:bg-warning/20"
+      )}
     >
-      <Icon className="h-3.5 w-3.5" />
-      {loading ? "..." : label}
-    </button>
+      {!loading && <Icon aria-hidden="true" className="h-3.5 w-3.5" />}
+      {label}
+    </Button>
   );
 }

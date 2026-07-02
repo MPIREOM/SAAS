@@ -1,11 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { FolderOpen, AlertTriangle, Clock, CheckCircle, ExternalLink } from "lucide-react";
+import {
+  FolderOpen,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+  ExternalLink,
+  Upload,
+  FileText,
+  FileImage,
+  FileSpreadsheet,
+  File as FileGeneric,
+} from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils/cn";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 interface Document {
   id: string;
@@ -29,6 +51,18 @@ function getExpiryStatus(expiryDate: string | null): "expired" | "expiringSoon" 
   return "valid";
 }
 
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp", "svg", "heic", "bmp"]);
+const SPREADSHEET_EXTENSIONS = new Set(["xls", "xlsx", "csv"]);
+const TEXT_EXTENSIONS = new Set(["pdf", "doc", "docx", "txt", "rtf"]);
+
+function getFileIcon(fileName: string | null) {
+  const ext = fileName?.split(".").pop()?.toLowerCase() || "";
+  if (IMAGE_EXTENSIONS.has(ext)) return FileImage;
+  if (SPREADSHEET_EXTENSIONS.has(ext)) return FileSpreadsheet;
+  if (TEXT_EXTENSIONS.has(ext)) return FileText;
+  return FileGeneric;
+}
+
 export default async function DocumentsPage({
   params,
   searchParams,
@@ -39,6 +73,8 @@ export default async function DocumentsPage({
   const { locale } = await params;
   const { filter, page: pageParam } = await searchParams;
   const t = await getTranslations("documents");
+  const tc = await getTranslations("common");
+  const tShared = await getTranslations("tenants");
   const currentPage = parseInt(pageParam || "1");
   const pageSize = 50;
 
@@ -97,68 +133,113 @@ export default async function DocumentsPage({
     custom: "custom",
   };
 
+  const entityTypeLabel = (entityType: string) =>
+    entityType === "tenant"
+      ? tc("tenant")
+      : entityType === "property"
+        ? tc("property")
+        : entityType;
+
+  const summaryCards = [
+    {
+      key: "expired",
+      count: expiredCount,
+      label: t("expired"),
+      icon: AlertTriangle,
+      border: "border-destructive/20",
+      iconBg: "bg-destructive/10",
+      text: "text-destructive",
+    },
+    {
+      key: "expiringSoon",
+      count: expiringSoonCount,
+      label: t("expiringSoon"),
+      icon: Clock,
+      border: "border-warning/20",
+      iconBg: "bg-warning/10",
+      text: "text-warning",
+    },
+    {
+      key: "valid",
+      count: validCount,
+      label: t("valid"),
+      icon: CheckCircle,
+      border: "border-success/20",
+      iconBg: "bg-success/10",
+      text: "text-success",
+    },
+  ];
+
   const filters = [
-    { key: null, label: "All" },
+    { key: null, label: tShared("all") },
     { key: "expired", label: t("expired"), count: expiredCount, color: "text-destructive bg-destructive/10" },
     { key: "expiringSoon", label: t("expiringSoon"), count: expiringSoonCount, color: "text-warning bg-warning/10" },
     { key: "valid", label: t("valid"), count: validCount, color: "text-success bg-success/10" },
   ];
 
+  const uploadCta = (
+    <Link
+      href={`/${locale}/documents/upload`}
+      className={cn(buttonVariants({ variant: "default" }), "rounded-xl")}
+    >
+      <Upload aria-hidden="true" className="h-4 w-4" />
+      {t("uploadDocument")}
+    </Link>
+  );
+
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} description={t("subtitle")} />
+      <PageHeader title={t("title")} description={t("subtitle")}>
+        {uploadCta}
+      </PageHeader>
 
       {/* Expiry Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-surface border border-destructive/20 rounded-xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-destructive/10 rounded-lg">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold font-mono text-destructive">{expiredCount}</p>
-            <p className="text-xs text-text-secondary">{t("expired")}</p>
-          </div>
-        </div>
-        <div className="bg-surface border border-warning/20 rounded-xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-warning/10 rounded-lg">
-            <Clock className="h-5 w-5 text-warning" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold font-mono text-warning">{expiringSoonCount}</p>
-            <p className="text-xs text-text-secondary">{t("expiringSoon")}</p>
-          </div>
-        </div>
-        <div className="bg-surface border border-success/20 rounded-xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-success/10 rounded-lg">
-            <CheckCircle className="h-5 w-5 text-success" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold font-mono text-success">{validCount}</p>
-            <p className="text-xs text-text-secondary">{t("valid")}</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-children">
+        {summaryCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.key}
+              className={`flex items-center gap-3 rounded-xl border bg-surface p-4 ${card.border}`}
+            >
+              <div className={`rounded-lg p-2 ${card.iconBg}`}>
+                <Icon aria-hidden="true" className={`h-5 w-5 ${card.text}`} />
+              </div>
+              <div>
+                <p className={`text-2xl font-bold font-mono ltr-nums ${card.text}`}>
+                  {card.count}
+                </p>
+                <p className="text-xs text-text-secondary">{card.label}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 flex-wrap">
-        {filters.map((f) => (
-          <Link
-            key={f.key || "all"}
-            href={f.key ? `/${locale}/documents?filter=${f.key}` : `/${locale}/documents`}
-            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-colors border ${
-              filter === f.key || (!filter && !f.key)
-                ? "bg-accent/10 text-accent border-accent/30"
-                : "bg-surface border-border/50 text-text-secondary hover:text-text-primary hover:border-border"
-            }`}
-          >
-            {f.label}
-            {f.count !== undefined && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${f.color || ""}`}>
-                {f.count}
-              </span>
-            )}
-          </Link>
-        ))}
+        {filters.map((f) => {
+          const isActive = filter === f.key || (!filter && !f.key);
+          return (
+            <Link
+              key={f.key || "all"}
+              href={f.key ? `/${locale}/documents?filter=${f.key}` : `/${locale}/documents`}
+              aria-current={isActive ? "page" : undefined}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                isActive
+                  ? "bg-accent/10 text-accent border-accent/30"
+                  : "bg-surface border-border/50 text-text-secondary hover:text-text-primary hover:border-border"
+              }`}
+            >
+              {f.label}
+              {f.count !== undefined && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ltr-nums ${f.color || ""}`}>
+                  {f.count}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Documents Table */}
@@ -167,23 +248,26 @@ export default async function DocumentsPage({
           icon={<FolderOpen className="h-5 w-5" />}
           title={t("noDocuments")}
           description={t("noDocumentsDescription")}
+          action={uploadCta}
         />
       ) : (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-surface animate-fade-in-up">
           {/* Desktop table — hidden on mobile in favor of card list below */}
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-elevated/30">
-                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">{t("documentType")}</th>
-                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">{t("entity")}</th>
-                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">{t("fileName")}</th>
-                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">{t("expiryDate")}</th>
-                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">{t("uploaded")}</th>
-                  <th className="text-center text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4"></th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="hidden md:block">
+            <Table className="min-w-[760px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="px-4">{t("documentType")}</TableHead>
+                  <TableHead className="px-4">{t("entity")}</TableHead>
+                  <TableHead className="px-4">{t("fileName")}</TableHead>
+                  <TableHead className="px-4">{t("expiryDate")}</TableHead>
+                  <TableHead className="px-4">{t("uploaded")}</TableHead>
+                  <TableHead className="w-14 px-4 text-end">
+                    <span className="sr-only">{tc("actions")}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredDocs.map((doc) => {
                   const expiryStatus = getExpiryStatus(doc.expiry_date);
                   const expiryVariant: "success" | "warning" | "destructive" =
@@ -192,52 +276,59 @@ export default async function DocumentsPage({
                       : expiryStatus === "expiringSoon"
                       ? "warning"
                       : "success";
+                  const FileIcon = getFileIcon(doc.file_name);
                   return (
-                    <tr key={doc.id} className="border-b border-border/20 hover:bg-surface-elevated/30 transition-colors">
-                      <td className="py-3 px-4">
+                    <TableRow
+                      key={doc.id}
+                      className={expiryStatus === "expired" ? "bg-destructive/5" : ""}
+                    >
+                      <TableCell className="px-4">
                         <Badge variant="default">
                           {t(`types.${documentTypeMap[doc.document_type] || "custom"}`)}
                         </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div>
-                          <p className="text-sm text-text-primary font-medium">{doc.entityName}</p>
-                          <p className="text-xs text-text-secondary capitalize">{doc.entity_type}</p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-text-secondary text-xs truncate max-w-[200px]">
-                        {doc.file_name || "—"}
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <p className="text-sm font-medium text-text-primary">{doc.entityName}</p>
+                        <p className="text-xs text-text-secondary">
+                          {entityTypeLabel(doc.entity_type)}
+                        </p>
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <span className="flex items-center gap-2 text-xs text-text-secondary">
+                          <FileIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-accent/70" />
+                          <span className="max-w-[200px] truncate">{doc.file_name || "—"}</span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4">
                         {doc.expiry_date ? (
-                          <Badge variant={expiryVariant}>
+                          <Badge variant={expiryVariant} className="font-mono ltr-nums">
                             {format(new Date(doc.expiry_date), "dd MMM yyyy")}
                           </Badge>
                         ) : (
                           <span className="text-xs text-text-secondary">—</span>
                         )}
-                      </td>
-                      <td className="py-3 px-4 text-xs text-text-secondary font-mono">
+                      </TableCell>
+                      <TableCell className="px-4 whitespace-nowrap font-mono text-xs text-text-secondary ltr-nums">
                         {format(new Date(doc.uploaded_at), "dd MMM yyyy")}
-                      </td>
-                      <td className="py-3 px-4 text-center">
+                      </TableCell>
+                      <TableCell className="px-4 text-end">
                         {doc.file_url && (
                           <a
                             href={doc.file_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            aria-label={t("viewDocument") || "View document"}
+                            aria-label={t("preview")}
                             className="inline-flex h-8 min-w-8 items-center justify-center rounded-md text-accent hover:text-accent-hover hover:bg-accent/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                           >
                             <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
                           </a>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Mobile card list */}
@@ -250,41 +341,50 @@ export default async function DocumentsPage({
                   : expiryStatus === "expiringSoon"
                   ? "warning"
                   : "success";
+              const FileIcon = getFileIcon(doc.file_name);
               return (
-                <li key={`m-${doc.id}`} className="p-4">
+                <li
+                  key={`m-${doc.id}`}
+                  className={`p-4 ${expiryStatus === "expired" ? "bg-destructive/5" : ""}`}
+                >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-text-primary truncate">
-                        {doc.entityName}
-                      </p>
-                      <p className="text-xs text-text-secondary capitalize mt-0.5">
-                        {doc.entity_type}
-                      </p>
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+                        <FileIcon aria-hidden="true" className="h-4 w-4 text-accent" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">
+                          {doc.entityName}
+                        </p>
+                        <p className="text-xs text-text-secondary mt-0.5">
+                          {entityTypeLabel(doc.entity_type)}
+                        </p>
+                      </div>
                     </div>
                     {doc.file_url && (
                       <a
                         href={doc.file_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label={t("viewDocument") || "View document"}
+                        aria-label={t("preview")}
                         className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md border border-border/50 text-text-secondary hover:text-accent hover:border-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                       >
                         <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
                       </a>
                     )}
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <Badge variant="default">
                       {t(`types.${documentTypeMap[doc.document_type] || "custom"}`)}
                     </Badge>
                     {doc.expiry_date && (
-                      <Badge variant={expiryVariant}>
+                      <Badge variant={expiryVariant} className="font-mono ltr-nums">
                         {format(new Date(doc.expiry_date), "dd MMM yyyy")}
                       </Badge>
                     )}
                   </div>
                   {doc.file_name && (
-                    <p className="mt-2 text-xs text-text-secondary truncate">
+                    <p className="mt-2 truncate text-xs text-text-secondary">
                       {doc.file_name}
                     </p>
                   )}
@@ -295,26 +395,13 @@ export default async function DocumentsPage({
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-              <Link
-                href={`/${locale}/documents?page=${Math.max(1, currentPage - 1)}${filter ? `&filter=${filter}` : ""}`}
-                className={`text-xs px-3 py-1.5 rounded-md border ${
-                  currentPage <= 1 ? "opacity-50 pointer-events-none border-border/30 text-text-secondary" : "border-border text-text-secondary hover:text-text-primary"
-                }`}
-              >
-                Previous
-              </Link>
-              <span className="text-xs text-text-secondary">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Link
-                href={`/${locale}/documents?page=${Math.min(totalPages, currentPage + 1)}${filter ? `&filter=${filter}` : ""}`}
-                className={`text-xs px-3 py-1.5 rounded-md border ${
-                  currentPage >= totalPages ? "opacity-50 pointer-events-none border-border/30 text-text-secondary" : "border-border text-text-secondary hover:text-text-primary"
-                }`}
-              >
-                Next
-              </Link>
+            <div className="border-t border-border/40">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                baseUrl={`/${locale}/documents`}
+                searchParams={filter ? { filter } : {}}
+              />
             </div>
           )}
         </div>

@@ -5,14 +5,12 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   Play,
-  Loader2,
-  CheckCircle2,
-  AlertTriangle,
   Eye,
   Send,
   MessageSquare,
   Mail,
   User,
+  ChevronDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -23,6 +21,10 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CURRENCY } from "@/lib/currency";
 
 interface OverdueInvoice {
   amount: string;
@@ -59,15 +61,16 @@ interface TriggerResult {
   };
 }
 
-const reminderTypeLabels: Record<string, string> = {
-  rent_upcoming: "Rent Upcoming",
-  rent_overdue: "Rent Overdue",
-  cheque_due: "Cheque Due",
-  lease_expiry: "Lease Expiry",
-};
+const KNOWN_REMINDER_TYPES = [
+  "rent_upcoming",
+  "rent_overdue",
+  "cheque_due",
+  "lease_expiry",
+] as const;
 
 export function ReminderTriggerButton() {
   const t = useTranslations("reminders");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -144,57 +147,64 @@ export function ReminderTriggerButton() {
     }
   }
 
+  const reminderTypeLabel = (type: string) =>
+    (KNOWN_REMINDER_TYPES as readonly string[]).includes(type)
+      ? t(`types.${type}`)
+      : type;
+
   return (
     <div className="space-y-3">
-      <button
-        onClick={handlePreview}
-        disabled={loading}
-        className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] disabled:opacity-50"
-      >
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Play className="h-4 w-4" />
-        )}
+      <Button type="button" onClick={handlePreview} loading={loading}>
+        {!loading && <Play aria-hidden="true" className="h-4 w-4" />}
         {t("runNow")}
-      </button>
+      </Button>
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
+      {error && <Alert variant="destructive">{error}</Alert>}
 
       {result && (
-        <div className="p-4 rounded-lg bg-surface border border-border space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-            <CheckCircle2 className="h-4 w-4 text-success" />
-            {t("triggerComplete", { count: result.totalSent })}
-          </div>
+        <Alert
+          variant="success"
+          title={t("triggerComplete", { count: result.totalSent })}
+          className="animate-fade-in-up text-start"
+        >
           {result.totalSent > 0 && (
             <div className="space-y-1 text-xs text-text-secondary">
               {result.results.rentUpcoming > 0 && (
-                <p>{t("type")}: rent upcoming — {result.results.rentUpcoming}</p>
+                <p>
+                  {t("types.rent_upcoming")} —{" "}
+                  <span className="font-mono ltr-nums">{result.results.rentUpcoming}</span>
+                </p>
               )}
               {result.results.rentOverdue > 0 && (
-                <p>{t("type")}: rent overdue — {result.results.rentOverdue}</p>
+                <p>
+                  {t("types.rent_overdue")} —{" "}
+                  <span className="font-mono ltr-nums">{result.results.rentOverdue}</span>
+                </p>
               )}
               {result.results.chequeDue > 0 && (
-                <p>{t("type")}: cheque due — {result.results.chequeDue}</p>
+                <p>
+                  {t("types.cheque_due")} —{" "}
+                  <span className="font-mono ltr-nums">{result.results.chequeDue}</span>
+                </p>
               )}
               {result.results.leaseExpiry > 0 && (
-                <p>{t("type")}: lease expiry — {result.results.leaseExpiry}</p>
+                <p>
+                  {t("types.lease_expiry")} —{" "}
+                  <span className="font-mono ltr-nums">{result.results.leaseExpiry}</span>
+                </p>
               )}
               {result.results.errors > 0 && (
-                <p className="text-destructive">{t("errors")}: {result.results.errors}</p>
+                <p className="text-destructive">
+                  {t("errors")}:{" "}
+                  <span className="font-mono ltr-nums">{result.results.errors}</span>
+                </p>
               )}
             </div>
           )}
           {result.totalSent === 0 && (
             <p className="text-xs text-text-secondary">{t("noRemindersToSend")}</p>
           )}
-        </div>
+        </Alert>
       )}
 
       {/* Preview Dialog */}
@@ -202,7 +212,7 @@ export function ReminderTriggerButton() {
         <DialogContent maxWidth="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-accent" />
+              <Eye aria-hidden="true" className="h-5 w-5 text-accent" />
               {t("previewTitle")}
             </DialogTitle>
             <DialogDescription>
@@ -214,7 +224,7 @@ export function ReminderTriggerButton() {
             {previews.map((item, i) => (
               <div
                 key={i}
-                className="border border-border rounded-lg overflow-hidden"
+                className="overflow-hidden rounded-lg border border-border/60"
               >
                 {/* Summary row */}
                 <button
@@ -222,56 +232,48 @@ export function ReminderTriggerButton() {
                   onClick={() =>
                     setExpandedIndex(expandedIndex === i ? null : i)
                   }
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-elevated/50 transition-colors text-start"
+                  aria-expanded={expandedIndex === i}
+                  className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-surface-elevated/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
-                  <User className="h-4 w-4 text-text-secondary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">
+                  <User aria-hidden="true" className="h-4 w-4 shrink-0 text-text-secondary" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-text-primary">
                       {item.tenantName}
                     </p>
                     <p className="text-xs text-text-secondary">
-                      {reminderTypeLabels[item.reminderType] || item.reminderType}
+                      {reminderTypeLabel(item.reminderType)}
                       {item.unitNumber ? ` — ${item.unitNumber}` : ""}
                       {item.propertyName ? ` @ ${item.propertyName}` : ""}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     {item.phone && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">
-                        WhatsApp
-                      </span>
+                      <Badge variant="success">{t("channels.whatsapp")}</Badge>
                     )}
                     {item.email && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
-                        Email
-                      </span>
+                      <Badge variant="default">{t("channels.email")}</Badge>
                     )}
                   </div>
-                  <svg
-                    className={`h-4 w-4 text-text-secondary transition-transform ${
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={`h-4 w-4 shrink-0 text-text-secondary transition-transform duration-200 ${
                       expandedIndex === i ? "rotate-180" : ""
                     }`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
+                  />
                 </button>
 
                 {/* Expanded message preview */}
                 {expandedIndex === i && (
-                  <div className="border-t border-border px-4 py-3 space-y-3 bg-surface-elevated/30">
+                  <div className="space-y-3 border-t border-border/60 bg-surface-elevated/30 px-4 py-3">
                     {/* Overdue breakdown */}
                     {item.overdueInvoices && item.overdueInvoices.length > 0 && (
                       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
-                        <p className="text-xs font-medium text-destructive mb-2">
-                          Outstanding Invoices ({item.overdueInvoices.length})
+                        <p className="mb-2 text-xs font-medium text-destructive">
+                          {t("outstandingInvoices")} (
+                          <span className="font-mono ltr-nums">
+                            {item.overdueInvoices.length}
+                          </span>
+                          )
                         </p>
                         <div className="space-y-1">
                           {item.overdueInvoices.map((inv, j) => (
@@ -280,41 +282,49 @@ export function ReminderTriggerButton() {
                               className="flex items-center justify-between text-xs text-text-secondary"
                             >
                               <span>{inv.periodLabel}</span>
-                              <span className="font-mono">{inv.amount} OMR</span>
+                              <span className="font-mono ltr-nums">
+                                {inv.amount} {CURRENCY.code}
+                              </span>
                             </div>
                           ))}
                         </div>
-                        <div className="flex items-center justify-between text-xs font-semibold text-destructive mt-2 pt-2 border-t border-destructive/20">
-                          <span>Total</span>
-                          <span className="font-mono">{item.totalOverdue} OMR</span>
+                        <div className="mt-2 flex items-center justify-between border-t border-destructive/20 pt-2 text-xs font-semibold text-destructive">
+                          <span>{tc("total")}</span>
+                          <span className="font-mono ltr-nums">
+                            {item.totalOverdue} {CURRENCY.code}
+                          </span>
                         </div>
                       </div>
                     )}
                     {item.phone && (
                       <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <MessageSquare className="h-3.5 w-3.5 text-success" />
+                        <div className="mb-1.5 flex items-center gap-1.5">
+                          <MessageSquare aria-hidden="true" className="h-3.5 w-3.5 text-success" />
                           <span className="text-xs font-medium text-text-secondary">
-                            WhatsApp — {item.phone}
+                            {t("channels.whatsapp")} —{" "}
+                            <span className="font-mono ltr-nums">{item.phone}</span>
                           </span>
                         </div>
-                        <div className="text-sm text-text-primary bg-surface rounded-lg p-3 border border-border whitespace-pre-wrap">
+                        <div className="whitespace-pre-wrap rounded-lg border border-border/60 bg-surface p-3 text-sm text-text-primary">
                           {item.whatsappMessage}
                         </div>
-                        <p className="text-xs text-text-secondary mt-1">
-                          Template: <code className="font-mono text-accent">{item.whatsappTemplateName}</code>
+                        <p className="mt-1 text-xs text-text-secondary">
+                          {t("whatsappTemplateName")}:{" "}
+                          <code className="font-mono text-accent">
+                            {item.whatsappTemplateName}
+                          </code>
                         </p>
                       </div>
                     )}
                     {item.email && (
                       <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Mail className="h-3.5 w-3.5 text-accent" />
+                        <div className="mb-1.5 flex items-center gap-1.5">
+                          <Mail aria-hidden="true" className="h-3.5 w-3.5 text-accent" />
                           <span className="text-xs font-medium text-text-secondary">
-                            Email — {item.email}
+                            {t("channels.email")} — {item.email}
                           </span>
                         </div>
-                        <div className="text-sm text-text-primary bg-surface rounded-lg p-3 border border-border whitespace-pre-wrap">
+                        <div className="whitespace-pre-wrap rounded-lg border border-border/60 bg-surface p-3 text-sm text-text-primary">
                           {item.emailMessage}
                         </div>
                       </div>
@@ -326,29 +336,20 @@ export function ReminderTriggerButton() {
           </DialogBody>
 
           <DialogFooter>
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 setShowPreview(false);
                 setExpandedIndex(null);
               }}
-              className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
             >
               {t("cancel")}
-            </button>
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={sending}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
+            </Button>
+            <Button type="button" onClick={handleSend} loading={sending}>
+              {!sending && <Send aria-hidden="true" className="h-4 w-4" />}
               {t("confirmSend", { count: previews.length })}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

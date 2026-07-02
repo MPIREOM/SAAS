@@ -50,10 +50,13 @@ export function Sidebar({ locale }: SidebarProps) {
 
   const isRtl = locale === "ar";
 
-  // Close mobile sidebar on route change
-  useEffect(() => {
+  // Close mobile sidebar on route change (state adjustment during render,
+  // per react.dev "you might not need an effect")
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMobileOpen(false);
-  }, [pathname]);
+  }
 
   // Prevent body scroll when mobile sidebar is open
   useEffect(() => {

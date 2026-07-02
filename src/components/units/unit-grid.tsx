@@ -121,9 +121,9 @@ export function UnitGrid({
               aria-selected={isActive}
               onClick={() => setFilter(f)}
               className={cn(
-                "shrink-0 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                "shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
                 isActive
-                  ? "bg-accent font-medium text-background"
+                  ? "bg-accent font-medium text-accent-foreground shadow-sm shadow-accent/20"
                   : "text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
               )}
             >
@@ -132,9 +132,9 @@ export function UnitGrid({
               </span>
               <span
                 className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[10px] font-mono tabular-nums",
+                  "rounded-md px-1.5 py-0.5 text-[10px] font-mono tabular-nums ltr-nums",
                   isActive
-                    ? "bg-background/20 text-background"
+                    ? "bg-accent-foreground/15 text-accent-foreground"
                     : "bg-surface-elevated text-text-secondary"
                 )}
               >
@@ -170,7 +170,7 @@ export function UnitGrid({
                 )}
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-sm font-bold font-mono text-text-primary group-hover:text-accent transition-colors">
+                  <p className="text-sm font-bold font-mono ltr-nums text-text-primary group-hover:text-accent transition-colors">
                     {unit.unit_number}
                   </p>
                   <div className="flex items-center gap-1.5">
@@ -204,19 +204,21 @@ export function UnitGrid({
                     {unit.active_tenant_name}
                   </p>
                 ) : unit.bedrooms != null ? (
-                  <p className="mt-1.5 text-[11px] text-text-secondary/60">
+                  <p className="mt-1.5 truncate text-[11px] text-text-secondary/70">
                     {unit.bedrooms === 0
                       ? tu("types.studio")
-                      : `${unit.bedrooms} BR`}
+                      : unit.bedrooms >= 1 && unit.bedrooms <= 4
+                        ? tu(`types.${unit.bedrooms}br`)
+                        : `${unit.bedrooms} BR`}
                   </p>
                 ) : unit.unit_type ? (
-                  <p className="mt-1.5 text-[11px] capitalize text-text-secondary/60">
+                  <p className="mt-1.5 truncate text-[11px] capitalize text-text-secondary/70">
                     {unit.unit_type}
                   </p>
                 ) : null}
 
                 {unit.rent_amount ? (
-                  <p className="mt-2 text-xs font-bold font-mono tabular-nums text-text-primary/70">
+                  <p className="mt-2 text-xs font-bold font-mono tabular-nums ltr-nums text-text-primary/70">
                     {Number(unit.rent_amount).toLocaleString("en-OM", {
                       minimumFractionDigits: 0,
                     })}{" "}

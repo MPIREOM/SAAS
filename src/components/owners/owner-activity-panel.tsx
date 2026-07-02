@@ -1,8 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowDownCircle, ArrowUpCircle, Receipt, Banknote, FileText } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
+import { cn } from "@/lib/utils/cn";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { OwnerDetailProps } from "@/components/owners/types";
 
@@ -27,11 +38,12 @@ export function OwnerActivityPanel({
   leaseInfo,
   activityWindowDays,
 }: OwnerDetailProps) {
+  const t = useTranslations("owners");
   const [windowDays, setWindowDays] = useState(activityWindowDays);
 
   const items = useMemo(() => buildActivity({
-    payments, expenses, settlements, businessFees, leaseInfo,
-  }), [payments, expenses, settlements, businessFees, leaseInfo]);
+    payments, expenses, settlements, businessFees, leaseInfo, t,
+  }), [payments, expenses, settlements, businessFees, leaseInfo, t]);
 
   const cutoff = useMemo(() => {
     const d = new Date();
@@ -42,24 +54,28 @@ export function OwnerActivityPanel({
   const visible = items.filter((i) => i.date >= cutoff);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-fade-in-up">
       {/* Window selector */}
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-text-secondary">Window:</span>
         {[7, 30, 90, 365].map((d) => (
           <button
             key={d}
+            type="button"
             onClick={() => setWindowDays(d)}
-            className={`px-3 py-1.5 rounded-lg border transition-colors ${
+            aria-pressed={windowDays === d}
+            className={cn(
+              "cursor-pointer rounded-lg border px-3 py-1.5 font-medium transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
               windowDays === d
-                ? "bg-accent/10 border-accent/40 text-accent"
-                : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border"
-            }`}
+                ? "border-accent/40 bg-accent/10 text-accent"
+                : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border hover:text-text-primary",
+            )}
           >
             {d === 365 ? "1y" : `${d}d`}
           </button>
         ))}
-        <span className="ms-auto text-text-secondary">
+        <span className="ms-auto font-mono ltr-nums text-text-secondary">
           {visible.length} {visible.length === 1 ? "entry" : "entries"}
         </span>
       </div>
@@ -67,64 +83,138 @@ export function OwnerActivityPanel({
       {visible.length === 0 ? (
         <EmptyState
           icon={<Receipt className="h-6 w-6" />}
-          title="No activity in this window"
+          title={t("noActivity")}
           description="Try a longer window above, or log an expense / payment via WhatsApp."
         />
       ) : (
-        <div className="rounded-2xl border border-border/60 bg-surface-elevated/30 divide-y divide-border/40 overflow-hidden">
-          {visible.map((item, i) => (
-            <ActivityRow key={i} item={item} />
-          ))}
-        </div>
+        <>
+          {/* Desktop statement table */}
+          <div className="hidden overflow-hidden rounded-xl border border-border/50 md:block">
+            <Table className="min-w-[560px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-28">Date</TableHead>
+                  <TableHead>Entry</TableHead>
+                  <TableHead className="w-40 text-end">
+                    Amount ({CURRENCY.code})
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.map((item, i) => (
+                  <ActivityTableRow key={i} item={item} />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile card list */}
+          <ul className="space-y-2 md:hidden">
+            {visible.map((item, i) => (
+              <ActivityCard key={i} item={item} />
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
 }
 
-function ActivityRow({ item }: { item: ActivityItem }) {
-  const Icon = ICONS[item.kind];
-  const tone = item.sign === "+"
-    ? "text-emerald-400"
-    : item.sign === "-"
-      ? "text-amber-400"
+function toneFor(sign: ActivityItem["sign"]): string {
+  return sign === "+"
+    ? "text-success"
+    : sign === "-"
+      ? "text-destructive"
       : "text-text-secondary";
+}
+
+function AmountCell({ item }: { item: ActivityItem }) {
   return (
-    <div className="flex items-start gap-3 px-4 py-3">
-      <div className={`mt-0.5 ${tone}`}>
-        <Icon className="h-5 w-5" />
+    <span
+      className={cn(
+        "font-mono text-sm font-semibold tabular-nums ltr-nums",
+        toneFor(item.sign),
+      )}
+    >
+      {item.sign === "+" && "+"}
+      {item.sign === "-" && "−"}
+      {item.amount.toLocaleString("en-OM", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}
+    </span>
+  );
+}
+
+function ActivityTableRow({ item }: { item: ActivityItem }) {
+  const Icon = ICONS[item.kind];
+  return (
+    <TableRow>
+      <TableCell className="whitespace-nowrap font-mono text-xs ltr-nums text-text-secondary">
+        {formatDate(item.date)}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-start gap-2.5">
+          <Icon
+            aria-hidden="true"
+            className={cn("mt-0.5 h-4 w-4 shrink-0", toneFor(item.sign))}
+          />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-sm font-medium text-text-primary">
+                {item.primary}
+              </span>
+              {item.badge && (
+                <Badge variant="secondary" className="uppercase tracking-wider text-[10px]">
+                  {item.badge}
+                </Badge>
+              )}
+            </div>
+            <div className="mt-0.5 truncate text-xs text-text-secondary">
+              {item.secondary}
+            </div>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-end">
+        <AmountCell item={item} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function ActivityCard({ item }: { item: ActivityItem }) {
+  const Icon = ICONS[item.kind];
+  return (
+    <li className="flex items-start gap-3 rounded-xl border border-border/50 bg-surface-elevated/40 px-4 py-3">
+      <div className={cn("mt-0.5", toneFor(item.sign))}>
+        <Icon aria-hidden="true" className="h-5 w-5" />
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-text-primary truncate">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate text-sm font-medium text-text-primary">
             {item.primary}
           </span>
           {item.badge && (
-            <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-elevated border border-border/40 text-text-secondary">
+            <Badge variant="secondary" className="uppercase tracking-wider text-[10px]">
               {item.badge}
-            </span>
+            </Badge>
           )}
         </div>
-        <div className="text-xs text-text-secondary mt-0.5 truncate">
+        <div className="mt-0.5 truncate text-xs text-text-secondary">
           {item.secondary}
         </div>
       </div>
-      <div className="text-end shrink-0">
-        <div className={`text-sm font-mono tabular-nums font-semibold ${tone}`}>
-          {item.sign === "+" && "+"}
-          {item.sign === "-" && "−"}
-          {item.amount.toLocaleString("en-OM", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{" "}
-          <span className="text-[10px] text-text-secondary font-sans">
-            {CURRENCY.code}
-          </span>
-        </div>
-        <div className="text-[10px] text-text-secondary mt-0.5">
+      <div className="shrink-0 text-end">
+        <AmountCell item={item} />
+        <span className="ms-1 text-[10px] text-text-secondary">
+          {CURRENCY.code}
+        </span>
+        <div className="mt-0.5 font-mono text-[10px] ltr-nums text-text-secondary">
           {formatDate(item.date)}
         </div>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -141,10 +231,11 @@ function buildActivity({
   settlements,
   businessFees,
   leaseInfo,
+  t,
 }: Pick<
   OwnerDetailProps,
   "payments" | "expenses" | "settlements" | "businessFees" | "leaseInfo"
->): ActivityItem[] {
+> & { t: ReturnType<typeof useTranslations> }): ActivityItem[] {
   const out: ActivityItem[] = [];
 
   for (const p of payments) {
@@ -191,8 +282,8 @@ function buildActivity({
       amount: Number(s.amount || 0),
       primary:
         s.direction === "company_to_owner"
-          ? "Paid to owner"
-          : "Received from owner",
+          ? t("paidToOwner")
+          : t("receivedFromOwner"),
       secondary: [
         labelMethod(s.method),
         s.reference_number ? `Ref ${s.reference_number}` : null,

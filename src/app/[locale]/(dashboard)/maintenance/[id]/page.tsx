@@ -1,21 +1,52 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCY } from "@/lib/currency";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
   Wrench,
-  ArrowLeft,
   User,
   Phone,
   Calendar,
-  DollarSign,
+  Banknote,
   MessageSquare,
   Paperclip,
   Video,
 } from "lucide-react";
 import MaintenanceActions from "./maintenance-actions";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
+import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Stepper } from "@/components/ui/stepper";
+
+function urgencyVariant(
+  u: string
+): "secondary" | "default" | "warning" | "destructive" {
+  switch (u) {
+    case "emergency":
+      return "destructive";
+    case "high":
+      return "warning";
+    case "medium":
+      return "default";
+    default:
+      return "secondary";
+  }
+}
+
+function statusVariant(
+  s: string
+): "warning" | "default" | "success" | "secondary" {
+  switch (s) {
+    case "open":
+      return "warning";
+    case "in_progress":
+      return "default";
+    case "resolved":
+      return "success";
+    default:
+      return "secondary";
+  }
+}
 
 export default async function MaintenanceDetailPage({
   params,
@@ -24,6 +55,8 @@ export default async function MaintenanceDetailPage({
 }) {
   const { locale, id } = await params;
   const t = await getTranslations("maintenance");
+  const tc = await getTranslations("common");
+  const tu = await getTranslations("units");
   const supabase = await createClient();
 
   const { data: request } = await supabase
@@ -42,8 +75,6 @@ export default async function MaintenanceDetailPage({
 
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
   if (propertyIds !== null) {
-    const unitData = request.units as Record<string, unknown> | null;
-    const propertyData = unitData?.properties as Record<string, unknown> | null;
     // The query joins units -> properties, but we need property_id from the unit.
     // Since property is joined via property_id, we can get it from request.unit_id's property.
     // Actually the unit is joined as units:unit_id(unit_number, properties:property_id(name))
@@ -76,173 +107,158 @@ export default async function MaintenanceDetailPage({
   const property = unit?.properties as Record<string, unknown> | null;
   const tenant = request.tenants as Record<string, unknown> | null;
 
-  const urgencyColors: Record<string, string> = {
-    low: "bg-text-secondary/10 text-text-secondary",
-    medium: "bg-accent/10 text-accent",
-    high: "bg-warning/10 text-warning",
-    emergency: "bg-destructive/10 text-destructive",
-  };
-
-  const statusColors: Record<string, string> = {
-    open: "bg-warning/10 text-warning",
-    in_progress: "bg-accent/10 text-accent",
-    resolved: "bg-success/10 text-success",
-    closed: "bg-text-secondary/10 text-text-secondary",
-  };
-
   const statusFlow = ["open", "in_progress", "resolved", "closed"];
   const currentIndex = statusFlow.indexOf(request.status as string);
   const nextStatus = currentIndex < statusFlow.length - 1 ? statusFlow[currentIndex + 1] : null;
 
+  const requestUrgency = (request.urgency as string) || "low";
+  const requestStatus = (request.status as string) || "open";
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link
-              href={`/${locale}/maintenance`}
-              className="text-text-secondary hover:text-text-primary transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-2xl font-semibold text-text-primary font-display">
-              Request #{(request.id as string).slice(0, 8)}
-            </h1>
-          </div>
-          <p className="text-sm text-text-secondary">
-            {(property?.name as string) || "—"} &middot; Unit {(unit?.unit_number as string) || "—"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`text-xs px-2.5 py-1 rounded-full capitalize ${
-              urgencyColors[(request.urgency as string) || "low"]
-            }`}
-          >
-            {t(`urgencies.${request.urgency}`)}
-          </span>
-          <span
-            className={`text-xs px-2.5 py-1 rounded-full capitalize ${
-              statusColors[(request.status as string) || "open"]
-            }`}
-          >
-            {t(`statuses.${request.status}`)}
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        title={t("requestNumber", { id: (request.id as string).slice(0, 8) })}
+        description={`${(property?.name as string) || "—"} · ${tc("unit")} ${(unit?.unit_number as string) || "—"}`}
+        breadcrumbs={[
+          { label: t("title"), href: `/${locale}/maintenance` },
+          { label: `#${(request.id as string).slice(0, 8)}` },
+        ]}
+      >
+        <Badge variant={urgencyVariant(requestUrgency)} className="capitalize">
+          {t(`urgencies.${request.urgency}`)}
+        </Badge>
+        <Badge variant={statusVariant(requestStatus)} className="capitalize">
+          {t(`statuses.${request.status}`)}
+        </Badge>
+      </PageHeader>
 
-      {/* Info Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
-          <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-            {t("details")}
-          </h3>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Wrench className="h-3.5 w-3.5 text-text-secondary" />
-              <span className="text-sm text-text-primary">
-                {t(`categories.${request.category}`)}
+      {/* Request overview — identity card */}
+      <section className="bg-surface border border-border/60 rounded-xl overflow-hidden animate-fade-in-up">
+        <div className="p-5 bg-gradient-to-r from-accent/5 to-transparent border-b border-border/40 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
+            <Wrench aria-hidden="true" className="h-5 w-5 text-accent" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-text-primary font-display truncate">
+              {t(`categories.${request.category}`)}
+            </h2>
+            <p className="text-xs text-text-secondary truncate">
+              {(property?.name as string) || "—"} &middot; {tc("unit")}{" "}
+              <span className="font-mono ltr-nums">
+                {(unit?.unit_number as string) || "—"}
               </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 text-text-secondary" />
-              <span className="text-sm text-text-secondary font-mono ltr-nums">
-                {new Date(request.created_at as string).toLocaleDateString()}
-              </span>
-            </div>
-            {Boolean(request.estimated_cost) && (
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-3.5 w-3.5 text-text-secondary" />
-                <span className="text-sm text-text-primary font-mono ltr-nums">
-                  {request.estimated_cost as number} {CURRENCY.code}
-                </span>
-              </div>
-            )}
-            {Boolean(request.actual_cost) && (
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-3.5 w-3.5 text-accent" />
-                <span className="text-sm text-accent font-mono ltr-nums">
-                  {request.actual_cost as number} {CURRENCY.code} (Actual)
-                </span>
-              </div>
-            )}
+            </p>
           </div>
         </div>
-
-        <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
-          <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-            {t("tenant")}
-          </h3>
-          {tenant ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <User className="h-3.5 w-3.5 text-text-secondary" />
-                <span className="text-sm text-text-primary">
-                  {tenant.full_name as string}
-                </span>
-              </div>
-              {(tenant.phone as string) && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-3.5 w-3.5 text-text-secondary" />
-                  <span className="text-sm text-text-secondary font-mono ltr-nums">
-                    {tenant.phone as string}
+        <dl className="p-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-5">
+          <div>
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Calendar aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("requestDate")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+              {new Date(request.created_at as string).toLocaleDateString()}
+            </dd>
+          </div>
+          <div>
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Banknote aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("estimatedCost")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+              {request.estimated_cost ? (
+                <>
+                  {Number(request.estimated_cost).toLocaleString("en-OM", {
+                    minimumFractionDigits: 2,
+                  })}{" "}
+                  <span className="text-[10px] font-sans text-text-secondary">
+                    {CURRENCY.code}
                   </span>
-                </div>
+                </>
+              ) : (
+                "—"
               )}
-            </div>
-          ) : (
-            <p className="text-sm text-text-secondary">No tenant assigned</p>
-          )}
-        </div>
-
-        <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
-          <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-            {t("assignedTo")}
-          </h3>
-          {request.assigned_to_name ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <User className="h-3.5 w-3.5 text-text-secondary" />
-                <span className="text-sm text-text-primary">
-                  {request.assigned_to_name as string}
-                </span>
-              </div>
-              {Boolean(request.assigned_to_phone) && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-3.5 w-3.5 text-text-secondary" />
-                  <span className="text-sm text-text-secondary font-mono ltr-nums">
-                    {request.assigned_to_phone as string}
+            </dd>
+          </div>
+          <div>
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Banknote aria-hidden="true" className="h-3 w-3 text-accent/70" />
+              {t("actualCost")}
+            </dt>
+            <dd className="mt-1 text-sm font-semibold text-accent font-mono ltr-nums">
+              {request.actual_cost ? (
+                <>
+                  {Number(request.actual_cost).toLocaleString("en-OM", {
+                    minimumFractionDigits: 2,
+                  })}{" "}
+                  <span className="text-[10px] font-sans font-normal text-text-secondary">
+                    {CURRENCY.code}
                   </span>
-                </div>
+                </>
+              ) : (
+                <span className="font-normal text-text-primary">—</span>
               )}
-            </div>
-          ) : (
-            <p className="text-sm text-text-secondary">{t("notAssigned")}</p>
-          )}
-        </div>
-      </div>
+            </dd>
+          </div>
+          <div className="col-span-2 sm:col-span-3 lg:col-span-1">
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <User aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("tenant")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary truncate">
+              {tenant ? (tenant.full_name as string) : tu("noTenant")}
+            </dd>
+            {tenant?.phone ? (
+              <dd className="mt-0.5 text-xs text-text-secondary font-mono ltr-nums truncate">
+                {tenant.phone as string}
+              </dd>
+            ) : null}
+          </div>
+          <div className="col-span-2 sm:col-span-3 lg:col-span-2">
+            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <Phone aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              {t("assignedTo")}
+            </dt>
+            <dd className="mt-1 text-sm text-text-primary truncate">
+              {(request.assigned_to_name as string) || t("notAssigned")}
+            </dd>
+            {request.assigned_to_phone ? (
+              <dd className="mt-0.5 text-xs text-text-secondary font-mono ltr-nums truncate">
+                {request.assigned_to_phone as string}
+              </dd>
+            ) : null}
+          </div>
+        </dl>
+      </section>
 
       {/* Description */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <h3 className="text-sm font-medium text-text-primary mb-3">
+      <section className="bg-surface border border-border/60 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-text-primary font-display mb-3">
           {t("description")}
         </h3>
         <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">
           {request.description as string}
         </p>
-      </div>
+      </section>
 
       {/* Attachments — always render so it's obvious whether photos were
           received (helps diagnose "I uploaded a photo but it isn't showing"). */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <h3 className="text-sm font-medium text-text-primary mb-4 flex items-center gap-2">
-          <Paperclip className="h-4 w-4 text-text-secondary" />
-          Attachments ({attachments?.length || 0})
-        </h3>
+      <section className="bg-surface border border-border/60 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/15">
+            <Paperclip aria-hidden="true" className="h-4 w-4 text-accent" />
+          </div>
+          <h3 className="text-sm font-semibold text-text-primary font-display">
+            {t("attachments")}
+          </h3>
+          <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+            {attachments?.length || 0}
+          </span>
+        </div>
         {!attachments || attachments.length === 0 ? (
           <p className="text-sm text-text-secondary">
-            No files were attached to this request.
+            {t("noAttachments")}
           </p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -256,7 +272,7 @@ export default async function MaintenanceDetailPage({
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group block bg-surface-elevated border border-border rounded-lg overflow-hidden hover:border-accent/40 transition-colors"
+                  className="group block bg-surface-elevated border border-border/60 rounded-lg overflow-hidden hover:border-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   title={name}
                 >
                   {isVideo ? (
@@ -267,7 +283,7 @@ export default async function MaintenanceDetailPage({
                         preload="metadata"
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
-                        <Video className="h-8 w-8 text-white" />
+                        <Video aria-hidden="true" className="h-8 w-8 text-white" />
                       </div>
                     </div>
                   ) : (
@@ -287,65 +303,60 @@ export default async function MaintenanceDetailPage({
             })}
           </div>
         )}
-      </div>
+      </section>
 
       {/* Status Flow */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <h3 className="text-sm font-medium text-text-primary mb-4">
+      <section className="bg-surface border border-border/60 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-text-primary font-display mb-4">
           {t("statusUpdate")}
         </h3>
-        <div className="flex items-center gap-3 mb-4">
-          {statusFlow.map((status, index) => (
-            <div key={status} className="flex items-center gap-3">
-              <div
-                className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize ${
-                  index <= currentIndex
-                    ? statusColors[status]
-                    : "bg-surface-elevated text-text-secondary"
-                }`}
-              >
-                {t(`statuses.${status}`)}
-              </div>
-              {index < statusFlow.length - 1 && (
-                <div
-                  className={`w-6 h-px ${
-                    index < currentIndex ? "bg-accent" : "bg-border"
-                  }`}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+        <Stepper
+          className="mb-5"
+          steps={statusFlow.map((status) => ({
+            id: status,
+            label: t(`statuses.${status}`),
+          }))}
+          activeIndex={currentIndex}
+        />
         <MaintenanceActions
           requestId={id}
           currentStatus={request.status as string}
           nextStatus={nextStatus}
         />
-      </div>
+      </section>
 
       {/* Notes / Activity Log */}
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <h3 className="text-sm font-medium text-text-primary mb-4">
-          <MessageSquare className="h-4 w-4 inline-block me-2 text-text-secondary" />
-          {t("activityLog")}
-        </h3>
+      <section className="bg-surface border border-border/60 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/15">
+            <MessageSquare aria-hidden="true" className="h-4 w-4 text-accent" />
+          </div>
+          <h3 className="text-sm font-semibold text-text-primary font-display">
+            {t("activityLog")}
+          </h3>
+          {notes && notes.length > 0 && (
+            <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+              {notes.length}
+            </span>
+          )}
+        </div>
 
         {notes && notes.length > 0 ? (
-          <div className="space-y-3 mb-6">
+          <ol className="space-y-3 mb-6">
             {notes.map((note: Record<string, unknown>) => (
-              <div
+              <li
                 key={note.id as string}
-                className="border-l-2 border-border ps-4 py-2"
+                className="border-s-2 border-accent/30 ps-4 py-1.5"
               >
-                <p className="text-sm text-text-primary">
+                <p className="text-sm text-text-primary leading-relaxed">
                   {note.content as string}
                 </p>
                 <p className="text-xs text-text-secondary mt-1 font-mono ltr-nums">
                   {new Date(note.created_at as string).toLocaleString()}
                 </p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         ) : (
           <p className="text-sm text-text-secondary mb-6">
             {t("noNotes")}
@@ -358,7 +369,7 @@ export default async function MaintenanceDetailPage({
           nextStatus={nextStatus}
           showNoteForm
         />
-      </div>
+      </section>
     </div>
   );
 }

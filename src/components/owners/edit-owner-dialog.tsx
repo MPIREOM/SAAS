@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
@@ -14,6 +15,10 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { Owner } from "@/components/owners/types";
 
 export function EditOwnerDialog({
@@ -49,6 +54,7 @@ function EditOwnerForm({
   owner: Owner;
   onClose: () => void;
 }) {
+  const t = useTranslations("owners");
   const router = useRouter();
   const { toast } = useToast();
   const [name, setName] = useState(owner.name);
@@ -104,144 +110,112 @@ function EditOwnerForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Edit owner</DialogTitle>
+        <DialogTitle>{t("editOwner")}</DialogTitle>
         <DialogDescription>
           Owner details, opening balance, and contact info. Changes here flow
           into the daily summary and the WhatsApp agent immediately.
         </DialogDescription>
       </DialogHeader>
 
-        <DialogBody>
-          <form id="edit-owner-form" onSubmit={handleSubmit} className="space-y-4">
-            <Field label="Name">
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+      <DialogBody>
+        <form id="edit-owner-form" onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="text"
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              type="text"
+              label="WhatsApp (digits + country code)"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              placeholder="e.g. 96899372277"
+              className="font-mono ltr-nums"
+            />
+            <Input
+              type="email"
+              label="Email (optional)"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Select
+              label="Language"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as "en" | "ar")}
+            >
+              <option value="en">English</option>
+              <option value="ar">Arabic</option>
+            </Select>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium tracking-tight text-foreground">
+                Active
+              </span>
+              <label className="inline-flex h-10 cursor-pointer items-center gap-2 px-1">
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="h-4 w-4 cursor-pointer accent-accent"
+                />
+                <span className="text-sm text-text-primary">
+                  {isActive ? "Active" : "Archived"}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <fieldset className="space-y-4 rounded-xl border border-border/60 bg-surface-elevated/30 p-4">
+            <legend className="px-1 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
+              Opening balance snapshot
+            </legend>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                type="number"
+                label="Amount (OMR)"
+                step={0.001}
+                value={openingBalance}
+                onChange={(e) => setOpeningBalance(e.target.value)}
                 required
-                className={INPUT_CLASS}
+                className="font-mono ltr-nums"
+                helperText="Positive = company owes owner. Negative = owner owes company."
               />
-            </Field>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="WhatsApp (digits + country code)">
-                <input
-                  type="text"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  placeholder="e.g. 96899372277"
-                  className={INPUT_CLASS}
-                />
-              </Field>
-              <Field label="Email (optional)">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={INPUT_CLASS}
-                />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Language">
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value as "en" | "ar")}
-                  className={INPUT_CLASS}
-                >
-                  <option value="en">English</option>
-                  <option value="ar">Arabic</option>
-                </select>
-              </Field>
-              <Field label="Active">
-                <label className="inline-flex items-center gap-2 h-10 px-3">
-                  <input
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="h-4 w-4"
-                  />
-                  <span className="text-sm">
-                    {isActive ? "Active" : "Archived"}
-                  </span>
-                </label>
-              </Field>
-            </div>
-
-            <div className="rounded-xl border border-border/60 bg-surface-elevated/30 p-4 space-y-4">
-              <div className="text-[10px] uppercase tracking-wider text-text-secondary font-medium">
-                Opening balance snapshot
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Amount (OMR)">
-                  <input
-                    type="number"
-                    step={0.001}
-                    value={openingBalance}
-                    onChange={(e) => setOpeningBalance(e.target.value)}
-                    required
-                    className={INPUT_CLASS}
-                  />
-                  <p className="text-[10px] text-text-secondary mt-1">
-                    Positive = company owes owner. Negative = owner owes company.
-                  </p>
-                </Field>
-                <Field label="As of date">
-                  <input
-                    type="date"
-                    value={openingDate}
-                    onChange={(e) => setOpeningDate(e.target.value)}
-                    required
-                    className={INPUT_CLASS}
-                  />
-                </Field>
-              </div>
-            </div>
-
-            <Field label="Notes">
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className={INPUT_CLASS + " resize-none"}
-                placeholder="Anything worth remembering about this owner"
+              <Input
+                type="date"
+                label="As of date"
+                value={openingDate}
+                onChange={(e) => setOpeningDate(e.target.value)}
+                required
+                className="font-mono ltr-nums"
               />
-            </Field>
-          </form>
-        </DialogBody>
+            </div>
+          </fieldset>
+
+          <Textarea
+            label="Notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Anything worth remembering about this owner"
+            className="resize-none"
+          />
+        </form>
+      </DialogBody>
 
       <DialogFooter>
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-10 px-5 bg-surface-elevated border border-border/60 text-text-primary text-sm font-medium rounded-xl hover:bg-surface-hover transition-colors"
-        >
+        <Button type="button" variant="secondary" onClick={onClose}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          form="edit-owner-form"
-          disabled={saving}
-          className="h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-colors disabled:opacity-40"
-        >
+        </Button>
+        <Button type="submit" form="edit-owner-form" loading={saving}>
           {saving ? "Saving…" : "Save changes"}
-        </button>
+        </Button>
       </DialogFooter>
     </>
-  );
-}
-
-const INPUT_CLASS =
-  "w-full h-10 bg-surface-elevated/50 border border-border/60 rounded-xl px-3 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-colors";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }

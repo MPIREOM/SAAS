@@ -3,6 +3,16 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Settings2, Send } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ManageUserPropertiesDialog } from "./manage-user-properties-dialog";
 
 interface Property {
@@ -66,156 +76,196 @@ export function UserManagementTable({
     }
   };
 
-  const roleColors: Record<string, string> = {
-    super_admin: "bg-accent/10 text-accent",
-    property_manager: "bg-warning/10 text-warning",
-  };
-
   const openManageProperties = (user: UserRow) => {
     setSelectedUser(user);
     setDialogOpen(true);
   };
 
+  const roleLabel = (role: string) =>
+    role === "super_admin"
+      ? t("superAdmin")
+      : role === "property_manager"
+        ? t("propertyManager")
+        : role;
+
+  const renderRoleBadge = (role: string) => (
+    <Badge
+      variant={
+        role === "super_admin"
+          ? "default"
+          : role === "property_manager"
+            ? "warning"
+            : "secondary"
+      }
+    >
+      {roleLabel(role)}
+    </Badge>
+  );
+
+  const renderStatusBadge = (u: UserRow) => (
+    <Badge variant={u.is_active ? "success" : "secondary"}>
+      {u.is_active ? t("active") : t("inactive")}
+    </Badge>
+  );
+
+  const renderInviteBadge = (u: UserRow) =>
+    u.last_sign_in_at ? (
+      <Badge variant="success">{t("inviteAccepted")}</Badge>
+    ) : u.invited_at ? (
+      <Badge variant="warning" title={new Date(u.invited_at).toLocaleString()}>
+        {t("invitePending")} ·{" "}
+        <span className="ltr-nums font-mono">
+          {new Date(u.invited_at).toLocaleDateString()}
+        </span>
+      </Badge>
+    ) : (
+      <Badge variant="secondary">{t("inviteNotSent")}</Badge>
+    );
+
+  const propertiesText = (u: UserRow) => {
+    const access = u.user_property_assignments;
+    return u.role === "super_admin"
+      ? t("allProperties")
+      : access && access.length > 0
+        ? access
+            .map((a) => a.properties?.name)
+            .filter(Boolean)
+            .join(", ")
+        : t("noPropertiesAssigned");
+  };
+
+  const renderActions = (u: UserRow) =>
+    isSuperAdmin ? (
+      <div className="flex items-center gap-1">
+        {u.role !== "super_admin" && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => openManageProperties(u)}
+            title={t("managePropertyAccess")}
+            aria-label={t("managePropertyAccess")}
+            className="h-8 w-8 p-0 text-text-secondary hover:text-accent"
+          >
+            <Settings2 aria-hidden="true" className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {u.id !== currentUserId && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => handleResendInvite(u.id)}
+            disabled={resendingId === u.id}
+            loading={resendingId === u.id}
+            title={t("resendInvite")}
+            aria-label={t("resendInvite")}
+            className="h-8 w-8 p-0 text-text-secondary hover:text-accent"
+          >
+            {resendingId !== u.id && (
+              <Send aria-hidden="true" className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        )}
+      </div>
+    ) : null;
+
+  const renderFeedback = (u: UserRow) =>
+    feedback?.userId === u.id ? (
+      <p
+        role="status"
+        className={`mt-1 text-xs ${
+          feedback.ok ? "text-success" : "text-destructive"
+        }`}
+      >
+        {feedback.message}
+      </p>
+    ) : null;
+
   return (
     <>
-      <div className="overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[600px]">
-          <thead>
-            <tr className="border-b border-border bg-surface-elevated">
-              <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                {t("name")}
-              </th>
-              <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                {t("email")}
-              </th>
-              <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                {t("role")}
-              </th>
-              <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                {t("users")}
-              </th>
-              <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                {t("invitation")}
-              </th>
-              <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5">
-                {t("properties")}
-              </th>
+      {/* Desktop table */}
+      <div className="hidden overflow-hidden rounded-lg border border-border/50 md:block">
+        <Table className="min-w-[640px]">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>{t("name")}</TableHead>
+              <TableHead>{t("email")}</TableHead>
+              <TableHead>{t("role")}</TableHead>
+              <TableHead>{tc("status")}</TableHead>
+              <TableHead>{t("invitation")}</TableHead>
+              <TableHead>{t("properties")}</TableHead>
               {isSuperAdmin && (
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-2.5 w-10" />
+                <TableHead className="w-20 text-end">
+                  <span className="sr-only">{tc("actions")}</span>
+                </TableHead>
               )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {users.map((u) => {
-              const access = u.user_property_assignments;
-              return (
-                <tr
-                  key={u.id}
-                  className="hover:bg-surface-elevated/50 transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-medium text-text-primary">
-                      {u.full_name || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm text-text-secondary font-mono">
-                      {u.email || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                        roleColors[u.role] || "bg-text-secondary/10 text-text-secondary"
-                      }`}
-                    >
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        u.is_active
-                          ? "bg-success/10 text-success"
-                          : "bg-text-secondary/10 text-text-secondary"
-                      }`}
-                    >
-                      {u.is_active ? t("active") : t("inactive")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.last_sign_in_at ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">
-                        {t("inviteAccepted")}
-                      </span>
-                    ) : u.invited_at ? (
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning font-mono ltr-nums"
-                        title={new Date(u.invited_at).toLocaleString()}
-                      >
-                        {t("invitePending")} ·{" "}
-                        {new Date(u.invited_at).toLocaleDateString()}
-                      </span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-text-secondary/10 text-text-secondary">
-                        {t("inviteNotSent")}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm text-text-secondary">
-                      {u.role === "super_admin"
-                        ? t("allProperties")
-                        : access && access.length > 0
-                          ? access
-                              .map((a) => a.properties?.name)
-                              .filter(Boolean)
-                              .join(", ")
-                          : t("noPropertiesAssigned")}
-                    </span>
-                  </td>
-                  {isSuperAdmin && (
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        {u.role !== "super_admin" && (
-                          <button
-                            type="button"
-                            onClick={() => openManageProperties(u)}
-                            title={t("managePropertyAccess")}
-                            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-border/30 text-text-secondary hover:text-accent transition-colors"
-                          >
-                            <Settings2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        {u.id !== currentUserId && (
-                          <button
-                            type="button"
-                            onClick={() => handleResendInvite(u.id)}
-                            disabled={resendingId === u.id}
-                            title={t("resendInvite")}
-                            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-border/30 text-text-secondary hover:text-accent transition-colors disabled:opacity-50"
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      {feedback?.userId === u.id && (
-                        <p
-                          className={`text-xs mt-1 ${
-                            feedback.ok ? "text-success" : "text-destructive"
-                          }`}
-                        >
-                          {feedback.message}
-                        </p>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((u) => (
+              <TableRow key={u.id}>
+                <TableCell>
+                  <span className="text-sm font-medium text-text-primary">
+                    {u.full_name || "—"}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="font-mono text-sm text-text-secondary">
+                    {u.email || "—"}
+                  </span>
+                </TableCell>
+                <TableCell>{renderRoleBadge(u.role)}</TableCell>
+                <TableCell>{renderStatusBadge(u)}</TableCell>
+                <TableCell>{renderInviteBadge(u)}</TableCell>
+                <TableCell>
+                  <span className="text-sm text-text-secondary">
+                    {propertiesText(u)}
+                  </span>
+                </TableCell>
+                {isSuperAdmin && (
+                  <TableCell className="text-end">
+                    {renderActions(u)}
+                    {renderFeedback(u)}
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
+
+      {/* Mobile card list */}
+      <ul className="space-y-2 md:hidden">
+        {users.map((u) => (
+          <li
+            key={`m-${u.id}`}
+            className="rounded-lg border border-border/50 bg-surface-elevated/40 p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-text-primary">
+                  {u.full_name || "—"}
+                </p>
+                <p className="mt-0.5 truncate font-mono text-xs text-text-secondary">
+                  {u.email || "—"}
+                </p>
+              </div>
+              {renderActions(u)}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {renderRoleBadge(u.role)}
+              {renderStatusBadge(u)}
+              {renderInviteBadge(u)}
+            </div>
+            <p className="mt-2 text-xs text-text-secondary">
+              <span className="uppercase tracking-wider">{t("properties")}:</span>{" "}
+              {propertiesText(u)}
+            </p>
+            {renderFeedback(u)}
+          </li>
+        ))}
+      </ul>
 
       {selectedUser && (
         <ManageUserPropertiesDialog

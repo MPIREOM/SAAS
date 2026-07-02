@@ -10,7 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/ui/page-header";
-import { Loader2, Upload } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
+import { FileText, Upload, X } from "lucide-react";
 
 interface PropertyOption {
   id: string;
@@ -169,7 +171,7 @@ export default function NewExpensePage({
 
       {optionsLoading ? (
         <div className="flex items-center justify-center py-20" aria-busy="true">
-          <Loader2 aria-hidden="true" className="h-5 w-5 text-accent animate-spin" />
+          <Spinner sizeClassName="h-5 w-5" label={tc("loading")} />
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -227,7 +229,7 @@ export default function NewExpensePage({
                 required
                 defaultValue={today}
                 label={`${t("date")} *`}
-                className="font-mono"
+                className="font-mono ltr-nums"
               />
             </div>
 
@@ -247,7 +249,7 @@ export default function NewExpensePage({
                 step={0.01}
                 label={`${t("amount")} (OMR) *`}
                 placeholder="0.00"
-                className="font-mono"
+                className="font-mono ltr-nums tabular-nums"
               />
               <Input
                 name="vendor"
@@ -264,19 +266,29 @@ export default function NewExpensePage({
             </span>
             {receiptFile ? (
               <div className="flex items-center gap-3 p-3 bg-success/5 border border-success/20 rounded-lg">
-                <Upload aria-hidden="true" className="h-4 w-4 text-success" />
-                <span className="text-sm text-text-primary truncate flex-1">{receiptFile.name}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10">
+                  <FileText aria-hidden="true" className="h-4 w-4 text-success" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-text-primary truncate">{receiptFile.name}</p>
+                  <p className="text-xs text-text-secondary font-mono ltr-nums">
+                    {(receiptFile.size / 1024).toFixed(0)} KB
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setReceiptFile(null)}
-                  className="text-xs text-text-secondary hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 rounded px-1"
+                  className="inline-flex items-center gap-1 text-xs text-text-secondary cursor-pointer hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 rounded px-1.5 py-1"
                 >
+                  <X aria-hidden="true" className="h-3 w-3" />
                   {t("receiptRemove")}
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-border/60 rounded-lg cursor-pointer hover:border-accent/40 transition-colors">
-                <Upload aria-hidden="true" className="h-6 w-6 text-text-secondary/40 mb-2" />
+              <label className="flex flex-col items-center justify-center py-7 border-2 border-dashed border-border/60 rounded-xl cursor-pointer transition-all duration-200 hover:border-accent/40 hover:bg-accent/5 focus-within:ring-2 focus-within:ring-accent/40">
+                <span className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-surface-elevated">
+                  <Upload aria-hidden="true" className="h-5 w-5 text-text-secondary/60" />
+                </span>
                 <span className="text-sm text-text-secondary">{t("receiptUploadCta")}</span>
                 <span className="text-xs text-text-secondary/60 mt-0.5">{t("receiptUploadHint")}</span>
                 <input
@@ -295,11 +307,7 @@ export default function NewExpensePage({
             )}
           </div>
 
-          {error && (
-            <div role="alert" className="flex items-center gap-2 p-3.5 rounded-lg bg-destructive/10 border border-destructive/20">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
+          {error && <Alert variant="destructive">{error}</Alert>}
 
           <div className="flex items-center gap-3">
             <Button type="submit" loading={loading}>

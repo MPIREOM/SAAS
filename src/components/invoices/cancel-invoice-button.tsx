@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
-import { Ban, AlertTriangle } from "lucide-react";
+import { Ban } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import {
   Dialog,
@@ -16,6 +16,9 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert } from "@/components/ui/alert";
 import { CURRENCY } from "@/lib/currency";
 
 interface CancelInvoiceButtonProps {
@@ -85,11 +88,13 @@ export function CancelInvoiceButton({
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-destructive text-xs rounded-md border border-border/50 hover:border-destructive/30 transition-colors"
+        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-destructive text-xs rounded-md border border-border/50 hover:border-destructive/30 hover:bg-destructive/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
         title={t("cancelInvoice")}
+        aria-label={t("cancelInvoice")}
       >
-        <Ban className="h-3 w-3" />
+        <Ban className="h-3 w-3" aria-hidden="true" />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -99,31 +104,28 @@ export function CancelInvoiceButton({
             <DialogDescription>{t("cancelInvoiceDescription")}</DialogDescription>
           </DialogHeader>
 
-          <DialogBody>
+          <DialogBody className="space-y-4">
             {/* Warning */}
-            <div className="flex items-start gap-3 p-3 bg-destructive/5 border border-destructive/20 rounded-xl mb-4">
-              <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-              <p className="text-xs text-destructive/90">
-                {t("cancelWarning")}
-              </p>
-            </div>
+            <Alert variant="destructive" className="text-xs">
+              {t("cancelWarning")}
+            </Alert>
 
             {/* Invoice summary */}
-            <div className="p-4 bg-surface-elevated/50 rounded-xl border border-border/40 mb-4">
-              <div className="flex items-center justify-between">
-                <div>
+            <div className="p-4 bg-surface-elevated/50 rounded-xl border border-border/40">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
                     {t("tenant")}
                   </p>
-                  <p className="text-sm font-semibold text-text-primary">
+                  <p className="text-sm font-semibold text-text-primary truncate">
                     {tenantName}
                   </p>
                 </div>
-                <div className="text-end">
+                <div className="text-end shrink-0">
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
                     {t("amount")}
                   </p>
-                  <p className="text-lg font-bold font-mono tabular-nums text-text-primary">
+                  <p className="text-lg font-bold font-mono tabular-nums ltr-nums text-text-primary">
                     {totalAmount.toLocaleString("en-OM", {
                       minimumFractionDigits: 2,
                     })}
@@ -133,7 +135,10 @@ export function CancelInvoiceButton({
                   </p>
                   {alreadyPaid > 0 && (
                     <p className="text-[10px] text-warning mt-0.5">
-                      {t("paidAmount")}: {alreadyPaid.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                      {t("paidAmount")}:{" "}
+                      <span className="font-mono ltr-nums">
+                        {alreadyPaid.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                      </span>
                     </p>
                   )}
                 </div>
@@ -141,43 +146,33 @@ export function CancelInvoiceButton({
             </div>
 
             {/* Reason */}
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                {t("cancelReason")}
-              </label>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                rows={2}
-                className="w-full bg-surface-elevated/50 border border-border/60 rounded-xl px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all duration-200 resize-none"
-                placeholder={t("cancelReasonPlaceholder")}
-              />
-            </div>
+            <Textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              label={t("cancelReason")}
+              placeholder={t("cancelReasonPlaceholder")}
+              className="min-h-0 resize-none"
+            />
           </DialogBody>
 
           <DialogFooter>
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => setOpen(false)}
-              className="h-10 px-5 bg-surface-elevated border border-border/60 text-text-primary text-sm font-medium rounded-xl hover:bg-surface-hover transition-colors"
             >
               {tc("cancel")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="destructive"
               onClick={handleCancel}
-              disabled={loading}
-              className="h-10 px-5 bg-destructive hover:bg-destructive/90 text-white text-sm font-semibold rounded-xl transition-all duration-200 disabled:opacity-40 shadow-sm shadow-destructive/20 hover:shadow-md hover:shadow-destructive/30 active:scale-[0.98] flex items-center gap-2"
+              loading={loading}
             >
-              {loading ? (
-                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Ban className="h-4 w-4" />
-                  {t("confirmCancel")}
-                </>
-              )}
-            </button>
+              {!loading && <Ban className="h-4 w-4" aria-hidden="true" />}
+              {t("confirmCancel")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

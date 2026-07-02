@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Check, Pencil, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 
 const METHODS = ["cash", "bank_transfer", "cheque"] as const;
 type PaymentMethod = (typeof METHODS)[number];
@@ -26,21 +28,24 @@ export function EditPaymentMethod({ paymentId, currentMethod }: Props) {
 
   if (!editing) {
     return (
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <span className="text-sm text-text-secondary">
           {currentMethod ? t(`methods.${currentMethod}`) : "—"}
         </span>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => {
             setError(null);
             setEditing(true);
           }}
-          aria-label="Edit payment method"
-          className="text-text-secondary hover:text-text-primary transition-colors p-0.5"
+          aria-label={tc("edit")}
+          title={tc("edit")}
+          className="h-6 w-6 p-0 text-text-secondary hover:text-accent"
         >
-          <Pencil className="h-3 w-3" />
-        </button>
+          <Pencil aria-hidden="true" className="h-3 w-3" />
+        </Button>
       </div>
     );
   }
@@ -74,30 +79,36 @@ export function EditPaymentMethod({ paymentId, currentMethod }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-1.5">
-      <select
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Select
         value={selected}
         onChange={(e) => setSelected(e.target.value as PaymentMethod)}
         disabled={pending}
-        className="h-7 bg-surface-elevated border border-border rounded px-2 text-xs text-text-primary focus:outline-none focus:border-accent transition-colors"
+        aria-label={t("method")}
+        className="h-7 w-auto rounded-md px-2 py-0 pe-7 text-xs"
       >
         {METHODS.map((m) => (
           <option key={m} value={m}>
             {t(`methods.${m}`)}
           </option>
         ))}
-      </select>
-      <button
+      </Select>
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={save}
         disabled={pending}
         aria-label={tc("save")}
-        className="p-0.5 text-success hover:text-success/80 disabled:opacity-50"
+        title={tc("save")}
+        className="h-7 w-7 p-0 text-success hover:bg-success/10 hover:text-success"
       >
-        <Check className="h-3.5 w-3.5" />
-      </button>
-      <button
+        <Check aria-hidden="true" className="h-3.5 w-3.5" />
+      </Button>
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => {
           setSelected(currentMethod ?? "cash");
           setEditing(false);
@@ -105,12 +116,15 @@ export function EditPaymentMethod({ paymentId, currentMethod }: Props) {
         }}
         disabled={pending}
         aria-label={tc("cancel")}
-        className="p-0.5 text-text-secondary hover:text-text-primary disabled:opacity-50"
+        title={tc("cancel")}
+        className="h-7 w-7 p-0 text-text-secondary hover:text-text-primary"
       >
-        <X className="h-3.5 w-3.5" />
-      </button>
+        <X aria-hidden="true" className="h-3.5 w-3.5" />
+      </Button>
       {error && (
-        <span className="text-[10px] text-destructive ms-1">{error}</span>
+        <span role="alert" className="text-[11px] text-destructive">
+          {error}
+        </span>
       )}
     </div>
   );

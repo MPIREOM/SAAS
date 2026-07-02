@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 
 function Toggle({
@@ -24,11 +26,12 @@ function Toggle({
       aria-label={ariaLabel}
       onClick={onToggle}
       disabled={disabled}
-      className={`relative h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+      className={`relative h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${
         enabled ? "bg-accent" : "bg-border"
-      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
     >
       <span
+        aria-hidden="true"
         className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
           enabled ? "translate-x-4" : "translate-x-0.5"
         }`}
@@ -92,8 +95,12 @@ export function AutoInvoiceSettings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-6" aria-busy="true">
-        <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin text-text-secondary" />
+      <div className="space-y-4" aria-busy="true">
+        <span className="sr-only" role="status">
+          {t("autoInvoiceTitle")}
+        </span>
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-24 w-full" />
       </div>
     );
   }
@@ -101,16 +108,16 @@ export function AutoInvoiceSettings() {
   return (
     <div className="space-y-4">
       {/* Auto-generate toggle */}
-      <div className="flex items-center justify-between bg-surface-elevated border border-border rounded-md px-4 py-3">
-        <div>
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border/50 bg-surface-elevated/50 px-4 py-3 transition-colors hover:border-border">
+        <div className="min-w-0">
           <p className="text-sm font-medium text-text-primary">
             {t("autoInvoiceToggleTitle")}
           </p>
-          <p className="text-xs text-text-secondary mt-0.5">
+          <p className="mt-0.5 text-xs text-text-secondary">
             {t("autoInvoiceToggleHelp")}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           {saving && (
             <Loader2
               aria-hidden="true"
@@ -128,29 +135,22 @@ export function AutoInvoiceSettings() {
 
       {/* Days before selector */}
       {enabled && (
-        <div className="bg-surface-elevated border border-border rounded-md px-4 py-3">
-          <label
-            htmlFor="auto-invoice-days"
-            className="block text-sm font-medium text-text-primary mb-1"
-          >
-            {t("autoInvoiceAdvanceLabel")}
-          </label>
-          <p className="text-xs text-text-secondary mb-3">
-            {t("autoInvoiceAdvanceHelp")}
-          </p>
-          <select
+        <div className="rounded-lg border border-border/50 bg-surface-elevated/50 px-4 py-4">
+          <Select
             id="auto-invoice-days"
+            label={t("autoInvoiceAdvanceLabel")}
+            helperText={t("autoInvoiceAdvanceHelp")}
             value={daysBefore}
             onChange={(e) => save(enabled, Number(e.target.value))}
             disabled={saving}
-            className="w-full sm:w-64 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:opacity-50"
+            className="sm:max-w-72"
           >
             {DAYS_VALUES.map((value) => (
               <option key={value} value={value}>
                 {t(`autoInvoiceDays.${value}`)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
     </div>
