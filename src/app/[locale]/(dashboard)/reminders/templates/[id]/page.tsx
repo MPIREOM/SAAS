@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { Trash2, AlertTriangle } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,13 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/ui/page-header";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Template {
   id: string;
@@ -34,6 +41,8 @@ export default function EditTemplatePage({
 }) {
   const t = useTranslations("reminders");
   const tc = useTranslations("common");
+  const ts = useTranslations("settings");
+  const tt = useTranslations("tenants");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -106,186 +115,137 @@ export default function EditTemplatePage({
   if (!template) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <Spinner label={tc("loading")} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary font-display">
-          {t("editTemplate") || "Edit Template"}
-        </h1>
-        <button
+    <div className="max-w-2xl space-y-6">
+      <PageHeader title={t("editTemplate")}>
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => setShowDeleteDialog(true)}
           disabled={deleting}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-destructive/10 text-destructive text-sm font-medium rounded-md hover:bg-destructive/20 transition-colors disabled:opacity-50"
+          className="border border-destructive/25 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
           {tc("delete") || "Delete"}
-        </button>
+        </Button>
+      </PageHeader>
 
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent maxWidth="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>{tc("confirmDelete") || "Delete Template"}</DialogTitle>
-              <DialogDescription>
-                {t("deleteTemplateConfirm") || "Are you sure you want to delete this template? This action cannot be undone."}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogBody>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
-                <p className="text-sm text-text-secondary">
-                  <span className="font-medium text-text-primary">{template.name}</span>
-                </p>
-              </div>
-            </DialogBody>
-            <DialogFooter>
-              <button
-                type="button"
-                onClick={() => setShowDeleteDialog(false)}
-                className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
-              >
-                {tc("cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="h-9 px-4 bg-destructive hover:bg-destructive/90 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-              >
-                {deleting ? tc("loading") : tc("delete") || "Delete"}
-              </button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent maxWidth="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{tc("confirmDelete") || "Delete Template"}</DialogTitle>
+            <DialogDescription>
+              {t("deleteTemplateConfirm") || "Are you sure you want to delete this template? This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <Alert variant="destructive">
+              <span className="font-medium">{template.name}</span>
+            </Alert>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              {tc("cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              loading={deleting}
+            >
+              {tc("delete") || "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("templateName") || "Template Name"}{" "}
-              <span className="text-destructive">*</span>
-            </label>
-            <input
-              name="name"
-              required
-              defaultValue={template.name}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-5 animate-fade-in-up">
+        <div className="rounded-xl border border-border/60 bg-surface p-6 space-y-5">
+          <Input
+            name="name"
+            required
+            defaultValue={template.name}
+            label={`${t("templateName")} *`}
+          />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("type")} <span className="text-destructive">*</span>
-              </label>
-              <select
-                name="reminder_type"
-                required
-                defaultValue={template.reminder_type}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="rent_upcoming">Rent Upcoming</option>
-                <option value="rent_overdue">Rent Overdue</option>
-                <option value="cheque_due">Cheque Due</option>
-                <option value="lease_expiry">Lease Expiry</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                {t("channel")} <span className="text-destructive">*</span>
-              </label>
-              <select
-                name="channel"
-                required
-                defaultValue={template.channel}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="whatsapp">WhatsApp</option>
-                <option value="email">Email</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">
-                Language <span className="text-destructive">*</span>
-              </label>
-              <select
-                name="language"
-                required
-                defaultValue={template.language}
-                className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="en">English</option>
-                <option value="ar">Arabic</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("subject") || "Subject"} (email only)
-            </label>
-            <input
-              name="subject"
-              defaultValue={template.subject || ""}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("whatsappTemplateName")} (WhatsApp only)
-            </label>
-            <input
-              name="whatsapp_template_name"
-              defaultValue={template.whatsapp_template_name || ""}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
-              placeholder="e.g. mpire_rent_upcoming_en"
-            />
-            <p className="text-xs text-text-secondary mt-1.5">
-              {t("whatsappTemplateNameHint")}
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">
-              {t("body") || "Message Body"}{" "}
-              <span className="text-destructive">*</span>
-            </label>
-            <textarea
-              name="body_template"
+            <Select
+              name="reminder_type"
               required
-              rows={6}
-              defaultValue={template.body_template}
-              className="w-full bg-surface-elevated border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors resize-none"
-            />
-            <p className="text-xs text-text-secondary mt-1.5">
-              Available variables: {"{{tenant_name}}"}, {"{{amount}}"}, {"{{due_date}}"}, {"{{property_name}}"}, {"{{unit_number}}"}, {"{{total_overdue}}"}, {"{{overdue_details}}"}
-            </p>
+              defaultValue={template.reminder_type}
+              label={`${t("type")} *`}
+            >
+              <option value="rent_upcoming">{t("types.rent_upcoming")}</option>
+              <option value="rent_overdue">{t("types.rent_overdue")}</option>
+              <option value="cheque_due">{t("types.cheque_due")}</option>
+              <option value="lease_expiry">{t("types.lease_expiry")}</option>
+            </Select>
+            <Select
+              name="channel"
+              required
+              defaultValue={template.channel}
+              label={`${t("channel")} *`}
+            >
+              <option value="whatsapp">{t("channels.whatsapp")}</option>
+              <option value="email">{t("channels.email")}</option>
+            </Select>
+            <Select
+              name="language"
+              required
+              defaultValue={template.language}
+              label={`${ts("language")} *`}
+            >
+              <option value="en">{tt("languages.en")}</option>
+              <option value="ar">{tt("languages.ar")}</option>
+            </Select>
           </div>
+
+          <Input
+            name="subject"
+            defaultValue={template.subject || ""}
+            label={`${t("subject") || "Subject"} (email only)`}
+          />
+
+          <Input
+            name="whatsapp_template_name"
+            defaultValue={template.whatsapp_template_name || ""}
+            label={`${t("whatsappTemplateName")} (WhatsApp only)`}
+            helperText={t("whatsappTemplateNameHint")}
+            placeholder="e.g. mpire_rent_upcoming_en"
+            className="font-mono"
+          />
+
+          <Textarea
+            name="body_template"
+            required
+            rows={6}
+            defaultValue={template.body_template}
+            label={`${t("messageBody")} *`}
+            helperText={
+              "Available variables: {{tenant_name}}, {{amount}}, {{due_date}}, {{property_name}}, {{unit_number}}, {{total_overdue}}, {{overdue_details}}"
+            }
+            className="resize-none"
+          />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <Alert variant="destructive">{error}</Alert>}
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-          >
-            {loading ? tc("loading") : tc("save")}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
-          >
+          <Button type="submit" loading={loading}>
+            {tc("save")}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => router.back()}>
             {tc("cancel")}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

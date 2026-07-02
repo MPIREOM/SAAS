@@ -16,6 +16,18 @@ import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-c
 import { CollectionChart, type MonthlyCollectionData } from "@/components/reports/collection-chart";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils/cn";
 import { CURRENCY } from "@/lib/currency";
 
 /* ------------------------------------------------------------------ */
@@ -256,6 +268,7 @@ const exportReports = [
   {
     id: "monthly-rent",
     titleKey: "monthlyRentCollection" as const,
+    descKey: "monthlyRentCollectionDesc" as const,
     icon: DollarSign,
     color: "text-success",
     bgColor: "bg-success/10",
@@ -263,6 +276,7 @@ const exportReports = [
   {
     id: "tenant-roster",
     titleKey: "tenantRoster" as const,
+    descKey: "tenantRosterDesc" as const,
     icon: Users,
     color: "text-accent",
     bgColor: "bg-accent/10",
@@ -270,6 +284,7 @@ const exportReports = [
   {
     id: "maintenance-summary",
     titleKey: "maintenanceSummary" as const,
+    descKey: "maintenanceSummaryDesc" as const,
     icon: Wrench,
     color: "text-warning",
     bgColor: "bg-warning/10",
@@ -277,6 +292,7 @@ const exportReports = [
   {
     id: "cheque-tracker",
     titleKey: "chequeTracker" as const,
+    descKey: "chequeTrackerDesc" as const,
     icon: CreditCard,
     color: "text-accent",
     bgColor: "bg-accent/10",
@@ -284,6 +300,7 @@ const exportReports = [
   {
     id: "document-expiry",
     titleKey: "documentExpiry" as const,
+    descKey: "documentExpiryDesc" as const,
     icon: AlertTriangle,
     color: "text-destructive",
     bgColor: "bg-destructive/10",
@@ -348,10 +365,18 @@ export default async function ReportsPage({
     },
   ];
 
+  const occupancyVariant = (pct: number): "success" | "warning" | "destructive" =>
+    pct >= 80 ? "success" : pct >= 50 ? "warning" : "destructive";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <PageHeader title={t("title")} description={t("subtitle")}>
-        <DateRangeFilter defaultMonth={month} defaultYear={year} />
+        <div className="flex items-center gap-2.5 rounded-xl border border-border/50 bg-surface px-3 py-1.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            {t("dateRange")}
+          </span>
+          <DateRangeFilter defaultMonth={month} defaultYear={year} />
+        </div>
       </PageHeader>
 
       {/* Key Financial Metrics */}
@@ -361,16 +386,19 @@ export default async function ReportsPage({
           return (
             <div
               key={card.label}
-              className="group relative bg-surface border border-border rounded-xl p-5 overflow-hidden"
+              className="group relative bg-surface border border-border/60 rounded-xl p-5 overflow-hidden"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-60`} />
+              <div
+                aria-hidden="true"
+                className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-60`}
+              />
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[11px] text-text-secondary uppercase tracking-widest font-semibold">
                     {card.label}
                   </span>
                   <div className="h-8 w-8 rounded-lg bg-surface-elevated flex items-center justify-center">
-                    <Icon className={`h-4 w-4 ${card.iconColor}`} />
+                    <Icon aria-hidden="true" className={`h-4 w-4 ${card.iconColor}`} />
                   </div>
                 </div>
                 <p className="text-3xl font-display font-bold text-text-primary font-mono ltr-nums">
@@ -383,136 +411,206 @@ export default async function ReportsPage({
       </div>
 
       {/* Monthly Collection Trend */}
-      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+      <section className="bg-surface border border-border/60 rounded-xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
+          <h2 className="text-base font-display font-semibold text-text-primary tracking-tight">
             {t("collectionTrend")}
-          </h3>
-          <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+          </h2>
+          <div aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
         </div>
         <CollectionChart data={monthlyTrend} />
-      </div>
+      </section>
 
       {/* Property Performance Table */}
-      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "300ms" }}>
-        <h3 className="text-base font-display font-semibold text-text-primary tracking-tight mb-5">
+      <section className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+        <h2 className="px-6 pt-6 pb-5 text-base font-display font-semibold text-text-primary tracking-tight">
           {t("propertyPerformance")}
-        </h3>
+        </h2>
         {propertyPerformance.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-text-secondary">
-            <div className="h-12 w-12 rounded-xl bg-surface-elevated flex items-center justify-center mb-3">
-              <Building2 className="h-5 w-5 opacity-40" />
-            </div>
-            <p className="text-sm">{t("noReportData")}</p>
+          <div className="px-6 pb-6">
+            <EmptyState
+              icon={<Building2 className="h-5 w-5" />}
+              title={t("noReportData")}
+            />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-start text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 pe-4">
-                    {t("propertyName")}
-                  </th>
-                  <th className="text-center text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
-                    {t("units")}
-                  </th>
-                  <th className="text-center text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
-                    {t("occupancy")}
-                  </th>
-                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
-                    {t("monthlyRevenueLabel")}
-                  </th>
-                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
-                    {t("collectedLabel")}
-                  </th>
-                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 px-4">
-                    {t("expenses")}
-                  </th>
-                  <th className="text-end text-[11px] text-text-secondary uppercase tracking-widest font-semibold py-3 ps-4">
-                    {t("net")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {propertyPerformance.map((prop) => (
-                  <tr
-                    key={prop.id}
-                    className="border-b border-border/20 hover:bg-surface-elevated/30 transition-colors"
-                  >
-                    <td className="py-3.5 pe-4">
-                      <Link
-                        href={`/${locale}/properties/${prop.id}`}
-                        className="font-medium text-text-primary hover:text-accent transition-colors"
-                      >
-                        {prop.name}
-                      </Link>
-                    </td>
-                    <td className="text-center py-3.5 px-4 font-mono ltr-nums text-text-secondary">
-                      {prop.totalUnits}
-                    </td>
-                    <td className="text-center py-3.5 px-4">
-                      <span
-                        className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full font-mono ltr-nums ${
-                          prop.occupancyPct >= 80
-                            ? "bg-success/10 text-success"
-                            : prop.occupancyPct >= 50
-                            ? "bg-warning/10 text-warning"
-                            : "bg-destructive/10 text-destructive"
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table className="min-w-[820px]">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="ps-6 pe-4">{t("propertyName")}</TableHead>
+                    <TableHead className="px-4 text-center">{t("units")}</TableHead>
+                    <TableHead className="px-4 text-center">{t("occupancy")}</TableHead>
+                    <TableHead className="px-4 text-end">{t("monthlyRevenueLabel")}</TableHead>
+                    <TableHead className="px-4 text-end">{t("collectedLabel")}</TableHead>
+                    <TableHead className="px-4 text-end">{t("expenses")}</TableHead>
+                    <TableHead className="ps-4 pe-6 text-end">{t("net")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {propertyPerformance.map((prop) => (
+                    <TableRow key={prop.id}>
+                      <TableCell className="ps-6 pe-4 py-3.5">
+                        <Link
+                          href={`/${locale}/properties/${prop.id}`}
+                          className="font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                        >
+                          {prop.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="px-4 py-3.5 text-center font-mono ltr-nums text-text-secondary">
+                        {prop.totalUnits}
+                      </TableCell>
+                      <TableCell className="px-4 py-3.5 text-center">
+                        <Badge
+                          variant={occupancyVariant(prop.occupancyPct)}
+                          className="font-mono ltr-nums"
+                        >
+                          {prop.occupancyPct}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-4 py-3.5 text-end font-mono ltr-nums text-text-primary font-medium whitespace-nowrap">
+                        {prop.monthlyRevenue.toLocaleString()}{" "}
+                        <span className="text-[10px] font-normal text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-3.5 text-end font-mono ltr-nums text-accent font-medium whitespace-nowrap">
+                        {prop.collectedThisMonth.toLocaleString()}{" "}
+                        <span className="text-[10px] font-normal text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-3.5 text-end font-mono ltr-nums text-destructive font-medium whitespace-nowrap">
+                        {prop.expensesThisMonth.toLocaleString()}{" "}
+                        <span className="text-[10px] font-normal text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </TableCell>
+                      <TableCell
+                        className={`ps-4 pe-6 py-3.5 text-end font-mono ltr-nums font-semibold whitespace-nowrap ${
+                          prop.net >= 0 ? "text-success" : "text-destructive"
                         }`}
                       >
-                        {prop.occupancyPct}%
-                      </span>
-                    </td>
-                    <td className="text-end py-3.5 px-4 font-mono ltr-nums text-text-primary font-medium">
-                      {prop.monthlyRevenue.toLocaleString()} {CURRENCY.code}
-                    </td>
-                    <td className="text-end py-3.5 px-4 font-mono ltr-nums text-accent font-medium">
-                      {prop.collectedThisMonth.toLocaleString()} {CURRENCY.code}
-                    </td>
-                    <td className="text-end py-3.5 px-4 font-mono ltr-nums text-destructive font-medium">
-                      {prop.expensesThisMonth.toLocaleString()} {CURRENCY.code}
-                    </td>
-                    <td className={`text-end py-3.5 ps-4 font-mono ltr-nums font-medium ${
-                      prop.net >= 0 ? "text-success" : "text-destructive"
-                    }`}>
-                      {prop.net.toLocaleString()} {CURRENCY.code}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        {prop.net.toLocaleString()}{" "}
+                        <span className="text-[10px] font-normal text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile card list */}
+            <ul className="md:hidden divide-y divide-border/30 border-t border-border/40">
+              {propertyPerformance.map((prop) => (
+                <li key={`m-${prop.id}`} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link
+                      href={`/${locale}/properties/${prop.id}`}
+                      className="min-w-0 truncate text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                    >
+                      {prop.name}
+                    </Link>
+                    <Badge
+                      variant={occupancyVariant(prop.occupancyPct)}
+                      className="shrink-0 font-mono ltr-nums"
+                    >
+                      {prop.occupancyPct}%
+                    </Badge>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div>
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                        {t("units")}
+                      </dt>
+                      <dd className="mt-0.5 font-mono ltr-nums text-text-primary">
+                        {prop.totalUnits}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                        {t("monthlyRevenueLabel")}
+                      </dt>
+                      <dd className="mt-0.5 font-mono ltr-nums text-text-primary">
+                        {prop.monthlyRevenue.toLocaleString()}{" "}
+                        <span className="text-[10px] text-text-secondary">{CURRENCY.code}</span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                        {t("collectedLabel")}
+                      </dt>
+                      <dd className="mt-0.5 font-mono ltr-nums text-accent">
+                        {prop.collectedThisMonth.toLocaleString()}{" "}
+                        <span className="text-[10px] text-text-secondary">{CURRENCY.code}</span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                        {t("expenses")}
+                      </dt>
+                      <dd className="mt-0.5 font-mono ltr-nums text-destructive">
+                        {prop.expensesThisMonth.toLocaleString()}{" "}
+                        <span className="text-[10px] text-text-secondary">{CURRENCY.code}</span>
+                      </dd>
+                    </div>
+                    <div className="col-span-2 border-t border-border/40 pt-2">
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                        {t("net")}
+                      </dt>
+                      <dd
+                        className={`mt-0.5 font-mono ltr-nums font-semibold ${
+                          prop.net >= 0 ? "text-success" : "text-destructive"
+                        }`}
+                      >
+                        {prop.net.toLocaleString()}{" "}
+                        <span className="text-[10px] font-normal text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
-      </div>
+      </section>
 
       {/* Export Reports */}
-      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "400ms" }}>
-        <h3 className="text-base font-display font-semibold text-text-primary tracking-tight mb-5">
+      <section className="bg-surface border border-border/60 rounded-xl p-6">
+        <h2 className="text-base font-display font-semibold text-text-primary tracking-tight mb-5">
           {t("exportReports")}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 stagger-children">
           {exportReports.map((report) => {
             const Icon = report.icon;
             return (
               <div
                 key={report.id}
-                className="bg-surface-elevated/50 border border-border/30 rounded-lg p-4 flex flex-col"
+                className="flex items-start gap-3 rounded-lg border border-border/40 bg-surface-elevated/40 p-4 transition-colors hover:border-accent/30"
               >
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className={`p-1.5 rounded-md ${report.bgColor}`}>
-                    <Icon className={`h-3.5 w-3.5 ${report.color}`} />
-                  </div>
-                  <span className="text-xs font-medium text-text-primary font-display truncate">
-                    {t(report.titleKey)}
-                  </span>
+                <div className={`shrink-0 rounded-lg p-2 ${report.bgColor}`}>
+                  <Icon aria-hidden="true" className={`h-4 w-4 ${report.color}`} />
                 </div>
-                <div className="flex items-center gap-1.5 mt-auto">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-text-primary font-display">
+                    {t(report.titleKey)}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary line-clamp-2">
+                    {t(report.descKey)}
+                  </p>
                   <Link
                     href={`/api/reports/${report.id}?format=csv`}
                     target="_blank"
-                    className="inline-flex items-center gap-1 h-7 px-2.5 bg-accent hover:bg-accent-hover text-background text-[11px] font-medium rounded-md transition-colors"
+                    className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-3")}
                   >
-                    <Download className="h-3 w-3" />
+                    <Download aria-hidden="true" className="h-3.5 w-3.5" />
                     {t("exportExcel")}
                   </Link>
                 </div>
@@ -520,7 +618,7 @@ export default async function ReportsPage({
             );
           })}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

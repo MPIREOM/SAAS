@@ -1,6 +1,7 @@
 "use client";
 
 import { CURRENCY } from "@/lib/currency";
+import { useTranslations } from "next-intl";
 import {
   BarChart,
   Bar,
@@ -23,10 +24,12 @@ interface CollectionChartProps {
 }
 
 export function CollectionChart({ data }: CollectionChartProps) {
+  const t = useTranslations("reports");
+
   if (data.length === 0) {
     return (
-      <div className="h-[300px] flex items-center justify-center text-text-secondary text-sm">
-        No data available
+      <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed border-border/40 text-sm text-text-secondary">
+        {t("noReportData")}
       </div>
     );
   }
@@ -80,7 +83,7 @@ export function CollectionChart({ data }: CollectionChartProps) {
           />
           <Bar
             dataKey="collected"
-            name="Collected"
+            name={t("collectedLabel")}
             fill="var(--color-success)"
             radius={[4, 4, 0, 0]}
           />
