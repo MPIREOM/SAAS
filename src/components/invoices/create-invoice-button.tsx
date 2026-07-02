@@ -47,10 +47,11 @@ export function CreateInvoiceButton() {
   // Load all occupied units (one active lease per unit) when the dialog
   // opens. Preloading the full list avoids round-trips between dropdown
   // changes — the dataset is small for a typical property manager.
+  // loadingUnits is switched on in the open-button handler so the effect
+  // never calls setState synchronously.
   useEffect(() => {
     if (!open || units.length > 0) return;
     let cancelled = false;
-    setLoadingUnits(true);
     (async () => {
       const supabase = createClient();
       const { data, error: err } = await supabase
@@ -124,29 +125,14 @@ export function CreateInvoiceButton() {
     [units, selectedUnitId]
   );
 
-  // Auto-fill amount and default the due date to the 1st of the current
-  // month when a unit is picked. The lease's payment_due_day is ignored
-  // here on purpose: the admin always wants the standard "rent-due on
-  // the 1st" calendar, and can type a different date if a specific
-  // lease needs one.
-  useEffect(() => {
-    if (!selectedUnit) return;
-    setAmount(String(selectedUnit.monthly_rent));
-
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    setDueDate(`${y}-${String(m + 1).padStart(2, "0")}-01`);
-  }, [selectedUnit]);
-
   // Derive the billing period from the due date: period runs from the
-  // due date to exactly one month later. Keeping this in its own effect
-  // means typing a different due date also shifts the period, so the
-  // admin only ever has to touch one field.
-  useEffect(() => {
-    if (!dueDate) return;
-    setPeriodStart(dueDate);
-    const d = new Date(`${dueDate}T00:00:00`);
+  // due date to exactly one month later, so the admin only ever has to
+  // touch one field. Called wherever the due date changes.
+  const applyDueDate = (value: string) => {
+    setDueDate(value);
+    if (!value) return;
+    setPeriodStart(value);
+    const d = new Date(`${value}T00:00:00`);
     d.setMonth(d.getMonth() + 1);
     const y = d.getFullYear();
     const m = d.getMonth() + 1;
@@ -154,7 +140,24 @@ export function CreateInvoiceButton() {
     setPeriodEnd(
       `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`
     );
-  }, [dueDate]);
+  };
+
+  // Auto-fill amount and default the due date to the 1st of the current
+  // month when a unit is picked. The lease's payment_due_day is ignored
+  // here on purpose: the admin always wants the standard "rent-due on
+  // the 1st" calendar, and can type a different date if a specific
+  // lease needs one.
+  const handleUnitChange = (unitId: string) => {
+    setSelectedUnitId(unitId);
+    const unit = units.find((u) => u.unit_id === unitId);
+    if (!unit) return;
+    setAmount(String(unit.monthly_rent));
+
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    applyDueDate(`${y}-${String(m + 1).padStart(2, "0")}-01`);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +242,10 @@ export function CreateInvoiceButton() {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (units.length === 0) setLoadingUnits(true);
+          setOpen(true);
+        }}
         className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-lg transition-colors"
       >
         <Plus className="h-4 w-4" />
@@ -304,7 +310,7 @@ export function CreateInvoiceButton() {
                   </label>
                   <select
                     value={selectedUnitId}
-                    onChange={(e) => setSelectedUnitId(e.target.value)}
+                    onChange={(e) => handleUnitChange(e.target.value)}
                     className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
                   >
                     <option value="">Select a unit</option>
@@ -356,7 +362,7 @@ export function CreateInvoiceButton() {
                       type="date"
                       required
                       value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
+                      onChange={(e) => applyDueDate(e.target.value)}
                       className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
                     />
                   </div>

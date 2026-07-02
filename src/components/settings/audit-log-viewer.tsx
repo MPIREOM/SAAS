@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Activity, ChevronDown, ChevronUp } from "lucide-react";
@@ -25,35 +25,38 @@ export function AuditLogViewer() {
   const [page, setPage] = useState(0);
   const pageSize = 25;
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
-    const supabase = createClient();
-    try {
-      const { data, error: fetchError } = await supabase
-        .from("audit_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      if (fetchError) {
-        if (fetchError.message.includes("does not exist") || fetchError.code === "42P01") {
-          setError(t("auditNotConfigured"));
-        } else {
-          setError(fetchError.message);
-        }
-        setLogs([]);
-      } else {
-        setLogs(data || []);
-      }
-    } catch {
-      setError(t("auditLoadFailed"));
-    }
-    setLoading(false);
-  }, [page, t]);
-
+  // Fetch the current page of audit logs. All setState calls happen after
+  // the awaited query resolves, never synchronously inside the effect.
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("audit_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1)
+      .then(({ data, error: fetchError }) => {
+        if (cancelled) return;
+        if (fetchError) {
+          if (fetchError.message.includes("does not exist") || fetchError.code === "42P01") {
+            setError(t("auditNotConfigured"));
+          } else {
+            setError(fetchError.message);
+          }
+          setLogs([]);
+        } else {
+          setLogs(data || []);
+        }
+        setLoading(false);
+      }, () => {
+        if (cancelled) return;
+        setError(t("auditLoadFailed"));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, t]);
 
   if (loading) {
     return (
@@ -122,7 +125,10 @@ export function AuditLogViewer() {
       {/* Pagination */}
       <div className="flex items-center justify-between pt-2">
         <button
-          onClick={() => setPage(Math.max(0, page - 1))}
+          onClick={() => {
+            setLoading(true);
+            setPage(Math.max(0, page - 1));
+          }}
           disabled={page === 0}
           className="text-xs px-3 py-1.5 rounded-md border border-border text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
         >
@@ -130,7 +136,10 @@ export function AuditLogViewer() {
         </button>
         <span className="text-xs text-text-secondary">Page {page + 1}</span>
         <button
-          onClick={() => setPage(page + 1)}
+          onClick={() => {
+            setLoading(true);
+            setPage(page + 1);
+          }}
           disabled={logs.length < pageSize}
           className="text-xs px-3 py-1.5 rounded-md border border-border text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
         >

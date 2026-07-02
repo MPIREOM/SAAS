@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Eye,
@@ -48,10 +48,6 @@ export function SharePortalButton({
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open) loadTokens();
-  }, [open]);
-
   const loadTokens = async () => {
     setLoading(true);
     const res = await fetch(
@@ -60,6 +56,11 @@ export function SharePortalButton({
     const data = await res.json();
     setTokens(data.tokens || []);
     setLoading(false);
+  };
+
+  const openDialog = () => {
+    setOpen(true);
+    loadTokens();
   };
 
   const generateToken = async () => {
@@ -103,7 +104,7 @@ export function SharePortalButton({
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={openDialog}
         className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
       >
         <Eye className="h-4 w-4" />

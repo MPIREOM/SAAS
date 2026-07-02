@@ -54,14 +54,14 @@ async function getFinancialMetrics(selectedMonth?: string, selectedYear?: string
   unitsQuery = filterByProperties(unitsQuery, propertyIds);
 
   // Invoices this month (all statuses)
-  let allInvoicesQuery = supabase
+  const allInvoicesQuery = supabase
     .from("invoices")
     .select("amount, status")
     .gte("due_date", monthStart)
     .lte("due_date", monthEnd);
 
   // Outstanding invoices (pending + overdue, all time)
-  let outstandingQuery = supabase
+  const outstandingQuery = supabase
     .from("invoices")
     .select("amount")
     .in("status", ["pending", "overdue", "partial"]);
