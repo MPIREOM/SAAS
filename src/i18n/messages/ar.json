@@ -48,7 +48,6 @@
     "tryAgain": "حاول مرة أخرى",
     "monthlyRevenue": "الإيرادات الشهرية",
     "confirmDelete": "تأكيد الحذف",
-    "notes": "ملاحظات",
     "tenant": "المستأجر",
     "property": "العقار",
     "unit": "الوحدة",
@@ -116,7 +115,16 @@
     "passwordUpdated": "تم تحديث كلمة المرور بنجاح. جارٍ التحويل...",
     "passwordMismatch": "كلمات المرور غير متطابقة",
     "passwordTooShort": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
-    "resetError": "فشل إرسال رابط إعادة التعيين. حاول مرة أخرى."
+    "resetError": "فشل إرسال رابط إعادة التعيين. حاول مرة أخرى.",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "brandBadge": "إدارة العقارات",
+    "brandHeadline": "أدر عقاراتك بدقة واحترافية",
+    "brandDescription": "منصة احترافية لإدارة العقارات مصممة لعُمان. تابع المستأجرين والفواتير والصيانة والمزيد — في مكان واحد.",
+    "statUnitsManaged": "وحدة مُدارة",
+    "statCollectionRate": "نسبة التحصيل",
+    "statSupport": "الدعم",
+    "brandTagline": "نظام إدارة العقارات"
   },
   "properties": {
     "title": "العقارات",
@@ -432,7 +440,12 @@
     "importingCount": "إضافة {count} مستأجر إلى النظام",
     "importSuccess": "تم الاستيراد بنجاح!",
     "importedCount": "تم استيراد {count} مستأجر بنجاح",
-    "importCount": "استيراد {count} مستأجر"
+    "importCount": "استيراد {count} مستأجر",
+    "importRow": "الصف {row}: {message}",
+    "importParseFailed": "تعذّرت قراءة الملف",
+    "importProcessFailed": "تعذّرت معالجة الملف. تحقق من التنسيق وحاول مرة أخرى.",
+    "importFailed": "فشل الاستيراد",
+    "importFailedRetry": "فشل الاستيراد. حاول مرة أخرى."
   },
   "leases": {
     "title": "العقود",
@@ -535,7 +548,18 @@
     "invoiceCancelled": "تم إلغاء الفاتورة بنجاح",
     "cancelFailed": "فشل إلغاء الفاتورة",
     "downloadUnpaidPDF": "كشف الفواتير المتبقية",
-    "downloadUnpaidPDFDescription": "تنزيل ملف PDF بجميع الفواتير غير المسددة لهذا المستأجر"
+    "downloadUnpaidPDFDescription": "تنزيل ملف PDF بجميع الفواتير غير المسددة لهذا المستأجر",
+    "noOccupiedUnits": "لا توجد وحدات مشغولة.",
+    "paidToOwner": "دُفع للمالك مباشرة",
+    "paidToOwnerTooltip": "سلّم المستأجر الشيك مباشرة إلى المالك — لا يُسجَّل شيك هنا",
+    "paidToOwnerHint": "يُسجَّل الدفع بطريقة شيك دون تسجيل شيك لدى الشركة. يذهب الإيجار مباشرة إلى المالك — لن يزيد رصيد «مستحق للمالك»، لكن العمولة تُطبَّق على الوحدات ذات النسبة المئوية.",
+    "chequeNumberPlaceholder": "مثال: 001234",
+    "maxAmountPlaceholder": "الحد الأقصى: {amount}",
+    "selectProperty": "اختر العقار",
+    "selectUnit": "اختر الوحدة",
+    "invoicePeriodExistsWithStatus": "توجد فاتورة لهذا العقد ولهذه الفترة بالفعل (الحالة: {status}).",
+    "invoicePeriodExists": "توجد فاتورة لهذا العقد ولهذه الفترة بالفعل.",
+    "invoiceCreatedFor": "تم إنشاء الفاتورة لـ {name}"
   },
   "cheques": {
     "title": "الشيكات",
@@ -770,7 +794,7 @@
     "title": "الإعدادات",
     "subtitle": "الحساب والتفضيلات وإدارة الفريق",
     "activityLogTitle": "سجل النشاط",
-    "activityLogDescription": "آخر الإجراءات على النظام",
+    "activityLogDescription": "الإجراءات الأخيرة في النظام",
     "autoInvoiceTitle": "توليد الفواتير تلقائياً",
     "autoInvoiceDescription": "تحكّم في موعد إنشاء الفواتير تلقائياً للعقود السارية",
     "whatsappAgentTitle": "وكيل واتساب الذكي",
@@ -907,10 +931,15 @@
     "updatePassword": "تحديث كلمة المرور",
     "passwordUpdated": "تم تحديث كلمة المرور!",
     "activityLog": "سجل النشاط",
-    "activityLogDescription": "الإجراءات الأخيرة في النظام",
     "noActivityLogs": "لم يتم تسجيل أي نشاط بعد",
     "passwordMinLength": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
-    "passwordsNoMatch": "كلمتا المرور غير متطابقتين"
+    "passwordsNoMatch": "كلمتا المرور غير متطابقتين",
+    "preferencesError": "فشل حفظ التفضيلات",
+    "whatsappTestTitle": "اختبار واتساب",
+    "whatsappTestSubtitle": "أرسل رسالة تجريبية عبر واجهة Meta WhatsApp Cloud API",
+    "whatsappTestSend": "إرسال رسالة تجريبية",
+    "whatsappTestPhoneLabel": "رقم الهاتف",
+    "whatsappTestPhoneHelp": "أدخل رمز الدولة (مثال: ‎+968 لعُمان)"
   },
   "dashboard": {
     "title": "لوحة القيادة",
@@ -1096,7 +1125,10 @@
     "propertyLinksDescription": "شارك رابطاً واحداً لكل عقار مع المستأجرين. سيقومون بإدخال رقم وحدتهم في النموذج.",
     "regenerateLink": "إعادة إنشاء",
     "regenerateConfirm": "إعادة إنشاء الرابط؟ سيتوقف الرابط الحالي عن العمل فوراً.",
-    "noProperties": "لا توجد عقارات. أضف عقاراً أولاً."
+    "noProperties": "لا توجد عقارات. أضف عقاراً أولاً.",
+    "removePhoto": "إزالة الصورة",
+    "removeVideo": "إزالة الفيديو",
+    "photoAlt": "الصورة {index}"
   },
   "tenantPortal": {
     "title": "بوابة المستأجر",
@@ -1137,6 +1169,7 @@
       "bank_transfer": "تحويل بنكي",
       "cheque": "شيك"
     },
-    "whatsappMessage": "مرحباً! يمكنك استخدام هذا الرابط لعرض تفاصيل إيجارك والمستندات وسجل المدفوعات:"
+    "whatsappMessage": "مرحباً! يمكنك استخدام هذا الرابط لعرض تفاصيل إيجارك والمستندات وسجل المدفوعات:",
+    "openDocument": "فتح المستند"
   }
 }

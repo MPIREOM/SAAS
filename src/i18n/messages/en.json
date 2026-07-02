@@ -48,7 +48,6 @@
     "tryAgain": "Try Again",
     "monthlyRevenue": "Monthly Revenue",
     "confirmDelete": "Confirm Delete",
-    "notes": "Notes",
     "tenant": "Tenant",
     "property": "Property",
     "unit": "Unit",
@@ -116,7 +115,16 @@
     "passwordUpdated": "Password updated successfully. Redirecting to login...",
     "passwordMismatch": "Passwords do not match",
     "passwordTooShort": "Password must be at least 8 characters",
-    "resetError": "Failed to send reset link. Please try again."
+    "resetError": "Failed to send reset link. Please try again.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "brandBadge": "Property Management",
+    "brandHeadline": "Manage your properties with precision",
+    "brandDescription": "Professional property management platform built for Oman. Track tenants, invoices, maintenance, and more — all in one place.",
+    "statUnitsManaged": "Units Managed",
+    "statCollectionRate": "Collection Rate",
+    "statSupport": "Support",
+    "brandTagline": "Property Management System"
   },
   "properties": {
     "title": "Properties",
@@ -432,7 +440,12 @@
     "importingCount": "Adding {count} tenants to the system",
     "importSuccess": "Import complete!",
     "importedCount": "{count} tenants imported successfully",
-    "importCount": "Import {count} tenants"
+    "importCount": "Import {count} tenants",
+    "importRow": "Row {row}: {message}",
+    "importParseFailed": "Failed to parse file",
+    "importProcessFailed": "Failed to process file. Please check the format and try again.",
+    "importFailed": "Import failed",
+    "importFailedRetry": "Import failed. Please try again."
   },
   "leases": {
     "title": "Leases",
@@ -535,7 +548,18 @@
     "invoiceCancelled": "Invoice cancelled successfully",
     "cancelFailed": "Failed to cancel invoice",
     "downloadUnpaidPDF": "Remaining Invoices PDF",
-    "downloadUnpaidPDFDescription": "Download a PDF of all unpaid invoices for this tenant"
+    "downloadUnpaidPDFDescription": "Download a PDF of all unpaid invoices for this tenant",
+    "noOccupiedUnits": "No occupied units found.",
+    "paidToOwner": "Paid to owner",
+    "paidToOwnerTooltip": "Tenant gave the cheque directly to the owner — no cheque tracked here",
+    "paidToOwnerHint": "Recorded as paid by cheque, but no cheque is logged on the company side. The rent goes direct to the owner — it won't increase the \"company owes owner\" balance, but commission still applies for percentage-rate units.",
+    "chequeNumberPlaceholder": "e.g. 001234",
+    "maxAmountPlaceholder": "Max: {amount}",
+    "selectProperty": "Select a property",
+    "selectUnit": "Select a unit",
+    "invoicePeriodExistsWithStatus": "An invoice for this lease and period already exists (status: {status}).",
+    "invoicePeriodExists": "An invoice for this lease and period already exists.",
+    "invoiceCreatedFor": "Invoice created for {name}"
   },
   "cheques": {
     "title": "Cheques",
@@ -907,10 +931,15 @@
     "updatePassword": "Update Password",
     "passwordUpdated": "Password updated!",
     "activityLog": "Activity Log",
-    "activityLogDescription": "Recent actions across the system",
     "noActivityLogs": "No activity recorded yet",
     "passwordMinLength": "Password must be at least 8 characters",
-    "passwordsNoMatch": "Passwords do not match"
+    "passwordsNoMatch": "Passwords do not match",
+    "preferencesError": "Failed to save preferences",
+    "whatsappTestTitle": "WhatsApp Test",
+    "whatsappTestSubtitle": "Send a test message via Meta WhatsApp Cloud API",
+    "whatsappTestSend": "Send Test Message",
+    "whatsappTestPhoneLabel": "Phone Number",
+    "whatsappTestPhoneHelp": "Include country code (e.g. +968 for Oman)"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1096,7 +1125,10 @@
     "propertyLinksDescription": "Share one link per property with tenants. They enter their unit number on the form.",
     "regenerateLink": "Regenerate",
     "regenerateConfirm": "Regenerate the link? The existing link will stop working immediately.",
-    "noProperties": "No properties found. Add a property first."
+    "noProperties": "No properties found. Add a property first.",
+    "removePhoto": "Remove photo",
+    "removeVideo": "Remove video",
+    "photoAlt": "Photo {index}"
   },
   "tenantPortal": {
     "title": "Tenant Portal",
@@ -1137,6 +1169,7 @@
       "bank_transfer": "Bank Transfer",
       "cheque": "Cheque"
     },
-    "whatsappMessage": "Hi! You can use this link to view your tenancy details, documents, and payment history:"
+    "whatsappMessage": "Hi! You can use this link to view your tenancy details, documents, and payment history:",
+    "openDocument": "Open document"
   }
 }
