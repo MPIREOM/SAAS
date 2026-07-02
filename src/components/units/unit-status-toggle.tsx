@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Wrench, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -18,12 +19,13 @@ export function UnitStatusToggle({
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("units");
 
   if (currentStatus === "occupied") return null; // Can't toggle occupied units
 
   const isMaintenance = currentStatus === "maintenance";
   const nextStatus = isMaintenance ? "vacant" : "maintenance";
-  const label = isMaintenance ? "Mark as Vacant" : "Mark as Under Maintenance";
+  const label = isMaintenance ? t("markVacant") : t("markMaintenance");
   const Icon = isMaintenance ? CheckCircle2 : Wrench;
 
   async function handleToggle() {
@@ -37,7 +39,7 @@ export function UnitStatusToggle({
     if (error) {
       toast({ title: error.message, variant: "destructive" });
     } else {
-      toast({ title: `Unit marked as ${nextStatus}`, variant: "success" });
+      toast({ title: t("statusUpdated", { status: t(nextStatus) }), variant: "success" });
       router.refresh();
     }
     setLoading(false);

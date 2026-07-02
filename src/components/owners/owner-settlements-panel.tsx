@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, Pencil, Trash2, ArrowUpRight, ArrowDownLeft, Banknote } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
@@ -23,6 +24,7 @@ import { SettlementDialog } from "@/components/owners/settlement-dialog";
 import type { OwnerDetailProps, SettlementRow } from "@/components/owners/types";
 
 export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) {
+  const t = useTranslations("owners");
   const router = useRouter();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -72,7 +74,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
         </p>
         <Button type="button" size="sm" onClick={openCreate} className="sm:shrink-0">
           <Plus aria-hidden="true" className="h-4 w-4" />
-          New settlement
+          {t("newSettlement")}
         </Button>
       </div>
 
@@ -84,7 +86,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
           action={
             <Button type="button" size="sm" onClick={openCreate}>
               <Plus aria-hidden="true" className="h-4 w-4" />
-              New settlement
+              {t("newSettlement")}
             </Button>
           }
         />
@@ -144,6 +146,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
 }
 
 function DirectionBadge({ settlement: s }: { settlement: SettlementRow }) {
+  const t = useTranslations("owners");
   const isOut = s.direction === "company_to_owner";
   const Icon = isOut ? ArrowUpRight : ArrowDownLeft;
   return (
@@ -155,7 +158,7 @@ function DirectionBadge({ settlement: s }: { settlement: SettlementRow }) {
           isOut ? "text-destructive" : "text-success",
         )}
       />
-      {isOut ? "Paid to owner" : "Received from owner"}
+      {isOut ? t("paidToOwner") : t("receivedFromOwner")}
     </Badge>
   );
 }

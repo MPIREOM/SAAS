@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Wallet } from "lucide-react";
 
 export default async function OwnersIndexPage({
@@ -8,6 +9,7 @@ export default async function OwnersIndexPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const t = await getTranslations("owners");
   const supabase = await createClient();
 
   const { data: owners } = await supabase
@@ -35,7 +37,7 @@ export default async function OwnersIndexPage({
         </div>
         <div className="flex flex-col gap-1.5">
           <h1 className="font-display text-xl font-semibold tracking-tight text-text-primary">
-            No owners configured
+            {t("noOwnersConfigured")}
           </h1>
           <p className="max-w-md text-sm text-text-secondary">
             Run the owner setup SQL (or create a row in the{" "}

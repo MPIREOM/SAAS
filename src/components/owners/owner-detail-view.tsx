@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Pencil, Wallet, Building2, Banknote, Receipt, Activity, FileText } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
@@ -15,25 +16,26 @@ import type { OwnerDetailProps } from "@/components/owners/types";
 
 type TabKey = "activity" | "properties" | "settlements" | "fees";
 
-const TABS: { key: TabKey; label: string; icon: typeof Activity }[] = [
-  { key: "activity", label: "Activity", icon: Activity },
-  { key: "properties", label: "Properties", icon: Building2 },
-  { key: "settlements", label: "Settlements", icon: Banknote },
-  { key: "fees", label: "Business Fees", icon: Receipt },
+const TABS: { key: TabKey; icon: typeof Activity }[] = [
+  { key: "activity", icon: Activity },
+  { key: "properties", icon: Building2 },
+  { key: "settlements", icon: Banknote },
+  { key: "fees", icon: Receipt },
 ];
 
 export function OwnerDetailView(props: OwnerDetailProps) {
   const { owner, balance } = props;
+  const t = useTranslations("owners");
   const [tab, setTab] = useState<TabKey>("activity");
   const [editOwnerOpen, setEditOwnerOpen] = useState(false);
 
   // Friendly headline strings derived from the live balance calc.
   const balanceNumber = balance?.balance ?? Number(owner.opening_balance || 0);
   const sideLabel = balanceNumber > 0.005
-    ? `Company owes ${owner.name}`
+    ? t("companyOwesOwner", { name: owner.name })
     : balanceNumber < -0.005
-      ? `${owner.name} owes the company`
-      : "Settled";
+      ? t("ownerOwesCompany", { name: owner.name })
+      : t("settled");
   const sideTone = balanceNumber > 0.005
     ? "text-success"
     : balanceNumber < -0.005
@@ -42,7 +44,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={owner.name} description="Owner ledger">
+      <PageHeader title={owner.name} description={t("title")}>
         <a
           href={`/api/owners/${owner.id}/monthly-report/pdf`}
           target="_blank"
@@ -50,7 +52,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
           className={cn(buttonVariants({ variant: "secondary" }))}
         >
           <FileText aria-hidden="true" className="h-4 w-4" />
-          Preview report
+          {t("previewReport")}
         </a>
         <Button
           type="button"
@@ -58,18 +60,18 @@ export function OwnerDetailView(props: OwnerDetailProps) {
           onClick={() => setEditOwnerOpen(true)}
         >
           <Pencil aria-hidden="true" className="h-4 w-4" />
-          Edit owner
+          {t("editOwner")}
         </Button>
       </PageHeader>
 
       {/* Headline balance card */}
       <section
-        aria-label="Current balance"
+        aria-label={t("currentBalance")}
         className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/40 p-6"
       >
         <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
           <Wallet aria-hidden="true" className="h-4 w-4 text-accent" />
-          Current balance
+          {t("currentBalance")}
         </div>
         <div className="flex flex-wrap items-baseline gap-3">
           <span
@@ -129,18 +131,18 @@ export function OwnerDetailView(props: OwnerDetailProps) {
         aria-label="Owner ledger sections"
         className="-mb-px flex flex-wrap gap-2 overflow-x-auto border-b border-border/60"
       >
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const isActive = tab === t.key;
+        {TABS.map((tabItem) => {
+          const Icon = tabItem.icon;
+          const isActive = tab === tabItem.key;
           return (
             <button
-              key={t.key}
+              key={tabItem.key}
               type="button"
               role="tab"
-              id={`owner-tab-${t.key}`}
+              id={`owner-tab-${tabItem.key}`}
               aria-selected={isActive}
-              aria-controls={`owner-panel-${t.key}`}
-              onClick={() => setTab(t.key)}
+              aria-controls={`owner-panel-${tabItem.key}`}
+              onClick={() => setTab(tabItem.key)}
               className={cn(
                 "inline-flex cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-inset",
@@ -150,7 +152,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
               )}
             >
               <Icon aria-hidden="true" className="h-4 w-4" />
-              {t.label}
+              {t(`tabs.${tabItem.key}`)}
             </button>
           );
         })}
@@ -182,6 +184,7 @@ function BalanceBreakdownCard({
 }: {
   breakdown: NonNullable<OwnerDetailProps["balance"]>["breakdown"];
 }) {
+  const t = useTranslations("owners");
   const rows: { label: string; value: number; sign: "+" | "-" | ""; muted?: boolean }[] = [
     { label: "Opening balance", value: breakdown.openingBalance, sign: "" },
     { label: "Rent collected (cash + transfer)", value: breakdown.rentReceivedToCompany, sign: "+" },
@@ -208,7 +211,7 @@ function BalanceBreakdownCard({
       className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/30 p-6"
     >
       <h2 className="mb-4 font-display text-xs font-semibold uppercase tracking-wider text-text-secondary">
-        Breakdown
+        {t("breakdown")}
       </h2>
       <dl className="divide-y divide-border/30">
         {rows.map((r) => (
@@ -245,7 +248,7 @@ function BalanceBreakdownCard({
         ))}
         <div className="mt-2 flex items-center justify-between gap-4 pt-4 text-base font-semibold">
           <dt className="font-display tracking-tight text-text-primary">
-            = Current balance
+            = {t("currentBalance")}
           </dt>
           <dd className="shrink-0 font-mono tabular-nums ltr-nums text-end text-accent">
             {breakdown.balance.toLocaleString("en-OM", {

@@ -38,7 +38,6 @@ interface UnitWithLease {
 export function CreateInvoiceButton() {
   const t = useTranslations("invoices");
   const tc = useTranslations("common");
-  const te = useTranslations("expenses");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -201,7 +200,7 @@ export function CreateInvoiceButton() {
 
       if (existing) {
         setError(
-          `An invoice for this lease and period already exists (status: ${existing.status}).`
+          t("invoicePeriodExistsWithStatus", { status: existing.status })
         );
         setLoading(false);
         return;
@@ -224,14 +223,14 @@ export function CreateInvoiceButton() {
 
     if (insertError) {
       const msg = insertError.message?.includes("invoices_lease_period_unique")
-        ? "An invoice for this lease and period already exists."
+        ? t("invoicePeriodExists")
         : insertError.message;
       setError(msg);
       setLoading(false);
       return;
     }
 
-    setSuccess(`Invoice created for ${selectedUnit.tenant_name}`);
+    setSuccess(t("invoiceCreatedFor", { name: selectedUnit.tenant_name }));
     setLoading(false);
 
     setTimeout(() => {
@@ -294,12 +293,12 @@ export function CreateInvoiceButton() {
                 disabled={loadingUnits}
                 helperText={
                   !loadingUnits && properties.length === 0
-                    ? "No occupied units found."
+                    ? t("noOccupiedUnits")
                     : undefined
                 }
               >
                 <option value="">
-                  {loadingUnits ? tc("loading") : te("selectProperty")}
+                  {loadingUnits ? tc("loading") : t("selectProperty")}
                 </option>
                 {properties.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -316,7 +315,7 @@ export function CreateInvoiceButton() {
                     value={selectedUnitId}
                     onChange={(e) => handleUnitChange(e.target.value)}
                   >
-                    <option value="">{te("selectUnit")}</option>
+                    <option value="">{t("selectUnit")}</option>
                     {unitsForProperty.map((u) => (
                       <option key={u.unit_id} value={u.unit_id}>
                         {u.unit_number} — {u.tenant_name}

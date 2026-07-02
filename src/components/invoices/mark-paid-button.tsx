@@ -516,7 +516,9 @@ export function MarkPaidButton({
                     onChange={(e) => setPartialAmount(e.target.value)}
                     required
                     label={`${t("paidAmount")} (${CURRENCY.code})`}
-                    placeholder={`Max: ${remainingAmount.toFixed(2)}`}
+                    placeholder={t("maxAmountPlaceholder", {
+                      amount: remainingAmount.toFixed(2),
+                    })}
                     className="font-mono ltr-nums"
                     helperText={
                       partialAmount && Number(partialAmount) > 0
@@ -656,16 +658,16 @@ export function MarkPaidButton({
                               ? "bg-accent/10 border-accent/40 text-accent"
                               : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
                           }`}
-                          title="Tenant gave the cheque directly to the owner — no cheque tracked here"
+                          title={t("paidToOwnerTooltip")}
                         >
-                          Paid to owner
+                          {t("paidToOwner")}
                         </button>
                       </div>
 
                       {/* Direct-to-owner mode: explainer card */}
                       {noChequeOnFile && (
                         <Alert variant="info" className="text-xs animate-fade-in-up">
-                          Recorded as paid by cheque, but no cheque is logged on the company side. The rent goes direct to the owner — it won&apos;t increase the &quot;company owes owner&quot; balance, but commission still applies for percentage-rate units.
+                          {t("paidToOwnerHint")}
                         </Alert>
                       )}
 
@@ -768,7 +770,7 @@ export function MarkPaidButton({
                             onChange={(e) => setNewChequeNumber(e.target.value)}
                             required
                             label={tch("chequeNumber")}
-                            placeholder="e.g. 001234"
+                            placeholder={t("chequeNumberPlaceholder")}
                             className="font-mono ltr-nums"
                           />
                           <Input

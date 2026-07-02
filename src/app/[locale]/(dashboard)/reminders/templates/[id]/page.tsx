@@ -140,7 +140,7 @@ export default function EditTemplatePage({
           <DialogHeader>
             <DialogTitle>{tc("confirmDelete") || "Delete Template"}</DialogTitle>
             <DialogDescription>
-              {t("deleteTemplateConfirm") || "Are you sure you want to delete this template? This action cannot be undone."}
+              {t("deleteTemplateConfirm")}
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
@@ -212,13 +212,13 @@ export default function EditTemplatePage({
           <Input
             name="subject"
             defaultValue={template.subject || ""}
-            label={`${t("subject") || "Subject"} (email only)`}
+            label={`${t("subject")} (${t("emailOnly")})`}
           />
 
           <Input
             name="whatsapp_template_name"
             defaultValue={template.whatsapp_template_name || ""}
-            label={`${t("whatsappTemplateName")} (WhatsApp only)`}
+            label={`${t("whatsappTemplateName")} (${t("whatsappOnly")})`}
             helperText={t("whatsappTemplateNameHint")}
             placeholder="e.g. mpire_rent_upcoming_en"
             className="font-mono"
@@ -230,9 +230,7 @@ export default function EditTemplatePage({
             rows={6}
             defaultValue={template.body_template}
             label={`${t("messageBody")} *`}
-            helperText={
-              "Available variables: {{tenant_name}}, {{amount}}, {{due_date}}, {{property_name}}, {{unit_number}}, {{total_overdue}}, {{overdue_details}}"
-            }
+            helperText={`${t("availableVariables")}: {{tenant_name}}, {{amount}}, {{due_date}}, {{property_name}}, {{unit_number}}, {{total_overdue}}, {{overdue_details}}`}
             className="resize-none"
           />
         </div>

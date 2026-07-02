@@ -61,7 +61,6 @@ export default function TenantPortalPage({
   const tc = useTranslations("common");
   const ti = useTranslations("invoices");
   const tch = useTranslations("cheques");
-  const td = useTranslations("documents");
   const tt = useTranslations("tenants");
   const [data, setData] = useState<TenantData | null>(null);
   const [invalid, setInvalid] = useState(false);
@@ -589,7 +588,7 @@ export default function TenantPortalPage({
                         href={doc.file_url as string}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label={td("preview")}
+                        aria-label={t("openDocument")}
                         className="p-2 -m-0.5 rounded-lg text-accent hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors shrink-0"
                       >
                         <ExternalLink aria-hidden="true" className="h-4 w-4" />

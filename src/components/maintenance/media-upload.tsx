@@ -19,8 +19,7 @@ export function MediaUpload({
   onVideoChange,
   t,
 }: MediaUploadProps) {
-  const tc = useTranslations("common");
-  const tm = useTranslations("maintenance");
+  const tr = useTranslations("maintenanceRequest");
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
@@ -125,13 +124,13 @@ export function MediaUpload({
                 {/* eslint-disable-next-line @next/next/no-img-element -- local FileReader data-URL preview; next/image cannot optimize blob/data URLs */}
                 <img
                   src={src}
-                  alt={`${tm("photos")} ${i + 1}`}
+                  alt={tr("photoAlt", { index: i + 1 })}
                   className="w-full h-full object-cover"
                 />
                 <button
                   type="button"
                   onClick={() => removePhoto(i)}
-                  aria-label={tc("delete")}
+                  aria-label={tr("removePhoto")}
                   className="absolute top-1 end-1 h-6 w-6 bg-background/70 backdrop-blur-sm border border-border/60 rounded-full flex items-center justify-center cursor-pointer opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-opacity"
                 >
                   <X aria-hidden="true" className="h-3 w-3 text-text-primary" />
@@ -189,7 +188,7 @@ export function MediaUpload({
             <button
               type="button"
               onClick={removeVideo}
-              aria-label={tc("delete")}
+              aria-label={tr("removeVideo")}
               className="absolute top-2 end-2 h-7 w-7 bg-background/70 backdrop-blur-sm border border-border/60 rounded-full flex items-center justify-center cursor-pointer hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
             >
               <X aria-hidden="true" className="h-3.5 w-3.5 text-text-primary" />

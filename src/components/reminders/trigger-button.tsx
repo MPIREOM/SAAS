@@ -269,7 +269,7 @@ export function ReminderTriggerButton() {
                     {item.overdueInvoices && item.overdueInvoices.length > 0 && (
                       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
                         <p className="mb-2 text-xs font-medium text-destructive">
-                          Outstanding Invoices (
+                          {t("outstandingInvoices")} (
                           <span className="font-mono ltr-nums">
                             {item.overdueInvoices.length}
                           </span>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, Pencil, Trash2, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
@@ -21,6 +22,7 @@ import { BusinessFeeDialog } from "@/components/owners/business-fee-dialog";
 import type { OwnerDetailProps, BusinessFeeRow } from "@/components/owners/types";
 
 export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps) {
+  const t = useTranslations("owners");
   const router = useRouter();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -71,7 +73,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
         </p>
         <Button type="button" size="sm" onClick={openCreate} className="sm:shrink-0">
           <Plus aria-hidden="true" className="h-4 w-4" />
-          New fee
+          {t("newFee")}
         </Button>
       </div>
 
@@ -83,7 +85,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
           action={
             <Button type="button" size="sm" onClick={openCreate}>
               <Plus aria-hidden="true" className="h-4 w-4" />
-              New fee
+              {t("newFee")}
             </Button>
           }
         />

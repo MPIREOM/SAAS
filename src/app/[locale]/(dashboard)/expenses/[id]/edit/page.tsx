@@ -83,15 +83,16 @@ export default function EditExpensePage({
           setSelectedProperty(exp.property_id);
         }
         if (expenseRes.error) {
-          setError("Expense not found.");
+          setError(t("expenseNotFound"));
         }
       } catch {
-        setError("Failed to load expense data.");
+        setError(t("loadFailed"));
       } finally {
         setOptionsLoading(false);
       }
     };
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `t` is stable per locale; only refetch when the expense id changes
   }, [expenseId]);
 
   useEffect(() => {
@@ -206,7 +207,7 @@ export default function EditExpensePage({
           <Spinner sizeClassName="h-5 w-5" label={tc("loading")} />
         </div>
       ) : !expense ? (
-        <Alert variant="destructive">{error || "Expense not found."}</Alert>
+        <Alert variant="destructive">{error || t("expenseNotFound")}</Alert>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="bg-surface border border-border/40 rounded-xl p-6 space-y-5">

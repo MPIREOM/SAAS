@@ -94,13 +94,13 @@ export default function NewTemplatePage({
 
           <Input
             name="subject"
-            label={`${t("subject") || "Subject"} (email only)`}
+            label={`${t("subject")} (${t("emailOnly")})`}
             placeholder="e.g. Rent Reminder for {{month}}"
           />
 
           <Input
             name="whatsapp_template_name"
-            label={`${t("whatsappTemplateName")} (WhatsApp only)`}
+            label={`${t("whatsappTemplateName")} (${t("whatsappOnly")})`}
             helperText={t("whatsappTemplateNameHint")}
             placeholder="e.g. mpire_rent_upcoming_en"
             className="font-mono"
@@ -112,9 +112,7 @@ export default function NewTemplatePage({
             rows={6}
             label={`${t("messageBody")} *`}
             placeholder={`Dear {{tenant_name}},\n\nThis is a reminder that your rent of {{amount}} ${CURRENCY.code} is due on {{due_date}}.\n\nThank you.`}
-            helperText={
-              "Available variables: {{tenant_name}}, {{amount}}, {{due_date}}, {{property_name}}, {{unit_number}}, {{total_overdue}}, {{overdue_details}}"
-            }
+            helperText={`${t("availableVariables")}: {{tenant_name}}, {{amount}}, {{due_date}}, {{property_name}}, {{unit_number}}, {{total_overdue}}, {{overdue_details}}`}
             className="resize-none"
           />
         </div>

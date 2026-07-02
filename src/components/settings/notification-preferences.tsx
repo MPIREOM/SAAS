@@ -141,7 +141,7 @@ export function NotificationPreferences() {
         // Revert on failure
         setPrefs(prefs);
         toast({
-          title: t("preferencesError") ?? "Failed to save preferences",
+          title: t("preferencesError"),
           variant: "destructive",
         });
       } finally {

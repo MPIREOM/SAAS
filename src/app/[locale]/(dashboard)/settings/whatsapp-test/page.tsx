@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { MessageSquare, Send } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Alert } from "@/components/ui/alert";
@@ -57,6 +58,7 @@ const templateParamConfig: Record<string, { fields: ParamFieldConfig[]; defaults
 };
 
 export default function WhatsAppTestPage() {
+  const t = useTranslations("settings");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [templateName, setTemplateName] = useState("hello_world");
   const [languageCode, setLanguageCode] = useState("en_US");
@@ -114,8 +116,8 @@ export default function WhatsAppTestPage() {
   return (
     <div className="max-w-2xl space-y-6 stagger-children">
       <PageHeader
-        title="WhatsApp Test"
-        description="Send a test message via Meta WhatsApp Cloud API"
+        title={t("whatsappTestTitle")}
+        description={t("whatsappTestSubtitle")}
       />
 
       {/* Info banner */}
@@ -160,12 +162,12 @@ export default function WhatsAppTestPage() {
           {/* Phone Number */}
           <Input
             type="tel"
-            label="Phone Number *"
+            label={`${t("whatsappTestPhoneLabel")} *`}
             required
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
             placeholder="+968XXXXXXXX"
-            helperText="Include country code (e.g. +968 for Oman)"
+            helperText={t("whatsappTestPhoneHelp")}
             className="ltr-nums font-mono"
           />
 
@@ -233,7 +235,7 @@ export default function WhatsAppTestPage() {
             className="w-full"
           >
             {!loading && <Send aria-hidden="true" className="h-4 w-4" />}
-            {loading ? "Sending..." : "Send Test Message"}
+            {loading ? "Sending..." : t("whatsappTestSend")}
           </Button>
         </div>
       </section>

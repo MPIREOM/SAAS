@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
@@ -53,6 +54,7 @@ function EditOwnerForm({
   owner: Owner;
   onClose: () => void;
 }) {
+  const t = useTranslations("owners");
   const router = useRouter();
   const { toast } = useToast();
   const [name, setName] = useState(owner.name);
@@ -108,7 +110,7 @@ function EditOwnerForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Edit owner</DialogTitle>
+        <DialogTitle>{t("editOwner")}</DialogTitle>
         <DialogDescription>
           Owner details, opening balance, and contact info. Changes here flow
           into the daily summary and the WhatsApp agent immediately.

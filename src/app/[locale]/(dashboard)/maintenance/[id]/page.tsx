@@ -118,7 +118,7 @@ export default async function MaintenanceDetailPage({
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title={`Request #${(request.id as string).slice(0, 8)}`}
+        title={t("requestNumber", { id: (request.id as string).slice(0, 8) })}
         description={`${(property?.name as string) || "—"} · ${tc("unit")} ${(unit?.unit_number as string) || "—"}`}
         breadcrumbs={[
           { label: t("title"), href: `/${locale}/maintenance` },
@@ -250,7 +250,7 @@ export default async function MaintenanceDetailPage({
             <Paperclip aria-hidden="true" className="h-4 w-4 text-accent" />
           </div>
           <h3 className="text-sm font-semibold text-text-primary font-display">
-            Attachments
+            {t("attachments")}
           </h3>
           <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
             {attachments?.length || 0}
@@ -258,7 +258,7 @@ export default async function MaintenanceDetailPage({
         </div>
         {!attachments || attachments.length === 0 ? (
           <p className="text-sm text-text-secondary">
-            No files were attached to this request.
+            {t("noAttachments")}
           </p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">

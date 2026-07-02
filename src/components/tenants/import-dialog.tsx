@@ -96,7 +96,7 @@ export function ImportTenantsDialog({
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to parse file");
+        setError(data.error || t("importParseFailed"));
         return;
       }
 
@@ -107,7 +107,7 @@ export function ImportTenantsDialog({
       setValidRows(data.validRows);
       setStep("preview");
     } catch {
-      setError("Failed to process file. Please check the format and try again.");
+      setError(t("importProcessFailed"));
     }
   };
 
@@ -139,7 +139,7 @@ export function ImportTenantsDialog({
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Import failed");
+        setError(data.error || t("importFailed"));
         setStep("preview");
         return;
       }
@@ -148,7 +148,7 @@ export function ImportTenantsDialog({
       setStep("done");
       router.refresh();
     } catch {
-      setError("Import failed. Please try again.");
+      setError(t("importFailedRetry"));
       setStep("preview");
     }
   };
@@ -330,7 +330,7 @@ export function ImportTenantsDialog({
                   <div className="max-h-24 space-y-1 overflow-y-auto">
                     {validationErrors.map((err, i) => (
                       <p key={i} className="text-xs text-destructive/80">
-                        Row <span className="font-mono ltr-nums">{err.row}</span>: {err.message}
+                        {t("importRow", { row: err.row, message: err.message })}
                       </p>
                     ))}
                   </div>

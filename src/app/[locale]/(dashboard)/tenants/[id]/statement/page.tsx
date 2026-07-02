@@ -46,7 +46,7 @@ export default async function TenantStatementPage({
     return (
       <EmptyState
         icon={<FileText className="h-5 w-5" />}
-        title="Tenant not found"
+        title={t("notFound")}
         className="my-8"
       />
     );
@@ -161,7 +161,7 @@ export default async function TenantStatementPage({
         <Link
           href="#"
           className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 print:hidden"
-          title="Use Ctrl+P / Cmd+P to print"
+          title={tr("printHint")}
         >
           <Printer aria-hidden="true" className="h-4 w-4" />
           {tr("printReport")}

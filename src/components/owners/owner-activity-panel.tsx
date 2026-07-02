@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowDownCircle, ArrowUpCircle, Receipt, Banknote, FileText } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
@@ -37,11 +38,12 @@ export function OwnerActivityPanel({
   leaseInfo,
   activityWindowDays,
 }: OwnerDetailProps) {
+  const t = useTranslations("owners");
   const [windowDays, setWindowDays] = useState(activityWindowDays);
 
   const items = useMemo(() => buildActivity({
-    payments, expenses, settlements, businessFees, leaseInfo,
-  }), [payments, expenses, settlements, businessFees, leaseInfo]);
+    payments, expenses, settlements, businessFees, leaseInfo, t,
+  }), [payments, expenses, settlements, businessFees, leaseInfo, t]);
 
   const cutoff = useMemo(() => {
     const d = new Date();
@@ -81,7 +83,7 @@ export function OwnerActivityPanel({
       {visible.length === 0 ? (
         <EmptyState
           icon={<Receipt className="h-6 w-6" />}
-          title="No activity in this window"
+          title={t("noActivity")}
           description="Try a longer window above, or log an expense / payment via WhatsApp."
         />
       ) : (
@@ -229,10 +231,11 @@ function buildActivity({
   settlements,
   businessFees,
   leaseInfo,
+  t,
 }: Pick<
   OwnerDetailProps,
   "payments" | "expenses" | "settlements" | "businessFees" | "leaseInfo"
->): ActivityItem[] {
+> & { t: ReturnType<typeof useTranslations> }): ActivityItem[] {
   const out: ActivityItem[] = [];
 
   for (const p of payments) {
@@ -279,8 +282,8 @@ function buildActivity({
       amount: Number(s.amount || 0),
       primary:
         s.direction === "company_to_owner"
-          ? "Paid to owner"
-          : "Received from owner",
+          ? t("paidToOwner")
+          : t("receivedFromOwner"),
       secondary: [
         labelMethod(s.method),
         s.reference_number ? `Ref ${s.reference_number}` : null,

@@ -88,27 +88,22 @@ export default function LoginPage({
             <div className="inline-flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/10 px-3 py-1.5">
               <Building2 className="h-4 w-4 text-accent" aria-hidden="true" />
               <span className="text-xs font-medium tracking-wide text-accent">
-                Property Management
+                {t("brandBadge")}
               </span>
             </div>
             <h2 className="text-4xl font-display font-bold leading-tight text-text-primary xl:text-5xl">
-              Manage your
-              <br />
-              properties with
-              <br />
-              <span className="gold-shimmer">precision</span>
+              {t("brandHeadline")}
             </h2>
             <p className="max-w-md text-base leading-relaxed text-text-secondary">
-              Professional property management platform built for Oman. Track
-              tenants, invoices, maintenance, and more — all in one place.
+              {t("brandDescription")}
             </p>
           </div>
 
           <div className="flex items-center gap-10 border-t border-border/40 pt-8">
             {[
-              { value: "500+", label: "Units Managed" },
-              { value: "98%", label: "Collection Rate" },
-              { value: "24/7", label: "Support" },
+              { value: "500+", label: t("statUnitsManaged") },
+              { value: "98%", label: t("statCollectionRate") },
+              { value: "24/7", label: t("statSupport") },
             ].map((stat) => (
               <div key={stat.label}>
                 <p className="text-2xl font-display font-bold text-accent ltr-nums">
@@ -130,7 +125,7 @@ export default function LoginPage({
               MPIRE
             </h1>
             <p className="mt-2 text-sm text-text-secondary">
-              Property Management System
+              {t("brandTagline")}
             </p>
           </div>
 
@@ -182,7 +177,7 @@ export default function LoginPage({
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={t("password")}
+                  aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                   aria-pressed={showPassword}
                   className="absolute end-1 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >

@@ -129,7 +129,7 @@ export default function UpdatePasswordPage({
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    aria-label={t("newPassword")}
+                    aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                     aria-pressed={showPassword}
                     className="absolute end-1 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                   >

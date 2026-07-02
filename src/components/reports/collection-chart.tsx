@@ -76,7 +76,7 @@ export function CollectionChart({ data }: CollectionChartProps) {
           />
           <Bar
             dataKey="invoiced"
-            name="Invoiced"
+            name={t("invoicedLabel")}
             fill="var(--color-accent)"
             radius={[4, 4, 0, 0]}
             opacity={0.35}
