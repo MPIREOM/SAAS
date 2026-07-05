@@ -166,7 +166,7 @@ export default function MoveOutPage({
           setInvoices(outstandingInvoices);
           const defaults: Record<string, InvoiceAction> = {};
           outstandingInvoices.forEach((inv) => {
-            defaults[inv.id] = "cancel";
+            defaults[inv.id] = "leave_open";
           });
           setInvoiceActions(defaults);
         }
@@ -480,12 +480,14 @@ export default function MoveOutPage({
       return;
     }
 
-    // Resolve outstanding rent invoices based on user's choices
+    // Resolve outstanding rent invoices based on user's choices.
+    // "leave_open" invoices are intentionally untouched — they stay
+    // pending/overdue and remain collectable after the move-out.
     const writeOffIds = Object.entries(invoiceActions)
       .filter(([, action]) => action === "write_off")
       .map(([id]) => id);
     const cancelIds = Object.entries(invoiceActions)
-      .filter(([, action]) => action === "cancel" || action === "leave_open")
+      .filter(([, action]) => action === "cancel")
       .map(([id]) => id);
     const settleIds = Object.entries(invoiceActions)
       .filter(([, action]) => action === "settle")
@@ -560,6 +562,9 @@ export default function MoveOutPage({
     .reduce((sum, inv) => sum + outstanding(inv), 0);
   const cancelTotal = invoices
     .filter((inv) => invoiceActions[inv.id] === "cancel")
+    .reduce((sum, inv) => sum + outstanding(inv), 0);
+  const leaveOpenTotal = invoices
+    .filter((inv) => (invoiceActions[inv.id] || "leave_open") === "leave_open")
     .reduce((sum, inv) => sum + outstanding(inv), 0);
   const settleCollectTotal = invoices
     .filter((inv) => invoiceActions[inv.id] === "settle")
@@ -848,15 +853,22 @@ export default function MoveOutPage({
               <span className="text-xs text-text-secondary">{t("bulkAction")}:</span>
               <button
                 type="button"
+                onClick={() => setAllActions("leave_open")}
+                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-info hover:bg-info/10 hover:border-info/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                {t("invoiceActionLeaveOpen")}
+              </button>
+              <button
+                type="button"
                 onClick={() => setAllActions("cancel")}
-                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-text-secondary hover:text-text-primary hover:border-border transition-colors"
+                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-text-secondary hover:text-text-primary hover:border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 {t("invoiceActionCancel")}
               </button>
               <button
                 type="button"
                 onClick={() => setAllActions("write_off")}
-                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-warning hover:bg-warning/10 hover:border-warning/30 transition-colors"
+                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-warning hover:bg-warning/10 hover:border-warning/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
                 {t("invoiceActionWriteOff")}
               </button>
@@ -876,7 +888,7 @@ export default function MoveOutPage({
                         ? "bg-surface-elevated/30 border-border/30 opacity-60"
                         : action === "settle"
                         ? "bg-success/5 border-success/20"
-                        : "bg-surface-elevated/50 border-border/30"
+                        : "bg-info/5 border-info/20"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2.5">
@@ -916,11 +928,24 @@ export default function MoveOutPage({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAction(inv.id, "leave_open")}
+                        aria-pressed={action === "leave_open"}
+                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                          action === "leave_open"
+                            ? "bg-info/10 border-info/40 text-info"
+                            : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
+                        }`}
+                      >
+                        {t("invoiceActionLeaveOpen")}
+                      </button>
                       <button
                         type="button"
                         onClick={() => setAction(inv.id, "settle")}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all ${
+                        aria-pressed={action === "settle"}
+                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                           action === "settle"
                             ? "bg-success/10 border-success/40 text-success"
                             : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
@@ -931,7 +956,8 @@ export default function MoveOutPage({
                       <button
                         type="button"
                         onClick={() => setAction(inv.id, "write_off")}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all ${
+                        aria-pressed={action === "write_off"}
+                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                           action === "write_off"
                             ? "bg-warning/10 border-warning/40 text-warning"
                             : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
@@ -942,7 +968,8 @@ export default function MoveOutPage({
                       <button
                         type="button"
                         onClick={() => setAction(inv.id, "cancel")}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all ${
+                        aria-pressed={action === "cancel"}
+                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                           action === "cancel"
                             ? "bg-surface-elevated border-border text-text-primary"
                             : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
@@ -993,6 +1020,14 @@ export default function MoveOutPage({
               <p className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
                 {t("resolutionSummary")}
               </p>
+              {leaveOpenTotal > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-info">{t("keptPending")}</span>
+                  <span className="font-mono font-medium text-info tabular-nums ltr-nums">
+                    {fmt(leaveOpenTotal)} {CURRENCY.code}
+                  </span>
+                </div>
+              )}
               {settleCollectTotal > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-success">{t("settleCollect")}</span>
