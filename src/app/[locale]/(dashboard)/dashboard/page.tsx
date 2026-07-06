@@ -61,7 +61,7 @@ interface ExpiringLease {
 }
 
 interface AgedBucket {
-  label: string;
+  labelKey: "aged0to30" | "aged31to60" | "aged61to90" | "aged90plus";
   count: number;
   total: number;
   color: string;
@@ -330,18 +330,18 @@ async function getAgedReceivables(): Promise<AgedBucket[]> {
 
   if (!invoices || invoices.length === 0) {
     return [
-      { label: "0-30 days", count: 0, total: 0, color: "bg-warning/20 text-warning" },
-      { label: "31-60 days", count: 0, total: 0, color: "bg-warning/30 text-warning" },
-      { label: "61-90 days", count: 0, total: 0, color: "bg-destructive/20 text-destructive" },
-      { label: "90+ days", count: 0, total: 0, color: "bg-destructive/30 text-destructive" },
+      { labelKey: "aged0to30" as const, count: 0, total: 0, color: "bg-warning/20 text-warning" },
+      { labelKey: "aged31to60" as const, count: 0, total: 0, color: "bg-warning/30 text-warning" },
+      { labelKey: "aged61to90" as const, count: 0, total: 0, color: "bg-destructive/20 text-destructive" },
+      { labelKey: "aged90plus" as const, count: 0, total: 0, color: "bg-destructive/30 text-destructive" },
     ];
   }
 
   const buckets = [
-    { label: "0-30 days", min: 0, max: 30, count: 0, total: 0, color: "bg-warning/20 text-warning" },
-    { label: "31-60 days", min: 31, max: 60, count: 0, total: 0, color: "bg-warning/30 text-warning" },
-    { label: "61-90 days", min: 61, max: 90, count: 0, total: 0, color: "bg-destructive/20 text-destructive" },
-    { label: "90+ days", min: 91, max: Infinity, count: 0, total: 0, color: "bg-destructive/30 text-destructive" },
+    { labelKey: "aged0to30" as const, min: 0, max: 30, count: 0, total: 0, color: "bg-warning/20 text-warning" },
+    { labelKey: "aged31to60" as const, min: 31, max: 60, count: 0, total: 0, color: "bg-warning/30 text-warning" },
+    { labelKey: "aged61to90" as const, min: 61, max: 90, count: 0, total: 0, color: "bg-destructive/20 text-destructive" },
+    { labelKey: "aged90plus" as const, min: 91, max: Infinity, count: 0, total: 0, color: "bg-destructive/30 text-destructive" },
   ];
 
   invoices.forEach((inv) => {
@@ -360,7 +360,7 @@ async function getAgedReceivables(): Promise<AgedBucket[]> {
   });
 
   return buckets.map((b) => ({
-    label: b.label,
+    labelKey: b.labelKey,
     count: b.count,
     total: Math.round(b.total * 100) / 100,
     color: b.color,
@@ -495,6 +495,7 @@ export default async function DashboardPage({
   const { locale } = await params;
   const { month, year } = await searchParams;
   const t = await getTranslations("dashboard");
+  const tInvoices = await getTranslations("invoices");
   const [stats, overdueInvoices, recentInvoices, expiringLeases, agedReceivables, upcomingCheques, expiringDocuments] = await Promise.all([
     getDashboardStats(month, year),
     getOverdueInvoices(),
@@ -741,11 +742,11 @@ export default async function DashboardPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {agedReceivables.map((bucket) => (
             <div
-              key={bucket.label}
+              key={bucket.labelKey}
               className={`rounded-lg p-4 border border-border/30 ${bucket.color.split(" ")[0]}`}
             >
               <p className={`text-xs font-semibold uppercase tracking-wider ${bucket.color.split(" ")[1]}`}>
-                {bucket.label}
+                {t(bucket.labelKey)}
               </p>
               <p className="text-2xl font-display font-bold text-text-primary mt-2 ltr-nums">
                 {bucket.total.toLocaleString()} <span className="text-sm font-normal text-text-secondary">{CURRENCY.code}</span>
@@ -809,7 +810,9 @@ export default async function DashboardPage({
                           : "bg-warning/10 text-warning"
                       }`}
                     >
-                      {inv.status}
+                      {["paid", "pending", "overdue", "partial"].includes(inv.status)
+                        ? tInvoices(inv.status)
+                        : inv.status}
                     </span>
                   </div>
                 </Link>
@@ -902,8 +905,10 @@ export default async function DashboardPage({
                     </p>
                     {(cheque.propertyName || cheque.unitNumber) && (
                       <p className="text-xs text-text-secondary truncate mt-0.5">
-                        {cheque.propertyName || "?"}
-                        {cheque.unitNumber && ` · Unit ${cheque.unitNumber}`}
+                        {cheque.propertyName || "—"}
+                        {cheque.unitNumber && (
+                          <> &middot; {t("unit")} {cheque.unitNumber}</>
+                        )}
                       </p>
                     )}
                     <p className="text-xs text-text-secondary truncate mt-0.5">
@@ -915,7 +920,9 @@ export default async function DashboardPage({
                       {cheque.amount} {CURRENCY.code}
                     </p>
                     <p className={`text-xs mt-0.5 ${cheque.daysUntil <= 7 ? "text-warning font-medium" : "text-text-secondary"}`}>
-                      {cheque.daysUntil <= 0 ? t("dueToday") : `${cheque.daysUntil}d`}
+                      {cheque.daysUntil <= 0
+                        ? t("dueToday")
+                        : t("inDays", { days: cheque.daysUntil })}
                     </p>
                   </div>
                 </div>
@@ -971,7 +978,9 @@ export default async function DashboardPage({
                     <p className={`text-xs mt-0.5 ${
                       doc.daysUntil <= 0 ? "text-destructive font-medium" : doc.daysUntil <= 14 ? "text-warning font-medium" : "text-text-secondary"
                     }`}>
-                      {doc.daysUntil <= 0 ? t("expired") : `${doc.daysUntil}d ${t("daysLeft")}`}
+                      {doc.daysUntil <= 0
+                        ? t("expired")
+                        : `${doc.daysUntil} ${t("daysLeft")}`}
                     </p>
                   </div>
                 </div>

@@ -69,7 +69,7 @@ export function InvoicesTabs({
   function formatMonth(monthStr: string) {
     const [year, mon] = monthStr.split("-").map(Number);
     const date = new Date(year, mon - 1);
-    return date.toLocaleDateString("en-GB", {
+    return date.toLocaleDateString(`${locale}-u-nu-latn`, {
       month: "short",
       year: "numeric",
     });

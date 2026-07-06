@@ -11,8 +11,10 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { CURRENCY } from "@/lib/currency";
+import { Spinner } from "@/components/ui/spinner";
 
 interface MonthData {
   month: string;
@@ -28,6 +30,8 @@ interface CashFlowChartProps {
 export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
   const [data, setData] = useState<MonthData[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
 
   useEffect(() => {
     const load = async () => {
@@ -77,7 +81,7 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
       const months: MonthData[] = [];
       for (let i = 0; i < 6; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-        const monthLabel = date.toLocaleDateString("en", {
+        const monthLabel = date.toLocaleDateString(`${locale}-u-nu-latn`, {
           month: "short",
           year: "2-digit",
         });
@@ -117,12 +121,22 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
       setLoading(false);
     };
     load();
-  }, [propertyIds]);
+  }, [propertyIds, locale]);
 
   if (loading) {
     return (
-      <div className="h-[300px] flex items-center justify-center">
-        <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <Spinner
+        label={t("chartLoading")}
+        sizeClassName="h-5 w-5"
+        className="h-[300px]"
+      />
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="h-[300px] flex items-center justify-center text-sm text-text-secondary">
+        {t("noChartData")}
       </div>
     );
   }
@@ -169,6 +183,7 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
               boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
+            itemStyle={{ color: "var(--color-text-primary)" }}
             formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}
             cursor={{ fill: "var(--color-surface-elevated)", opacity: 0.3 }}
           />
@@ -176,11 +191,14 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
             wrapperStyle={{ fontSize: "12px", fontWeight: 500 }}
             iconType="square"
             iconSize={10}
+            formatter={(value: string) => (
+              <span style={{ color: "var(--color-text-secondary)" }}>{value}</span>
+            )}
           />
           <Area
             type="monotone"
             dataKey="income"
-            name="Income"
+            name={t("chartIncome")}
             stroke="var(--color-success)"
             fill="url(#incomeGrad)"
             strokeWidth={2}
@@ -188,7 +206,7 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
           <Area
             type="monotone"
             dataKey="expenses"
-            name="Expenses"
+            name={t("chartExpenses")}
             stroke="var(--color-destructive)"
             fill="url(#expenseGrad)"
             strokeWidth={2}

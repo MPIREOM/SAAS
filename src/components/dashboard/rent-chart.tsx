@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   BarChart,
   Bar,
@@ -13,6 +14,7 @@ import {
 } from "recharts";
 import { createClient } from "@/lib/supabase/client";
 import { CURRENCY } from "@/lib/currency";
+import { Spinner } from "@/components/ui/spinner";
 
 interface MonthData {
   month: string;
@@ -27,6 +29,9 @@ interface RentChartProps {
 export function RentChart({ propertyIds }: RentChartProps) {
   const [data, setData] = useState<MonthData[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("dashboard");
+  const tInvoices = useTranslations("invoices");
+  const locale = useLocale();
 
   useEffect(() => {
     const load = async () => {
@@ -73,7 +78,7 @@ export function RentChart({ propertyIds }: RentChartProps) {
       const months: MonthData[] = [];
       for (let i = 0; i < 12; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
-        const monthLabel = date.toLocaleDateString("en", {
+        const monthLabel = date.toLocaleDateString(`${locale}-u-nu-latn`, {
           month: "short",
           year: "2-digit",
         });
@@ -105,12 +110,22 @@ export function RentChart({ propertyIds }: RentChartProps) {
       setLoading(false);
     };
     load();
-  }, [propertyIds]);
+  }, [propertyIds, locale]);
 
   if (loading) {
     return (
-      <div className="h-[300px] flex items-center justify-center">
-        <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <Spinner
+        label={t("chartLoading")}
+        sizeClassName="h-5 w-5"
+        className="h-[300px]"
+      />
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="h-[300px] flex items-center justify-center text-sm text-text-secondary">
+        {t("noChartData")}
       </div>
     );
   }
@@ -147,6 +162,7 @@ export function RentChart({ propertyIds }: RentChartProps) {
               boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
+            itemStyle={{ color: "var(--color-text-primary)" }}
             formatter={(value) => [`${Number(value).toFixed(2)} ${CURRENCY.code}`]}
             cursor={{ fill: "var(--color-surface-elevated)", opacity: 0.3 }}
           />
@@ -154,16 +170,19 @@ export function RentChart({ propertyIds }: RentChartProps) {
             wrapperStyle={{ fontSize: "12px", fontWeight: 500 }}
             iconType="square"
             iconSize={10}
+            formatter={(value: string) => (
+              <span style={{ color: "var(--color-text-secondary)" }}>{value}</span>
+            )}
           />
           <Bar
             dataKey="paid"
-            name="Paid"
+            name={tInvoices("paid")}
             fill="var(--color-success)"
             radius={[4, 4, 0, 0]}
           />
           <Bar
             dataKey="pending"
-            name="Pending"
+            name={tInvoices("pending")}
             fill="var(--color-warning)"
             radius={[4, 4, 0, 0]}
           />

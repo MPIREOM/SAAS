@@ -10,7 +10,9 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { Spinner } from "@/components/ui/spinner";
 
 interface MonthData {
   month: string;
@@ -24,6 +26,8 @@ interface OccupancyChartProps {
 export function OccupancyChart({ propertyIds }: OccupancyChartProps) {
   const [data, setData] = useState<MonthData[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
 
   useEffect(() => {
     const load = async () => {
@@ -48,8 +52,6 @@ export function OccupancyChart({ propertyIds }: OccupancyChartProps) {
 
       // Get all leases to calculate historical occupancy
       const now = new Date();
-      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-      const startDate = sixMonthsAgo.toISOString().split("T")[0];
 
       let leasesQuery = supabase
         .from("leases")
@@ -73,7 +75,7 @@ export function OccupancyChart({ propertyIds }: OccupancyChartProps) {
         const date = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
         const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
         const checkDate = monthEnd.toISOString().split("T")[0];
-        const monthLabel = date.toLocaleDateString("en", {
+        const monthLabel = date.toLocaleDateString(`${locale}-u-nu-latn`, {
           month: "short",
           year: "2-digit",
         });
@@ -96,12 +98,22 @@ export function OccupancyChart({ propertyIds }: OccupancyChartProps) {
       setLoading(false);
     };
     load();
-  }, [propertyIds]);
+  }, [propertyIds, locale]);
 
   if (loading) {
     return (
-      <div className="h-[200px] flex items-center justify-center">
-        <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <Spinner
+        label={t("chartLoading")}
+        sizeClassName="h-5 w-5"
+        className="h-[200px]"
+      />
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="h-[200px] flex items-center justify-center text-sm text-text-secondary">
+        {t("noChartData")}
       </div>
     );
   }
@@ -145,12 +157,13 @@ export function OccupancyChart({ propertyIds }: OccupancyChartProps) {
               boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
+            itemStyle={{ color: "var(--color-text-primary)" }}
             formatter={(value) => [`${value}%`]}
           />
           <Area
             type="monotone"
             dataKey="rate"
-            name="Occupancy"
+            name={t("chartOccupancy")}
             stroke="var(--color-accent)"
             fill="url(#occupancyGrad)"
             strokeWidth={2}

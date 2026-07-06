@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight, Pencil, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
@@ -15,12 +16,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { OwnerDetailProps, PropertyRow, UnitRow } from "@/components/owners/types";
 
 const COMMISSION_OPTIONS = [
-  { value: "percentage", label: "Percentage of rent" },
-  { value: "included_in_business_fee", label: "Included in business fee" },
-  { value: "none", label: "No commission" },
+  "percentage",
+  "included_in_business_fee",
+  "none",
 ] as const;
 
 export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
+  const t = useTranslations("owners");
   const router = useRouter();
   const { toast } = useToast();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
       .eq("id", p.id);
     setSavingId(null);
     if (error) {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      toast({ title: t("saveFailed"), description: error.message, variant: "destructive" });
       return;
     }
     await logAudit(supabase, {
@@ -54,7 +56,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
       entity_id: p.id,
       metadata: { commission_type: type, commission_rate: rate },
     });
-    toast({ title: "Commission updated", variant: "success" });
+    toast({ title: t("propertiesPanel.commissionUpdated"), variant: "success" });
     router.refresh();
   }
 
@@ -74,7 +76,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
       .eq("id", u.id);
     setSavingId(null);
     if (error) {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      toast({ title: t("saveFailed"), description: error.message, variant: "destructive" });
       return;
     }
     await logAudit(supabase, {
@@ -86,7 +88,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
         commission_rate: rate,
       },
     });
-    toast({ title: "Unit override saved", variant: "success" });
+    toast({ title: t("propertiesPanel.unitOverrideSaved"), variant: "success" });
     router.refresh();
   }
 
@@ -94,8 +96,8 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
     return (
       <EmptyState
         icon={<Building2 className="h-6 w-6" />}
-        title="No properties linked to this owner yet"
-        description="Use the SQL seed in supabase/seed/owner_setup.sql to assign properties."
+        title={t("propertiesPanel.emptyTitle")}
+        description={t("propertiesPanel.emptyDescription")}
       />
     );
   }
@@ -103,9 +105,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
   return (
     <div className="space-y-3 animate-fade-in-up">
       <p className="text-xs text-text-secondary">
-        Set the commission arrangement for each property. Use a per-unit
-        override only when units inside the same property have different
-        arrangements.
+        {t("propertiesPanel.intro")}
       </p>
 
       {properties.map((p) => {
@@ -130,7 +130,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
             {isExpanded && (
               <div className="border-t border-border/40 bg-surface/40">
                 <div className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
-                  Per-unit overrides
+                  {t("propertiesPanel.perUnitOverrides")}
                 </div>
                 <div className="divide-y divide-border/40">
                   {propUnits.map((u) => (
@@ -172,6 +172,8 @@ function PropertyRowEditor({
   hasOverrides: boolean;
   unitCount: number;
 }) {
+  const t = useTranslations("owners");
+  const tCommon = useTranslations("common");
   const [type, setType] = useState<PropertyRow["commission_type"]>(
     property.commission_type,
   );
@@ -185,8 +187,8 @@ function PropertyRowEditor({
         variant="ghost"
         size="sm"
         onClick={onToggleUnits}
-        title="Show units / per-unit overrides"
-        aria-label="Show units / per-unit overrides"
+        title={t("propertiesPanel.showUnits")}
+        aria-label={t("propertiesPanel.showUnits")}
         aria-expanded={isExpanded}
         className="h-8 w-8 p-0 text-text-secondary hover:text-text-primary"
       >
@@ -200,10 +202,10 @@ function PropertyRowEditor({
         <div className="truncate text-sm font-medium text-text-primary">{property.name}</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
           <span className="font-mono ltr-nums">{unitCount}</span>
-          <span>{unitCount === 1 ? "unit" : "units"}</span>
+          <span>{t("propertiesPanel.unitWord", { count: unitCount })}</span>
           {hasOverrides && (
             <Badge variant="warning" className="text-[10px] uppercase tracking-wider">
-              has unit overrides
+              {t("propertiesPanel.hasOverrides")}
             </Badge>
           )}
         </div>
@@ -211,12 +213,12 @@ function PropertyRowEditor({
       <Select
         value={type}
         onChange={(e) => setType(e.target.value as PropertyRow["commission_type"])}
-        aria-label="Commission arrangement"
+        aria-label={t("propertiesPanel.commissionArrangement")}
         className="h-9 w-52 text-xs"
       >
-        {COMMISSION_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
+        {COMMISSION_OPTIONS.map((value) => (
+          <option key={value} value={value}>
+            {t(`propertiesPanel.commission.${value}`)}
           </option>
         ))}
       </Select>
@@ -229,7 +231,7 @@ function PropertyRowEditor({
             step={0.01}
             value={rate}
             onChange={(e) => setRate(e.target.value)}
-            aria-label="Commission rate (%)"
+            aria-label={t("propertiesPanel.commissionRate")}
             className="h-9 w-20 font-mono ltr-nums text-xs text-end"
           />
           <span className="text-xs text-text-secondary">%</span>
@@ -242,7 +244,7 @@ function PropertyRowEditor({
         disabled={!dirty || saving}
         loading={saving}
       >
-        {saving ? "Saving…" : "Save"}
+        {saving ? t("saving") : tCommon("save")}
       </Button>
     </div>
   );
@@ -261,6 +263,8 @@ function UnitRowEditor({
     rate: number | null,
   ) => void;
 }) {
+  const t = useTranslations("owners");
+  const tCommon = useTranslations("common");
   // null type means "inherit property". We surface this as the empty option.
   const [type, setType] = useState<UnitRow["commission_type"]>(unit.commission_type);
   const [rate, setRate] = useState(
@@ -275,7 +279,7 @@ function UnitRowEditor({
     <div className="flex flex-wrap items-center gap-3 px-4 py-2.5">
       <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-text-secondary/50" />
       <div className="min-w-0 flex-1 text-xs">
-        <span className="font-mono font-medium ltr-nums">Unit {unit.unit_number}</span>
+        <span className="font-mono font-medium ltr-nums">{tCommon("unit")} {unit.unit_number}</span>
         <span className="ms-2 text-text-secondary">
           <span className="font-mono ltr-nums">
             {Number(unit.rent_amount).toLocaleString("en-OM", {
@@ -283,7 +287,7 @@ function UnitRowEditor({
               maximumFractionDigits: 2,
             })}
           </span>{" "}
-          {CURRENCY.code}/mo · {unit.status}
+          {t("propertiesPanel.perMonth", { code: CURRENCY.code })} · {unit.status}
         </span>
       </div>
       <Select
@@ -292,13 +296,13 @@ function UnitRowEditor({
           const v = e.target.value;
           setType((v ? v : null) as UnitRow["commission_type"]);
         }}
-        aria-label="Unit commission override"
+        aria-label={t("propertiesPanel.unitCommissionOverride")}
         className="h-9 w-52 text-xs"
       >
-        <option value="">Inherit from property</option>
-        {COMMISSION_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
+        <option value="">{t("propertiesPanel.inheritFromProperty")}</option>
+        {COMMISSION_OPTIONS.map((value) => (
+          <option key={value} value={value}>
+            {t(`propertiesPanel.commission.${value}`)}
           </option>
         ))}
       </Select>
@@ -311,7 +315,7 @@ function UnitRowEditor({
             step={0.01}
             value={rate}
             onChange={(e) => setRate(e.target.value)}
-            aria-label="Unit commission rate (%)"
+            aria-label={t("propertiesPanel.unitCommissionRate")}
             className="h-9 w-20 font-mono ltr-nums text-xs text-end"
           />
           <span className="text-xs text-text-secondary">%</span>
@@ -326,7 +330,7 @@ function UnitRowEditor({
         disabled={!dirty || saving}
         loading={saving}
       >
-        {saving ? "Saving…" : "Save"}
+        {saving ? t("saving") : tCommon("save")}
       </Button>
     </div>
   );

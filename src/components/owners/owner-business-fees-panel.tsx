@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Trash2, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
@@ -23,6 +23,8 @@ import type { OwnerDetailProps, BusinessFeeRow } from "@/components/owners/types
 
 export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps) {
   const t = useTranslations("owners");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,7 +42,11 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
   async function deleteOne(f: BusinessFeeRow) {
     if (
       !confirm(
-        `Delete the ${f.period_month.slice(0, 7)} business fee (${Number(f.amount).toFixed(2)} ${CURRENCY.code})?`,
+        t("fees.confirmDelete", {
+          month: f.period_month.slice(0, 7),
+          amount: Number(f.amount).toFixed(2),
+          code: CURRENCY.code,
+        }),
       )
     ) {
       return;
@@ -51,7 +57,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
       .delete()
       .eq("id", f.id);
     if (error) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      toast({ title: t("deleteFailed"), description: error.message, variant: "destructive" });
       return;
     }
     await logAudit(supabase, {
@@ -59,7 +65,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
       entity_type: "owner_business_fee",
       entity_id: f.id,
     });
-    toast({ title: "Fee deleted", variant: "success" });
+    toast({ title: t("fees.deleted"), variant: "success" });
     router.refresh();
   }
 
@@ -67,9 +73,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
     <div className="space-y-4 animate-fade-in-up">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-secondary">
-          Flat monthly fee charged to the owner&apos;s ledger. The cron creates
-          one row per month automatically; edit or delete here when the
-          arrangement changes.
+          {t("fees.intro")}
         </p>
         <Button type="button" size="sm" onClick={openCreate} className="sm:shrink-0">
           <Plus aria-hidden="true" className="h-4 w-4" />
@@ -80,8 +84,8 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
       {businessFees.length === 0 ? (
         <EmptyState
           icon={<FileText className="h-6 w-6" />}
-          title="No fees yet"
-          description="The daily cron auto-creates a row each month for owners with included_in_business_fee properties."
+          title={t("fees.emptyTitle")}
+          description={t("fees.emptyDescription")}
           action={
             <Button type="button" size="sm" onClick={openCreate}>
               <Plus aria-hidden="true" className="h-4 w-4" />
@@ -96,13 +100,13 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
             <Table className="min-w-[520px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-44">Month</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead className="w-44">{t("fees.month")}</TableHead>
+                  <TableHead>{tCommon("notes")}</TableHead>
                   <TableHead className="w-40 text-end">
-                    Amount ({CURRENCY.code})
+                    {t("amountWithCode", { code: CURRENCY.code })}
                   </TableHead>
                   <TableHead className="w-20 text-end">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{tCommon("actions")}</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -111,7 +115,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
                   <TableRow key={f.id}>
                     <TableCell>
                       <span className="text-sm font-medium text-text-primary">
-                        {formatMonth(f.period_month)}
+                        {formatMonth(f.period_month, locale)}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -144,7 +148,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-text-primary">
-                      {formatMonth(f.period_month)}
+                      {formatMonth(f.period_month, locale)}
                     </p>
                     {f.notes && (
                       <p className="mt-0.5 truncate text-xs text-text-secondary">
@@ -198,6 +202,7 @@ function RowActions({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const tCommon = useTranslations("common");
   return (
     <div className="flex items-center justify-end gap-1">
       <Button
@@ -205,8 +210,8 @@ function RowActions({
         variant="ghost"
         size="sm"
         onClick={onEdit}
-        aria-label="Edit"
-        title="Edit"
+        aria-label={tCommon("edit")}
+        title={tCommon("edit")}
         className="h-8 w-8 p-0 text-text-secondary hover:text-accent"
       >
         <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
@@ -216,8 +221,8 @@ function RowActions({
         variant="ghost"
         size="sm"
         onClick={onDelete}
-        aria-label="Delete"
-        title="Delete"
+        aria-label={tCommon("delete")}
+        title={tCommon("delete")}
         className="h-8 w-8 p-0 text-text-secondary hover:bg-destructive/10 hover:text-destructive"
       >
         <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
@@ -226,9 +231,9 @@ function RowActions({
   );
 }
 
-function formatMonth(periodMonth: string): string {
+function formatMonth(periodMonth: string, locale: string): string {
   try {
-    return new Date(periodMonth).toLocaleDateString("en-GB", {
+    return new Date(periodMonth).toLocaleDateString(`${locale}-u-nu-latn`, {
       month: "long",
       year: "numeric",
     });

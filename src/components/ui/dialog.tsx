@@ -1,5 +1,6 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils/cn";
 
 /* -------------------------------- Context --------------------------------- */
@@ -47,6 +48,7 @@ interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
   ({ className, maxWidth = "max-w-lg", children, ...props }, ref) => {
+    const t = useTranslations("common");
     const { open, onOpenChange, titleId, descriptionId } = useDialog();
     const contentRef = React.useRef<HTMLDivElement>(null);
 
@@ -119,7 +121,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
               "text-text-secondary hover:text-foreground hover:bg-surface-elevated transition-all duration-200",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             )}
-            aria-label="Close"
+            aria-label={t("close")}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

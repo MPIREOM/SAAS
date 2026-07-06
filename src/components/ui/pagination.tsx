@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -15,6 +16,7 @@ export function Pagination({
   baseUrl,
   searchParams = {},
 }: PaginationProps) {
+  const t = useTranslations("common");
   if (totalPages <= 1) return null;
 
   const buildUrl = (page: number) => {
@@ -39,12 +41,12 @@ export function Pagination({
     "h-8 w-8 flex items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
 
   return (
-    <nav aria-label="Pagination" className="flex items-center justify-center gap-1 py-4">
+    <nav aria-label={t("pagination")} className="flex items-center justify-center gap-1 py-4">
       {/* Previous */}
       {currentPage > 1 ? (
         <Link
           href={buildUrl(currentPage - 1)}
-          aria-label="Previous page"
+          aria-label={t("previousPage")}
           className={cn(linkClass, "text-text-secondary hover:text-text-primary hover:bg-surface-elevated")}
         >
           <ChevronLeft className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
@@ -60,7 +62,7 @@ export function Pagination({
         <>
           <Link
             href={buildUrl(1)}
-            aria-label="Page 1"
+            aria-label={`${t("page")} 1`}
             className={cn(linkClass, "text-sm text-text-secondary hover:text-text-primary hover:bg-surface-elevated")}
           >
             1
@@ -75,7 +77,7 @@ export function Pagination({
         <Link
           key={page}
           href={buildUrl(page)}
-          aria-label={`Page ${page}`}
+          aria-label={`${t("page")} ${page}`}
           aria-current={page === currentPage ? "page" : undefined}
           className={cn(
             linkClass,
@@ -96,7 +98,7 @@ export function Pagination({
           )}
           <Link
             href={buildUrl(totalPages)}
-            aria-label={`Page ${totalPages}`}
+            aria-label={`${t("page")} ${totalPages}`}
             className={cn(linkClass, "text-sm text-text-secondary hover:text-text-primary hover:bg-surface-elevated")}
           >
             {totalPages}
@@ -108,7 +110,7 @@ export function Pagination({
       {currentPage < totalPages ? (
         <Link
           href={buildUrl(currentPage + 1)}
-          aria-label="Next page"
+          aria-label={t("nextPage")}
           className={cn(linkClass, "text-text-secondary hover:text-text-primary hover:bg-surface-elevated")}
         >
           <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />

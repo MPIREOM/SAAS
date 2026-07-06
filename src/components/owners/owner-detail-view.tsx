@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Pencil, Wallet, Building2, Banknote, Receipt, Activity, FileText } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
@@ -26,6 +26,7 @@ const TABS: { key: TabKey; icon: typeof Activity }[] = [
 export function OwnerDetailView(props: OwnerDetailProps) {
   const { owner, balance } = props;
   const t = useTranslations("owners");
+  const locale = useLocale();
   const [tab, setTab] = useState<TabKey>("activity");
   const [editOwnerOpen, setEditOwnerOpen] = useState(false);
 
@@ -92,7 +93,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
         </div>
         <div className={cn("mt-2 text-sm font-medium", sideTone)}>{sideLabel}</div>
         <div className="mt-1 text-xs text-text-secondary">
-          As of{" "}
+          {t("asOf")}{" "}
           <span className="font-mono ltr-nums">
             {balance?.asOf ?? new Date().toISOString().split("T")[0]}
           </span>
@@ -105,13 +106,13 @@ export function OwnerDetailView(props: OwnerDetailProps) {
       {/* Owner profile grid */}
       <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ProfileTile
-          label="WhatsApp"
+          label={t("profile.whatsapp")}
           value={owner.whatsapp_phone ? `+${owner.whatsapp_phone}` : "—"}
           mono
         />
-        <ProfileTile label="Language" value={owner.language_preference.toUpperCase()} />
+        <ProfileTile label={t("profile.language")} value={owner.language_preference.toUpperCase()} />
         <ProfileTile
-          label="Opening balance"
+          label={t("profile.openingBalance")}
           value={`${Number(owner.opening_balance).toLocaleString("en-OM", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
@@ -119,8 +120,8 @@ export function OwnerDetailView(props: OwnerDetailProps) {
           mono
         />
         <ProfileTile
-          label="Opening date"
-          value={formatDate(owner.opening_balance_date)}
+          label={t("profile.openingDate")}
+          value={formatDate(owner.opening_balance_date, locale)}
           mono
         />
       </div>
@@ -128,7 +129,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
       {/* Tab nav */}
       <div
         role="tablist"
-        aria-label="Owner ledger sections"
+        aria-label={t("ledgerSections")}
         className="-mb-px flex flex-wrap gap-2 overflow-x-auto border-b border-border/60"
       >
         {TABS.map((tabItem) => {
@@ -186,28 +187,28 @@ function BalanceBreakdownCard({
 }) {
   const t = useTranslations("owners");
   const rows: { label: string; value: number; sign: "+" | "-" | ""; muted?: boolean }[] = [
-    { label: "Opening balance", value: breakdown.openingBalance, sign: "" },
-    { label: "Rent collected (cash + transfer)", value: breakdown.rentReceivedToCompany, sign: "+" },
+    { label: t("breakdownRows.openingBalance"), value: breakdown.openingBalance, sign: "" },
+    { label: t("breakdownRows.rentCollected"), value: breakdown.rentReceivedToCompany, sign: "+" },
     {
-      label: "Rent paid by cheque (direct to owner)",
+      label: t("breakdownRows.rentByCheque"),
       value: breakdown.rentReceivedDirectByCheque,
       sign: "",
       muted: true,
     },
-    { label: "Commission earned by company", value: breakdown.commissionEarned, sign: "-" },
+    { label: t("breakdownRows.commissionEarned"), value: breakdown.commissionEarned, sign: "-" },
     {
-      label: "Commission catch-up (early move-outs)",
+      label: t("breakdownRows.commissionCatchUp"),
       value: breakdown.earlyTerminationCommissionCatchUp,
       sign: "-",
     },
-    { label: "Business manager fees", value: breakdown.businessManagerFees, sign: "-" },
-    { label: "Expenses paid by company", value: breakdown.expensesCoveredByCompany, sign: "-" },
-    { label: "Settlements paid to owner", value: breakdown.settlementsPaidToOwner, sign: "-" },
-    { label: "Settlements received from owner", value: breakdown.settlementsReceivedFromOwner, sign: "+" },
+    { label: t("breakdownRows.businessFees"), value: breakdown.businessManagerFees, sign: "-" },
+    { label: t("breakdownRows.expensesCovered"), value: breakdown.expensesCoveredByCompany, sign: "-" },
+    { label: t("breakdownRows.settlementsPaid"), value: breakdown.settlementsPaidToOwner, sign: "-" },
+    { label: t("breakdownRows.settlementsReceived"), value: breakdown.settlementsReceivedFromOwner, sign: "+" },
   ];
   return (
     <section
-      aria-label="Balance breakdown"
+      aria-label={t("breakdown")}
       className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/30 p-6"
     >
       <h2 className="mb-4 font-display text-xs font-semibold uppercase tracking-wider text-text-secondary">
@@ -226,7 +227,7 @@ function BalanceBreakdownCard({
               {r.label}
               {r.muted && (
                 <span className="ms-2 text-[10px] uppercase tracking-wider text-text-secondary">
-                  Reference only
+                  {t("breakdownRows.referenceOnly")}
                 </span>
               )}
             </dt>
@@ -289,9 +290,9 @@ function ProfileTile({
   );
 }
 
-function formatDate(s: string): string {
+function formatDate(s: string, locale: string): string {
   try {
-    return new Date(s).toLocaleDateString("en-GB", {
+    return new Date(s).toLocaleDateString(`${locale}-u-nu-latn`, {
       day: "2-digit",
       month: "short",
       year: "numeric",

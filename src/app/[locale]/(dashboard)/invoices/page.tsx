@@ -229,7 +229,7 @@ export default async function InvoicesPage({
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr);
-    return d.toLocaleDateString("en-GB", {
+    return d.toLocaleDateString(`${locale}-u-nu-latn`, {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -603,7 +603,7 @@ export default async function InvoicesPage({
                               href={`/api/invoices/${invoice.id}/pdf`}
                               target="_blank"
                               className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-accent text-xs rounded-md border border-border/50 hover:border-accent/30 transition-colors"
-                              title="View PDF"
+                              title={t("viewPdf")}
                             >
                               <Printer className="h-3 w-3" />
                             </Link>
@@ -743,7 +743,7 @@ export default async function InvoicesPage({
                         href={`/api/invoices/${invoice.id}/pdf`}
                         target="_blank"
                         className="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-border/50 px-2 text-text-secondary hover:text-accent hover:border-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                        aria-label="View PDF"
+                        aria-label={t("viewPdf")}
                       >
                         <Printer aria-hidden="true" className="h-3.5 w-3.5" />
                       </Link>

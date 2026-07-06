@@ -9,24 +9,32 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { CURRENCY } from "@/lib/currency";
+import { Spinner } from "@/components/ui/spinner";
 
-interface MethodData {
-  name: string;
+interface MethodTotal {
+  method: string;
   value: number;
-  color: string;
 }
 
-const METHOD_COLORS: Record<string, { color: string; label: string }> = {
-  cash: { color: "var(--color-success)", label: "Cash" },
-  bank_transfer: { color: "var(--color-accent)", label: "Bank Transfer" },
-  cheque: { color: "var(--color-warning)", label: "Cheque" },
+// Fixed method → categorical-slot mapping so a method keeps its color
+// regardless of rank or which methods appear. Status colors stay
+// reserved for status; series identity uses the chart tokens.
+const METHOD_COLORS: Record<string, string> = {
+  cash: "var(--color-chart-1)",
+  bank_transfer: "var(--color-chart-2)",
+  cheque: "var(--color-chart-3)",
 };
+const FALLBACK_COLOR = "var(--color-chart-4)";
+const KNOWN_METHODS = new Set(Object.keys(METHOD_COLORS));
 
 export function PaymentMethodChart() {
-  const [data, setData] = useState<MethodData[]>([]);
+  const [totals, setTotals] = useState<MethodTotal[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("dashboard");
+  const tInvoices = useTranslations("invoices");
 
   useEffect(() => {
     const load = async () => {
@@ -42,21 +50,20 @@ export function PaymentMethodChart() {
         .select("amount, method")
         .gte("payment_date", startDate);
 
-      const totals: Record<string, number> = {};
+      const sums: Record<string, number> = {};
       (payments || []).forEach((p) => {
         const method = (p.method as string) || "cash";
-        totals[method] = (totals[method] || 0) + parseFloat(p.amount as string);
+        sums[method] = (sums[method] || 0) + parseFloat(p.amount as string);
       });
 
-      const chartData: MethodData[] = Object.entries(totals)
-        .map(([method, total]) => ({
-          name: METHOD_COLORS[method]?.label || method,
-          value: Math.round(total * 100) / 100,
-          color: METHOD_COLORS[method]?.color || "var(--color-text-secondary)",
-        }))
-        .sort((a, b) => b.value - a.value);
-
-      setData(chartData);
+      setTotals(
+        Object.entries(sums)
+          .map(([method, total]) => ({
+            method,
+            value: Math.round(total * 100) / 100,
+          }))
+          .sort((a, b) => b.value - a.value)
+      );
       setLoading(false);
     };
     load();
@@ -64,19 +71,29 @@ export function PaymentMethodChart() {
 
   if (loading) {
     return (
-      <div className="h-[200px] flex items-center justify-center">
-        <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <Spinner
+        label={t("chartLoading")}
+        sizeClassName="h-5 w-5"
+        className="h-[200px]"
+      />
+    );
+  }
+
+  if (totals.length === 0) {
+    return (
+      <div className="h-[200px] flex items-center justify-center text-sm text-text-secondary">
+        {t("noChartData")}
       </div>
     );
   }
 
-  if (data.length === 0) {
-    return (
-      <div className="h-[200px] flex items-center justify-center text-text-secondary text-sm">
-        No payment data
-      </div>
-    );
-  }
+  const data = totals.map((entry) => ({
+    ...entry,
+    name: KNOWN_METHODS.has(entry.method)
+      ? tInvoices(`methods.${entry.method}`)
+      : entry.method,
+    color: METHOD_COLORS[entry.method] || FALLBACK_COLOR,
+  }));
 
   return (
     <div className="h-[200px]">
@@ -91,8 +108,8 @@ export function PaymentMethodChart() {
             paddingAngle={3}
             dataKey="value"
           >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+            {data.map((entry) => (
+              <Cell key={entry.method} fill={entry.color} />
             ))}
           </Pie>
           <Tooltip
@@ -104,12 +121,16 @@ export function PaymentMethodChart() {
               fontWeight: 500,
               boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
             }}
+            itemStyle={{ color: "var(--color-text-primary)" }}
             formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}
           />
           <Legend
             wrapperStyle={{ fontSize: "11px", fontWeight: 500 }}
             iconType="circle"
             iconSize={8}
+            formatter={(value: string) => (
+              <span style={{ color: "var(--color-text-secondary)" }}>{value}</span>
+            )}
           />
         </PieChart>
       </ResponsiveContainer>

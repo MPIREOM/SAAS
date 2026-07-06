@@ -20,6 +20,7 @@ import {
   DialogDescription,
   DialogBody,
 } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Token {
   id: string;
@@ -133,9 +134,11 @@ export function SharePortalButton({
 
               {/* Existing links */}
               {loading ? (
-                <div className="flex justify-center py-6">
-                  <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                </div>
+                <Spinner
+                  label={tc("loading")}
+                  sizeClassName="h-5 w-5"
+                  className="py-6"
+                />
               ) : tokens.length > 0 ? (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">

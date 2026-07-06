@@ -55,6 +55,7 @@ function EditOwnerForm({
   onClose: () => void;
 }) {
   const t = useTranslations("owners");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { toast } = useToast();
   const [name, setName] = useState(owner.name);
@@ -72,7 +73,7 @@ function EditOwnerForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      toast({ title: "Name is required", variant: "destructive" });
+      toast({ title: t("editOwnerDialog.nameRequired"), variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -93,7 +94,7 @@ function EditOwnerForm({
       .eq("id", owner.id);
     setSaving(false);
     if (error) {
-      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      toast({ title: t("saveFailed"), description: error.message, variant: "destructive" });
       return;
     }
     await logAudit(supabase, {
@@ -102,7 +103,7 @@ function EditOwnerForm({
       entity_id: owner.id,
       metadata: payload,
     });
-    toast({ title: "Owner updated", variant: "success" });
+    toast({ title: t("editOwnerDialog.updated"), variant: "success" });
     onClose();
     router.refresh();
   }
@@ -112,8 +113,7 @@ function EditOwnerForm({
       <DialogHeader>
         <DialogTitle>{t("editOwner")}</DialogTitle>
         <DialogDescription>
-          Owner details, opening balance, and contact info. Changes here flow
-          into the daily summary and the WhatsApp agent immediately.
+          {t("editOwnerDialog.description")}
         </DialogDescription>
       </DialogHeader>
 
@@ -121,7 +121,7 @@ function EditOwnerForm({
         <form id="edit-owner-form" onSubmit={handleSubmit} className="space-y-4">
           <Input
             type="text"
-            label="Name"
+            label={t("editOwnerDialog.name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -130,15 +130,15 @@ function EditOwnerForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               type="text"
-              label="WhatsApp (digits + country code)"
+              label={t("editOwnerDialog.whatsappLabel")}
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
-              placeholder="e.g. 96899372277"
+              placeholder={t("editOwnerDialog.whatsappPlaceholder")}
               className="font-mono ltr-nums"
             />
             <Input
               type="email"
-              label="Email (optional)"
+              label={t("editOwnerDialog.emailOptional")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -146,16 +146,16 @@ function EditOwnerForm({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select
-              label="Language"
+              label={t("profile.language")}
               value={language}
               onChange={(e) => setLanguage(e.target.value as "en" | "ar")}
             >
-              <option value="en">English</option>
-              <option value="ar">Arabic</option>
+              <option value="en">{t("editOwnerDialog.english")}</option>
+              <option value="ar">{t("editOwnerDialog.arabic")}</option>
             </Select>
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium tracking-tight text-foreground">
-                Active
+                {t("editOwnerDialog.active")}
               </span>
               <label className="inline-flex h-10 cursor-pointer items-center gap-2 px-1">
                 <input
@@ -165,7 +165,7 @@ function EditOwnerForm({
                   className="h-4 w-4 cursor-pointer accent-accent"
                 />
                 <span className="text-sm text-text-primary">
-                  {isActive ? "Active" : "Archived"}
+                  {isActive ? t("editOwnerDialog.active") : t("editOwnerDialog.archived")}
                 </span>
               </label>
             </div>
@@ -173,22 +173,22 @@ function EditOwnerForm({
 
           <fieldset className="space-y-4 rounded-xl border border-border/60 bg-surface-elevated/30 p-4">
             <legend className="px-1 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
-              Opening balance snapshot
+              {t("editOwnerDialog.openingBalanceSnapshot")}
             </legend>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 type="number"
-                label="Amount (OMR)"
+                label={t("amountOmr")}
                 step={0.001}
                 value={openingBalance}
                 onChange={(e) => setOpeningBalance(e.target.value)}
                 required
                 className="font-mono ltr-nums"
-                helperText="Positive = company owes owner. Negative = owner owes company."
+                helperText={t("editOwnerDialog.openingBalanceHelper")}
               />
               <Input
                 type="date"
-                label="As of date"
+                label={t("editOwnerDialog.asOfDate")}
                 value={openingDate}
                 onChange={(e) => setOpeningDate(e.target.value)}
                 required
@@ -198,11 +198,11 @@ function EditOwnerForm({
           </fieldset>
 
           <Textarea
-            label="Notes"
+            label={tCommon("notes")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="Anything worth remembering about this owner"
+            placeholder={t("editOwnerDialog.notesPlaceholder")}
             className="resize-none"
           />
         </form>
@@ -210,10 +210,10 @@ function EditOwnerForm({
 
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
+          {tCommon("cancel")}
         </Button>
         <Button type="submit" form="edit-owner-form" loading={saving}>
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? t("saving") : t("saveChanges")}
         </Button>
       </DialogFooter>
     </>

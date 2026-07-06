@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Trash2, ArrowUpRight, ArrowDownLeft, Banknote } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
@@ -25,6 +25,7 @@ import type { OwnerDetailProps, SettlementRow } from "@/components/owners/types"
 
 export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) {
   const t = useTranslations("owners");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -42,7 +43,11 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
   async function deleteOne(s: SettlementRow) {
     if (
       !confirm(
-        `Delete this settlement? ${Number(s.amount).toFixed(2)} ${CURRENCY.code} on ${s.settled_at}. This cannot be undone.`,
+        t("settlements.confirmDelete", {
+          amount: Number(s.amount).toFixed(2),
+          code: CURRENCY.code,
+          date: s.settled_at,
+        }),
       )
     ) {
       return;
@@ -53,7 +58,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
       .delete()
       .eq("id", s.id);
     if (error) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      toast({ title: t("deleteFailed"), description: error.message, variant: "destructive" });
       return;
     }
     await logAudit(supabase, {
@@ -61,7 +66,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
       entity_type: "owner_settlement",
       entity_id: s.id,
     });
-    toast({ title: "Settlement deleted", variant: "success" });
+    toast({ title: t("settlements.deleted"), variant: "success" });
     router.refresh();
   }
 
@@ -69,8 +74,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
     <div className="space-y-4 animate-fade-in-up">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-secondary">
-          Record payouts the company makes to the owner, or money the owner
-          gives back to the company.
+          {t("settlements.intro")}
         </p>
         <Button type="button" size="sm" onClick={openCreate} className="sm:shrink-0">
           <Plus aria-hidden="true" className="h-4 w-4" />
@@ -81,8 +85,8 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
       {settlements.length === 0 ? (
         <EmptyState
           icon={<Banknote className="h-6 w-6" />}
-          title="No settlements yet"
-          description="Each time the company pays the owner (or vice versa), record it here so the running balance reflects it."
+          title={t("settlements.emptyTitle")}
+          description={t("settlements.emptyDescription")}
           action={
             <Button type="button" size="sm" onClick={openCreate}>
               <Plus aria-hidden="true" className="h-4 w-4" />
@@ -97,14 +101,14 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
             <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-28">Date</TableHead>
-                  <TableHead>Direction</TableHead>
-                  <TableHead>Details</TableHead>
+                  <TableHead className="w-28">{tCommon("date")}</TableHead>
+                  <TableHead>{t("settlements.direction")}</TableHead>
+                  <TableHead>{t("settlements.details")}</TableHead>
                   <TableHead className="w-40 text-end">
-                    Amount ({CURRENCY.code})
+                    {t("amountWithCode", { code: CURRENCY.code })}
                   </TableHead>
                   <TableHead className="w-20 text-end">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{tCommon("actions")}</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -181,11 +185,14 @@ function SettlementAmount({ settlement: s }: { settlement: SettlementRow }) {
   );
 }
 
-function detailsText(s: SettlementRow): string {
+function detailsText(
+  s: SettlementRow,
+  t: ReturnType<typeof useTranslations>,
+): string {
   return (
     [
-      labelMethod(s.method),
-      s.reference_number ? `Ref ${s.reference_number}` : null,
+      labelMethod(s.method, t),
+      s.reference_number ? t("ref", { number: s.reference_number }) : null,
       s.notes,
     ]
       .filter(Boolean)
@@ -200,6 +207,7 @@ function RowActions({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const tCommon = useTranslations("common");
   return (
     <div className="flex items-center justify-end gap-1">
       <Button
@@ -207,8 +215,8 @@ function RowActions({
         variant="ghost"
         size="sm"
         onClick={onEdit}
-        aria-label="Edit"
-        title="Edit"
+        aria-label={tCommon("edit")}
+        title={tCommon("edit")}
         className="h-8 w-8 p-0 text-text-secondary hover:text-accent"
       >
         <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
@@ -218,8 +226,8 @@ function RowActions({
         variant="ghost"
         size="sm"
         onClick={onDelete}
-        aria-label="Delete"
-        title="Delete"
+        aria-label={tCommon("delete")}
+        title={tCommon("delete")}
         className="h-8 w-8 p-0 text-text-secondary hover:bg-destructive/10 hover:text-destructive"
       >
         <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
@@ -237,16 +245,18 @@ function SettlementTableRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("owners");
+  const locale = useLocale();
   return (
     <TableRow>
       <TableCell className="whitespace-nowrap font-mono text-xs ltr-nums text-text-secondary">
-        {formatDate(s.settled_at)}
+        {formatDate(s.settled_at, locale)}
       </TableCell>
       <TableCell>
         <DirectionBadge settlement={s} />
       </TableCell>
       <TableCell>
-        <span className="text-xs text-text-secondary">{detailsText(s)}</span>
+        <span className="text-xs text-text-secondary">{detailsText(s, t)}</span>
       </TableCell>
       <TableCell className="text-end">
         <SettlementAmount settlement={s} />
@@ -267,18 +277,20 @@ function SettlementCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("owners");
+  const locale = useLocale();
   return (
     <li className="rounded-xl border border-border/50 bg-surface-elevated/40 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <DirectionBadge settlement={s} />
-          <p className="mt-1.5 text-xs text-text-secondary">{detailsText(s)}</p>
+          <p className="mt-1.5 text-xs text-text-secondary">{detailsText(s, t)}</p>
         </div>
         <RowActions onEdit={onEdit} onDelete={onDelete} />
       </div>
       <div className="mt-3 flex items-baseline justify-between gap-3">
         <span className="font-mono text-xs ltr-nums text-text-secondary">
-          {formatDate(s.settled_at)}
+          {formatDate(s.settled_at, locale)}
         </span>
         <span className="text-end">
           <SettlementAmount settlement={s} />
@@ -291,13 +303,22 @@ function SettlementCard({
   );
 }
 
-function labelMethod(m: string) {
-  return m === "bank_transfer" ? "Bank transfer" : m.charAt(0).toUpperCase() + m.slice(1);
+function labelMethod(m: string, t: ReturnType<typeof useTranslations>) {
+  switch (m) {
+    case "cash":
+      return t("methods.cash");
+    case "bank_transfer":
+      return t("methods.bankTransfer");
+    case "cheque":
+      return t("methods.cheque");
+    default:
+      return m.charAt(0).toUpperCase() + m.slice(1);
+  }
 }
 
-function formatDate(s: string): string {
+function formatDate(s: string, locale: string): string {
   try {
-    return new Date(s).toLocaleDateString("en-GB", {
+    return new Date(s).toLocaleDateString(`${locale}-u-nu-latn`, {
       day: "2-digit",
       month: "short",
       year: "numeric",

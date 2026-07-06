@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
@@ -63,6 +64,8 @@ function SettlementDialogForm({
   editing: SettlementRow | null;
   onClose: () => void;
 }) {
+  const t = useTranslations("owners");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { toast } = useToast();
   const [direction, setDirection] = useState<Direction>(
@@ -83,7 +86,7 @@ function SettlementDialogForm({
     e.preventDefault();
     const numericAmount = Number(amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      toast({ title: "Amount must be a positive number", variant: "destructive" });
+      toast({ title: t("settlements.amountPositive"), variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -105,7 +108,7 @@ function SettlementDialogForm({
         .eq("id", editing.id);
       setSaving(false);
       if (error) {
-        toast({ title: "Save failed", description: error.message, variant: "destructive" });
+        toast({ title: t("saveFailed"), description: error.message, variant: "destructive" });
         return;
       }
       await logAudit(supabase, {
@@ -122,7 +125,7 @@ function SettlementDialogForm({
         .single();
       setSaving(false);
       if (error) {
-        toast({ title: "Save failed", description: error.message, variant: "destructive" });
+        toast({ title: t("saveFailed"), description: error.message, variant: "destructive" });
         return;
       }
       await logAudit(supabase, {
@@ -132,7 +135,7 @@ function SettlementDialogForm({
         metadata: payload,
       });
     }
-    toast({ title: editing ? "Settlement updated" : "Settlement recorded", variant: "success" });
+    toast({ title: editing ? t("settlements.updated") : t("settlements.recorded"), variant: "success" });
     onClose();
     router.refresh();
   }
@@ -140,9 +143,9 @@ function SettlementDialogForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{editing ? "Edit settlement" : "Record settlement"}</DialogTitle>
+        <DialogTitle>{editing ? t("settlements.editTitle") : t("settlements.recordTitle")}</DialogTitle>
         <DialogDescription>
-          Money moving between the company and the owner. Adjusts the running balance immediately.
+          {t("settlements.dialogDescription")}
         </DialogDescription>
       </DialogHeader>
 
@@ -151,7 +154,7 @@ function SettlementDialogForm({
           {/* Direction toggle */}
           <fieldset>
             <legend className="mb-1.5 text-sm font-medium tracking-tight text-foreground">
-              Direction
+              {t("settlements.direction")}
             </legend>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -166,9 +169,9 @@ function SettlementDialogForm({
                     : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border",
                 )}
               >
-                Company → Owner
+                {t("settlements.companyToOwner")}
                 <span className="mt-1 block text-[10px] opacity-70">
-                  decreases balance
+                  {t("settlements.decreasesBalance")}
                 </span>
               </button>
               <button
@@ -183,9 +186,9 @@ function SettlementDialogForm({
                     : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border",
                 )}
               >
-                Owner → Company
+                {t("settlements.ownerToCompany")}
                 <span className="mt-1 block text-[10px] opacity-70">
-                  increases balance
+                  {t("settlements.increasesBalance")}
                 </span>
               </button>
             </div>
@@ -193,29 +196,29 @@ function SettlementDialogForm({
 
           <Input
             type="number"
-            label="Amount (OMR)"
+            label={t("amountOmr")}
             min={0.001}
             step={0.001}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            placeholder="e.g. 1500.000"
+            placeholder={t("settlements.amountPlaceholder")}
             className="font-mono ltr-nums"
           />
 
           <Select
-            label="Method"
+            label={t("method")}
             value={method}
             onChange={(e) => setMethod(e.target.value as Method)}
           >
-            <option value="cash">Cash</option>
-            <option value="bank_transfer">Bank transfer</option>
-            <option value="cheque">Cheque</option>
+            <option value="cash">{t("methods.cash")}</option>
+            <option value="bank_transfer">{t("methods.bankTransfer")}</option>
+            <option value="cheque">{t("methods.cheque")}</option>
           </Select>
 
           <Input
             type="date"
-            label="Date"
+            label={tCommon("date")}
             value={settledAt}
             onChange={(e) => setSettledAt(e.target.value)}
             required
@@ -224,19 +227,19 @@ function SettlementDialogForm({
 
           <Input
             type="text"
-            label="Reference (optional)"
+            label={t("settlements.referenceOptional")}
             value={reference}
             onChange={(e) => setReference(e.target.value)}
-            placeholder="Cheque number, transfer reference, etc."
+            placeholder={t("settlements.referencePlaceholder")}
             className="font-mono ltr-nums"
           />
 
           <Textarea
-            label="Notes"
+            label={tCommon("notes")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            placeholder="Optional"
+            placeholder={tCommon("optional")}
             className="resize-none"
           />
         </form>
@@ -244,10 +247,10 @@ function SettlementDialogForm({
 
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
+          {tCommon("cancel")}
         </Button>
         <Button type="submit" form="settlement-form" loading={saving}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Record"}
+          {saving ? t("saving") : editing ? t("saveChanges") : t("settlements.record")}
         </Button>
       </DialogFooter>
     </>

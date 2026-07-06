@@ -97,7 +97,7 @@ export default async function ExpensesPage({
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr);
-    return d.toLocaleDateString("en-GB", {
+    return d.toLocaleDateString(`${locale}-u-nu-latn`, {
       day: "2-digit",
       month: "short",
       year: "numeric",
