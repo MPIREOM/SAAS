@@ -116,7 +116,7 @@ async function getFinancialMetrics(selectedMonth?: string, selectedYear?: string
   };
 }
 
-async function getMonthlyTrend(): Promise<MonthlyCollectionData[]> {
+async function getMonthlyTrend(locale: string): Promise<MonthlyCollectionData[]> {
   const supabase = await createClient();
   const now = new Date();
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
@@ -131,7 +131,7 @@ async function getMonthlyTrend(): Promise<MonthlyCollectionData[]> {
   const months: MonthlyCollectionData[] = [];
   for (let i = 0; i < 6; i++) {
     const date = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-    const monthLabel = date.toLocaleDateString("en", {
+    const monthLabel = date.toLocaleDateString(`${locale}-u-nu-latn`, {
       month: "short",
       year: "2-digit",
     });
@@ -328,7 +328,7 @@ export default async function ReportsPage({
 
   const [metrics, monthlyTrend, propertyPerformance] = await Promise.all([
     getFinancialMetrics(month, year),
-    getMonthlyTrend(),
+    getMonthlyTrend(locale),
     getPropertyPerformance(month, year),
   ]);
 

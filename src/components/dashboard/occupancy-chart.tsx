@@ -52,8 +52,6 @@ export function OccupancyChart({ propertyIds }: OccupancyChartProps) {
 
       // Get all leases to calculate historical occupancy
       const now = new Date();
-      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-      const startDate = sixMonthsAgo.toISOString().split("T")[0];
 
       let leasesQuery = supabase
         .from("leases")

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut, Plus, X, FileText, Download } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
@@ -69,6 +69,8 @@ export default function MoveOutPage({
 }) {
   const t = useTranslations("tenants");
   const tc = useTranslations("common");
+  const locale = useLocale();
+  const dateLocale = `${locale}-u-nu-latn`;
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -898,15 +900,15 @@ export default function MoveOutPage({
                           {fmt(bal)} {CURRENCY.code}
                         </p>
                         <p className="text-xs text-text-secondary mt-0.5">
-                          {t("dueLabel")}: {new Date(inv.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                          {t("dueLabel")}: {new Date(inv.due_date).toLocaleDateString(dateLocale, { day: "2-digit", month: "short", year: "numeric" })}
                           {inv.period_start && inv.period_end && (
                             <span className="text-border mx-1">&middot;</span>
                           )}
                           {inv.period_start && inv.period_end && (
                             <span>
-                              {new Date(inv.period_start).toLocaleDateString("en-GB", { month: "short" })}
+                              {new Date(inv.period_start).toLocaleDateString(dateLocale, { month: "short" })}
                               {" - "}
-                              {new Date(inv.period_end).toLocaleDateString("en-GB", { month: "short", year: "2-digit" })}
+                              {new Date(inv.period_end).toLocaleDateString(dateLocale, { month: "short", year: "2-digit" })}
                             </span>
                           )}
                         </p>
@@ -1193,7 +1195,7 @@ export default function MoveOutPage({
                   </p>
                   <p className="text-text-secondary">
                     {t("moveOutFees.preview.vacateDate")}:{" "}
-                    {new Date(vacateDate).toLocaleDateString("en-GB", {
+                    {new Date(vacateDate).toLocaleDateString(dateLocale, {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
