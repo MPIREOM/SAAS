@@ -117,8 +117,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
-      {/* Toast container — bottom-right for LTR, bottom-left for RTL */}
-      <div aria-live="polite" className="fixed bottom-4 right-4 rtl:right-auto rtl:left-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+      {/* Toast container — bottom end corner (mirrors automatically in RTL) */}
+      <div aria-live="polite" className="fixed bottom-4 end-4 z-[9999] flex flex-col gap-2 pointer-events-none">
         {toasts.map((t) => (
           <ToastItem key={t.id} toast={t} onRemove={removeToast} />
         ))}

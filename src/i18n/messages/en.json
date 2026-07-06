@@ -1014,7 +1014,18 @@
     "viewVacancies": "View vacancies",
     "dismissAlert": "Dismiss alert",
     "primaryMetrics": "Key metrics",
-    "portfolioSnapshot": "Portfolio snapshot"
+    "portfolioSnapshot": "Portfolio snapshot",
+    "chartIncome": "Income",
+    "chartExpenses": "Expenses",
+    "chartOccupancy": "Occupancy",
+    "chartLoading": "Loading chart",
+    "noChartData": "No data for this period",
+    "otherProperties": "Other",
+    "aged0to30": "0–30 days",
+    "aged31to60": "31–60 days",
+    "aged61to90": "61–90 days",
+    "aged90plus": "90+ days",
+    "inDays": "{days}d"
   },
   "reports": {
     "title": "Reports",

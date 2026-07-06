@@ -1014,7 +1014,18 @@
     "viewVacancies": "عرض الشواغر",
     "dismissAlert": "إغلاق التنبيه",
     "primaryMetrics": "المؤشرات الرئيسية",
-    "portfolioSnapshot": "نظرة على المحفظة"
+    "portfolioSnapshot": "نظرة على المحفظة",
+    "chartIncome": "الدخل",
+    "chartExpenses": "المصروفات",
+    "chartOccupancy": "الإشغال",
+    "chartLoading": "جارٍ تحميل الرسم البياني",
+    "noChartData": "لا توجد بيانات لهذه الفترة",
+    "otherProperties": "أخرى",
+    "aged0to30": "0–30 يوماً",
+    "aged31to60": "31–60 يوماً",
+    "aged61to90": "61–90 يوماً",
+    "aged90plus": "أكثر من 90 يوماً",
+    "inDays": "{days} يوم"
   },
   "reports": {
     "title": "التقارير",

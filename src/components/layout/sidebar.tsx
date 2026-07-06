@@ -169,8 +169,7 @@ export function Sidebar({ locale }: SidebarProps) {
       <button
         onClick={() => setMobileOpen(true)}
         aria-label={tc("openMenu")}
-        className="md:hidden fixed top-3.5 z-50 p-2 rounded-lg glass border border-border/50 text-text-secondary hover:text-accent transition-all duration-200"
-        style={{ [isRtl ? "right" : "left"]: "0.75rem" }}
+        className="md:hidden fixed top-3.5 start-3 z-50 p-2 rounded-lg glass border border-border/50 text-text-secondary hover:text-accent transition-all duration-200"
       >
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
@@ -188,12 +187,10 @@ export function Sidebar({ locale }: SidebarProps) {
       <aside
         className={cn(
           "md:hidden fixed top-0 h-screen w-64 bg-surface border-border/50 flex flex-col z-50 transition-transform duration-300 ease-out",
-          isRtl ? "right-0 border-l" : "left-0 border-r",
+          "start-0 border-e",
           mobileOpen
             ? "translate-x-0"
-            : isRtl
-            ? "translate-x-full"
-            : "-translate-x-full"
+            : "-translate-x-full rtl:translate-x-full"
         )}
       >
         {sidebarContent(true)}
@@ -203,7 +200,7 @@ export function Sidebar({ locale }: SidebarProps) {
       <aside
         className={cn(
           "hidden md:flex fixed top-0 h-screen bg-surface/80 backdrop-blur-xl border-border/50 flex-col transition-all duration-300 ease-out z-40",
-          isRtl ? "right-0 border-l" : "left-0 border-r",
+          "start-0 border-e",
           collapsed ? "w-[68px]" : "w-64"
         )}
       >

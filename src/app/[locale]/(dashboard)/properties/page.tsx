@@ -219,7 +219,7 @@ export default async function PropertiesPage({
                     <div className="p-2.5 bg-accent/10 rounded-xl group-hover:bg-accent/15 transition-colors">
                       <Building2 className="h-5 w-5 text-accent" />
                     </div>
-                    <ChevronRight className="h-4 w-4 text-text-secondary/0 group-hover:text-text-secondary transition-all duration-200 translate-x-0 group-hover:translate-x-0.5" />
+                    <ChevronRight aria-hidden="true" className="h-4 w-4 text-text-secondary/0 group-hover:text-text-secondary transition-all duration-200 translate-x-0 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
                   </div>
 
                   <h3 className="text-base font-semibold text-text-primary group-hover:text-accent transition-colors font-display tracking-tight">

@@ -7,6 +7,7 @@ import { Globe, Moon, Sun, Search, LogOut, X } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { Spinner } from "@/components/ui/spinner";
 
 interface TopbarProps {
   locale: string;
@@ -269,7 +270,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
                 aria-busy="true"
                 aria-live="polite"
               >
-                <div className="h-4 w-4 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+                <Spinner label={t("loading")} sizeClassName="h-4 w-4" />
               </div>
             ) : searchResults.length > 0 ? (
               <div className="py-1.5 max-h-72 overflow-y-auto">

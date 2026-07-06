@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { RefreshCw, ArrowLeft, Calendar, DollarSign } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
+import { Spinner } from "@/components/ui/spinner";
 
 interface CurrentLease {
   id: string;
@@ -151,9 +152,11 @@ export default function RenewLeasePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
+      <Spinner
+        label={tc("loading")}
+        sizeClassName="h-8 w-8"
+        className="min-h-[400px]"
+      />
     );
   }
 
@@ -175,9 +178,10 @@ export default function RenewLeasePage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-colors"
+          aria-label={tc("back")}
+          className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft aria-hidden="true" className="h-5 w-5 rtl:rotate-180" />
         </button>
         <div>
           <h1 className="text-2xl font-display font-bold text-text-primary">{t("renewLease")}</h1>

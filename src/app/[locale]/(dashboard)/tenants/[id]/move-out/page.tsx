@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut, Plus, X, FileText, Download } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
+import { Spinner } from "@/components/ui/spinner";
 import { getEarlyTerminationCommissionForLease, type EarlyTerminationCommissionPreview } from "@/lib/owners/balance";
 
 interface OutstandingInvoice {
@@ -697,7 +698,7 @@ export default function MoveOutPage({
           )}
           {vacateDate && loadingCommission && !commissionPreview && (
             <div className="rounded-lg border border-border/40 bg-surface-elevated/30 p-3 text-xs text-text-secondary flex items-center gap-2">
-              <div className="h-3 w-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              <Spinner sizeClassName="h-3 w-3" />
               {t("earlyTerminationCommission.calculating")}
             </div>
           )}
@@ -1057,8 +1058,8 @@ export default function MoveOutPage({
         )}
 
         {loadingInvoices && (
-          <div className="bg-surface border border-border rounded-lg p-6 flex items-center justify-center">
-            <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <div className="bg-surface border border-border rounded-lg p-6">
+            <Spinner label={tc("loading")} sizeClassName="h-5 w-5" />
           </div>
         )}
 

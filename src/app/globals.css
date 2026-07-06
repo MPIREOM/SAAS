@@ -17,6 +17,11 @@
   --color-success: var(--success);
   --color-info: var(--info);
   --color-muted-foreground: var(--text-secondary);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
   --font-mono: var(--font-mono);
@@ -41,6 +46,15 @@
   --info: #5B9DF9;
   --foreground: #F0EDE6;
 
+  /* Categorical chart series — CVD-validated against the dark surface.
+     Identity colors for data series only; status colors stay reserved
+     for status. Assign in fixed slot order, never cycled. */
+  --chart-1: #AD8A28;
+  --chart-2: #4A8BE8;
+  --chart-3: #25A07F;
+  --chart-4: #8677E0;
+  --chart-5: #D2648C;
+
   /* Gradient tokens */
   --gradient-gold: linear-gradient(135deg, #C9A84C 0%, #E8D48B 50%, #C9A84C 100%);
   --gradient-surface: linear-gradient(180deg, #13121A 0%, #0B0A0F 100%);
@@ -63,6 +77,13 @@
   --success: #2D9E4A;
   --info: #3B7DD8;
   --foreground: #1A1820;
+
+  /* Same five hues re-stepped for the white card surface */
+  --chart-1: #A68A2A;
+  --chart-2: #2A66C4;
+  --chart-3: #0C7D62;
+  --chart-4: #6553C4;
+  --chart-5: #B04A72;
 
   --gradient-gold: linear-gradient(135deg, #A68A2A 0%, #D4B95E 50%, #A68A2A 100%);
   --gradient-surface: linear-gradient(180deg, #FFFFFF 0%, #F6F4EE 100%);

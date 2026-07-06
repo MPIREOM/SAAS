@@ -9,32 +9,38 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { CURRENCY } from "@/lib/currency";
+import { Spinner } from "@/components/ui/spinner";
 
-interface PropertyData {
-  name: string;
+interface PropertySlice {
+  key: string;
+  name: string | null; // null = the folded "Other" slice, labeled at render
   value: number;
   color: string;
 }
 
-const COLORS = [
-  "var(--color-accent)",
-  "var(--color-success)",
-  "var(--color-warning)",
-  "var(--color-info)",
-  "var(--color-destructive)",
-  "var(--color-warning)",
-  "var(--color-success)",
+// Categorical slots in fixed order — never cycled. Portfolios larger than
+// five properties fold the tail into a single muted "Other" slice instead
+// of inventing or repeating hues.
+const SERIES_COLORS = [
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
 ];
+const OTHER_COLOR = "var(--color-text-secondary)";
 
 interface RevenueByPropertyChartProps {
   propertyIds?: string[] | null;
 }
 
 export function RevenueByPropertyChart({ propertyIds }: RevenueByPropertyChartProps) {
-  const [data, setData] = useState<PropertyData[]>([]);
+  const [data, setData] = useState<PropertySlice[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("dashboard");
 
   useEffect(() => {
     const load = async () => {
@@ -94,15 +100,39 @@ export function RevenueByPropertyChart({ propertyIds }: RevenueByPropertyChartPr
       });
 
       const propNameMap = new Map(properties.map((p) => [p.id, p.name]));
-      const chartData: PropertyData[] = Array.from(totals.entries())
-        .map(([propId, total], idx) => ({
-          name: propNameMap.get(propId) || "Unknown",
+      const ranked = Array.from(totals.entries())
+        .map(([propId, total]) => ({
+          propId,
+          name: propNameMap.get(propId) || null,
           value: Math.round(total * 100) / 100,
-          color: COLORS[idx % COLORS.length],
         }))
         .sort((a, b) => b.value - a.value);
 
-      setData(chartData);
+      // Top five named properties get a categorical slot; everything else
+      // (sixth property onward + revenue from unnamed/archived properties)
+      // folds into one muted "Other" slice.
+      const named = ranked.filter((r) => r.name !== null);
+      const top = named.slice(0, SERIES_COLORS.length);
+      const otherTotal =
+        named.slice(SERIES_COLORS.length).reduce((sum, r) => sum + r.value, 0) +
+        ranked.filter((r) => r.name === null).reduce((sum, r) => sum + r.value, 0);
+
+      const slices: PropertySlice[] = top.map((r, idx) => ({
+        key: r.propId,
+        name: r.name,
+        value: r.value,
+        color: SERIES_COLORS[idx],
+      }));
+      if (otherTotal > 0) {
+        slices.push({
+          key: "__other__",
+          name: null,
+          value: Math.round(otherTotal * 100) / 100,
+          color: OTHER_COLOR,
+        });
+      }
+
+      setData(slices);
       setLoading(false);
     };
     load();
@@ -110,26 +140,33 @@ export function RevenueByPropertyChart({ propertyIds }: RevenueByPropertyChartPr
 
   if (loading) {
     return (
-      <div className="h-[200px] flex items-center justify-center">
-        <div className="h-5 w-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
+      <Spinner
+        label={t("chartLoading")}
+        sizeClassName="h-5 w-5"
+        className="h-[200px]"
+      />
     );
   }
 
   if (data.length === 0) {
     return (
-      <div className="h-[200px] flex items-center justify-center text-text-secondary text-sm">
-        No revenue data
+      <div className="h-[200px] flex items-center justify-center text-sm text-text-secondary">
+        {t("noChartData")}
       </div>
     );
   }
+
+  const labeled = data.map((slice) => ({
+    ...slice,
+    name: slice.name ?? t("otherProperties"),
+  }));
 
   return (
     <div className="h-[200px]">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            data={data}
+            data={labeled}
             cx="50%"
             cy="50%"
             innerRadius={50}
@@ -137,8 +174,8 @@ export function RevenueByPropertyChart({ propertyIds }: RevenueByPropertyChartPr
             paddingAngle={3}
             dataKey="value"
           >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+            {labeled.map((entry) => (
+              <Cell key={entry.key} fill={entry.color} />
             ))}
           </Pie>
           <Tooltip
@@ -150,12 +187,16 @@ export function RevenueByPropertyChart({ propertyIds }: RevenueByPropertyChartPr
               fontWeight: 500,
               boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
             }}
+            itemStyle={{ color: "var(--color-text-primary)" }}
             formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}
           />
           <Legend
             wrapperStyle={{ fontSize: "11px", fontWeight: 500 }}
             iconType="circle"
             iconSize={8}
+            formatter={(value: string) => (
+              <span style={{ color: "var(--color-text-secondary)" }}>{value}</span>
+            )}
           />
         </PieChart>
       </ResponsiveContainer>
