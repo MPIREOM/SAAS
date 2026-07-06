@@ -92,13 +92,15 @@ export default async function DocumentsPage({
   const tenantIds = docs.filter(d => d.entity_type === "tenant").map(d => d.entity_id);
   const propertyIds = docs.filter(d => d.entity_type === "property").map(d => d.entity_id);
 
-  const { data: tenants } = tenantIds.length > 0
-    ? await supabase.from("tenants").select("id, full_name").in("id", tenantIds)
-    : { data: [] };
-
-  const { data: properties } = propertyIds.length > 0
-    ? await supabase.from("properties").select("id, name").in("id", propertyIds)
-    : { data: [] };
+  // Both name lookups run in parallel
+  const [{ data: tenants }, { data: properties }] = await Promise.all([
+    tenantIds.length > 0
+      ? supabase.from("tenants").select("id, full_name").in("id", tenantIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+    propertyIds.length > 0
+      ? supabase.from("properties").select("id, name").in("id", propertyIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
 
   const entityMap = new Map<string, string>();
   (tenants || []).forEach(t => entityMap.set(t.id, t.full_name));

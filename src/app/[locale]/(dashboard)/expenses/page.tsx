@@ -64,12 +64,6 @@ export default async function ExpensesPage({
     countQuery = countQuery.in("property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
   }
 
-  const { count: totalCount } = await countQuery;
-  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
-
-  const { data: expenses } = await query
-    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
-
   // Get properties for filter
   let propertiesQuery = supabase
     .from("properties")
@@ -78,7 +72,15 @@ export default async function ExpensesPage({
   if (propertyIds !== null) {
     propertiesQuery = propertiesQuery.in("id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
   }
-  const { data: properties } = await propertiesQuery;
+
+  // Count, page and filter options load in parallel
+  const [{ count: totalCount }, { data: expenses }, { data: properties }] =
+    await Promise.all([
+      countQuery,
+      query.range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1),
+      propertiesQuery,
+    ]);
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
   const allExpenses = expenses || [];
   const totalAmount = allExpenses.reduce(

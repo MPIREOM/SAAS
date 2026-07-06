@@ -187,20 +187,10 @@ async function getPropertyPerformance(selectedMonth?: string, selectedYear?: str
     .select("id, name")
     .eq("is_archived", false);
   propsQuery = filterByProperties(propsQuery, propertyIds, "id");
-  const { data: properties } = await propsQuery;
-  if (!properties || properties.length === 0) return [];
 
   // Fetch all units with property_id
   let unitsQ = supabase.from("units").select("id, property_id, status, rent_amount");
   unitsQ = filterByProperties(unitsQ, propertyIds);
-  const { data: units } = await unitsQ;
-
-  // Fetch invoices this month that have units -> property linkage
-  const { data: monthInvoices } = await supabase
-    .from("invoices")
-    .select("amount, status, unit_id")
-    .gte("due_date", monthStart)
-    .lte("due_date", monthEnd);
 
   // Fetch expenses this month grouped by property
   let expensesQ = supabase
@@ -209,7 +199,25 @@ async function getPropertyPerformance(selectedMonth?: string, selectedYear?: str
     .gte("expense_date", monthStart)
     .lte("expense_date", monthEnd);
   expensesQ = filterByProperties(expensesQ, propertyIds);
-  const { data: expenseData } = await expensesQ;
+
+  // None of these depend on each other — load all four in parallel
+  const [
+    { data: properties },
+    { data: units },
+    { data: monthInvoices },
+    { data: expenseData },
+  ] = await Promise.all([
+    propsQuery,
+    unitsQ,
+    supabase
+      .from("invoices")
+      .select("amount, status, unit_id")
+      .gte("due_date", monthStart)
+      .lte("due_date", monthEnd),
+    expensesQ,
+  ]);
+
+  if (!properties || properties.length === 0) return [];
 
   const unitMap = new Map<string, { property_id: string }>();
   (units || []).forEach((u) => {

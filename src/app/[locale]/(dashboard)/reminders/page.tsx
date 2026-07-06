@@ -27,13 +27,15 @@ export default async function RemindersPage({
   const tc = await getTranslations("common");
   const supabase = await createClient();
 
-  // Property-level access control
+  // Property-level access control — a single joined query replaces the old
+  // units -> leases two-step lookup (one round-trip instead of two)
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
   let accessibleTenantIds: string[] | null = null;
   if (propertyIds !== null) {
-    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
-    const unitIds = units?.map(u => u.id) || [];
-    const { data: leases } = await supabase.from("leases").select("tenant_id").in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+    const { data: leases } = await supabase
+      .from("leases")
+      .select("tenant_id, units!inner(property_id)")
+      .in("units.property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
     accessibleTenantIds = [...new Set(leases?.map(l => l.tenant_id) || [])];
   }
 
@@ -48,12 +50,12 @@ export default async function RemindersPage({
   if (accessibleTenantIds !== null) {
     remindersQuery = remindersQuery.in("tenant_id", accessibleTenantIds.length > 0 ? accessibleTenantIds : ["__no_access__"]);
   }
-  const { data: reminders } = await remindersQuery;
 
-  const { data: templates } = await supabase
-    .from("notification_templates")
-    .select("*")
-    .order("name");
+  // Log and templates load in parallel
+  const [{ data: reminders }, { data: templates }] = await Promise.all([
+    remindersQuery,
+    supabase.from("notification_templates").select("*").order("name"),
+  ]);
 
   const statusVariant = (s: string): "success" | "destructive" | "warning" => {
     if (s === "sent") return "success";

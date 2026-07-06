@@ -24,13 +24,15 @@ export default async function TenantsPage({
   const tc = await getTranslations("common");
   const supabase = await createClient();
 
-  // Property-level access control
+  // Property-level access control — a single joined query replaces the old
+  // units -> leases two-step lookup (one round-trip instead of two)
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
   let accessibleTenantIds: string[] | null = null;
   if (propertyIds !== null) {
-    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
-    const accessUnitIds = units?.map(u => u.id) || [];
-    const { data: leases } = await supabase.from("leases").select("tenant_id").in("unit_id", accessUnitIds.length > 0 ? accessUnitIds : ["__no_access__"]);
+    const { data: leases } = await supabase
+      .from("leases")
+      .select("tenant_id, units!inner(property_id)")
+      .in("units.property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
     accessibleTenantIds = [...new Set(leases?.map(l => l.tenant_id) || [])];
   }
 
@@ -99,11 +101,12 @@ export default async function TenantsPage({
   if (accessibleTenantIds !== null) {
     countQuery = countQuery.in("id", accessibleTenantIds.length > 0 ? accessibleTenantIds : ["__no_access__"]);
   }
-  const { count: totalCount } = await countQuery;
+  // Count and page load in parallel
+  const [{ count: totalCount }, { data: tenants }] = await Promise.all([
+    countQuery,
+    query.range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1),
+  ]);
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
-
-  const { data: tenants } = await query
-    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
   return (
     <div className="space-y-6">

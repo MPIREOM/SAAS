@@ -36,26 +36,32 @@ export default async function InvoicesPage({
   const t = await getTranslations("invoices");
   const supabase = await createClient();
 
-  // Property-level access control
+  // Property-level access control. Restricted users and the property filter
+  // both apply through the joined units.property_id column, so the old
+  // unit-ID prefetch round-trips are gone.
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
-  let unitIds: string[] | null = null;
-  if (propertyIds !== null) {
-    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
-    unitIds = units?.map(u => u.id) || [];
+  const accessFilter =
+    propertyIds !== null
+      ? propertyIds.length > 0
+        ? propertyIds
+        : ["__no_access__"]
+      : null;
+  const needsUnitJoin = accessFilter !== null || Boolean(property);
+
+  // Month boundaries for the filter (computed once, shared by all queries)
+  let monthStart: string | null = null;
+  let monthEnd: string | null = null;
+  if (month) {
+    const [year, mon] = month.split("-").map(Number);
+    monthStart = `${year}-${String(mon).padStart(2, "0")}-01`;
+    const lastDay = new Date(year, mon, 0).getDate();
+    monthEnd = `${year}-${String(mon).padStart(2, "0")}-${lastDay}`;
   }
 
   // Fetch properties for filter dropdown
   let propertiesQuery = supabase.from("properties").select("id, name").eq("is_archived", false).order("name");
-  if (propertyIds !== null) {
-    propertiesQuery = propertiesQuery.in("id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
-  }
-  const { data: properties } = await propertiesQuery;
-
-  // If property filter is selected, get units for that property
-  let propertyUnitIds: string[] | null = null;
-  if (property) {
-    const { data: propUnits } = await supabase.from("units").select("id").eq("property_id", property);
-    propertyUnitIds = propUnits?.map(u => u.id) || [];
+  if (accessFilter !== null) {
+    propertiesQuery = propertiesQuery.in("id", accessFilter);
   }
 
   // Build query
@@ -64,7 +70,7 @@ export default async function InvoicesPage({
     .select(`
       *,
       tenants(full_name),
-      units(unit_number, properties(name))
+      units${needsUnitJoin ? "!inner" : ""}(unit_number, property_id, properties(name))
     `)
     .order("due_date", { ascending: false });
 
@@ -76,20 +82,16 @@ export default async function InvoicesPage({
     query = query.in("status", ["written_off", "cancelled"]);
   }
 
-  if (month) {
-    const [year, mon] = month.split("-").map(Number);
-    const monthStart = `${year}-${String(mon).padStart(2, "0")}-01`;
-    const lastDay = new Date(year, mon, 0).getDate();
-    const monthEnd = `${year}-${String(mon).padStart(2, "0")}-${lastDay}`;
+  if (monthStart && monthEnd) {
     query = query.gte("due_date", monthStart).lte("due_date", monthEnd);
   }
 
-  if (unitIds !== null) {
-    query = query.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  if (accessFilter !== null) {
+    query = query.in("units.property_id", accessFilter);
   }
 
-  if (propertyUnitIds !== null) {
-    query = query.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__no_access__"]);
+  if (property) {
+    query = query.eq("units.property_id", property);
   }
 
   // Pagination
@@ -99,7 +101,10 @@ export default async function InvoicesPage({
   // Get total count for pagination
   let countQuery = supabase
     .from("invoices")
-    .select("*", { count: "exact", head: true });
+    .select(needsUnitJoin ? "*, units!inner(property_id)" : "*", {
+      count: "exact",
+      head: true,
+    });
 
   if (status === "pending") {
     countQuery = countQuery.in("status", ["pending", "overdue", "partial"]);
@@ -108,29 +113,24 @@ export default async function InvoicesPage({
   } else if (status === "resolved") {
     countQuery = countQuery.in("status", ["written_off", "cancelled"]);
   }
-  if (month) {
-    const [y, m] = month.split("-").map(Number);
-    const ms = `${y}-${String(m).padStart(2, "0")}-01`;
-    const ld = new Date(y, m, 0).getDate();
-    const me = `${y}-${String(m).padStart(2, "0")}-${ld}`;
-    countQuery = countQuery.gte("due_date", ms).lte("due_date", me);
+  if (monthStart && monthEnd) {
+    countQuery = countQuery.gte("due_date", monthStart).lte("due_date", monthEnd);
   }
-  if (unitIds !== null) {
-    countQuery = countQuery.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  if (accessFilter !== null) {
+    countQuery = countQuery.in("units.property_id", accessFilter);
   }
-  if (propertyUnitIds !== null) {
-    countQuery = countQuery.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__no_access__"]);
+  if (property) {
+    countQuery = countQuery.eq("units.property_id", property);
   }
-  const { count: totalCount } = await countQuery;
-  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
-
-  const { data: invoices } = await query
-    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
   // Build a summary query with the same filters (but no pagination) to get accurate totals
   let summaryQuery = supabase
     .from("invoices")
-    .select("amount, status, due_date, paid_amount");
+    .select(
+      needsUnitJoin
+        ? "amount, status, due_date, paid_amount, units!inner(property_id)"
+        : "amount, status, due_date, paid_amount"
+    );
 
   if (status === "pending") {
     summaryQuery = summaryQuery.in("status", ["pending", "overdue", "partial"]);
@@ -139,28 +139,40 @@ export default async function InvoicesPage({
   } else if (status === "resolved") {
     summaryQuery = summaryQuery.in("status", ["written_off", "cancelled"]);
   }
-  if (month) {
-    const [sy, sm] = month.split("-").map(Number);
-    const sms = `${sy}-${String(sm).padStart(2, "0")}-01`;
-    const sld = new Date(sy, sm, 0).getDate();
-    const sme = `${sy}-${String(sm).padStart(2, "0")}-${sld}`;
-    summaryQuery = summaryQuery.gte("due_date", sms).lte("due_date", sme);
+  if (monthStart && monthEnd) {
+    summaryQuery = summaryQuery.gte("due_date", monthStart).lte("due_date", monthEnd);
   }
-  if (unitIds !== null) {
-    summaryQuery = summaryQuery.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  if (accessFilter !== null) {
+    summaryQuery = summaryQuery.in("units.property_id", accessFilter);
   }
-  if (propertyUnitIds !== null) {
-    summaryQuery = summaryQuery.in("unit_id", propertyUnitIds.length > 0 ? propertyUnitIds : ["__no_access__"]);
+  if (property) {
+    summaryQuery = summaryQuery.eq("units.property_id", property);
   }
-  const { data: summaryInvoices } = await summaryQuery;
 
-  // Get available months for filter — only show up to current month
+  // Available months for the filter — only show up to current month
   const todayStr = new Date().toISOString().substring(0, 7);
-  const { data: monthsRaw } = await supabase
+  const monthsQuery = supabase
     .from("invoices")
     .select("due_date")
     .lte("due_date", new Date().toISOString().split("T")[0])
     .order("due_date", { ascending: false });
+
+  // One parallel batch instead of five sequential round-trips
+  const [
+    { data: properties },
+    { count: totalCount },
+    { data: invoices },
+    { data: summaryInvoices },
+    { data: monthsRaw },
+  ] = await Promise.all([
+    propertiesQuery,
+    countQuery,
+    query.range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1),
+    summaryQuery,
+    monthsQuery,
+  ]);
+
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
   const availableMonths = Array.from(
     new Set(
@@ -170,9 +182,16 @@ export default async function InvoicesPage({
     )
   ).filter((m) => m <= todayStr);
 
-  // Compute summary stats from ALL filtered invoices (not just current page)
-  const allInvoices = invoices || [];
-  const allSummary = summaryInvoices || [];
+  // Compute summary stats from ALL filtered invoices (not just current page).
+  // Casts: the conditional select strings defeat the client's literal-type
+  // parser; rows are consumed as loosely-typed records below anyway.
+  const allInvoices = (invoices || []) as unknown as Record<string, unknown>[];
+  const allSummary = (summaryInvoices || []) as unknown as {
+    amount: string | number;
+    status: string;
+    due_date: string;
+    paid_amount: string | number | null;
+  }[];
   const now = new Date();
   const totalAmount = allSummary.reduce(
     (sum, inv) => sum + Number(inv.amount || 0),

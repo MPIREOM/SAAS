@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/access-control";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
@@ -12,22 +12,15 @@ export default async function DashboardLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Request-cached: shared with the page being rendered, so the old
+  // getUser() network call + profile query here no longer add their own
+  // round-trips on top of the page's.
+  const context = await getAuthContext();
 
-  if (!user) {
+  if (!context) {
     redirect(`/${locale}/auth/login`);
   }
-
-  // Fetch user profile
-  const { data: profile } = await supabase
-    .from("users")
-    .select("full_name, role")
-    .eq("id", user.id)
-    .single();
 
   const isRtl = locale === "ar";
 
@@ -37,8 +30,8 @@ export default async function DashboardLayout({
       <div className="transition-all duration-300 ease-out md:ms-64">
         <Topbar
           locale={locale}
-          userEmail={user.email}
-          userName={profile?.full_name}
+          userEmail={context.email ?? undefined}
+          userName={context.fullName ?? undefined}
         />
         <main className="p-4 md:p-8"><ToastProvider>{children}</ToastProvider></main>
       </div>
