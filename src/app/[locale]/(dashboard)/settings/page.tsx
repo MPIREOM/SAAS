@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { getAuthContext } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import {
   User,
@@ -81,29 +82,22 @@ export default async function SettingsPage({
   const tMaint = await getTranslations("maintenanceRequest");
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user?.id)
-    .single();
-
-  const { data: allUsers } = await supabase
-    .from("users")
-    .select("*, user_property_assignments(property_id, properties(name))")
-    .order("created_at", { ascending: false });
+  // Request-cached session context (no network call to the Auth server)
+  const context = await getAuthContext();
+  const userId = context?.userId || "";
+  const isSuperAdmin = context?.role === "super_admin";
 
   // Pull auth-side timestamps (invited_at, last_sign_in_at) so we can show
   // which users have a pending invite vs. have accepted. The `users` table
   // doesn't track this — Supabase Auth does.
-  const authMap = new Map<
-    string,
-    { invited_at: string | null; last_sign_in_at: string | null }
-  >();
-  if (profile?.role === "super_admin") {
+  const authMapPromise: Promise<
+    Map<string, { invited_at: string | null; last_sign_in_at: string | null }>
+  > = (async () => {
+    const map = new Map<
+      string,
+      { invited_at: string | null; last_sign_in_at: string | null }
+    >();
+    if (!isSuperAdmin) return map;
     try {
       const adminClient = createAdminClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -113,7 +107,7 @@ export default async function SettingsPage({
         perPage: 1000,
       });
       for (const u of authList?.users ?? []) {
-        authMap.set(u.id, {
+        map.set(u.id, {
           invited_at: u.invited_at ?? null,
           last_sign_in_at: u.last_sign_in_at ?? null,
         });
@@ -121,24 +115,37 @@ export default async function SettingsPage({
     } catch (err) {
       console.error("Failed to fetch auth users for invite status:", err);
     }
-  }
+    return map;
+  })();
 
-  const { data: allProperties } = await supabase
-    .from("properties")
-    .select("id, name, notifications_enabled")
-    .eq("is_archived", false)
-    .order("name");
-
-  // Fetch active tenants with their current lease info for notification toggles
-  const { data: activeTenants } = await supabase
-    .from("tenants")
-    .select(
-      "id, full_name, phone, notifications_enabled, leases(unit_id, is_active, units(unit_number, properties(name)))"
-    )
-    .eq("status", "active")
-    .order("full_name");
-
-  const isSuperAdmin = profile?.role === "super_admin";
+  // All independent lookups load in one parallel batch
+  const [
+    { data: profile },
+    { data: allUsers },
+    { data: allProperties },
+    { data: activeTenants },
+    authMap,
+  ] = await Promise.all([
+    supabase.from("users").select("*").eq("id", userId).single(),
+    supabase
+      .from("users")
+      .select("*, user_property_assignments(property_id, properties(name))")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("properties")
+      .select("id, name, notifications_enabled")
+      .eq("is_archived", false)
+      .order("name"),
+    // Active tenants with their current lease info for notification toggles
+    supabase
+      .from("tenants")
+      .select(
+        "id, full_name, phone, notifications_enabled, leases(unit_id, is_active, units(unit_number, properties(name)))"
+      )
+      .eq("status", "active")
+      .order("full_name"),
+    authMapPromise,
+  ]);
   const propertiesList = (allProperties || []).map((p) => ({
     id: p.id as string,
     name: p.name as string,
@@ -206,9 +213,9 @@ export default async function SettingsPage({
         description={t("profileDescription")}
       >
         <ProfileEditForm
-          userId={user?.id || ""}
+          userId={userId}
           currentName={(profile?.full_name as string) || ""}
-          currentEmail={user?.email || ""}
+          currentEmail={context?.email || ""}
         />
         <div className="mt-5 grid grid-cols-1 gap-4 border-t border-border/40 pt-5 sm:grid-cols-2">
           <div>
@@ -230,8 +237,8 @@ export default async function SettingsPage({
               {t("memberSince")}
             </span>
             <p className="ltr-nums mt-1.5 font-mono text-sm text-text-primary">
-              {user?.created_at
-                ? new Date(user.created_at).toLocaleDateString()
+              {profile?.created_at
+                ? new Date(profile.created_at as string).toLocaleDateString()
                 : "—"}
             </p>
           </div>
@@ -278,7 +285,7 @@ export default async function SettingsPage({
             })}
             allProperties={propertiesList}
             isSuperAdmin={isSuperAdmin}
-            currentUserId={user?.id || ""}
+            currentUserId={userId}
           />
         ) : (
           <EmptyState
@@ -355,7 +362,7 @@ export default async function SettingsPage({
         description={t("whatsappAgentDescription")}
       >
         <WhatsAppAgentSetup
-          userId={user?.id || ""}
+          userId={userId}
           currentPhone={(profile?.whatsapp_phone as string) || null}
           notificationPhones={
             (profile?.notification_phones as string[] | null) || []

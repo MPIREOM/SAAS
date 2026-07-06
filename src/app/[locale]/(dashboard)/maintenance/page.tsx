@@ -49,13 +49,15 @@ export default async function MaintenancePage({
   const t = await getTranslations("maintenance");
   const supabase = await createClient();
 
-  // Property-level access control
+  // Property-level access control — restricted users filter through the
+  // joined unit's property_id, so no unit-ID prefetch round-trip is needed
   const propertyIds = await getUserAccessiblePropertyIds(supabase);
-  let unitIds: string[] | null = null;
-  if (propertyIds !== null) {
-    const { data: units } = await supabase.from("units").select("id").in("property_id", propertyIds);
-    unitIds = units?.map(u => u.id) || [];
-  }
+  const accessFilter =
+    propertyIds !== null
+      ? propertyIds.length > 0
+        ? propertyIds
+        : ["__no_access__"]
+      : null;
 
   const statusFilter =
     typeof resolvedSearchParams.status === "string"
@@ -70,7 +72,7 @@ export default async function MaintenancePage({
     .from("maintenance_requests")
     .select(`
       *,
-      units:unit_id(unit_number, properties:property_id(name)),
+      units:unit_id${accessFilter !== null ? "!inner" : ""}(unit_number, property_id, properties:property_id(name)),
       tenants:tenant_id(full_name)
     `)
     .order("created_at", { ascending: false });
@@ -79,8 +81,8 @@ export default async function MaintenancePage({
     query = query.eq("status", statusFilter);
   }
 
-  if (unitIds !== null) {
-    query = query.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  if (accessFilter !== null) {
+    query = query.in("units.property_id", accessFilter);
   }
 
   // Pagination
@@ -90,19 +92,27 @@ export default async function MaintenancePage({
   // Get total count for pagination
   let countQuery = supabase
     .from("maintenance_requests")
-    .select("*", { count: "exact", head: true });
+    .select(
+      accessFilter !== null ? "*, units:unit_id!inner(property_id)" : "*",
+      { count: "exact", head: true }
+    );
 
   if (statusFilter !== "all") {
     countQuery = countQuery.eq("status", statusFilter);
   }
-  if (unitIds !== null) {
-    countQuery = countQuery.in("unit_id", unitIds.length > 0 ? unitIds : ["__no_access__"]);
+  if (accessFilter !== null) {
+    countQuery = countQuery.in("units.property_id", accessFilter);
   }
-  const { count: totalCount } = await countQuery;
-  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
-  const { data: requests } = await query
-    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
+  // Count and page load in parallel
+  const [{ count: totalCount }, { data: requestRows }] = await Promise.all([
+    countQuery,
+    query.range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1),
+  ]);
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
+  // Cast: the conditional select string defeats the client's literal-type
+  // parser; rows are consumed as Record<string, unknown> below anyway.
+  const requests = requestRows as unknown as Record<string, unknown>[] | null;
 
   const tabs = ["all", "open", "in_progress", "resolved", "closed"] as const;
 

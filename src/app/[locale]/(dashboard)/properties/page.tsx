@@ -52,11 +52,13 @@ export default async function PropertiesPage({
     .select("*", { count: "exact", head: true })
     .eq("is_archived", false);
   countQuery = filterByProperties(countQuery, propertyIds, "id");
-  const { count: totalCount } = await countQuery;
-  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
-  const { data: properties } = await propertiesQuery
-    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
+  // Count and page load in parallel
+  const [{ count: totalCount }, { data: properties }] = await Promise.all([
+    countQuery,
+    propertiesQuery.range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1),
+  ]);
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
   // Compute portfolio-level stats
   const allUnits = properties?.flatMap(

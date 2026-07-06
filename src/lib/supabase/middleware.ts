@@ -29,9 +29,14 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() verifies the session JWT against the project's signing keys
+  // (fetched once from the CDN-cached JWKS endpoint) instead of calling the
+  // Supabase Auth server the way getUser() does. getUser() added a full
+  // network round-trip to EVERY request — page loads, RSC navigations and
+  // prefetches alike — which made each tab switch visibly slower. Expired
+  // sessions are still refreshed here, which is this middleware's job.
+  const { data } = await supabase.auth.getClaims();
+  const hasSession = Boolean(data?.claims?.sub);
 
   // Redirect unauthenticated users to login (except for auth pages and API routes)
   const isAuthPage = request.nextUrl.pathname.includes("/auth/");
@@ -39,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   const isPublicPage = request.nextUrl.pathname.includes("/maintenance-request/") ||
     request.nextUrl.pathname.includes("/tenant-portal/");
 
-  if (!user && !isAuthPage && !isApiRoute && !isPublicPage) {
+  if (!hasSession && !isAuthPage && !isApiRoute && !isPublicPage) {
     const pathLocale = request.nextUrl.pathname.split("/")[1] || "en";
     const locale = (pathLocale === "en" || pathLocale === "ar") ? pathLocale : "en";
     const url = request.nextUrl.clone();

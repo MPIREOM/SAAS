@@ -101,6 +101,10 @@ async function getDashboardStats(selectedMonth?: string, selectedYear?: string) 
   const monthStart = format(new Date(year, month, 1), "yyyy-MM-dd");
   const monthEnd = format(new Date(year, month + 1, 0), "yyyy-MM-dd");
 
+  const noAccessFilter = ["__no_access__"];
+  const restrictedPropertyIds =
+    propertyIds !== null && propertyIds.length === 0 ? noAccessFilter : propertyIds;
+
   // Properties query
   let propertiesQuery = supabase
     .from("properties")
@@ -136,19 +140,37 @@ async function getDashboardStats(selectedMonth?: string, selectedYear?: string) 
     .lte("expense_date", monthEnd);
   expensesQuery = filterByProperties(expensesQuery, propertyIds);
 
-  // Pre-fetch accessible unit IDs for filtering maintenance requests
-  let accessibleUnitIds: string[] = [];
-  if (propertyIds !== null) {
-    const { data: accUnits } = await supabase.from("units").select("id").in("property_id", propertyIds.length > 0 ? propertyIds : ["__no_access__"]);
-    accessibleUnitIds = (accUnits || []).map((u) => u.id);
+  // Open maintenance requests — restricted users filter through the joined
+  // unit's property_id, so no unit-ID prefetch round-trip is needed.
+  const maintenanceQuery =
+    restrictedPropertyIds !== null
+      ? supabase
+          .from("maintenance_requests")
+          .select("*, units!inner(property_id)", { count: "exact", head: true })
+          .in("status", ["open", "in_progress"])
+          .in("units.property_id", restrictedPropertyIds)
+      : supabase
+          .from("maintenance_requests")
+          .select("*", { count: "exact", head: true })
+          .in("status", ["open", "in_progress"]);
+
+  // Revenue this month (paid invoices), joined through units the same way
+  let revenueQuery = supabase
+    .from("invoices")
+    .select(
+      restrictedPropertyIds !== null
+        ? "amount, units!inner(property_id)"
+        : "amount"
+    )
+    .eq("status", "paid")
+    .gte("due_date", monthStart)
+    .lte("due_date", monthEnd);
+  if (restrictedPropertyIds !== null) {
+    revenueQuery = revenueQuery.in("units.property_id", restrictedPropertyIds);
   }
 
-  // Units for filtering invoices
-  let unitsForInvoicesQuery = supabase
-    .from("units")
-    .select("id");
-  unitsForInvoicesQuery = filterByProperties(unitsForInvoicesQuery, propertyIds);
-
+  // Everything runs in one parallel batch — the old version chained three
+  // extra sequential round-trips (unit-ID prefetches + revenue) after it.
   const [
     { count: propertyCount },
     { count: unitCount },
@@ -156,40 +178,24 @@ async function getDashboardStats(selectedMonth?: string, selectedYear?: string) 
     { count: tenantCount },
     { count: openMaintenanceCount },
     { data: expensesData },
-    { data: accessibleUnits },
     { data: vacantUnitsData },
+    { data: paidInvoices },
   ] = await Promise.all([
     propertiesQuery,
     unitsQuery,
     occupiedQuery,
     supabase.from("tenants").select("*", { count: "exact", head: true }).eq("status", "active"),
-    (() => {
-      let mq = supabase.from("maintenance_requests").select("*", { count: "exact", head: true }).in("status", ["open", "in_progress"]);
-      if (propertyIds !== null) {
-        mq = mq.in("unit_id", accessibleUnitIds.length > 0 ? accessibleUnitIds : ["__no_access__"]);
-      }
-      return mq;
-    })(),
+    maintenanceQuery,
     expensesQuery,
-    unitsForInvoicesQuery,
     vacantUnitsQuery,
+    revenueQuery,
   ]);
 
-  // Revenue this month (paid invoices)
-  const unitIds = (accessibleUnits || []).map((u) => u.id);
-  let revenueThisMonth = 0;
-  if (unitIds.length > 0) {
-    const { data: paidInvoices } = await supabase
-      .from("invoices")
-      .select("amount")
-      .eq("status", "paid")
-      .gte("due_date", monthStart)
-      .lte("due_date", monthEnd)
-      .in("unit_id", unitIds);
-    revenueThisMonth = (paidInvoices || []).reduce(
-      (sum, inv) => sum + parseFloat(inv.amount as string), 0
-    );
-  }
+  // Cast: the conditional select string defeats the client's literal-type
+  // parser; only `amount` is read here.
+  const revenueThisMonth = ((paidInvoices || []) as unknown as { amount: string }[]).reduce(
+    (sum, inv) => sum + parseFloat(inv.amount), 0
+  );
 
   const expensesThisMonth = (expensesData || []).reduce(
     (sum, exp) => sum + parseFloat(exp.amount as string), 0

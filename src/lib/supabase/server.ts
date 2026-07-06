@@ -1,7 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
-export async function createClient() {
+// cache() memoizes the client per request during React rendering, so the
+// layout, page and every data helper in one navigation share a single
+// instance instead of re-reading the cookie store each time. Outside of a
+// React render (route handlers, server actions) cache() is a passthrough.
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -25,4 +30,4 @@ export async function createClient() {
       },
     }
   );
-}
+});
