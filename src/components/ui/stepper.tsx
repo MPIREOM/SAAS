@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -39,10 +40,11 @@ interface StepperProps {
 }
 
 export function Stepper({ steps, activeIndex, onChange, className }: StepperProps) {
+  const t = useTranslations("common");
   return (
     <ol
       role="list"
-      aria-label="Progress"
+      aria-label={t("progress")}
       className={cn(
         "flex items-center gap-2 sm:gap-3 overflow-x-auto",
         className

@@ -78,7 +78,9 @@
     "monthNov": "Nov",
     "monthDec": "Dec",
     "add": "Add",
-    "stepOf": "Step {current} of {total}"
+    "stepOf": "Step {current} of {total}",
+    "progress": "Progress",
+    "breadcrumb": "Breadcrumb"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -566,7 +568,8 @@
     "selectUnit": "Select a unit",
     "invoicePeriodExistsWithStatus": "An invoice for this lease and period already exists (status: {status}).",
     "invoicePeriodExists": "An invoice for this lease and period already exists.",
-    "invoiceCreatedFor": "Invoice created for {name}"
+    "invoiceCreatedFor": "Invoice created for {name}",
+    "viewPdf": "View PDF"
   },
   "cheques": {
     "title": "Cheques",
@@ -1223,6 +1226,131 @@
     "noActivity": "No activity in this window",
     "editOwner": "Edit owner",
     "previewReport": "Preview report",
-    "noOwnersConfigured": "No owners configured"
+    "noOwnersConfigured": "No owners configured",
+    "saveFailed": "Save failed",
+    "deleteFailed": "Delete failed",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "amountOmr": "Amount (OMR)",
+    "amountWithCode": "Amount ({code})",
+    "method": "Method",
+    "methods": {
+      "cash": "Cash",
+      "bankTransfer": "Bank transfer",
+      "cheque": "Cheque"
+    },
+    "ref": "Ref {number}",
+    "asOf": "As of",
+    "ledgerSections": "Owner ledger sections",
+    "profile": {
+      "whatsapp": "WhatsApp",
+      "language": "Language",
+      "openingBalance": "Opening balance",
+      "openingDate": "Opening date"
+    },
+    "breakdownRows": {
+      "openingBalance": "Opening balance",
+      "rentCollected": "Rent collected (cash + transfer)",
+      "rentByCheque": "Rent paid by cheque (direct to owner)",
+      "commissionEarned": "Commission earned by company",
+      "commissionCatchUp": "Commission catch-up (early move-outs)",
+      "businessFees": "Business manager fees",
+      "expensesCovered": "Expenses paid by company",
+      "settlementsPaid": "Settlements paid to owner",
+      "settlementsReceived": "Settlements received from owner",
+      "referenceOnly": "Reference only"
+    },
+    "activity": {
+      "window": "Window",
+      "windowDays": "{days}d",
+      "windowYear": "1y",
+      "entryCount": "{count, plural, one {# entry} other {# entries}}",
+      "emptyDescription": "Try a longer window above, or log an expense / payment via WhatsApp.",
+      "entry": "Entry",
+      "rentWithTenant": "Rent — {name}",
+      "rentPayment": "Rent payment",
+      "directToOwner": "direct to owner",
+      "propertyPrefix": "Property: {name}",
+      "ownerLevel": "Owner-level",
+      "businessManagerFee": "Business manager fee",
+      "period": "Period {month}"
+    },
+    "propertiesPanel": {
+      "intro": "Set the commission arrangement for each property. Use a per-unit override only when units inside the same property have different arrangements.",
+      "emptyTitle": "No properties linked to this owner yet",
+      "emptyDescription": "Use the SQL seed in supabase/seed/owner_setup.sql to assign properties.",
+      "perUnitOverrides": "Per-unit overrides",
+      "showUnits": "Show units / per-unit overrides",
+      "unitWord": "{count, plural, one {unit} other {units}}",
+      "hasOverrides": "has unit overrides",
+      "commissionArrangement": "Commission arrangement",
+      "commissionRate": "Commission rate (%)",
+      "unitCommissionOverride": "Unit commission override",
+      "unitCommissionRate": "Unit commission rate (%)",
+      "inheritFromProperty": "Inherit from property",
+      "perMonth": "{code}/mo",
+      "commission": {
+        "percentage": "Percentage of rent",
+        "included_in_business_fee": "Included in business fee",
+        "none": "No commission"
+      },
+      "commissionUpdated": "Commission updated",
+      "unitOverrideSaved": "Unit override saved"
+    },
+    "settlements": {
+      "intro": "Record payouts the company makes to the owner, or money the owner gives back to the company.",
+      "emptyTitle": "No settlements yet",
+      "emptyDescription": "Each time the company pays the owner (or vice versa), record it here so the running balance reflects it.",
+      "direction": "Direction",
+      "details": "Details",
+      "confirmDelete": "Delete this settlement? {amount} {code} on {date}. This cannot be undone.",
+      "deleted": "Settlement deleted",
+      "recordTitle": "Record settlement",
+      "editTitle": "Edit settlement",
+      "dialogDescription": "Money moving between the company and the owner. Adjusts the running balance immediately.",
+      "companyToOwner": "Company → Owner",
+      "ownerToCompany": "Owner → Company",
+      "decreasesBalance": "decreases balance",
+      "increasesBalance": "increases balance",
+      "amountPlaceholder": "e.g. 1500.000",
+      "referenceOptional": "Reference (optional)",
+      "referencePlaceholder": "Cheque number, transfer reference, etc.",
+      "amountPositive": "Amount must be a positive number",
+      "updated": "Settlement updated",
+      "recorded": "Settlement recorded",
+      "record": "Record"
+    },
+    "fees": {
+      "intro": "Flat monthly fee charged to the owner's ledger. The cron creates one row per month automatically; edit or delete here when the arrangement changes.",
+      "emptyTitle": "No fees yet",
+      "emptyDescription": "The daily cron auto-creates a row each month for owners with included_in_business_fee properties.",
+      "month": "Month",
+      "confirmDelete": "Delete the {month} business fee ({amount} {code})?",
+      "deleted": "Fee deleted",
+      "addTitle": "Add business fee",
+      "editTitle": "Edit business fee",
+      "dialogDescription": "One flat charge per calendar month. Subtracts from the owner balance.",
+      "amountNonNegative": "Amount must be zero or positive",
+      "duplicateMonth": "A fee already exists for this month — edit that row instead.",
+      "updated": "Fee updated",
+      "added": "Fee added"
+    },
+    "editOwnerDialog": {
+      "description": "Owner details, opening balance, and contact info. Changes here flow into the daily summary and the WhatsApp agent immediately.",
+      "nameRequired": "Name is required",
+      "updated": "Owner updated",
+      "name": "Name",
+      "whatsappLabel": "WhatsApp (digits + country code)",
+      "whatsappPlaceholder": "e.g. 96899372277",
+      "emailOptional": "Email (optional)",
+      "english": "English",
+      "arabic": "Arabic",
+      "active": "Active",
+      "archived": "Archived",
+      "openingBalanceSnapshot": "Opening balance snapshot",
+      "openingBalanceHelper": "Positive = company owes owner. Negative = owner owes company.",
+      "asOfDate": "As of date",
+      "notesPlaceholder": "Anything worth remembering about this owner"
+    }
   }
 }

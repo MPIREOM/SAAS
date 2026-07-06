@@ -78,7 +78,9 @@
     "monthNov": "نوفمبر",
     "monthDec": "ديسمبر",
     "add": "إضافة",
-    "stepOf": "الخطوة {current} من {total}"
+    "stepOf": "الخطوة {current} من {total}",
+    "progress": "التقدم",
+    "breadcrumb": "مسار التنقل"
   },
   "nav": {
     "dashboard": "لوحة القيادة",
@@ -566,7 +568,8 @@
     "selectUnit": "اختر الوحدة",
     "invoicePeriodExistsWithStatus": "توجد فاتورة لهذا العقد ولهذه الفترة بالفعل (الحالة: {status}).",
     "invoicePeriodExists": "توجد فاتورة لهذا العقد ولهذه الفترة بالفعل.",
-    "invoiceCreatedFor": "تم إنشاء الفاتورة لـ {name}"
+    "invoiceCreatedFor": "تم إنشاء الفاتورة لـ {name}",
+    "viewPdf": "عرض PDF"
   },
   "cheques": {
     "title": "الشيكات",
@@ -1223,6 +1226,131 @@
     "noActivity": "لا يوجد نشاط في هذه الفترة",
     "editOwner": "تعديل المالك",
     "previewReport": "معاينة التقرير",
-    "noOwnersConfigured": "لا يوجد ملاك مسجلون"
+    "noOwnersConfigured": "لا يوجد ملاك مسجلون",
+    "saveFailed": "فشل الحفظ",
+    "deleteFailed": "فشل الحذف",
+    "saving": "جاري الحفظ…",
+    "saveChanges": "حفظ التغييرات",
+    "amountOmr": "المبلغ (ر.ع)",
+    "amountWithCode": "المبلغ ({code})",
+    "method": "طريقة الدفع",
+    "methods": {
+      "cash": "نقداً",
+      "bankTransfer": "تحويل بنكي",
+      "cheque": "شيك"
+    },
+    "ref": "مرجع {number}",
+    "asOf": "حتى تاريخ",
+    "ledgerSections": "أقسام دفتر المالك",
+    "profile": {
+      "whatsapp": "واتساب",
+      "language": "اللغة",
+      "openingBalance": "الرصيد الافتتاحي",
+      "openingDate": "تاريخ الافتتاح"
+    },
+    "breakdownRows": {
+      "openingBalance": "الرصيد الافتتاحي",
+      "rentCollected": "الإيجار المحصّل (نقداً + تحويل)",
+      "rentByCheque": "الإيجار المدفوع بشيك (مباشرة للمالك)",
+      "commissionEarned": "العمولة المكتسبة للشركة",
+      "commissionCatchUp": "استكمال العمولة (حالات الإخلاء المبكر)",
+      "businessFees": "رسوم إدارة الأعمال",
+      "expensesCovered": "المصروفات المدفوعة من الشركة",
+      "settlementsPaid": "التسويات المدفوعة للمالك",
+      "settlementsReceived": "التسويات المستلمة من المالك",
+      "referenceOnly": "للمرجعية فقط"
+    },
+    "activity": {
+      "window": "الفترة",
+      "windowDays": "{days} يوم",
+      "windowYear": "سنة",
+      "entryCount": "{count, plural, zero {لا قيود} one {قيد واحد} two {قيدان} few {# قيود} many {# قيداً} other {# قيد}}",
+      "emptyDescription": "جرّب فترة أطول أعلاه، أو سجّل مصروفاً أو دفعة عبر واتساب.",
+      "entry": "القيد",
+      "rentWithTenant": "إيجار — {name}",
+      "rentPayment": "دفعة إيجار",
+      "directToOwner": "مباشرة للمالك",
+      "propertyPrefix": "العقار: {name}",
+      "ownerLevel": "على مستوى المالك",
+      "businessManagerFee": "رسم إدارة الأعمال",
+      "period": "الفترة {month}"
+    },
+    "propertiesPanel": {
+      "intro": "حدد ترتيب العمولة لكل عقار. استخدم التجاوز على مستوى الوحدة فقط عندما تختلف الترتيبات بين وحدات العقار نفسه.",
+      "emptyTitle": "لا توجد عقارات مرتبطة بهذا المالك بعد",
+      "emptyDescription": "استخدم ملف SQL في supabase/seed/owner_setup.sql لإسناد العقارات.",
+      "perUnitOverrides": "تجاوزات على مستوى الوحدة",
+      "showUnits": "عرض الوحدات / التجاوزات على مستوى الوحدة",
+      "unitWord": "{count, plural, zero {وحدات} one {وحدة} two {وحدتان} few {وحدات} many {وحدة} other {وحدة}}",
+      "hasOverrides": "يحتوي على تجاوزات للوحدات",
+      "commissionArrangement": "ترتيب العمولة",
+      "commissionRate": "نسبة العمولة (%)",
+      "unitCommissionOverride": "تجاوز عمولة الوحدة",
+      "unitCommissionRate": "نسبة عمولة الوحدة (%)",
+      "inheritFromProperty": "اتباع إعداد العقار",
+      "perMonth": "{code}/شهرياً",
+      "commission": {
+        "percentage": "نسبة من الإيجار",
+        "included_in_business_fee": "ضمن رسوم إدارة الأعمال",
+        "none": "بدون عمولة"
+      },
+      "commissionUpdated": "تم تحديث العمولة",
+      "unitOverrideSaved": "تم حفظ تجاوز الوحدة"
+    },
+    "settlements": {
+      "intro": "سجّل المدفوعات التي تدفعها الشركة للمالك، أو المبالغ التي يعيدها المالك إلى الشركة.",
+      "emptyTitle": "لا توجد تسويات بعد",
+      "emptyDescription": "في كل مرة تدفع فيها الشركة للمالك (أو العكس)، سجّلها هنا حتى يعكسها الرصيد الجاري.",
+      "direction": "الاتجاه",
+      "details": "التفاصيل",
+      "confirmDelete": "هل تريد حذف هذه التسوية؟ {amount} {code} بتاريخ {date}. لا يمكن التراجع عن هذا الإجراء.",
+      "deleted": "تم حذف التسوية",
+      "recordTitle": "تسجيل تسوية",
+      "editTitle": "تعديل التسوية",
+      "dialogDescription": "أموال تنتقل بين الشركة والمالك. تُعدّل الرصيد الجاري فوراً.",
+      "companyToOwner": "الشركة ← المالك",
+      "ownerToCompany": "المالك ← الشركة",
+      "decreasesBalance": "يُنقص الرصيد",
+      "increasesBalance": "يزيد الرصيد",
+      "amountPlaceholder": "مثال: 1500.000",
+      "referenceOptional": "المرجع (اختياري)",
+      "referencePlaceholder": "رقم الشيك، مرجع التحويل، إلخ.",
+      "amountPositive": "يجب أن يكون المبلغ رقماً موجباً",
+      "updated": "تم تحديث التسوية",
+      "recorded": "تم تسجيل التسوية",
+      "record": "تسجيل"
+    },
+    "fees": {
+      "intro": "رسم شهري ثابت يُقيّد على دفتر المالك. تنشئ المهمة المجدولة صفاً واحداً لكل شهر تلقائياً؛ عدّل أو احذف هنا عند تغيّر الترتيب.",
+      "emptyTitle": "لا توجد رسوم بعد",
+      "emptyDescription": "تنشئ المهمة المجدولة اليومية صفاً كل شهر تلقائياً للملاك الذين لديهم عقارات ضمن رسوم إدارة الأعمال.",
+      "month": "الشهر",
+      "confirmDelete": "هل تريد حذف رسم إدارة الأعمال لشهر {month} ({amount} {code})؟",
+      "deleted": "تم حذف الرسم",
+      "addTitle": "إضافة رسم إدارة أعمال",
+      "editTitle": "تعديل رسم إدارة الأعمال",
+      "dialogDescription": "رسم ثابت واحد لكل شهر ميلادي. يُخصم من رصيد المالك.",
+      "amountNonNegative": "يجب أن يكون المبلغ صفراً أو أكثر",
+      "duplicateMonth": "يوجد رسم لهذا الشهر بالفعل — عدّل ذلك الصف بدلاً من إضافة رسم جديد.",
+      "updated": "تم تحديث الرسم",
+      "added": "تمت إضافة الرسم"
+    },
+    "editOwnerDialog": {
+      "description": "بيانات المالك والرصيد الافتتاحي ومعلومات التواصل. تنعكس التغييرات هنا فوراً على الملخص اليومي ووكيل واتساب.",
+      "nameRequired": "الاسم مطلوب",
+      "updated": "تم تحديث المالك",
+      "name": "الاسم",
+      "whatsappLabel": "واتساب (أرقام مع رمز الدولة)",
+      "whatsappPlaceholder": "مثال: 96899372277",
+      "emailOptional": "البريد الإلكتروني (اختياري)",
+      "english": "الإنجليزية",
+      "arabic": "العربية",
+      "active": "نشط",
+      "archived": "مؤرشف",
+      "openingBalanceSnapshot": "لقطة الرصيد الافتتاحي",
+      "openingBalanceHelper": "موجب = الشركة مدينة للمالك. سالب = المالك مدين للشركة.",
+      "asOfDate": "اعتباراً من تاريخ",
+      "notesPlaceholder": "أي شيء يستحق التذكر عن هذا المالك"
+    }
   }
 }

@@ -1,5 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -63,9 +64,10 @@ export function PageHeader({
 }
 
 function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
+  const t = useTranslations("common");
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={t("breadcrumb")}
       className="mb-2 flex items-center gap-1 text-xs text-text-secondary"
     >
       {items.map((item, idx) => {

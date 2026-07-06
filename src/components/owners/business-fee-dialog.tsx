@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
@@ -55,6 +56,8 @@ function BusinessFeeDialogForm({
   editing: BusinessFeeRow | null;
   onClose: () => void;
 }) {
+  const t = useTranslations("owners");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { toast } = useToast();
   const [periodMonth, setPeriodMonth] = useState(
@@ -70,7 +73,7 @@ function BusinessFeeDialogForm({
     e.preventDefault();
     const numericAmount = Number(amount);
     if (!Number.isFinite(numericAmount) || numericAmount < 0) {
-      toast({ title: "Amount must be zero or positive", variant: "destructive" });
+      toast({ title: t("fees.amountNonNegative"), variant: "destructive" });
       return;
     }
     // Force the date to the 1st of the month — that's how the schema
@@ -92,7 +95,7 @@ function BusinessFeeDialogForm({
         .eq("id", editing.id);
       setSaving(false);
       if (error) {
-        toast({ title: "Save failed", description: error.message, variant: "destructive" });
+        toast({ title: t("saveFailed"), description: error.message, variant: "destructive" });
         return;
       }
       await logAudit(supabase, {
@@ -111,9 +114,9 @@ function BusinessFeeDialogForm({
       if (error) {
         // Friendlier message for the unique-violation on (owner, month).
         const desc = error.code === "23505"
-          ? "A fee already exists for this month — edit that row instead."
+          ? t("fees.duplicateMonth")
           : error.message;
-        toast({ title: "Save failed", description: desc, variant: "destructive" });
+        toast({ title: t("saveFailed"), description: desc, variant: "destructive" });
         return;
       }
       await logAudit(supabase, {
@@ -123,7 +126,7 @@ function BusinessFeeDialogForm({
         metadata: payload,
       });
     }
-    toast({ title: editing ? "Fee updated" : "Fee added", variant: "success" });
+    toast({ title: editing ? t("fees.updated") : t("fees.added"), variant: "success" });
     onClose();
     router.refresh();
   }
@@ -131,9 +134,9 @@ function BusinessFeeDialogForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{editing ? "Edit business fee" : "Add business fee"}</DialogTitle>
+        <DialogTitle>{editing ? t("fees.editTitle") : t("fees.addTitle")}</DialogTitle>
         <DialogDescription>
-          One flat charge per calendar month. Subtracts from the owner balance.
+          {t("fees.dialogDescription")}
         </DialogDescription>
       </DialogHeader>
 
@@ -141,7 +144,7 @@ function BusinessFeeDialogForm({
         <form id="business-fee-form" onSubmit={handleSubmit} className="space-y-4">
           <Input
             type="month"
-            label="Month"
+            label={t("fees.month")}
             value={periodMonth.slice(0, 7)}
             onChange={(e) => setPeriodMonth(e.target.value + "-01")}
             required
@@ -149,7 +152,7 @@ function BusinessFeeDialogForm({
           />
           <Input
             type="number"
-            label="Amount (OMR)"
+            label={t("amountOmr")}
             min={0}
             step={0.001}
             value={amount}
@@ -158,11 +161,11 @@ function BusinessFeeDialogForm({
             className="font-mono ltr-nums"
           />
           <Textarea
-            label="Notes"
+            label={tCommon("notes")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            placeholder="Optional"
+            placeholder={tCommon("optional")}
             className="resize-none"
           />
         </form>
@@ -170,10 +173,10 @@ function BusinessFeeDialogForm({
 
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
+          {tCommon("cancel")}
         </Button>
         <Button type="submit" form="business-fee-form" loading={saving}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Add"}
+          {saving ? t("saving") : editing ? t("saveChanges") : tCommon("add")}
         </Button>
       </DialogFooter>
     </>

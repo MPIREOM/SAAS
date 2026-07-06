@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ArrowDownCircle, ArrowUpCircle, Receipt, Banknote, FileText } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
@@ -39,11 +39,13 @@ export function OwnerActivityPanel({
   activityWindowDays,
 }: OwnerDetailProps) {
   const t = useTranslations("owners");
+  const tCommon = useTranslations("common");
+  const tCategories = useTranslations("expenses.categories");
   const [windowDays, setWindowDays] = useState(activityWindowDays);
 
   const items = useMemo(() => buildActivity({
-    payments, expenses, settlements, businessFees, leaseInfo, t,
-  }), [payments, expenses, settlements, businessFees, leaseInfo, t]);
+    payments, expenses, settlements, businessFees, leaseInfo, t, tCommon, tCategories,
+  }), [payments, expenses, settlements, businessFees, leaseInfo, t, tCommon, tCategories]);
 
   const cutoff = useMemo(() => {
     const d = new Date();
@@ -57,7 +59,7 @@ export function OwnerActivityPanel({
     <div className="space-y-4 animate-fade-in-up">
       {/* Window selector */}
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-text-secondary">Window:</span>
+        <span className="text-text-secondary">{t("activity.window")}:</span>
         {[7, 30, 90, 365].map((d) => (
           <button
             key={d}
@@ -72,11 +74,11 @@ export function OwnerActivityPanel({
                 : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border hover:text-text-primary",
             )}
           >
-            {d === 365 ? "1y" : `${d}d`}
+            {d === 365 ? t("activity.windowYear") : t("activity.windowDays", { days: d })}
           </button>
         ))}
         <span className="ms-auto font-mono ltr-nums text-text-secondary">
-          {visible.length} {visible.length === 1 ? "entry" : "entries"}
+          {t("activity.entryCount", { count: visible.length })}
         </span>
       </div>
 
@@ -84,7 +86,7 @@ export function OwnerActivityPanel({
         <EmptyState
           icon={<Receipt className="h-6 w-6" />}
           title={t("noActivity")}
-          description="Try a longer window above, or log an expense / payment via WhatsApp."
+          description={t("activity.emptyDescription")}
         />
       ) : (
         <>
@@ -93,10 +95,10 @@ export function OwnerActivityPanel({
             <Table className="min-w-[560px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-28">Date</TableHead>
-                  <TableHead>Entry</TableHead>
+                  <TableHead className="w-28">{tCommon("date")}</TableHead>
+                  <TableHead>{t("activity.entry")}</TableHead>
                   <TableHead className="w-40 text-end">
-                    Amount ({CURRENCY.code})
+                    {t("amountWithCode", { code: CURRENCY.code })}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -147,11 +149,12 @@ function AmountCell({ item }: { item: ActivityItem }) {
 }
 
 function ActivityTableRow({ item }: { item: ActivityItem }) {
+  const locale = useLocale();
   const Icon = ICONS[item.kind];
   return (
     <TableRow>
       <TableCell className="whitespace-nowrap font-mono text-xs ltr-nums text-text-secondary">
-        {formatDate(item.date)}
+        {formatDate(item.date, locale)}
       </TableCell>
       <TableCell>
         <div className="flex items-start gap-2.5">
@@ -184,6 +187,7 @@ function ActivityTableRow({ item }: { item: ActivityItem }) {
 }
 
 function ActivityCard({ item }: { item: ActivityItem }) {
+  const locale = useLocale();
   const Icon = ICONS[item.kind];
   return (
     <li className="flex items-start gap-3 rounded-xl border border-border/50 bg-surface-elevated/40 px-4 py-3">
@@ -211,7 +215,7 @@ function ActivityCard({ item }: { item: ActivityItem }) {
           {CURRENCY.code}
         </span>
         <div className="mt-0.5 font-mono text-[10px] ltr-nums text-text-secondary">
-          {formatDate(item.date)}
+          {formatDate(item.date, locale)}
         </div>
       </div>
     </li>
@@ -232,10 +236,16 @@ function buildActivity({
   businessFees,
   leaseInfo,
   t,
+  tCommon,
+  tCategories,
 }: Pick<
   OwnerDetailProps,
   "payments" | "expenses" | "settlements" | "businessFees" | "leaseInfo"
-> & { t: ReturnType<typeof useTranslations> }): ActivityItem[] {
+> & {
+  t: ReturnType<typeof useTranslations>;
+  tCommon: ReturnType<typeof useTranslations>;
+  tCategories: ReturnType<typeof useTranslations>;
+}): ActivityItem[] {
   const out: ActivityItem[] = [];
 
   for (const p of payments) {
@@ -248,11 +258,13 @@ function buildActivity({
       // company holding ledger. Cash & transfer hit our account.
       sign: direct ? "0" : "+",
       amount: Number(p.amount || 0),
-      primary: info ? `Rent — ${info.tenantName}` : "Rent payment",
+      primary: info
+        ? t("activity.rentWithTenant", { name: info.tenantName })
+        : t("activity.rentPayment"),
       secondary: info
-        ? `${info.propertyName} · Unit ${info.unitNumber} · ${labelMethod(p.method)}`
-        : labelMethod(p.method),
-      badge: direct ? "direct to owner" : undefined,
+        ? `${info.propertyName} · ${tCommon("unit")} ${info.unitNumber} · ${labelMethod(p.method, t)}`
+        : labelMethod(p.method, t),
+      badge: direct ? t("activity.directToOwner") : undefined,
     });
   }
 
@@ -263,10 +275,12 @@ function buildActivity({
       kind: "expense",
       sign: "-",
       amount: Number(e.amount || 0),
-      primary: e.description || labelCategory(e.category),
+      primary: e.description || labelCategory(e.category, tCategories),
       secondary: [
-        labelCategory(e.category),
-        propName ? `Property: ${propName}` : "Owner-level",
+        labelCategory(e.category, tCategories),
+        propName
+          ? t("activity.propertyPrefix", { name: propName })
+          : t("activity.ownerLevel"),
         e.vendor || null,
       ]
         .filter(Boolean)
@@ -285,8 +299,8 @@ function buildActivity({
           ? t("paidToOwner")
           : t("receivedFromOwner"),
       secondary: [
-        labelMethod(s.method),
-        s.reference_number ? `Ref ${s.reference_number}` : null,
+        labelMethod(s.method, t),
+        s.reference_number ? t("ref", { number: s.reference_number }) : null,
         s.notes,
       ]
         .filter(Boolean)
@@ -300,28 +314,29 @@ function buildActivity({
       kind: "business_fee",
       sign: "-",
       amount: Number(f.amount || 0),
-      primary: "Business manager fee",
-      secondary: f.notes || `Period ${f.period_month.slice(0, 7)}`,
+      primary: t("activity.businessManagerFee"),
+      secondary: f.notes || t("activity.period", { month: f.period_month.slice(0, 7) }),
     });
   }
 
   return out.sort((a, b) => b.date.localeCompare(a.date));
 }
 
-function labelMethod(method: string): string {
+function labelMethod(method: string, t: ReturnType<typeof useTranslations>): string {
   switch (method) {
     case "cash":
-      return "Cash";
+      return t("methods.cash");
     case "bank_transfer":
-      return "Bank transfer";
+      return t("methods.bankTransfer");
     case "cheque":
-      return "Cheque";
+      return t("methods.cheque");
     default:
       return method;
   }
 }
 
-function labelCategory(c: string): string {
+function labelCategory(c: string, tCategories: ReturnType<typeof useTranslations>): string {
+  if (tCategories.has(c)) return tCategories(c);
   return c.replace(/_/g, " ").replace(/\b\w/g, (s) => s.toUpperCase());
 }
 
@@ -331,9 +346,9 @@ function pickJoinedName(joined: unknown): string | null {
   return (v as { name?: string })?.name || null;
 }
 
-function formatDate(s: string): string {
+function formatDate(s: string, locale: string): string {
   try {
-    return new Date(s).toLocaleDateString("en-GB", {
+    return new Date(s).toLocaleDateString(`${locale}-u-nu-latn`, {
       day: "2-digit",
       month: "short",
       year: "numeric",
