@@ -100,8 +100,11 @@ export function OwnerDetailView(props: OwnerDetailProps) {
         </div>
       </section>
 
-      {/* Breakdown card */}
-      {balance && <BalanceBreakdownCard breakdown={balance.breakdown} />}
+      {/* Breakdown card — scoped to the current month, with the previous
+          month's closing balance rolled over as the opening figure. */}
+      {balance && (
+        <BalanceBreakdownCard breakdown={balance.breakdown} asOf={balance.asOf} />
+      )}
 
       {/* Owner profile grid */}
       <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -182,10 +185,13 @@ export function OwnerDetailView(props: OwnerDetailProps) {
 
 function BalanceBreakdownCard({
   breakdown,
+  asOf,
 }: {
   breakdown: NonNullable<OwnerDetailProps["balance"]>["breakdown"];
+  asOf: string;
 }) {
   const t = useTranslations("owners");
+  const locale = useLocale();
   const rows: { label: string; value: number; sign: "+" | "-" | ""; muted?: boolean }[] = [
     { label: t("breakdownRows.openingBalance"), value: breakdown.openingBalance, sign: "" },
     { label: t("breakdownRows.rentCollected"), value: breakdown.rentReceivedToCompany, sign: "+" },
@@ -212,7 +218,7 @@ function BalanceBreakdownCard({
       className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/30 p-6"
     >
       <h2 className="mb-4 font-display text-xs font-semibold uppercase tracking-wider text-text-secondary">
-        {t("breakdown")}
+        {t("breakdownForMonth", { month: formatMonth(asOf, locale) })}
       </h2>
       <dl className="divide-y divide-border/30">
         {rows.map((r) => (
@@ -288,6 +294,17 @@ function ProfileTile({
       </div>
     </div>
   );
+}
+
+function formatMonth(s: string, locale: string): string {
+  try {
+    return new Date(s).toLocaleDateString(`${locale}-u-nu-latn`, {
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return s;
+  }
 }
 
 function formatDate(s: string, locale: string): string {

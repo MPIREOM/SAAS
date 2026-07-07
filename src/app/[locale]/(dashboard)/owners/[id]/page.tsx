@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { getOwnerBalance } from "@/lib/owners/balance";
+import { getOwnerBalance, muscatMonthWindow } from "@/lib/owners/balance";
 import { OwnerDetailView } from "@/components/owners/owner-detail-view";
 import type { ExpenseRow } from "@/components/owners/types";
 
@@ -128,7 +128,12 @@ export default async function OwnerDetailPage({
   );
 
   // Live balance using the same calc the daily summary + agent rely on.
-  const balance = await getOwnerBalance(supabase, id);
+  // Scoped to the current Muscat month (same view as the monthly report):
+  // the breakdown's opening balance is the previous month's closing balance
+  // rolled over, not the genesis opening_balance snapshot. The headline
+  // `balance` stays cumulative either way.
+  const { asOf, monthStart } = muscatMonthWindow();
+  const balance = await getOwnerBalance(supabase, id, asOf, { monthStart });
 
   // Build a lease info map for the activity timeline so we can show
   // "Tenant — Unit (Property)" without an extra round-trip per row.

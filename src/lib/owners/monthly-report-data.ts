@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getOwnerBalance, type OwnerBalanceResult } from "./balance";
+import {
+  getOwnerBalance,
+  muscatMonthWindow,
+  type OwnerBalanceResult,
+} from "./balance";
 
 export type MonthlyReportExpense = {
   date: string;
@@ -62,14 +66,6 @@ export type MonthlyReport = {
   defaultedTotal: number;
 };
 
-function firstOfMonth(asOf: Date): string {
-  return `${asOf.getUTCFullYear()}-${String(asOf.getUTCMonth() + 1).padStart(2, "0")}-01`;
-}
-
-function ymd(d: Date): string {
-  return d.toISOString().split("T")[0];
-}
-
 // Pulls everything needed to render a single owner's monthly-to-date PDF
 // report: cumulative balance + all unpaid invoices on their properties
 // (the "defaulted tenants" — drops off the report once paid) + this
@@ -82,10 +78,7 @@ export async function getOwnerMonthlyReport(
   // Use Muscat-local date so the cron firing at 13:00 UTC Thursday
   // (17:00 Muscat) reports on the correct calendar day if it ever
   // straddles midnight.
-  const now = asOfInput ?? new Date();
-  const muscatNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
-  const asOf = ymd(muscatNow);
-  const monthStart = firstOfMonth(muscatNow);
+  const { muscatNow, asOf, monthStart } = muscatMonthWindow(asOfInput);
 
   // Pass monthStart so the balance breakdown is scoped to the current month
   // with a rolling opening balance (prior months' commission/charges are

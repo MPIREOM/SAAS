@@ -1213,6 +1213,7 @@
     "ownerOwesCompany": "{name} owes the company",
     "settled": "Settled",
     "breakdown": "Breakdown",
+    "breakdownForMonth": "Breakdown — {month}",
     "tabs": {
       "activity": "Activity",
       "properties": "Properties",
@@ -1245,11 +1246,11 @@
     "profile": {
       "whatsapp": "WhatsApp",
       "language": "Language",
-      "openingBalance": "Opening balance",
-      "openingDate": "Opening date"
+      "openingBalance": "Ledger start balance",
+      "openingDate": "Ledger start date"
     },
     "breakdownRows": {
-      "openingBalance": "Opening balance",
+      "openingBalance": "Opening balance (brought forward)",
       "rentCollected": "Rent collected (cash + transfer)",
       "rentByCheque": "Rent paid by cheque (direct to owner)",
       "commissionEarned": "Commission earned by company",

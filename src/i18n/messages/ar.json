@@ -1213,6 +1213,7 @@
     "ownerOwesCompany": "{name} مدين للشركة",
     "settled": "مسدد",
     "breakdown": "التفصيل",
+    "breakdownForMonth": "التفصيل — {month}",
     "tabs": {
       "activity": "النشاط",
       "properties": "العقارات",
@@ -1245,11 +1246,11 @@
     "profile": {
       "whatsapp": "واتساب",
       "language": "اللغة",
-      "openingBalance": "الرصيد الافتتاحي",
-      "openingDate": "تاريخ الافتتاح"
+      "openingBalance": "رصيد بداية الدفتر",
+      "openingDate": "تاريخ بداية الدفتر"
     },
     "breakdownRows": {
-      "openingBalance": "الرصيد الافتتاحي",
+      "openingBalance": "الرصيد الافتتاحي (مرحّل من الأشهر السابقة)",
       "rentCollected": "الإيجار المحصّل (نقداً + تحويل)",
       "rentByCheque": "الإيجار المدفوع بشيك (مباشرة للمالك)",
       "commissionEarned": "العمولة المكتسبة للشركة",
