@@ -1213,6 +1213,25 @@
     "ownerOwesCompany": "{name} owes the company",
     "settled": "Settled",
     "breakdown": "Breakdown",
+    "breakdownForMonth": "Breakdown — {month}",
+    "closingBalance": "Closing balance",
+    "monthPicker": {
+      "label": "Statement month",
+      "previous": "Previous month",
+      "next": "Next month",
+      "backToCurrent": "Current month"
+    },
+    "analysis": {
+      "title": "Month analysis — {month}",
+      "credits": "Added this month",
+      "charges": "Deducted this month",
+      "netChange": "Net change",
+      "vsPreviousMonth": "vs previous month",
+      "expensesByCategory": "Expenses by category",
+      "rentByMethod": "Rent collected by method",
+      "noExpenses": "No expenses recorded this month",
+      "noRent": "No rent recorded this month"
+    },
     "tabs": {
       "activity": "Activity",
       "properties": "Properties",
@@ -1245,11 +1264,11 @@
     "profile": {
       "whatsapp": "WhatsApp",
       "language": "Language",
-      "openingBalance": "Opening balance",
-      "openingDate": "Opening date"
+      "openingBalance": "Ledger start balance",
+      "openingDate": "Ledger start date"
     },
     "breakdownRows": {
-      "openingBalance": "Opening balance",
+      "openingBalance": "Opening balance (brought forward)",
       "rentCollected": "Rent collected (cash + transfer)",
       "rentByCheque": "Rent paid by cheque (direct to owner)",
       "commissionEarned": "Commission earned by company",

@@ -43,8 +43,24 @@ export type OwnerBalanceResult = {
 //     expenses, settlements) are scoped to [monthStart, asOf].
 //   - `balance` is unchanged — it is always the full cumulative figure as of
 //     asOf, so the monthly view still reconciles: opening + this-month = current.
-// Callers that omit monthStart (owners page, WhatsApp agent, admin summary)
-// keep the original cumulative breakdown.
+// Callers that omit monthStart (WhatsApp agent, admin summary) keep the
+// original cumulative breakdown.
+// Muscat (UTC+4) calendar window for "this month" ledger views. Shared by the
+// monthly report and the owner detail page so a request near midnight UTC
+// still lands on the correct local calendar day.
+export function muscatMonthWindow(now: Date = new Date()): {
+  muscatNow: Date;
+  asOf: string; // YYYY-MM-DD — today, Muscat-local
+  monthStart: string; // YYYY-MM-DD — 1st of the current Muscat month
+} {
+  const muscatNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+  const asOf = muscatNow.toISOString().split("T")[0];
+  const monthStart = `${muscatNow.getUTCFullYear()}-${String(
+    muscatNow.getUTCMonth() + 1,
+  ).padStart(2, "0")}-01`;
+  return { muscatNow, asOf, monthStart };
+}
+
 export async function getOwnerBalance(
   supabase: SupabaseClient,
   ownerId: string,
