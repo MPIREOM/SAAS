@@ -1214,6 +1214,24 @@
     "settled": "مسدد",
     "breakdown": "التفصيل",
     "breakdownForMonth": "التفصيل — {month}",
+    "closingBalance": "الرصيد الختامي",
+    "monthPicker": {
+      "label": "شهر الكشف",
+      "previous": "الشهر السابق",
+      "next": "الشهر التالي",
+      "backToCurrent": "الشهر الحالي"
+    },
+    "analysis": {
+      "title": "تحليل الشهر — {month}",
+      "credits": "المضاف هذا الشهر",
+      "charges": "المخصوم هذا الشهر",
+      "netChange": "صافي التغيّر",
+      "vsPreviousMonth": "مقارنة بالشهر السابق",
+      "expensesByCategory": "المصروفات حسب الفئة",
+      "rentByMethod": "الإيجار المحصّل حسب طريقة الدفع",
+      "noExpenses": "لا مصروفات مسجلة هذا الشهر",
+      "noRent": "لا إيجار مسجل هذا الشهر"
+    },
     "tabs": {
       "activity": "النشاط",
       "properties": "العقارات",

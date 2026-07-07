@@ -82,6 +82,21 @@ export type LeaseInfo = {
   propertyName: string;
 };
 
+// Month-scoped aggregates for the analysis card, computed server-side from
+// the same window as the breakdown so the two always agree.
+export type OwnerMonthAnalysis = {
+  month: string; // YYYY-MM
+  credits: number; // rent to company + settlements received from owner
+  charges: number; // commission + catch-up + fees + expenses + settlements paid
+  netChange: number; // credits − charges = closing − opening
+  closingBalance: number; // cumulative balance at the end of the window
+  expensesByCategory: { category: string; amount: number; count: number }[];
+  rentByMethod: { method: string; amount: number; count: number }[];
+  // Previous month's aggregates for deltas; null when the previous month
+  // predates the ledger start.
+  prev: { credits: number; charges: number; netChange: number } | null;
+};
+
 export type OwnerDetailProps = {
   owner: Owner;
   properties: PropertyRow[];
@@ -91,6 +106,15 @@ export type OwnerDetailProps = {
   payments: PaymentRow[];
   expenses: ExpenseRow[];
   leaseInfo: Record<string, LeaseInfo>;
+  // Balance for the SELECTED month: breakdown is month-scoped with the
+  // previous month's closing balance rolled over as its opening figure.
   balance: OwnerBalanceResult | null;
+  // Always-current cumulative balance for the headline card, regardless of
+  // which statement month is selected.
+  liveBalance: { balance: number; asOf: string } | null;
+  monthAnalysis: OwnerMonthAnalysis | null;
+  selectedMonth: string; // YYYY-MM
+  minMonth: string; // YYYY-MM of the ledger start (opening_balance_date)
+  maxMonth: string; // YYYY-MM of the current Muscat month
   activityWindowDays: number;
 };

@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils/cn";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EditOwnerDialog } from "@/components/owners/edit-owner-dialog";
+import { OwnerMonthPicker } from "@/components/owners/owner-month-picker";
+import { OwnerMonthAnalysisPanel } from "@/components/owners/owner-month-analysis-panel";
 import { OwnerActivityPanel } from "@/components/owners/owner-activity-panel";
 import { OwnerPropertiesPanel } from "@/components/owners/owner-properties-panel";
 import { OwnerSettlementsPanel } from "@/components/owners/owner-settlements-panel";
@@ -24,14 +26,17 @@ const TABS: { key: TabKey; icon: typeof Activity }[] = [
 ];
 
 export function OwnerDetailView(props: OwnerDetailProps) {
-  const { owner, balance } = props;
+  const { owner, balance, liveBalance, monthAnalysis, selectedMonth, minMonth, maxMonth } = props;
   const t = useTranslations("owners");
   const locale = useLocale();
   const [tab, setTab] = useState<TabKey>("activity");
   const [editOwnerOpen, setEditOwnerOpen] = useState(false);
+  const isCurrentMonth = selectedMonth === maxMonth;
 
-  // Friendly headline strings derived from the live balance calc.
-  const balanceNumber = balance?.balance ?? Number(owner.opening_balance || 0);
+  // Friendly headline strings derived from the live balance calc. The
+  // headline always shows the CURRENT balance even when a past statement
+  // month is selected below.
+  const balanceNumber = liveBalance?.balance ?? Number(owner.opening_balance || 0);
   const sideLabel = balanceNumber > 0.005
     ? t("companyOwesOwner", { name: owner.name })
     : balanceNumber < -0.005
@@ -95,15 +100,27 @@ export function OwnerDetailView(props: OwnerDetailProps) {
         <div className="mt-1 text-xs text-text-secondary">
           {t("asOf")}{" "}
           <span className="font-mono ltr-nums">
-            {balance?.asOf ?? new Date().toISOString().split("T")[0]}
+            {liveBalance?.asOf ?? new Date().toISOString().split("T")[0]}
           </span>
         </div>
       </section>
 
-      {/* Breakdown card — scoped to the current month, with the previous
+      {/* Statement month picker — drives the breakdown + analysis below. */}
+      <OwnerMonthPicker month={selectedMonth} minMonth={minMonth} maxMonth={maxMonth} />
+
+      {/* Breakdown card — scoped to the selected month, with the previous
           month's closing balance rolled over as the opening figure. */}
       {balance && (
-        <BalanceBreakdownCard breakdown={balance.breakdown} asOf={balance.asOf} />
+        <BalanceBreakdownCard
+          breakdown={balance.breakdown}
+          asOf={balance.asOf}
+          isCurrentMonth={isCurrentMonth}
+        />
+      )}
+
+      {/* Month analysis — credits/charges/net for the selected month. */}
+      {monthAnalysis && (
+        <OwnerMonthAnalysisPanel analysis={monthAnalysis} isCurrentMonth={isCurrentMonth} />
       )}
 
       {/* Owner profile grid */}
@@ -186,9 +203,11 @@ export function OwnerDetailView(props: OwnerDetailProps) {
 function BalanceBreakdownCard({
   breakdown,
   asOf,
+  isCurrentMonth,
 }: {
   breakdown: NonNullable<OwnerDetailProps["balance"]>["breakdown"];
   asOf: string;
+  isCurrentMonth: boolean;
 }) {
   const t = useTranslations("owners");
   const locale = useLocale();
@@ -255,7 +274,7 @@ function BalanceBreakdownCard({
         ))}
         <div className="mt-2 flex items-center justify-between gap-4 pt-4 text-base font-semibold">
           <dt className="font-display tracking-tight text-text-primary">
-            = {t("currentBalance")}
+            = {t(isCurrentMonth ? "currentBalance" : "closingBalance")}
           </dt>
           <dd className="shrink-0 font-mono tabular-nums ltr-nums text-end text-accent">
             {breakdown.balance.toLocaleString("en-OM", {

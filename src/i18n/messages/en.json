@@ -1214,6 +1214,24 @@
     "settled": "Settled",
     "breakdown": "Breakdown",
     "breakdownForMonth": "Breakdown — {month}",
+    "closingBalance": "Closing balance",
+    "monthPicker": {
+      "label": "Statement month",
+      "previous": "Previous month",
+      "next": "Next month",
+      "backToCurrent": "Current month"
+    },
+    "analysis": {
+      "title": "Month analysis — {month}",
+      "credits": "Added this month",
+      "charges": "Deducted this month",
+      "netChange": "Net change",
+      "vsPreviousMonth": "vs previous month",
+      "expensesByCategory": "Expenses by category",
+      "rentByMethod": "Rent collected by method",
+      "noExpenses": "No expenses recorded this month",
+      "noRent": "No rent recorded this month"
+    },
     "tabs": {
       "activity": "Activity",
       "properties": "Properties",
