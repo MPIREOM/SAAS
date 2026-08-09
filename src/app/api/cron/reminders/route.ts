@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { sendWhatsAppTemplate, buildRentReminderComponents, buildOverdueReminderComponents } from "@/lib/whatsapp/client";
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
-import { addDays, format, differenceInDays, parseISO } from "date-fns";
+import { addDays, format, differenceInDays, differenceInCalendarDays, lastDayOfMonth, parseISO, startOfMonth } from "date-fns";
 import { runAdminSummary, wasAdminSummaryRunToday } from "@/app/api/cron/admin-summary/route";
 import { checkBearer } from "@/lib/crypto/safe-compare";
 
@@ -132,27 +132,82 @@ export async function GET(request: NextRequest) {
           // Skip tenants with notifications disabled
           if (tenant.notifications_enabled === false) continue;
 
-          const dueDay = lease.payment_due_day || 1;
-          const currentMonth = omanNow.getMonth();
-          const currentYear = omanNow.getFullYear();
-          const dueDate = new Date(currentYear, currentMonth, dueDay);
-          const daysUntilDue = differenceInDays(dueDate, today);
+          // Upcoming rent reminder — anchored to the tenant's actual due
+          // date, not the 1st of the month. The earliest unpaid invoice
+          // wins (invoices can be issued with any due date, e.g. the 15th
+          // or 20th); only when no invoice exists yet does the lease's
+          // payment_due_day decide, rolling into next month once this
+          // month's due day has passed.
+          if (upcomingSetting.is_enabled) {
+            const { data: upcomingInvs } = await supabase
+              .from("invoices")
+              .select("amount, paid_amount, due_date")
+              .eq("lease_id", lease.id)
+              .in("status", ["pending", "partial"])
+              .gte("due_date", todayStr)
+              .order("due_date", { ascending: true })
+              .limit(1);
 
-          // Upcoming rent reminder (configurable days before)
-          if (upcomingSetting.is_enabled && daysUntilDue > 0 && upcomingSetting.days_before.includes(daysUntilDue)) {
-            await sendReminder(supabase, templateIndex, {
-              tenantId: tenant.id as string,
-              tenantName: tenant.full_name as string,
-              phone: tenant.phone as string,
-              email: tenant.email as string,
-              language: (tenant.language_preference as string) || "en",
-              unitNumber: unit.unit_number as string,
-              propertyName: (property?.name as string) || "",
-              amount: String(lease.monthly_rent),
-              dueDate: format(dueDate, "yyyy-MM-dd"),
-              reminderType: "rent_upcoming",
-            });
-            results.rentUpcoming++;
+            let upcomingDueDateStr: string | null = null;
+            let upcomingAmount = String(lease.monthly_rent);
+
+            if (upcomingInvs && upcomingInvs.length > 0) {
+              const inv = upcomingInvs[0];
+              upcomingDueDateStr = inv.due_date as string;
+              upcomingAmount = String(
+                Number(inv.amount || 0) - Number(inv.paid_amount || 0)
+              );
+            } else {
+              const dueDay = lease.payment_due_day || 1;
+              const currentMonth = omanNow.getMonth();
+              const currentYear = omanNow.getFullYear();
+              let candidate = new Date(
+                currentYear,
+                currentMonth,
+                Math.min(dueDay, lastDayOfMonth(new Date(currentYear, currentMonth, 1)).getDate())
+              );
+              if (format(candidate, "yyyy-MM-dd") < todayStr) {
+                const nextMonth = new Date(currentYear, currentMonth + 1, 1);
+                candidate = new Date(
+                  nextMonth.getFullYear(),
+                  nextMonth.getMonth(),
+                  Math.min(dueDay, lastDayOfMonth(nextMonth).getDate())
+                );
+              }
+              // If that period is already invoiced (paid or overdue), the
+              // invoice paths own it — no lease-based reminder.
+              const { data: periodInv } = await supabase
+                .from("invoices")
+                .select("id")
+                .eq("lease_id", lease.id)
+                .eq("period_start", format(startOfMonth(candidate), "yyyy-MM-dd"))
+                .neq("status", "cancelled")
+                .limit(1)
+                .maybeSingle();
+              if (!periodInv) upcomingDueDateStr = format(candidate, "yyyy-MM-dd");
+            }
+
+            if (upcomingDueDateStr) {
+              const daysUntilDue = differenceInCalendarDays(
+                parseISO(upcomingDueDateStr),
+                parseISO(todayStr)
+              );
+              if (daysUntilDue > 0 && upcomingSetting.days_before.includes(daysUntilDue)) {
+                await sendReminder(supabase, templateIndex, {
+                  tenantId: tenant.id as string,
+                  tenantName: tenant.full_name as string,
+                  phone: tenant.phone as string,
+                  email: tenant.email as string,
+                  language: (tenant.language_preference as string) || "en",
+                  unitNumber: unit.unit_number as string,
+                  propertyName: (property?.name as string) || "",
+                  amount: upcomingAmount,
+                  dueDate: upcomingDueDateStr,
+                  reminderType: "rent_upcoming",
+                });
+                results.rentUpcoming++;
+              }
+            }
           }
 
           // Overdue rent reminder — invoice-driven (checks ALL overdue invoices)

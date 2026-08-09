@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { sendWhatsAppTemplate, buildRentReminderComponents, buildOverdueReminderComponents } from "@/lib/whatsapp/client";
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
-import { addDays, format, differenceInDays, parseISO } from "date-fns";
+import { addDays, format, differenceInDays, differenceInCalendarDays, lastDayOfMonth, parseISO, startOfMonth } from "date-fns";
 
 export const maxDuration = 60;
 
@@ -132,7 +132,8 @@ async function gatherReminders(
 ): Promise<ReminderParams[]> {
   // Use Oman timezone (UTC+4) for date string, but keep `today` as real UTC for differenceInDays
   const today = new Date();
-  const todayStr = new Date(today.getTime() + 4 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const omanNow = new Date(today.getTime() + 4 * 60 * 60 * 1000);
+  const todayStr = omanNow.toISOString().split("T")[0];
   const gathered: ReminderParams[] = [];
 
   // Load configurable settings
@@ -186,25 +187,74 @@ async function gatherReminders(
         dueDate: todayStr,
       };
 
-      // Upcoming rent — find pending invoices with due_date >= today
+      // Upcoming rent — anchored to the tenant's actual due date and
+      // gated by the configured days_before rule, so a manual trigger at
+      // the start of the month no longer messages tenants whose rent is
+      // due mid-month. The earliest unpaid invoice wins; only when no
+      // invoice exists yet does the lease's payment_due_day decide,
+      // rolling into next month once this month's due day has passed.
       if (upcomingSetting.is_enabled) {
         const { data: upcomingInvs } = await supabase
           .from("invoices")
-          .select("amount, due_date, period_start")
+          .select("amount, paid_amount, due_date")
           .eq("lease_id", lease.id)
-          .eq("status", "pending")
+          .in("status", ["pending", "partial"])
           .gte("due_date", todayStr)
           .order("due_date", { ascending: true })
           .limit(1);
 
+        let upcomingDueDateStr: string | null = null;
+        let upcomingAmount = String(lease.monthly_rent);
+
         if (upcomingInvs && upcomingInvs.length > 0) {
           const inv = upcomingInvs[0];
-          gathered.push({
-            ...baseParams,
-            amount: String(inv.amount),
-            dueDate: inv.due_date as string,
-            reminderType: "rent_upcoming",
-          });
+          upcomingDueDateStr = inv.due_date as string;
+          upcomingAmount = String(
+            Number(inv.amount || 0) - Number(inv.paid_amount || 0)
+          );
+        } else {
+          const dueDay = (lease.payment_due_day as number) || 1;
+          const currentMonth = omanNow.getMonth();
+          const currentYear = omanNow.getFullYear();
+          let candidate = new Date(
+            currentYear,
+            currentMonth,
+            Math.min(dueDay, lastDayOfMonth(new Date(currentYear, currentMonth, 1)).getDate())
+          );
+          if (format(candidate, "yyyy-MM-dd") < todayStr) {
+            const nextMonth = new Date(currentYear, currentMonth + 1, 1);
+            candidate = new Date(
+              nextMonth.getFullYear(),
+              nextMonth.getMonth(),
+              Math.min(dueDay, lastDayOfMonth(nextMonth).getDate())
+            );
+          }
+          // If that period is already invoiced (paid or overdue), the
+          // invoice paths own it — no lease-based reminder.
+          const { data: periodInv } = await supabase
+            .from("invoices")
+            .select("id")
+            .eq("lease_id", lease.id)
+            .eq("period_start", format(startOfMonth(candidate), "yyyy-MM-dd"))
+            .neq("status", "cancelled")
+            .limit(1)
+            .maybeSingle();
+          if (!periodInv) upcomingDueDateStr = format(candidate, "yyyy-MM-dd");
+        }
+
+        if (upcomingDueDateStr) {
+          const daysUntilDue = differenceInCalendarDays(
+            parseISO(upcomingDueDateStr),
+            parseISO(todayStr)
+          );
+          if (daysUntilDue > 0 && upcomingSetting.days_before.includes(daysUntilDue)) {
+            gathered.push({
+              ...baseParams,
+              amount: upcomingAmount,
+              dueDate: upcomingDueDateStr,
+              reminderType: "rent_upcoming",
+            });
+          }
         }
       }
 
