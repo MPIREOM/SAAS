@@ -3756,31 +3756,6 @@ async function executeTool(
       if (!invoice)
         return JSON.stringify({ error: `Invoice ${invoiceId} not found` });
 
-      const periodStart = invoice.period_start as string | null;
-      const paidDate = invoice.paid_date as string | null;
-      const lower = periodStart || (paidDate ? `${paidDate.slice(0, 4)}-01-01` : null);
-      const upper =
-        invoice.status === "paid" && paidDate
-          ? paidDate
-          : new Date().toISOString().slice(0, 10);
-
-      let paymentsQuery = supabase
-        .from("payments")
-        .select("id, amount, method, payment_date, reference_number, notes, created_at")
-        .eq("lease_id", invoice.lease_id as string)
-        .order("payment_date", { ascending: false });
-      if (lower) paymentsQuery = paymentsQuery.gte("payment_date", lower);
-      if (upper) paymentsQuery = paymentsQuery.lte("payment_date", upper);
-
-      const { data: payments, error: payErr } = await paymentsQuery;
-      if (payErr) return JSON.stringify({ error: payErr.message });
-
-      const { data: linkedCheques } = await supabase
-        .from("cheques")
-        .select("id, cheque_number, bank_name, cheque_date, amount, status, payment_id")
-        .eq("invoice_id", invoiceId)
-        .order("cheque_date", { ascending: false });
-
       const tenant = invoice.tenants as unknown as
         | Record<string, unknown>
         | null;
@@ -3791,43 +3766,72 @@ async function executeTool(
         | Record<string, unknown>
         | null;
 
+      const invoiceOut = {
+        id: invoice.id,
+        status: invoice.status,
+        amount: Number(invoice.amount || 0),
+        paid_amount: Number(invoice.paid_amount || 0),
+        due_date: invoice.due_date,
+        period_start: invoice.period_start,
+        period_end: invoice.period_end,
+        paid_date: invoice.paid_date,
+        tenant_name: tenant?.full_name || null,
+        unit_number: unit?.unit_number || null,
+        property_name: property?.name || null,
+      };
+
+      // Cheques explicitly linked to this invoice (authoritative).
+      const { data: linkedCheques } = await supabase
+        .from("cheques")
+        .select("id, cheque_number, bank_name, cheque_date, amount, status, payment_id")
+        .eq("invoice_id", invoiceId)
+        .order("cheque_date", { ascending: false });
+
+      const linkedChequesOut = (linkedCheques || []).map(
+        (c: Record<string, unknown>) => ({
+          id: c.id,
+          cheque_number: c.cheque_number,
+          bank_name: c.bank_name,
+          cheque_date: c.cheque_date,
+          amount: Number(c.amount || 0),
+          status: c.status,
+          payment_id: c.payment_id,
+        }),
+      );
+
+      if (invoice.status === "pending" || invoice.status === "overdue") {
+        return JSON.stringify({
+          invoice: invoiceOut,
+          payments: [],
+          linked_cheques: linkedChequesOut,
+          note: "This invoice is unpaid — no payments recorded yet.",
+        });
+      }
+
+      // Reuse the same shared matcher we use in get_tenant_invoices so the
+      // two tools never disagree about which payment paid which invoice.
+      const enriched = await attachPaymentsToInvoices(supabase, [
+        invoice as Record<string, unknown>,
+      ]);
+      const matchedPayments =
+        ((enriched[0] as Record<string, unknown>).payments as
+          | Record<string, unknown>[]
+          | undefined) || [];
+
+      const linkSources = new Set(
+        matchedPayments.map((p) => p.link_source as string),
+      );
+      const note = linkSources.has("heuristic")
+        ? "At least one payment was matched by date window (no payment.invoice_id FK). If multiple payments returned, ASK the user which one applies before changing anything."
+        : matchedPayments.length === 0 && invoice.status === "paid"
+          ? "Invoice is marked paid but no payment row matched the paid_date. The payment may have been deleted or the dates are out of sync — investigate carefully and do NOT assume the invoice was paid twice."
+          : "Payments matched via authoritative links (cheque-invoice link or paid_date match).";
+
       return JSON.stringify({
-        invoice: {
-          id: invoice.id,
-          status: invoice.status,
-          amount: Number(invoice.amount || 0),
-          paid_amount: Number(invoice.paid_amount || 0),
-          due_date: invoice.due_date,
-          period_start: invoice.period_start,
-          period_end: invoice.period_end,
-          paid_date: invoice.paid_date,
-          tenant_name: tenant?.full_name || null,
-          unit_number: unit?.unit_number || null,
-          property_name: property?.name || null,
-        },
-        payments: (payments || []).map((p: Record<string, unknown>) => ({
-          id: p.id,
-          method: p.method,
-          amount: Number(p.amount || 0),
-          payment_date: p.payment_date,
-          reference_number: p.reference_number || null,
-          notes: p.notes || null,
-        })),
-        linked_cheques: (linkedCheques || []).map(
-          (c: Record<string, unknown>) => ({
-            id: c.id,
-            cheque_number: c.cheque_number,
-            bank_name: c.bank_name,
-            cheque_date: c.cheque_date,
-            amount: Number(c.amount || 0),
-            status: c.status,
-            payment_id: c.payment_id,
-          }),
-        ),
-        note:
-          invoice.status === "pending" || invoice.status === "overdue"
-            ? "This invoice is unpaid — no payments recorded yet."
-            : "Payments are matched by lease_id and date window (invoices have no direct payment_id FK). Confirm with the user if multiple payments are returned.",
+        invoice: invoiceOut,
+        payments: matchedPayments,
+        linked_cheques: linkedChequesOut,
+        note,
       });
     }
 
@@ -4024,11 +4028,19 @@ async function executeTool(
 
 // ── Payment lookup helpers ────────────────────────────────────────────────
 
-// Fetch payments for a list of invoices and attach a `payments` array to each
-// paid/partial invoice. Payments don't carry a direct invoice_id FK, so we
-// match by lease_id + a date window covering the invoice period through the
-// invoice's paid_date. This is a heuristic but is the same correlation the
-// rest of the system uses (e.g. owner ledger).
+// Match payments to invoices. There is no payment.invoice_id FK in the
+// schema, so we use the most authoritative signals available:
+//  1. cheques.invoice_id → cheques.payment_id (true link, when the cheque
+//     was attached to an invoice).
+//  2. For status='paid': payments on the same lease whose payment_date
+//     equals invoice.paid_date (i.e. the closing payment that flipped it
+//     to paid).
+//  3. For status='partial': fall back to a date-window heuristic
+//     (period_start → today) and tag results with link_source='heuristic'
+//     so the agent knows the match is fuzzy.
+// A previous version used the broad date window for all paid invoices,
+// which over-matched when one lease had multiple invoices and produced
+// false "this invoice was paid twice" reports.
 async function attachPaymentsToInvoices(
   supabase: ReturnType<typeof getAdminSupabase>,
   invoices: Record<string, unknown>[],
@@ -4041,48 +4053,92 @@ async function attachPaymentsToInvoices(
   const leaseIds = Array.from(
     new Set(needsPayments.map((i) => i.lease_id as string).filter(Boolean)),
   );
+  const invoiceIds = needsPayments.map((i) => i.id as string);
   if (leaseIds.length === 0) return invoices;
 
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("id, lease_id, amount, method, payment_date, reference_number, notes")
-    .in("lease_id", leaseIds)
-    .order("payment_date", { ascending: false });
+  const [paymentsRes, chequesRes] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("id, lease_id, amount, method, payment_date, reference_number, notes")
+      .in("lease_id", leaseIds)
+      .order("payment_date", { ascending: false }),
+    supabase
+      .from("cheques")
+      .select("id, invoice_id, payment_id, cheque_number, amount, cheque_date, status")
+      .in("invoice_id", invoiceIds),
+  ]);
 
-  const allPayments = (payments || []) as Record<string, unknown>[];
+  const allPayments = (paymentsRes.data || []) as Record<string, unknown>[];
+  const chequesByInvoice = new Map<string, Record<string, unknown>[]>();
+  for (const c of (chequesRes.data || []) as Record<string, unknown>[]) {
+    const key = c.invoice_id as string;
+    if (!key) continue;
+    const arr = chequesByInvoice.get(key) || [];
+    arr.push(c);
+    chequesByInvoice.set(key, arr);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const formatPayment = (
+    p: Record<string, unknown>,
+    linkSource: string,
+  ) => ({
+    id: p.id,
+    method: p.method,
+    amount: Number(p.amount || 0),
+    payment_date: p.payment_date,
+    reference_number: p.reference_number || null,
+    notes: p.notes || null,
+    link_source: linkSource,
+  });
 
   return invoices.map((inv) => {
     if (inv.status !== "paid" && inv.status !== "partial") return inv;
 
     const leaseId = inv.lease_id as string;
-    const periodStart = inv.period_start as string | null;
     const paidDate = inv.paid_date as string | null;
-    // Lower bound: invoice period start (fall back to a year before paid_date
-    // if period_start is missing). Upper bound: paid_date for fully-paid
-    // invoices (the payment that completed it), otherwise today.
-    const lower = periodStart || (paidDate ? `${paidDate.slice(0, 4)}-01-01` : "");
-    const upper =
-      inv.status === "paid" && paidDate
-        ? paidDate
-        : new Date().toISOString().slice(0, 10);
+    const periodStart = inv.period_start as string | null;
 
-    const matched = allPayments
-      .filter((p) => p.lease_id === leaseId)
-      .filter((p) => {
+    const matched: Record<string, unknown>[] = [];
+    const seen = new Set<string>();
+
+    // 1. Authoritative: cheques explicitly linked to this invoice.
+    const linkedCheques = chequesByInvoice.get(inv.id as string) || [];
+    for (const c of linkedCheques) {
+      const pid = c.payment_id as string | null;
+      if (!pid) continue;
+      const p = allPayments.find((pp) => pp.id === pid);
+      if (p && !seen.has(p.id as string)) {
+        matched.push(formatPayment(p, "cheque_invoice_link"));
+        seen.add(p.id as string);
+      }
+    }
+
+    // 2. For fully-paid invoices: closing payment(s) on paid_date.
+    if (inv.status === "paid" && paidDate) {
+      for (const p of allPayments) {
+        if (p.lease_id !== leaseId) continue;
+        if (p.payment_date !== paidDate) continue;
+        if (seen.has(p.id as string)) continue;
+        matched.push(formatPayment(p, "paid_date_match"));
+        seen.add(p.id as string);
+      }
+    }
+
+    // 3. For partial invoices: window heuristic, flagged as fuzzy.
+    if (inv.status === "partial") {
+      for (const p of allPayments) {
+        if (p.lease_id !== leaseId) continue;
         const d = p.payment_date as string;
-        if (!d) return false;
-        if (lower && d < lower) return false;
-        if (upper && d > upper) return false;
-        return true;
-      })
-      .map((p) => ({
-        id: p.id,
-        method: p.method,
-        amount: Number(p.amount || 0),
-        payment_date: p.payment_date,
-        reference_number: p.reference_number || null,
-        notes: p.notes || null,
-      }));
+        if (!d) continue;
+        if (periodStart && d < periodStart) continue;
+        if (d > today) continue;
+        if (seen.has(p.id as string)) continue;
+        matched.push(formatPayment(p, "heuristic"));
+        seen.add(p.id as string);
+      }
+    }
 
     return { ...inv, payments: matched };
   });
@@ -4377,6 +4433,8 @@ YOU CAN:
     - get_tenant_invoices already returns a payments[] array on each paid/partial invoice (with method). Read that first.
     - If the user asks about a single specific invoice or you need more detail, call get_invoice_payments with the invoice_id.
     - NEVER say "the method isn't shown" without first calling one of these tools.
+    - CRITICAL — DO NOT REPORT "PAID TWICE": An invoice cannot be paid twice — mark_invoice_paid refuses to record a payment against an already-paid invoice. If the payments[] array contains more than one row, that is almost always a multi-payment paid invoice (one closing payment plus an earlier partial), or a fuzzy match (link_source: "heuristic"). NEVER tell the user "this invoice was paid twice" or "in cash AND cheque" — the system prevents that. Instead: present the payments factually, note the link_source on each, and if anything looks ambiguous ask "which of these is the correct one for this invoice?" before drawing conclusions.
+    - Trust link_source: "cheque_invoice_link" (authoritative — a cheque row points at this invoice) and "paid_date_match" (the payment dated exactly the day the invoice flipped to paid). Treat link_source: "heuristic" as a guess and tell the user explicitly.
 15. Fix the payment method on a previous payment — "actually that was a cheque, not cash", "change Feb's payment to bank transfer", "fix the method"
     - First call get_invoice_payments (or rely on the payments[] from get_tenant_invoices) to find the payment_id.
     - Then call update_payment_method with payment_id and new_method.
