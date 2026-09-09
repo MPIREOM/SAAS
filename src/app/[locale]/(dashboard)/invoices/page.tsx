@@ -21,6 +21,7 @@ import {
 import { InvoicesTabs } from "@/components/invoices/invoices-tabs";
 import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
 import { CancelInvoiceButton } from "@/components/invoices/cancel-invoice-button";
+import { RevertPaidButton } from "@/components/invoices/revert-paid-button";
 import { CreateInvoiceButton } from "@/components/invoices/create-invoice-button";
 import { CURRENCY } from "@/lib/currency";
 
@@ -607,16 +608,28 @@ export default async function InvoicesPage({
                             >
                               <Printer className="h-3 w-3" />
                             </Link>
+                            {(isPaid || isPartial) && (
+                              <RevertPaidButton
+                                invoiceId={invoice.id as string}
+                                amount={String(invoice.amount)}
+                                paidAmount={String(invoice.paid_amount || 0)}
+                                tenantName={
+                                  (tenant?.full_name as string) || "—"
+                                }
+                              />
+                            )}
+                            {!isWrittenOff && !isCancelled && (
+                              <CancelInvoiceButton
+                                invoiceId={invoice.id as string}
+                                amount={String(invoice.amount)}
+                                paidAmount={String(invoice.paid_amount || 0)}
+                                tenantName={
+                                  (tenant?.full_name as string) || "—"
+                                }
+                              />
+                            )}
                             {!isPaid && !isWrittenOff && !isCancelled && (
                               <>
-                                <CancelInvoiceButton
-                                  invoiceId={invoice.id as string}
-                                  amount={String(invoice.amount)}
-                                  paidAmount={String(invoice.paid_amount || 0)}
-                                  tenantName={
-                                    (tenant?.full_name as string) || "—"
-                                  }
-                                />
                                 <MarkPaidButton
                                   invoiceId={invoice.id as string}
                                   amount={String(invoice.amount)}
@@ -747,14 +760,24 @@ export default async function InvoicesPage({
                       >
                         <Printer aria-hidden="true" className="h-3.5 w-3.5" />
                       </Link>
+                      {(isPaid || isPartial) && (
+                        <RevertPaidButton
+                          invoiceId={invoice.id as string}
+                          amount={String(invoice.amount)}
+                          paidAmount={String(invoice.paid_amount || 0)}
+                          tenantName={(tenant?.full_name as string) || "—"}
+                        />
+                      )}
+                      {!isWrittenOff && !isCancelled && (
+                        <CancelInvoiceButton
+                          invoiceId={invoice.id as string}
+                          amount={String(invoice.amount)}
+                          paidAmount={String(invoice.paid_amount || 0)}
+                          tenantName={(tenant?.full_name as string) || "—"}
+                        />
+                      )}
                       {!isPaid && !isWrittenOff && !isCancelled && (
                         <>
-                          <CancelInvoiceButton
-                            invoiceId={invoice.id as string}
-                            amount={String(invoice.amount)}
-                            paidAmount={String(invoice.paid_amount || 0)}
-                            tenantName={(tenant?.full_name as string) || "—"}
-                          />
                           <MarkPaidButton
                             invoiceId={invoice.id as string}
                             amount={String(invoice.amount)}

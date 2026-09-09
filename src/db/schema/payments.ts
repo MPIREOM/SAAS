@@ -133,6 +133,12 @@ export const payments = pgTable("payments", {
   tenantId: uuid("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
+  // The invoice this payment settled (nullable — legacy rows and advance
+  // payments spanning several invoices may not have one). Used to find the
+  // exact rows to remove when a payment is reverted.
+  invoiceId: uuid("invoice_id").references(() => invoices.id, {
+    onDelete: "set null",
+  }),
   amount: numeric("amount").notNull(),
   paymentDate: date("payment_date").notNull(),
   method: paymentMethodEnum("method"),
@@ -152,6 +158,10 @@ export const paymentsRelations = relations(payments, ({ one, many }) => ({
   tenant: one(tenants, {
     fields: [payments.tenantId],
     references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [payments.invoiceId],
+    references: [invoices.id],
   }),
   cheques: many(cheques),
 }));

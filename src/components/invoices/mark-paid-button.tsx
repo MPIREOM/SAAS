@@ -224,6 +224,7 @@ export function MarkPaidButton({
         .insert({
           lease_id: invoice.lease_id,
           tenant_id: invoice.tenant_id,
+          invoice_id: invoiceId,
           amount: totalPaymentAmount,
           payment_date: paidDate,
           method,
