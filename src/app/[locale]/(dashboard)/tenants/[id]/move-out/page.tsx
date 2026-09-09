@@ -528,6 +528,7 @@ export default function MoveOutPage({
       await supabase.from("payments").insert({
         lease_id: inv.lease_id,
         tenant_id: inv.tenant_id,
+        invoice_id: inv.id,
         amount: settleAmount,
         payment_date: vacateDate,
         method: "cash",

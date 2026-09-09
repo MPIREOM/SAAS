@@ -6,6 +6,14 @@ import {
   getEarlyTerminationCommissionForLease,
 } from "@/lib/owners/balance";
 import { getExpensesSummary } from "@/lib/expenses/summary";
+import {
+  INVOICE_REVERT_SELECT,
+  findInvoicePayments,
+  isRevertableStatus,
+  revertInvoicePayment,
+  type InvoiceForRevert,
+  type InvoicePaymentCandidate,
+} from "@/lib/invoices/revert-payment";
 
 const anthropic = new Anthropic({
   // callClaude() below owns retry logic, so disable the SDK's built-in retries
@@ -535,7 +543,7 @@ const tools: Anthropic.Tool[] = [
   {
     name: "cancel_invoice",
     description:
-      "Cancel or write off an invoice. Use 'cancelled' when the invoice was created by mistake or is no longer needed. Use 'written_off' when the debt is uncollectable.",
+      "Cancel or write off an invoice. Use 'cancelled' when the invoice was created by mistake or is no longer needed. Use 'written_off' when the debt is uncollectable. Works on PAID and PARTIAL invoices too: the payment(s) recorded against the invoice are deleted along with it (so the owner ledger is corrected). If the tool returns { needs_confirmation: true, candidate_payments: [...] }, show the user those payments and ask which to remove, then re-call with payment_ids (or keep_payments=true to leave the payment records in place).",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -552,8 +560,49 @@ const tools: Anthropic.Tool[] = [
           type: "string",
           description: "Reason for cancellation/write-off",
         },
+        payment_ids: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "For paid/partial invoices only: the payment UUIDs to delete together with the invoice. Take them from candidate_payments in a needs_confirmation response, or from get_invoice_payments. Omit to delete the payments directly linked to the invoice.",
+        },
+        keep_payments: {
+          type: "boolean",
+          description:
+            "For paid/partial invoices only: true to cancel the invoice but keep every payment record untouched. Default false.",
+        },
       },
       required: ["invoice_id", "action"],
+    },
+  },
+  {
+    name: "revert_invoice_to_unpaid",
+    description:
+      "Undo a payment that was recorded by mistake: deletes the payment record(s) for the invoice, re-opens any cheques the invoice cleared, and returns the invoice to 'pending' (or 'overdue' if the due date has passed) with paid_amount 0. Use for 'I recorded that payment by mistake', 'unit 12 did NOT pay, undo it', 'mark the March invoice unpaid again', 'reverse the payment on Ahmad's invoice'. Only works on paid or partial invoices. If the tool returns { needs_confirmation: true, candidate_payments: [...] }, list those payments (date, method, amount) to the user, ask which to remove, and re-call with payment_ids (or keep_payments=true to only reset the status). ALWAYS confirm with the user before calling this — it deletes financial records.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        invoice_id: {
+          type: "string",
+          description: "The invoice UUID to return to unpaid",
+        },
+        payment_ids: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "The payment UUIDs to delete. Take them from candidate_payments in a needs_confirmation response, or from get_invoice_payments. Omit to delete the payments directly linked to the invoice.",
+        },
+        keep_payments: {
+          type: "boolean",
+          description:
+            "true to reset the invoice to unpaid but keep every payment record untouched. Default false.",
+        },
+        reason: {
+          type: "string",
+          description: "Why the payment is being reverted (stored on the invoice notes)",
+        },
+      },
+      required: ["invoice_id"],
     },
   },
   {
@@ -1245,6 +1294,7 @@ async function executeTool(
         .insert({
           lease_id: invoice.lease_id,
           tenant_id: invoice.tenant_id,
+          invoice_id: invoiceId,
           amount: paymentAmount,
           payment_date: paidDate,
           method,
@@ -3242,22 +3292,82 @@ async function executeTool(
       // Fetch invoice
       const { data: invoice, error: fetchError } = await supabase
         .from("invoices")
-        .select("id, amount, status, tenant_id, tenants(full_name), units(unit_number)")
+        .select(
+          `${INVOICE_REVERT_SELECT}, tenants(full_name), units(unit_number)`,
+        )
         .eq("id", invoiceId)
         .single();
 
       if (fetchError || !invoice)
         return JSON.stringify({ error: "Invoice not found" });
 
-      if (invoice.status === "paid")
-        return JSON.stringify({
-          error: "Cannot cancel a paid invoice. It has already been settled.",
-        });
-
       if (invoice.status === "cancelled" || invoice.status === "written_off")
         return JSON.stringify({
           error: `Invoice is already ${invoice.status}`,
         });
+
+      const tenant = invoice.tenants as unknown as Record<string, unknown> | null;
+      const unit = invoice.units as unknown as Record<string, unknown> | null;
+
+      // Paid / partial invoice being CANCELLED: the recorded payment(s) go
+      // with it, otherwise the money stays on the owner ledger against
+      // nothing. Write-off keeps payments (the tenant really did pay part).
+      const hasMoney = Number(invoice.paid_amount || 0) > 0;
+      if (action === "cancelled" && hasMoney) {
+        const invoiceForRevert = invoice as unknown as InvoiceForRevert;
+        const resolved = await resolvePaymentsForUndo(
+          supabase,
+          invoiceForRevert,
+          input,
+        );
+        if ("needs_confirmation" in resolved) {
+          return JSON.stringify({
+            ...resolved,
+            invoice_id: invoiceId,
+            tenant_name: tenant?.full_name,
+            unit_number: unit?.unit_number,
+          });
+        }
+
+        const result = await revertInvoicePayment(supabase, {
+          invoice: invoiceForRevert,
+          paymentIds: resolved.paymentIds,
+          target: "cancelled",
+          reason: input.reason as string | undefined,
+          today: omanTodayIso(),
+        });
+        if (!result.ok)
+          return JSON.stringify({ error: result.error || "Cancel failed" });
+
+        await supabase.from("audit_log").insert({
+          user_id: userId,
+          action: "cancel_invoice",
+          entity_type: "invoice",
+          entity_id: invoiceId,
+          metadata: {
+            new_status: "cancelled",
+            reason,
+            deleted_payment_ids: result.deleted_payment_ids,
+            source: "whatsapp_agent",
+          },
+        });
+
+        return JSON.stringify({
+          success: true,
+          invoice_id: invoiceId,
+          tenant_name: tenant?.full_name,
+          unit_number: unit?.unit_number,
+          amount: invoice.amount,
+          previous_status: invoice.status,
+          new_status: "cancelled",
+          deleted_payments: result.deleted_payment_ids.length,
+          reason,
+          note:
+            result.deleted_payment_ids.length > 0
+              ? "The linked payment record(s) were deleted; the owner balance is recalculated automatically."
+              : "No payment records were deleted — the invoice status was changed only.",
+        });
+      }
 
       const { error: updateError } = await supabase
         .from("invoices")
@@ -3284,9 +3394,6 @@ async function executeTool(
         },
       });
 
-      const tenant = invoice.tenants as unknown as Record<string, unknown> | null;
-      const unit = invoice.units as unknown as Record<string, unknown> | null;
-
       return JSON.stringify({
         success: true,
         invoice_id: invoiceId,
@@ -3295,6 +3402,88 @@ async function executeTool(
         amount: invoice.amount,
         new_status: action,
         reason,
+      });
+    }
+
+    case "revert_invoice_to_unpaid": {
+      const invoiceId = input.invoice_id as string;
+      if (!invoiceId)
+        return JSON.stringify({ error: "invoice_id is required" });
+
+      const { data: invoice, error: fetchError } = await supabase
+        .from("invoices")
+        .select(
+          `${INVOICE_REVERT_SELECT}, tenants(full_name), units(unit_number)`,
+        )
+        .eq("id", invoiceId)
+        .single();
+
+      if (fetchError || !invoice)
+        return JSON.stringify({ error: "Invoice not found" });
+
+      if (!isRevertableStatus(invoice.status as string))
+        return JSON.stringify({
+          error: `Invoice is ${invoice.status} — only paid or partial invoices can be returned to unpaid.`,
+        });
+
+      const tenant = invoice.tenants as unknown as Record<string, unknown> | null;
+      const unit = invoice.units as unknown as Record<string, unknown> | null;
+      const invoiceForRevert = invoice as unknown as InvoiceForRevert;
+
+      const resolved = await resolvePaymentsForUndo(
+        supabase,
+        invoiceForRevert,
+        input,
+      );
+      if ("needs_confirmation" in resolved) {
+        return JSON.stringify({
+          ...resolved,
+          invoice_id: invoiceId,
+          tenant_name: tenant?.full_name,
+          unit_number: unit?.unit_number,
+        });
+      }
+
+      const result = await revertInvoicePayment(supabase, {
+        invoice: invoiceForRevert,
+        paymentIds: resolved.paymentIds,
+        target: "unpaid",
+        reason: input.reason as string | undefined,
+        today: omanTodayIso(),
+      });
+      if (!result.ok)
+        return JSON.stringify({ error: result.error || "Revert failed" });
+
+      await supabase.from("audit_log").insert({
+        user_id: userId,
+        action: "revert_payment",
+        entity_type: "invoice",
+        entity_id: invoiceId,
+        metadata: {
+          previous_status: invoice.status,
+          new_status: result.new_status,
+          deleted_payment_ids: result.deleted_payment_ids,
+          reopened_cheques: result.reopened_cheque_count,
+          reason: (input.reason as string) || null,
+          source: "whatsapp_agent",
+        },
+      });
+
+      return JSON.stringify({
+        success: true,
+        invoice_id: invoiceId,
+        tenant_name: tenant?.full_name,
+        unit_number: unit?.unit_number,
+        amount: Number(invoice.amount),
+        previously_paid: Number(invoice.paid_amount || 0),
+        previous_status: invoice.status,
+        new_status: result.new_status,
+        deleted_payments: result.deleted_payment_ids.length,
+        reopened_cheques: result.reopened_cheque_count,
+        note:
+          result.deleted_payment_ids.length > 0
+            ? "Payment record(s) deleted; the owner balance is recalculated automatically."
+            : "No payment records were deleted — only the invoice status and paid amount were reset.",
       });
     }
 
@@ -3764,16 +3953,31 @@ async function executeTool(
           ? paidDate
           : new Date().toISOString().slice(0, 10);
 
-      let paymentsQuery = supabase
+      // Payments recorded since the invoice_id link exists are exact
+      // matches; older ones fall back to the lease + date-window heuristic.
+      const { data: linkedPayments, error: linkedErr } = await supabase
         .from("payments")
         .select("id, amount, method, payment_date, reference_number, notes, created_at")
-        .eq("lease_id", invoice.lease_id as string)
+        .eq("invoice_id", invoiceId)
         .order("payment_date", { ascending: false });
-      if (lower) paymentsQuery = paymentsQuery.gte("payment_date", lower);
-      if (upper) paymentsQuery = paymentsQuery.lte("payment_date", upper);
+      if (linkedErr) return JSON.stringify({ error: linkedErr.message });
 
-      const { data: payments, error: payErr } = await paymentsQuery;
-      if (payErr) return JSON.stringify({ error: payErr.message });
+      let payments = linkedPayments || [];
+      const matchedByLink = payments.length > 0;
+      if (!matchedByLink) {
+        let paymentsQuery = supabase
+          .from("payments")
+          .select("id, amount, method, payment_date, reference_number, notes, created_at")
+          .eq("lease_id", invoice.lease_id as string)
+          .is("invoice_id", null)
+          .order("payment_date", { ascending: false });
+        if (lower) paymentsQuery = paymentsQuery.gte("payment_date", lower);
+        if (upper) paymentsQuery = paymentsQuery.lte("payment_date", upper);
+
+        const { data: inferred, error: payErr } = await paymentsQuery;
+        if (payErr) return JSON.stringify({ error: payErr.message });
+        payments = inferred || [];
+      }
 
       const { data: linkedCheques } = await supabase
         .from("cheques")
@@ -3827,7 +4031,9 @@ async function executeTool(
         note:
           invoice.status === "pending" || invoice.status === "overdue"
             ? "This invoice is unpaid — no payments recorded yet."
-            : "Payments are matched by lease_id and date window (invoices have no direct payment_id FK). Confirm with the user if multiple payments are returned.",
+            : matchedByLink
+              ? "Payments are linked directly to this invoice."
+              : "Payments are matched by lease_id and date window (older payments have no direct invoice link). Confirm with the user if multiple payments are returned.",
       });
     }
 
@@ -4029,6 +4235,60 @@ async function executeTool(
 // match by lease_id + a date window covering the invoice period through the
 // invoice's paid_date. This is a heuristic but is the same correlation the
 // rest of the system uses (e.g. owner ledger).
+// ── Undo-payment helpers ──────────────────────────────────────────────────
+
+function omanTodayIso(): string {
+  // Oman is UTC+4 with no DST.
+  return new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * Work out which payment rows to delete when reverting/cancelling a paid
+ * invoice, based on what the model passed:
+ *   - keep_payments → none
+ *   - payment_ids   → exactly those (scoped to the invoice's lease later)
+ *   - otherwise     → payments linked via payments.invoice_id. If there are
+ *                     none but a heuristic match exists (legacy payments),
+ *                     hand the candidates back so the model confirms with
+ *                     the user before anything is deleted.
+ */
+async function resolvePaymentsForUndo(
+  supabase: ReturnType<typeof getAdminSupabase>,
+  invoice: InvoiceForRevert,
+  input: Record<string, unknown>,
+): Promise<
+  | { paymentIds: string[] }
+  | {
+      needs_confirmation: true;
+      reason: string;
+      candidate_payments: InvoicePaymentCandidate[];
+      message: string;
+    }
+> {
+  if (input.keep_payments === true) return { paymentIds: [] };
+
+  const explicit = Array.isArray(input.payment_ids)
+    ? (input.payment_ids as unknown[]).filter(
+        (x): x is string => typeof x === "string" && x.length > 0,
+      )
+    : [];
+  if (explicit.length > 0) return { paymentIds: explicit };
+
+  const candidates = await findInvoicePayments(supabase, invoice);
+  if (candidates.length === 0) return { paymentIds: [] };
+
+  const linked = candidates.filter((c) => c.linked);
+  if (linked.length > 0) return { paymentIds: linked.map((c) => c.id) };
+
+  return {
+    needs_confirmation: true,
+    reason: "payments_matched_by_date",
+    candidate_payments: candidates,
+    message:
+      "No payment is linked directly to this invoice; these payments were matched by lease and date. Show them to the user (date, method, amount) and ask which to remove, then re-call with payment_ids — or keep_payments=true to change only the invoice status.",
+  };
+}
+
 async function attachPaymentsToInvoices(
   supabase: ReturnType<typeof getAdminSupabase>,
   invoices: Record<string, unknown>[],
@@ -4045,14 +4305,27 @@ async function attachPaymentsToInvoices(
 
   const { data: payments } = await supabase
     .from("payments")
-    .select("id, lease_id, amount, method, payment_date, reference_number, notes")
+    .select("id, lease_id, invoice_id, amount, method, payment_date, reference_number, notes")
     .in("lease_id", leaseIds)
     .order("payment_date", { ascending: false });
 
   const allPayments = (payments || []) as Record<string, unknown>[];
 
+  const toSummary = (p: Record<string, unknown>) => ({
+    id: p.id,
+    method: p.method,
+    amount: Number(p.amount || 0),
+    payment_date: p.payment_date,
+    reference_number: p.reference_number || null,
+    notes: p.notes || null,
+  });
+
   return invoices.map((inv) => {
     if (inv.status !== "paid" && inv.status !== "partial") return inv;
+
+    // Exact link first (payments recorded since payments.invoice_id exists).
+    const linked = allPayments.filter((p) => p.invoice_id === inv.id);
+    if (linked.length > 0) return { ...inv, payments: linked.map(toSummary) };
 
     const leaseId = inv.lease_id as string;
     const periodStart = inv.period_start as string | null;
@@ -4067,7 +4340,7 @@ async function attachPaymentsToInvoices(
         : new Date().toISOString().slice(0, 10);
 
     const matched = allPayments
-      .filter((p) => p.lease_id === leaseId)
+      .filter((p) => p.lease_id === leaseId && !p.invoice_id)
       .filter((p) => {
         const d = p.payment_date as string;
         if (!d) return false;
@@ -4075,14 +4348,7 @@ async function attachPaymentsToInvoices(
         if (upper && d > upper) return false;
         return true;
       })
-      .map((p) => ({
-        id: p.id,
-        method: p.method,
-        amount: Number(p.amount || 0),
-        payment_date: p.payment_date,
-        reference_number: p.reference_number || null,
-        notes: p.notes || null,
-      }));
+      .map(toSummary);
 
     return { ...inv, payments: matched };
   });
@@ -4401,6 +4667,12 @@ YOU CAN:
 21. Register a tenant / save their ID — "add this tenant", "register him", "here's his ID", "save this passport for Ahmad"
     - Use register_tenant for a NEW tenant. Read name/nationality/national ID off any ID photo yourself; ask the user for the phone (always) and, if they want a lease, the unit, monthly rent and start/end dates. If an ID photo was sent, pass id_document_token so the photo is saved to the tenant's file. Pass unit_id + monthly_rent + lease_start_date + lease_end_date to create the lease in the same call.
     - Use attach_tenant_document to save a photo (ID, passport, lease) to an EXISTING tenant — resolve the tenant first, then pass tenant_id + attachment_token.
+22. Undo a payment / return an invoice to unpaid — "I recorded that payment by mistake", "unit 12 did NOT pay, undo it", "mark March unpaid again", "reverse the payment for Ahmad", "that was the wrong invoice"
+    - Find the invoice first (get_unit_by_number / get_tenant_invoices — it must be paid or partial), then call revert_invoice_to_unpaid with the invoice_id. It deletes the payment record(s), re-opens any cheque the invoice cleared, and puts the invoice back to pending/overdue.
+    - If it returns { needs_confirmation: true, candidate_payments: [...] }, list those payments (date, method, amount) and ask the user which one(s) to remove, then re-call with payment_ids. Use keep_payments=true only if the user explicitly wants the payment record kept.
+    - Because this deletes financial records, confirm with the user before calling it unless they were explicit ("undo it", "yes revert it").
+    - If the user wants the PAID invoice gone entirely ("cancel that invoice, it should never have existed"), use cancel_invoice with action='cancelled' instead — it also removes the payment(s) and follows the same needs_confirmation flow.
+    - If the user just wants to change HOW it was paid (cash vs cheque), do NOT revert — use update_payment_method.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
@@ -4415,7 +4687,7 @@ BEHAVIOR RULES:
 - FORMATTING — WhatsApp uses SINGLE asterisks for bold (e.g. *Tenant:* Ammar). NEVER use double asterisks (**Tenant:**) — WhatsApp renders them as literal stars. Use single * for bold and _ for italic. No Markdown headings (#).
 - Include amounts with "OMR" suffix.
 - When updating rent, search for the tenant first, get their lease ID, then use update_lease_rent.
-- When cancelling an invoice, search for the tenant and their invoices first, then cancel the right one.
+- When cancelling an invoice, search for the tenant and their invoices first, then cancel the right one. Paid invoices CAN be cancelled or returned to unpaid — never tell the user a paid invoice cannot be changed; use revert_invoice_to_unpaid (undo the payment) or cancel_invoice (void it and its payment).
 - NEVER say "I don't have a function for that" — you have tools for everything listed above.
 - CRITICAL — DUPLICATE EXPENSES: If add_expense returns { requires_confirmation: true, reason: "possible_duplicate" }, do NOT record anything yet. Tell the user a matching expense already exists (quote its amount/category/date from existing_expenses) and ask whether this is a genuinely separate expense or one you already recorded. If it is the SAME expense, do NOT re-record — and if a duplicate is already in the ledger, call delete_expense to remove the extra copy. Only call add_expense again with confirm_duplicate=true if the user confirms it is a separate, legitimate expense. NEVER set confirm_duplicate=true just to clear the warning.
 - CRITICAL — DUPLICATE SETTLEMENTS: If record_owner_settlement returns { requires_confirmation: true, reason: "possible_duplicate" }, do NOT record anything yet. Tell the user a matching settlement already exists (quote its amount/date/direction from existing_settlements) and ask whether this is a genuinely separate payment or a duplicate. If they say it is the SAME payment recorded twice, do NOT re-record — instead call delete_owner_settlement to remove the extra copy. Only call record_owner_settlement again with confirm_duplicate=true if they confirm it is a separate, legitimate payment.

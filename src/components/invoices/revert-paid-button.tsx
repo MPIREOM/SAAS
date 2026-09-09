@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
-import { Ban } from "lucide-react";
+import { Undo2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import {
   Dialog,
@@ -29,44 +29,45 @@ import {
 } from "@/lib/invoices/revert-payment";
 import { InvoicePaymentsPicker } from "./invoice-payments-picker";
 
-interface CancelInvoiceButtonProps {
+interface RevertPaidButtonProps {
   invoiceId: string;
   amount: string;
   paidAmount?: string;
   tenantName: string;
 }
 
-export function CancelInvoiceButton({
+/**
+ * "Return to unpaid" — undoes a payment recorded by mistake. Deletes the
+ * selected payment rows, re-opens any cheques the invoice retired, and puts
+ * the invoice back to pending/overdue with paid_amount 0.
+ */
+export function RevertPaidButton({
   invoiceId,
   amount,
-  paidAmount: existingPaidAmount,
+  paidAmount,
   tenantName,
-}: CancelInvoiceButtonProps) {
+}: RevertPaidButtonProps) {
   const t = useTranslations("invoices");
   const tc = useTranslations("common");
   const router = useRouter();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [reason, setReason] = useState("");
-  // Only used when the invoice already has money recorded against it.
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [invoice, setInvoice] = useState<InvoiceForRevert | null>(null);
   const [payments, setPayments] = useState<InvoicePaymentCandidate[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [reason, setReason] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const totalAmount = Number(amount);
-  const alreadyPaid = Number(existingPaidAmount || 0);
-  const hasPayments = alreadyPaid > 0;
+  const alreadyPaid = Number(paidAmount || 0);
 
   async function openDialog() {
     setOpen(true);
-    setReason("");
-    setLoadError(null);
-    if (!hasPayments) return;
-
     setLoadingPayments(true);
+    setLoadError(null);
+    setReason("");
     const supabase = createClient();
     const { data, error } = await supabase
       .from("invoices")
@@ -82,6 +83,7 @@ export function CancelInvoiceButton({
     setInvoice(inv);
     const found = await findInvoicePayments(supabase, inv);
     setPayments(found);
+    // Exact matches are pre-selected; inferred ones need an explicit tick.
     setSelectedIds(found.filter((p) => p.linked).map((p) => p.id));
     setLoadingPayments(false);
   }
@@ -92,56 +94,37 @@ export function CancelInvoiceButton({
     );
   }
 
-  async function handleCancel() {
+  async function handleRevert() {
+    if (!invoice) return;
     setLoading(true);
     const supabase = createClient();
 
-    let error: string | null = null;
-    let deletedPaymentIds: string[] = [];
+    const result = await revertInvoicePayment(supabase, {
+      invoice,
+      paymentIds: selectedIds,
+      target: "unpaid",
+      reason,
+    });
 
-    if (hasPayments && invoice) {
-      // Paid / partial invoice: remove the selected payments, then void it.
-      const result = await revertInvoicePayment(supabase, {
-        invoice,
-        paymentIds: selectedIds,
-        target: "cancelled",
-        reason,
-      });
-      error = result.ok ? null : result.error || t("cancelFailed");
-      deletedPaymentIds = result.deleted_payment_ids;
-    } else {
-      const cancelNote = reason ? `Cancelled: ${reason}` : "Cancelled manually";
-      const { error: updateError } = await supabase
-        .from("invoices")
-        .update({
-          status: "cancelled",
-          notes: cancelNote,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", invoiceId);
-      error = updateError?.message ?? null;
-    }
-
-    if (!error) {
+    if (result.ok) {
       await logAudit(supabase, {
-        action: "cancel_invoice",
+        action: "revert_payment",
         entity_type: "invoice",
         entity_id: invoiceId,
-        metadata: hasPayments
-          ? { deleted_payment_ids: deletedPaymentIds, reason: reason || null }
-          : undefined,
+        metadata: {
+          new_status: result.new_status,
+          deleted_payment_ids: result.deleted_payment_ids,
+          reopened_cheques: result.reopened_cheque_count,
+          reason: reason || null,
+        },
       });
-
       setOpen(false);
-      toast({
-        title: t("invoiceCancelled"),
-        variant: "success",
-      });
+      toast({ title: t("revert.success"), variant: "success" });
       router.refresh();
     } else {
       toast({
-        title: t("cancelFailed"),
-        description: error,
+        title: t("revert.failed"),
+        description: result.error,
         variant: "destructive",
       });
     }
@@ -153,27 +136,23 @@ export function CancelInvoiceButton({
       <button
         type="button"
         onClick={openDialog}
-        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-destructive text-xs rounded-md border border-border/50 hover:border-destructive/30 hover:bg-destructive/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
-        title={t("cancelInvoice")}
-        aria-label={t("cancelInvoice")}
+        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-warning text-xs rounded-md border border-border/50 hover:border-warning/30 hover:bg-warning/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
+        title={t("revert.title")}
+        aria-label={t("revert.title")}
       >
-        <Ban className="h-3 w-3" aria-hidden="true" />
+        <Undo2 className="h-3 w-3 rtl:rotate-180" aria-hidden="true" />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          maxWidth={hasPayments ? "max-w-md" : "max-w-sm"}
-          className="flex max-h-[90vh] flex-col"
-        >
+        <DialogContent maxWidth="max-w-md" className="flex max-h-[90vh] flex-col">
           <DialogHeader>
-            <DialogTitle>{t("cancelInvoice")}</DialogTitle>
-            <DialogDescription>{t("cancelInvoiceDescription")}</DialogDescription>
+            <DialogTitle>{t("revert.title")}</DialogTitle>
+            <DialogDescription>{t("revert.description")}</DialogDescription>
           </DialogHeader>
 
           <DialogBody className="space-y-4 overflow-y-auto">
-            {/* Warning */}
-            <Alert variant="destructive" className="text-xs">
-              {hasPayments ? t("cancelPaidWarning") : t("cancelWarning")}
+            <Alert variant="warning" className="text-xs">
+              {t("revert.warning")}
             </Alert>
 
             {/* Invoice summary */}
@@ -189,75 +168,59 @@ export function CancelInvoiceButton({
                 </div>
                 <div className="text-end shrink-0">
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
-                    {t("amount")}
+                    {t("paidAmount")}
                   </p>
                   <p className="text-lg font-bold font-mono tabular-nums ltr-nums text-text-primary">
-                    {totalAmount.toLocaleString("en-OM", {
-                      minimumFractionDigits: 2,
-                    })}
+                    {alreadyPaid.toLocaleString("en-OM", { minimumFractionDigits: 2 })}
                     <span className="text-xs font-sans font-normal text-text-secondary ms-1">
+                      / {totalAmount.toLocaleString("en-OM", { minimumFractionDigits: 2 })}{" "}
                       {CURRENCY.code}
                     </span>
                   </p>
-                  {alreadyPaid > 0 && (
-                    <p className="text-[10px] text-warning mt-0.5">
-                      {t("paidAmount")}:{" "}
-                      <span className="font-mono ltr-nums">
-                        {alreadyPaid.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
-                      </span>
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
 
-            {/* Payments recorded against the invoice */}
-            {hasPayments &&
-              (loadError ? (
-                <Alert variant="destructive" className="text-xs">
-                  {loadError}
-                </Alert>
-              ) : (
-                <InvoicePaymentsPicker
-                  loading={loadingPayments}
-                  payments={payments}
-                  selectedIds={selectedIds}
-                  onToggle={toggle}
-                />
-              ))}
+            {loadError ? (
+              <Alert variant="destructive" className="text-xs">
+                {loadError}
+              </Alert>
+            ) : (
+              <InvoicePaymentsPicker
+                loading={loadingPayments}
+                payments={payments}
+                selectedIds={selectedIds}
+                onToggle={toggle}
+              />
+            )}
 
-            {hasPayments && !loadingPayments && payments.length > 0 && selectedIds.length === 0 && (
+            {!loadingPayments && payments.length > 0 && selectedIds.length === 0 && (
               <p className="text-xs text-text-secondary">{t("revert.keepPaymentsHint")}</p>
             )}
 
-            {/* Reason */}
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
               label={t("cancelReason")}
-              placeholder={t("cancelReasonPlaceholder")}
+              placeholder={t("revert.reasonPlaceholder")}
               className="min-h-0 resize-none"
             />
           </DialogBody>
 
           <DialogFooter className="pt-4 border-t border-border/40">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setOpen(false)}
-            >
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               {tc("cancel")}
             </Button>
             <Button
               type="button"
               variant="destructive"
-              onClick={handleCancel}
+              onClick={handleRevert}
               loading={loading}
-              disabled={hasPayments && (loadingPayments || !invoice || !!loadError)}
+              disabled={loadingPayments || !invoice || !!loadError}
             >
-              {!loading && <Ban className="h-4 w-4" aria-hidden="true" />}
-              {t("confirmCancel")}
+              {!loading && <Undo2 className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />}
+              {t("revert.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

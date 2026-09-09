@@ -569,7 +569,22 @@
     "invoicePeriodExistsWithStatus": "An invoice for this lease and period already exists (status: {status}).",
     "invoicePeriodExists": "An invoice for this lease and period already exists.",
     "invoiceCreatedFor": "Invoice created for {name}",
-    "viewPdf": "View PDF"
+    "viewPdf": "View PDF",
+    "cancelPaidWarning": "This invoice already has a payment recorded. Cancelling it will void the invoice and delete the selected payment records. This cannot be undone.",
+    "revert": {
+      "title": "Return to unpaid",
+      "description": "Undo the payment recorded on this invoice and put it back to unpaid.",
+      "warning": "The selected payment records will be deleted and any cheques cleared by this invoice will go back to pending. The owner balance is recalculated automatically.",
+      "paymentsToRemove": "Payments to remove",
+      "noPaymentsFound": "No payment records were found for this invoice. Only the invoice status will be reset.",
+      "inferredWarning": "These payments were matched by date and lease, not linked directly. Check them before removing.",
+      "inferredMatch": "matched by date",
+      "keepPaymentsHint": "No payments selected — the payment records will be kept and only the invoice status will change.",
+      "reasonPlaceholder": "e.g. Recorded against the wrong invoice…",
+      "confirm": "Return to unpaid",
+      "success": "Invoice returned to unpaid",
+      "failed": "Failed to revert payment"
+    }
   },
   "cheques": {
     "title": "Cheques",
