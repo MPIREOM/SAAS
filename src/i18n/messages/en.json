@@ -820,6 +820,18 @@
     "rulesMaxNotices": "Stop after",
     "rulesNotices": "notices",
     "rulesMaxNoticesHint": "Per newly overdue invoice. Empty = 3. Repeats at most every 3 days.",
+    "delivery": "Delivery",
+    "deliveryStatuses": {
+      "sent": "Not delivered",
+      "delivered": "Delivered",
+      "read": "Read",
+      "failed": "Failed"
+    },
+    "undelivered": "Undelivered WhatsApp reminders",
+    "undeliveredHint": "WhatsApp accepted these messages but never delivered them within 48 hours, or reported a failure. WhatsApp does not say why; a tenant who blocked the number or changed phones looks exactly like this.",
+    "undeliveredNone": "Every recent WhatsApp reminder was delivered.",
+    "undeliveredAttempts": "{count, plural, one {# undelivered message} other {# undelivered messages}}",
+    "lastAttempt": "Last attempt",
     "subject": "Subject",
     "deleteTemplateConfirm": "Are you sure you want to delete this template? This action cannot be undone.",
     "availableVariables": "Available variables",

@@ -44,6 +44,13 @@ export const reminderLogs = pgTable("reminder_logs", {
   status: reminderStatusEnum("status").notNull().default("pending"),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   errorMessage: text("error_message"),
+  /** Meta message id (wamid) for WhatsApp sends; matches delivery receipts. */
+  providerMessageId: text("provider_message_id"),
+  /** Latest WhatsApp receipt: sent | delivered | read | failed. */
+  deliveryStatus: text("delivery_status"),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  deliveryError: text("delivery_error"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

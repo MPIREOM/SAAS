@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
-import { Bell, FileText, Plus, Pencil } from "lucide-react";
+import { AlertTriangle, Bell, FileText, Plus, Pencil } from "lucide-react";
+import { findUndeliveredTenants } from "@/lib/whatsapp/delivery-receipts";
 import { ReminderTriggerButton } from "@/components/reminders/trigger-button";
 import { ReminderRules } from "@/components/reminders/reminder-rules";
 import { PageHeader } from "@/components/ui/page-header";
@@ -51,11 +52,18 @@ export default async function RemindersPage({
     remindersQuery = remindersQuery.in("tenant_id", accessibleTenantIds.length > 0 ? accessibleTenantIds : ["__no_access__"]);
   }
 
-  // Log and templates load in parallel
-  const [{ data: reminders }, { data: templates }] = await Promise.all([
+  // Log, templates and the undelivered list load in parallel
+  const [{ data: reminders }, { data: templates }, undelivered] = await Promise.all([
     remindersQuery,
     supabase.from("notification_templates").select("*").order("name"),
+    findUndeliveredTenants(supabase, { days: 30, tenantIds: accessibleTenantIds }),
   ]);
+
+  const deliveryVariant = (s: string): "success" | "destructive" | "warning" => {
+    if (s === "delivered" || s === "read") return "success";
+    if (s === "failed") return "destructive";
+    return "warning";
+  };
 
   const statusVariant = (s: string): "success" | "destructive" | "warning" => {
     if (s === "sent") return "success";
@@ -80,6 +88,55 @@ export default async function RemindersPage({
       <PageHeader title={t("title")} description={t("subtitle")}>
         <ReminderTriggerButton />
       </PageHeader>
+
+      {/* Undelivered WhatsApp reminders — the closest signal WhatsApp gives
+          that a tenant has blocked the number or is unreachable. */}
+      <section className="space-y-4 animate-fade-in-up">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10 border border-warning/15">
+            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-warning" />
+          </span>
+          <h2 className="text-lg font-semibold text-text-primary font-display">
+            {t("undelivered")}
+          </h2>
+          {undelivered.length > 0 && (
+            <span className="rounded-md border border-border/40 bg-surface-elevated px-2 py-0.5 font-mono text-xs font-medium text-text-secondary ltr-nums">
+              {undelivered.length}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-text-secondary">{t("undeliveredHint")}</p>
+        {undelivered.length > 0 ? (
+          <ul className="divide-y divide-border/40 overflow-hidden rounded-xl border border-border/60 bg-surface">
+            {undelivered.map((u) => (
+              <li key={u.tenantId} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-text-primary">{u.tenantName}</p>
+                  <p className="mt-0.5 font-mono text-xs text-text-secondary ltr-nums">{u.phone || "—"}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={deliveryVariant(u.lastStatus)}>
+                    {t(`deliveryStatuses.${u.lastStatus}`)}
+                  </Badge>
+                  <span className="text-xs text-text-secondary">
+                    {t("undeliveredAttempts", { count: u.attempts })}
+                  </span>
+                  <span className="font-mono text-xs text-text-secondary ltr-nums">
+                    {t("lastAttempt")}: {new Date(u.lastSentAt).toLocaleDateString()}
+                  </span>
+                </div>
+                {u.lastError && (
+                  <p className="w-full truncate text-xs text-text-secondary">{u.lastError}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="rounded-xl border border-border/60 bg-surface p-4 text-sm text-text-secondary">
+            {t("undeliveredNone")}
+          </p>
+        )}
+      </section>
 
       {/* Reminder Log Section */}
       <section className="space-y-4 animate-fade-in-up">
@@ -109,6 +166,7 @@ export default async function RemindersPage({
                     <TableHead className="px-4">{t("type")}</TableHead>
                     <TableHead className="px-4">{t("channel")}</TableHead>
                     <TableHead className="px-4">{t("status")}</TableHead>
+                    <TableHead className="px-4">{t("delivery")}</TableHead>
                     <TableHead className="px-4">{t("message")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -140,6 +198,15 @@ export default async function RemindersPage({
                           {reminder.status ? (
                             <Badge variant={statusVariant(reminder.status as string)}>
                               {t(`statuses.${reminder.status}`)}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-text-secondary">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4">
+                          {reminder.delivery_status ? (
+                            <Badge variant={deliveryVariant(reminder.delivery_status as string)}>
+                              {t(`deliveryStatuses.${reminder.delivery_status}`)}
                             </Badge>
                           ) : (
                             <span className="text-xs text-text-secondary">—</span>
@@ -186,6 +253,11 @@ export default async function RemindersPage({
                       {Boolean(reminder.status) && (
                         <Badge variant={statusVariant(reminder.status as string)}>
                           {t(`statuses.${reminder.status}`)}
+                        </Badge>
+                      )}
+                      {Boolean(reminder.delivery_status) && (
+                        <Badge variant={deliveryVariant(reminder.delivery_status as string)}>
+                          {t(`deliveryStatuses.${reminder.delivery_status}`)}
                         </Badge>
                       )}
                     </div>

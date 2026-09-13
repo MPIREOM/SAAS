@@ -679,6 +679,9 @@ async function sendReminder(
       status: whatsappResult.success ? "sent" : "failed",
       sent_at: new Date().toISOString(),
       error_message: whatsappResult.error || null,
+      // Meta's message id, so delivery receipts can be matched back.
+      provider_message_id: whatsappResult.messageId || null,
+      delivery_status: whatsappResult.success ? "sent" : null,
     });
   }
 

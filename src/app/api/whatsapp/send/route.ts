@@ -77,6 +77,8 @@ export async function POST(request: NextRequest) {
     status: result.success ? "sent" : "failed",
     sent_at: new Date().toISOString(),
     error_message: result.error || null,
+    provider_message_id: result.messageId || null,
+    delivery_status: result.success ? "sent" : null,
   });
 
   if (!result.success) {
