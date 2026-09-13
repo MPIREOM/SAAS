@@ -6,6 +6,7 @@ import { CheckCircle2, Link2, RefreshCw, XCircle } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { TemplateCreateOutcome, WhatsAppSetupStatus } from "@/lib/whatsapp/setup";
 
@@ -46,7 +47,8 @@ export function WhatsAppSetupPanel() {
   const [status, setStatus] = useState<WhatsAppSetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"webhooks" | "templates" | null>(null);
+  const [busy, setBusy] = useState<"webhooks" | "templates" | "register" | null>(null);
+  const [pin, setPin] = useState("");
   const [notice, setNotice] = useState<{ variant: "success" | "destructive"; text: string } | null>(null);
   const [outcomes, setOutcomes] = useState<TemplateCreateOutcome[]>([]);
 
@@ -68,17 +70,23 @@ export function WhatsAppSetupPanel() {
     void load();
   }, [load]);
 
-  async function runAction(kind: "webhooks" | "templates") {
+  async function runAction(kind: "webhooks" | "templates" | "register") {
     setBusy(kind);
     setNotice(null);
     try {
-      const res = await fetch(`/api/whatsapp/setup/${kind}`, { method: "POST" });
+      const res = await fetch(`/api/whatsapp/setup/${kind}`, {
+        method: "POST",
+        ...(kind === "register"
+          ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) }
+          : {}),
+      });
       const data = await res.json();
       if (!res.ok) {
         setNotice({ variant: "destructive", text: data.error || t("setupActionFailed") });
         return;
       }
       if (kind === "templates") setOutcomes((data.results as TemplateCreateOutcome[]) ?? []);
+      if (kind === "register") setPin("");
       setNotice({ variant: "success", text: t("setupDone") });
       await load();
     } catch {
@@ -191,6 +199,35 @@ export function WhatsAppSetupPanel() {
               <Mono>{status.phone.platformType ?? "—"}</Mono>
               {status.phone.nameStatus && <Badge variant={statusVariant(status.phone.nameStatus)}>{status.phone.nameStatus}</Badge>}
             </Row>
+            {status.phone.status !== "CONNECTED" && (
+              <div className="space-y-2 pt-3">
+                <p className="text-sm text-text-secondary">{t("setupRegisterHint")}</p>
+                <form
+                  className="flex flex-wrap items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void runAction("register");
+                  }}
+                >
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    minLength={6}
+                    maxLength={6}
+                    autoComplete="off"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="••••••"
+                    aria-label={t("setupPin")}
+                    className="h-9 w-32 font-mono ltr-nums"
+                  />
+                  <Button type="submit" size="sm" loading={busy === "register"} disabled={busy !== null || pin.length !== 6}>
+                    {t("setupRegister")}
+                  </Button>
+                </form>
+              </div>
+            )}
           </>
         ) : null}
       </Section>

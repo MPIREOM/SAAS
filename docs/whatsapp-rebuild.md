@@ -26,7 +26,7 @@ reads the same names and must not pick them up.
 
 | Variable | Value |
 | --- | --- |
-| `WHATSAPP_ACCESS_TOKEN` | the system-user token |
+| `WHATSAPP_ACCESS_TOKEN` | the system-user token. Copy it from Meta straight into Vercel; a token pasted into a chat, ticket or email is compromised — invalidate it (developers.facebook.com/tools/debug/accesstoken → Invalidate) and generate a new one |
 | `WHATSAPP_PHONE_NUMBER_ID` | Phone number ID from WhatsApp Manager / App dashboard |
 | `WHATSAPP_BUSINESS_ACCOUNT_ID` | the new WABA ID (optional but recommended) |
 | `WHATSAPP_APP_SECRET` | App dashboard → App settings → Basic → App secret |
@@ -41,7 +41,11 @@ Settings → **WhatsApp Setup** (super admin only), or `/settings/whatsapp-setup
 
 1. **Environment**: every required variable shows "Set".
 2. **Access token**: valid, never expires, the App ID is the new app.
-3. **Phone number**: status `CONNECTED`, platform `CLOUD_API`.
+3. **Phone number**: status `CONNECTED`, platform `CLOUD_API`. A number that
+   was only added in WhatsApp Manager shows `PENDING`: enter a 6-digit PIN in
+   the **Register number** form and submit. That call registers the number for
+   the Cloud API and sets its two-step verification PIN (keep the PIN; Meta
+   asks for it when the number is ever moved or deleted).
 4. **Connect webhooks**: registers the app's `whatsapp_business_account`
    webhook at this deployment (Meta verifies the URL with the verify token on
    the spot) with the fields `messages`, `account_update`, `account_alerts`,

@@ -9,6 +9,7 @@ import {
   getPhoneNumber,
   getWabaSubscribedApps,
   listTemplates,
+  registerPhoneNumber,
   setAppSubscription,
   subscribeAppToWaba,
   whatsAppAdminEnv,
@@ -233,4 +234,14 @@ export async function createMissingTemplates(supabase: SupabaseClient): Promise<
     );
   }
   return { ok: true, data: { results } };
+}
+
+/** Register the configured number for Cloud API with the given two-step PIN. */
+export async function registerNumber(pin: string): Promise<ActionResult<{ success: boolean }>> {
+  const env = whatsAppAdminEnv();
+  if (!env.accessToken) return { ok: false, error: "WHATSAPP_ACCESS_TOKEN is not set in Vercel." };
+  if (!env.phoneNumberId) return { ok: false, error: "WHATSAPP_PHONE_NUMBER_ID is not set in Vercel." };
+  const r = await registerPhoneNumber(env, pin);
+  if (!r.ok) return { ok: false, error: r.error };
+  return { ok: true, data: r.data };
 }

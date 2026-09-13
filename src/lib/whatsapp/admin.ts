@@ -197,6 +197,27 @@ export async function getPhoneNumber(env: WhatsAppAdminEnv): Promise<GraphResult
   };
 }
 
+/**
+ * Register the phone number for Cloud API use. Adding a number in WhatsApp
+ * Manager only verifies ownership; until this call succeeds the number
+ * shows PENDING and cannot send or receive. The PIN becomes (or must match)
+ * the number's two-step verification PIN. Idempotent on an already
+ * registered number.
+ */
+export async function registerPhoneNumber(env: WhatsAppAdminEnv, pin: string): Promise<GraphResult<{ success: boolean }>> {
+  const missing = needToken(env);
+  if (missing) return missing;
+  if (!env.phoneNumberId) return fail("WHATSAPP_PHONE_NUMBER_ID is not set");
+  if (!/^\d{6}$/.test(pin)) return fail("The PIN must be exactly 6 digits");
+  const r = await graph<{ success?: boolean }>(`${env.phoneNumberId}/register`, {
+    token: env.accessToken!,
+    method: "POST",
+    json: { messaging_product: "whatsapp", pin },
+  });
+  if (!r.ok) return r;
+  return { ok: true, data: { success: Boolean(r.data.success) } };
+}
+
 // ---------------------------------------------------------------------------
 // WhatsApp Business Account discovery
 // ---------------------------------------------------------------------------
