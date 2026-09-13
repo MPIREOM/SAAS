@@ -65,6 +65,8 @@ export const reminderSettings = pgTable("reminder_settings", {
   reminderType: reminderTypeEnum("reminder_type").notNull().unique(),
   daysBefore: integer("days_before").array().notNull().default(sql`'{}'`),
   repeatIntervalDays: integer("repeat_interval_days"),
+  /** Overdue only: notices per newly overdue invoice (null = default 3). */
+  maxRepeats: integer("max_repeats"),
   isEnabled: boolean("is_enabled").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

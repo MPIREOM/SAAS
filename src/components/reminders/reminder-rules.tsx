@@ -13,8 +13,14 @@ interface ReminderSetting {
   reminder_type: string;
   days_before: number[];
   repeat_interval_days: number | null;
+  max_repeats?: number | null;
   is_enabled: boolean;
 }
+
+// Mirrors MIN_OVERDUE_REPEAT_DAYS / MAX_OVERDUE_MAX_REPEATS on the server;
+// the API rejects anything outside these bounds.
+const MIN_OVERDUE_REPEAT_DAYS = 3;
+const MAX_OVERDUE_MAX_REPEATS = 20;
 
 export function ReminderRules() {
   const t = useTranslations("reminders");
@@ -85,6 +91,16 @@ export function ReminderRules() {
     setSaved(false);
   }
 
+  function updateMaxRepeats(type: string, value: string) {
+    const num = value === "" ? null : parseInt(value, 10);
+    setSettings((prev) =>
+      prev.map((s) =>
+        s.reminder_type === type ? { ...s, max_repeats: num } : s
+      )
+    );
+    setSaved(false);
+  }
+
   async function handleSave() {
     setSaving(true);
     setError("");
@@ -99,6 +115,7 @@ export function ReminderRules() {
             reminder_type: s.reminder_type,
             days_before: s.days_before,
             repeat_interval_days: s.repeat_interval_days,
+            max_repeats: s.reminder_type === "rent_overdue" ? (s.max_repeats ?? null) : null,
             is_enabled: s.is_enabled,
           })),
         }),
@@ -254,7 +271,7 @@ export function ReminderRules() {
                       <div className="flex items-center gap-2">
                         <Input
                           type="number"
-                          min="1"
+                          min={MIN_OVERDUE_REPEAT_DAYS}
                           value={setting.repeat_interval_days ?? ""}
                           onChange={(e) =>
                             updateRepeatInterval(
@@ -270,6 +287,35 @@ export function ReminderRules() {
                           {t("rulesDays")}
                         </span>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Notice cap (only for overdue) */}
+                  {isOverdue && (
+                    <div>
+                      <p className="mb-1.5 block text-xs text-text-secondary">
+                        {t("rulesMaxNotices")}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          max={MAX_OVERDUE_MAX_REPEATS}
+                          value={setting.max_repeats ?? ""}
+                          onChange={(e) =>
+                            updateMaxRepeats(setting.reminder_type, e.target.value)
+                          }
+                          placeholder="3"
+                          aria-label={t("rulesMaxNotices")}
+                          className="h-8 w-20 px-2 py-0 font-mono ltr-nums"
+                        />
+                        <span className="text-xs text-text-secondary">
+                          {t("rulesNotices")}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-text-secondary">
+                        {t("rulesMaxNoticesHint")}
+                      </p>
                     </div>
                   )}
                 </div>

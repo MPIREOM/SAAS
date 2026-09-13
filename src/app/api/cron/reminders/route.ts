@@ -6,6 +6,11 @@ import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, differenceInCalendarDays, lastDayOfMonth, parseISO, startOfMonth } from "date-fns";
 import { runAdminSummary, wasAdminSummaryRunToday } from "@/app/api/cron/admin-summary/route";
 import { checkBearer } from "@/lib/crypto/safe-compare";
+import {
+  decideOverdueSend,
+  loadOverdueSendHistory,
+  type OverdueCapSetting,
+} from "@/lib/reminders/overdue-cap";
 
 // Vercel Cron: runs daily at 8:00 AM (configured in vercel.json)
 export const maxDuration = 300;
@@ -59,6 +64,8 @@ export async function GET(request: NextRequest) {
   const results = {
     rentUpcoming: 0,
     rentOverdue: 0,
+    // Overdue notices withheld by the per-tenant cap (see overdue-cap.ts).
+    rentOverdueSuppressed: { capReached: 0, tooSoon: 0 },
     chequeDue: 0,
     leaseExpiry: 0,
     errors: 0,
@@ -82,15 +89,16 @@ export async function GET(request: NextRequest) {
 
     // Load configurable reminder settings
     const { data: settingsRows } = await supabase.from("reminder_settings").select("*");
-    const settingsMap = new Map<string, { days_before: number[]; repeat_interval_days: number | null; is_enabled: boolean }>();
+    type ReminderSettingRow = OverdueCapSetting & { days_before: number[]; is_enabled: boolean };
+    const settingsMap = new Map<string, ReminderSettingRow>();
     // Defaults
     settingsMap.set("rent_upcoming", { days_before: [3], repeat_interval_days: null, is_enabled: true });
-    settingsMap.set("rent_overdue", { days_before: [1], repeat_interval_days: 1, is_enabled: true });
+    settingsMap.set("rent_overdue", { days_before: [1], repeat_interval_days: 7, max_repeats: 3, is_enabled: true });
     settingsMap.set("lease_expiry", { days_before: [60, 30, 7], repeat_interval_days: null, is_enabled: true });
     settingsMap.set("cheque_due", { days_before: [3], repeat_interval_days: null, is_enabled: true });
     if (settingsRows) {
       for (const row of settingsRows) {
-        settingsMap.set(row.reminder_type, row as { days_before: number[]; repeat_interval_days: number | null; is_enabled: boolean });
+        settingsMap.set(row.reminder_type, row as ReminderSettingRow);
       }
     }
 
@@ -222,22 +230,20 @@ export async function GET(request: NextRequest) {
               .order("due_date", { ascending: true });
 
             if (overdueInvs && overdueInvs.length > 0) {
-              // Check when the last overdue reminder was sent for this tenant
-              const repeatDays = overdueSetting.repeat_interval_days || 3;
-              const { data: lastReminderRows } = await supabase
-                .from("reminder_logs")
-                .select("sent_at")
-                .eq("tenant_id", tenant.id as string)
-                .eq("reminder_type", "rent_overdue")
-                .eq("status", "sent")
-                .order("sent_at", { ascending: false })
-                .limit(1);
+              // Per-tenant cap: at most max_repeats notices per newly overdue
+              // invoice, never more often than the (floored) repeat interval.
+              const episodeStart = overdueInvs[overdueInvs.length - 1].due_date as string;
+              const history = await loadOverdueSendHistory(
+                supabase,
+                tenant.id as string,
+                episodeStart
+              );
+              const decision = decideOverdueSend(overdueSetting, history, today);
 
-              const lastReminder = lastReminderRows?.[0] || null;
-              const shouldSend = !lastReminder ||
-                differenceInDays(today, parseISO(lastReminder.sent_at as string)) >= repeatDays;
-
-              if (shouldSend) {
+              if (!decision.send) {
+                if (decision.reason === "cap_reached") results.rentOverdueSuppressed.capReached++;
+                else results.rentOverdueSuppressed.tooSoon++;
+              } else {
                 const overdueInvoices: OverdueInvoice[] = overdueInvs.map(
                   (inv: Record<string, unknown>) => ({
                     amount: String(Number(inv.amount || 0) - Number(inv.paid_amount || 0)),

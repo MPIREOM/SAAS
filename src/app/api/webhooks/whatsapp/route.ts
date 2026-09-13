@@ -5,6 +5,10 @@ import { safeEqual } from "@/lib/crypto/safe-compare";
 import { processWhatsAppMessage, type InlineImage } from "@/lib/whatsapp/agent";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp/client";
 import {
+  handleWhatsAppAccountEvent,
+  isAccountEventField,
+} from "@/lib/whatsapp/account-events";
+import {
   downloadWhatsAppMedia,
   extensionForMime,
   type DownloadedMedia,
@@ -151,6 +155,18 @@ export async function POST(request: NextRequest) {
     const changes = entry.changes || [];
     for (const change of changes) {
       const value = change.value;
+
+      // Account-level events (ban, restriction, quality downgrade,
+      // Coexistence disconnect, review outcome): log loudly, email the
+      // admins, and move on — there is no message to answer.
+      if (isAccountEventField(change.field)) {
+        await handleWhatsAppAccountEvent(
+          change.field,
+          (value ?? {}) as Record<string, unknown>,
+          typeof entry.id === "string" ? entry.id : undefined,
+        );
+        continue;
+      }
 
       // Handle incoming messages — text and image (image is treated as a
       // receipt photo for an expense the user is about to describe).
