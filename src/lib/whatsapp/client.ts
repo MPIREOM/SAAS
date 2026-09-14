@@ -155,6 +155,31 @@ export async function sendWhatsAppTextMessage(
   }
 }
 
+/**
+ * Lease expiry has no amount: {{1}} tenant, {{2}} unit, {{3}} property,
+ * {{4}} lease end date. Sending five parameters to a four-variable template
+ * is rejected by Meta (#132000), so this builder must stay in step with the
+ * mpire_lease_expiry_* templates (see template-definitions.ts).
+ */
+export function buildLeaseExpiryComponents(params: {
+  tenantName: string;
+  unitNumber: string;
+  propertyName: string;
+  endDate: string;
+}): TemplateComponent[] {
+  return [
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: params.tenantName },
+        { type: "text", text: params.unitNumber },
+        { type: "text", text: params.propertyName },
+        { type: "text", text: params.endDate },
+      ],
+    },
+  ];
+}
+
 export function buildOverdueReminderComponents(params: {
   tenantName: string;
   unitNumber: string;
