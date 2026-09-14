@@ -29,8 +29,14 @@ import { allTemplateDefinitions, type TemplateDefinition } from "./template-defi
 
 export const WEBHOOK_PATH = "/api/webhooks/whatsapp";
 
+/**
+ * Where Meta must deliver webhooks. WHATSAPP_WEBHOOK_BASE_URL wins; otherwise
+ * the origin the admin is using the setup page from (the deployment itself);
+ * NEXT_PUBLIC_APP_URL only as a last resort, because in this project it
+ * points at the public marketing site, not the app.
+ */
 export function webhookCallbackUrl(env: WhatsAppAdminEnv, fallbackOrigin: string | null): string | null {
-  const base = env.appUrl ?? fallbackOrigin;
+  const base = env.webhookBaseUrl ?? fallbackOrigin ?? env.appUrl;
   return base ? `${base.replace(/\/+$/, "")}${WEBHOOK_PATH}` : null;
 }
 
@@ -81,7 +87,7 @@ function envChecks(env: WhatsAppAdminEnv): EnvCheck[] {
     { name: "WHATSAPP_APP_SECRET", set: Boolean(env.appSecret), required: true },
     { name: "WHATSAPP_WEBHOOK_VERIFY_TOKEN", set: Boolean(env.verifyToken), required: true },
     { name: "WHATSAPP_BUSINESS_ACCOUNT_ID", set: Boolean(env.businessAccountId), required: false },
-    { name: "NEXT_PUBLIC_APP_URL", set: Boolean(env.appUrl), required: false },
+    { name: "WHATSAPP_WEBHOOK_BASE_URL", set: Boolean(env.webhookBaseUrl), required: false },
   ];
 }
 
@@ -169,7 +175,7 @@ export async function connectWebhooks(fallbackOrigin: string | null): Promise<Ac
   if (!env.appSecret) return { ok: false, error: "WHATSAPP_APP_SECRET is not set — the webhook would reject every delivery." };
   if (!env.verifyToken) return { ok: false, error: "WHATSAPP_WEBHOOK_VERIFY_TOKEN is not set in Vercel." };
   const callbackUrl = webhookCallbackUrl(env, fallbackOrigin);
-  if (!callbackUrl) return { ok: false, error: "Set NEXT_PUBLIC_APP_URL so the callback URL is known." };
+  if (!callbackUrl) return { ok: false, error: "Set WHATSAPP_WEBHOOK_BASE_URL so the callback URL is known." };
 
   const token = await debugToken(env);
   if (!token.ok) return { ok: false, error: `Token check failed: ${token.error}` };

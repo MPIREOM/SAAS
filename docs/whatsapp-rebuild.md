@@ -31,7 +31,7 @@ reads the same names and must not pick them up.
 | `WHATSAPP_BUSINESS_ACCOUNT_ID` | the new WABA ID (optional but recommended) |
 | `WHATSAPP_APP_SECRET` | App dashboard → App settings → Basic → App secret |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | any random string; you never type it into Meta yourself |
-| `NEXT_PUBLIC_APP_URL` | `https://saas-rho-kohl.vercel.app` (no trailing slash) |
+| `WHATSAPP_WEBHOOK_BASE_URL` | `https://saas-rho-kohl.vercel.app` (no trailing slash). Optional: without it the setup page uses the origin you open it from. Do not use `NEXT_PUBLIC_APP_URL` for this — in this project it points at the marketing site. |
 
 Redeploy after changing them.
 

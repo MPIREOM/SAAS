@@ -72,8 +72,10 @@ export interface WhatsAppAdminEnv {
   businessAccountId: string | null;
   appSecret: string | null;
   verifyToken: string | null;
-  /** Public base URL of this deployment, for the webhook callback. */
+  /** NEXT_PUBLIC_APP_URL — may point at the marketing site, so only a last resort. */
   appUrl: string | null;
+  /** WHATSAPP_WEBHOOK_BASE_URL — explicit base URL for the webhook callback. */
+  webhookBaseUrl: string | null;
 }
 
 function clean(v: string | undefined): string | null {
@@ -89,6 +91,7 @@ export function whatsAppAdminEnv(): WhatsAppAdminEnv {
     appSecret: clean(process.env.WHATSAPP_APP_SECRET),
     verifyToken: clean(process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN),
     appUrl: clean(process.env.NEXT_PUBLIC_APP_URL)?.replace(/\/+$/, "") ?? null,
+    webhookBaseUrl: clean(process.env.WHATSAPP_WEBHOOK_BASE_URL)?.replace(/\/+$/, "") ?? null,
   };
 }
 
