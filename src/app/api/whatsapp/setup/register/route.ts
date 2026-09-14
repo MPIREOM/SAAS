@@ -13,7 +13,11 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as { pin?: unknown };
   const pin = typeof body.pin === "string" ? body.pin.trim() : "";
   const result = await registerNumber(pin);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+  if (!result.ok) {
+    // Meta's error text only — never the PIN or token.
+    console.error("[WhatsApp Setup] register failed:", result.error);
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
   console.log("[WhatsApp Setup] Phone number registered for Cloud API");
   return NextResponse.json(result.data);
 }

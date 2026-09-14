@@ -9,7 +9,11 @@ export async function POST(request: NextRequest) {
   const denied = await requireSuperAdmin();
   if (denied) return denied;
   const result = await connectWebhooks(requestOrigin(request));
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+  if (!result.ok) {
+    // Meta's error text only — never the PIN or token.
+    console.error("[WhatsApp Setup] webhooks failed:", result.error);
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
   console.log("[WhatsApp Setup] Webhooks connected", result.data);
   return NextResponse.json(result.data);
 }

@@ -11,7 +11,11 @@ export async function POST() {
   if (denied) return denied;
   const supabase = await createClient();
   const result = await createMissingTemplates(supabase);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+  if (!result.ok) {
+    // Meta's error text only — never the PIN or token.
+    console.error("[WhatsApp Setup] templates failed:", result.error);
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
   console.log("[WhatsApp Setup] Templates submitted", {
     created: result.data.results.filter((r) => r.action === "created").length,
     failed: result.data.results.filter((r) => r.action === "failed").length,
