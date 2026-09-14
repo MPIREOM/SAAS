@@ -60,6 +60,20 @@ Settings → **WhatsApp Setup** (super admin only), or `/settings/whatsapp-setup
 6. Register the admin number again under Settings → WhatsApp AI Agent if it
    was removed, then send "Hello" to the new number.
 
+## Template parameter layouts
+
+The senders and the template definitions must agree on variable order; a
+mismatch is rejected by Meta at send time (#132000) and by the setup page
+at creation time.
+
+| Template | Variables |
+| --- | --- |
+| `mpire_rent_upcoming_*`, `mpire_cheque_due_*` | {{1}} tenant, {{2}} unit, {{3}} property, {{4}} amount, {{5}} due date |
+| `mpire_rent_overdue_*` | {{1}} tenant, {{2}} unit, {{3}} property, {{4}} total overdue, {{5}} per-invoice details |
+| `mpire_lease_expiry_*` | {{1}} tenant, {{2}} unit, {{3}} property, {{4}} lease end date (no amount) |
+| `daily_briefs` | 11 variables, see `template-definitions.ts` |
+| `owner_monthly_report` | document header + {{1}} owner, {{2}} month, {{3}} balance caption |
+
 ## Rules that keep the new number alive
 
 - Reminder cadence is capped in code: at most 3 overdue notices per newly
