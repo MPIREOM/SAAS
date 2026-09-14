@@ -26,6 +26,8 @@ interface GraphErrorBody {
     error_subcode?: number;
     error_user_msg?: string;
     error_user_title?: string;
+    /** Meta puts the actual reason here on generic codes such as (#100). */
+    error_data?: { details?: string; messaging_product?: string };
   };
 }
 
@@ -52,8 +54,12 @@ async function graph<T>(
     const data = (await res.json().catch(() => ({}))) as T & GraphErrorBody;
     if (!res.ok || data?.error) {
       const e = data?.error;
-      const message = e?.error_user_msg ?? e?.message ?? `Meta API error (HTTP ${res.status})`;
-      return fail(e?.code ? `(#${e.code}) ${message}` : message, e?.code ?? null, res.status);
+      const parts = [e?.error_user_title, e?.error_user_msg ?? e?.message, e?.error_data?.details]
+        .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+        .filter((v, i, arr) => arr.indexOf(v) === i);
+      const message = parts.join(" — ") || `Meta API error (HTTP ${res.status})`;
+      const subcode = e?.error_subcode ? `/${e.error_subcode}` : "";
+      return fail(e?.code ? `(#${e.code}${subcode}) ${message}` : message, e?.code ?? null, res.status);
     }
     return { ok: true, data };
   } catch (e) {
