@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import type { TemplateCreateOutcome, WhatsAppSetupStatus } from "@/lib/whatsapp/setup";
 
 type BadgeVariant = "success" | "destructive" | "warning" | "default";
+type ActionKind = "webhooks" | "templates" | "register" | "request-code" | "verify-code";
 
 function statusVariant(status: string | null): BadgeVariant {
   if (!status) return "warning";
@@ -47,8 +48,9 @@ export function WhatsAppSetupPanel() {
   const [status, setStatus] = useState<WhatsAppSetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"webhooks" | "templates" | "register" | null>(null);
+  const [busy, setBusy] = useState<ActionKind | null>(null);
   const [pin, setPin] = useState("");
+  const [code, setCode] = useState("");
   const [notice, setNotice] = useState<{ variant: "success" | "destructive"; text: string } | null>(null);
   const [outcomes, setOutcomes] = useState<TemplateCreateOutcome[]>([]);
 
@@ -70,15 +72,15 @@ export function WhatsAppSetupPanel() {
     void load();
   }, [load]);
 
-  async function runAction(kind: "webhooks" | "templates" | "register") {
+  async function runAction(kind: ActionKind, payload?: Record<string, string>) {
     setBusy(kind);
     setNotice(null);
     try {
+      const body =
+        kind === "register" ? { pin } : kind === "verify-code" ? { code } : payload;
       const res = await fetch(`/api/whatsapp/setup/${kind}`, {
         method: "POST",
-        ...(kind === "register"
-          ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) }
-          : {}),
+        ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -87,6 +89,7 @@ export function WhatsAppSetupPanel() {
       }
       if (kind === "templates") setOutcomes((data.results as TemplateCreateOutcome[]) ?? []);
       if (kind === "register") setPin("");
+      if (kind === "verify-code") setCode("");
       setNotice({ variant: "success", text: t("setupDone") });
       await load();
     } catch {
@@ -199,6 +202,56 @@ export function WhatsAppSetupPanel() {
               <Mono>{status.phone.platformType ?? "—"}</Mono>
               {status.phone.nameStatus && <Badge variant={statusVariant(status.phone.nameStatus)}>{status.phone.nameStatus}</Badge>}
             </Row>
+            <Row label={t("setupOwnership")}>
+              <Badge variant={status.phone.codeVerificationStatus === "VERIFIED" ? "success" : "warning"}>
+                {status.phone.codeVerificationStatus ?? "—"}
+              </Badge>
+            </Row>
+            {status.phone.codeVerificationStatus !== "VERIFIED" && (
+              <div className="space-y-2 pt-3">
+                <p className="text-sm text-text-secondary">{t("setupVerifyHint")}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void runAction("request-code", { method: "SMS" })}
+                    loading={busy === "request-code"}
+                    disabled={busy !== null}
+                  >
+                    {t("setupSendSms")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void runAction("request-code", { method: "VOICE" })}
+                    loading={busy === "request-code"}
+                    disabled={busy !== null}
+                  >
+                    {t("setupSendCall")}
+                  </Button>
+                </div>
+                <form
+                  className="flex flex-wrap items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void runAction("verify-code");
+                  }}
+                >
+                  <Input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                    placeholder="123456"
+                    aria-label={t("setupCode")}
+                    className="h-9 w-32 font-mono ltr-nums"
+                  />
+                  <Button type="submit" size="sm" loading={busy === "verify-code"} disabled={busy !== null || code.length < 4}>
+                    {t("setupVerify")}
+                  </Button>
+                </form>
+              </div>
+            )}
             {status.phone.status !== "CONNECTED" && (
               <div className="space-y-2 pt-3">
                 <p className="text-sm text-text-secondary">{t("setupRegisterHint")}</p>

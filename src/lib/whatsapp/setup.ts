@@ -10,7 +10,9 @@ import {
   getWabaSubscribedApps,
   listTemplates,
   registerPhoneNumber,
+  requestVerificationCode,
   setAppSubscription,
+  verifyCode,
   subscribeAppToWaba,
   whatsAppAdminEnv,
   WEBHOOK_FIELDS,
@@ -248,6 +250,26 @@ export async function registerNumber(pin: string): Promise<ActionResult<{ succes
   if (!env.accessToken) return { ok: false, error: "WHATSAPP_ACCESS_TOKEN is not set in Vercel." };
   if (!env.phoneNumberId) return { ok: false, error: "WHATSAPP_PHONE_NUMBER_ID is not set in Vercel." };
   const r = await registerPhoneNumber(env, pin);
+  if (!r.ok) return { ok: false, error: r.error };
+  return { ok: true, data: r.data };
+}
+
+/** Send the ownership verification code to the configured number. */
+export async function sendVerificationCode(method: "SMS" | "VOICE"): Promise<ActionResult<{ success: boolean }>> {
+  const env = whatsAppAdminEnv();
+  if (!env.accessToken) return { ok: false, error: "WHATSAPP_ACCESS_TOKEN is not set in Vercel." };
+  if (!env.phoneNumberId) return { ok: false, error: "WHATSAPP_PHONE_NUMBER_ID is not set in Vercel." };
+  const r = await requestVerificationCode(env, method);
+  if (!r.ok) return { ok: false, error: r.error };
+  return { ok: true, data: r.data };
+}
+
+/** Confirm the ownership verification code. */
+export async function confirmVerificationCode(code: string): Promise<ActionResult<{ success: boolean }>> {
+  const env = whatsAppAdminEnv();
+  if (!env.accessToken) return { ok: false, error: "WHATSAPP_ACCESS_TOKEN is not set in Vercel." };
+  if (!env.phoneNumberId) return { ok: false, error: "WHATSAPP_PHONE_NUMBER_ID is not set in Vercel." };
+  const r = await verifyCode(env, code);
   if (!r.ok) return { ok: false, error: r.error };
   return { ok: true, data: r.data };
 }

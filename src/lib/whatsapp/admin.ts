@@ -163,6 +163,8 @@ export interface PhoneNumberInfo {
   /** CLOUD_API, ON_PREMISE, NOT_APPLICABLE */
   platformType: string | null;
   messagingLimit: string | null;
+  /** VERIFIED, NOT_VERIFIED, EXPIRED — ownership check via SMS/voice code. */
+  codeVerificationStatus: string | null;
 }
 
 export async function getPhoneNumber(env: WhatsAppAdminEnv): Promise<GraphResult<PhoneNumberInfo>> {
@@ -178,10 +180,12 @@ export async function getPhoneNumber(env: WhatsAppAdminEnv): Promise<GraphResult
     name_status?: string;
     platform_type?: string;
     messaging_limit_tier?: string;
+    code_verification_status?: string;
   }>(env.phoneNumberId, {
     token: env.accessToken!,
     query: {
-      fields: "display_phone_number,verified_name,status,quality_rating,name_status,platform_type,messaging_limit_tier",
+      fields:
+        "display_phone_number,verified_name,status,quality_rating,name_status,platform_type,messaging_limit_tier,code_verification_status",
     },
   });
   if (!r.ok) return r;
@@ -196,8 +200,42 @@ export async function getPhoneNumber(env: WhatsAppAdminEnv): Promise<GraphResult
       nameStatus: r.data.name_status ?? null,
       platformType: r.data.platform_type ?? null,
       messagingLimit: r.data.messaging_limit_tier ?? null,
+      codeVerificationStatus: r.data.code_verification_status ?? null,
     },
   };
+}
+
+/** Ask Meta to send the ownership verification code to the number by SMS or voice call. */
+export async function requestVerificationCode(
+  env: WhatsAppAdminEnv,
+  method: "SMS" | "VOICE",
+  language = "en_US"
+): Promise<GraphResult<{ success: boolean }>> {
+  const missing = needToken(env);
+  if (missing) return missing;
+  if (!env.phoneNumberId) return fail("WHATSAPP_PHONE_NUMBER_ID is not set");
+  const r = await graph<{ success?: boolean }>(`${env.phoneNumberId}/request_code`, {
+    token: env.accessToken!,
+    method: "POST",
+    json: { code_method: method, language },
+  });
+  if (!r.ok) return r;
+  return { ok: true, data: { success: Boolean(r.data.success) } };
+}
+
+/** Confirm the ownership verification code Meta sent. */
+export async function verifyCode(env: WhatsAppAdminEnv, code: string): Promise<GraphResult<{ success: boolean }>> {
+  const missing = needToken(env);
+  if (missing) return missing;
+  if (!env.phoneNumberId) return fail("WHATSAPP_PHONE_NUMBER_ID is not set");
+  if (!/^\d{4,8}$/.test(code)) return fail("The verification code must be 4 to 8 digits");
+  const r = await graph<{ success?: boolean }>(`${env.phoneNumberId}/verify_code`, {
+    token: env.accessToken!,
+    method: "POST",
+    json: { code },
+  });
+  if (!r.ok) return r;
+  return { ok: true, data: { success: Boolean(r.data.success) } };
 }
 
 /**
