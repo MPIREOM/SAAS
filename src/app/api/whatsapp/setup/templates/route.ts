@@ -16,9 +16,13 @@ export async function POST() {
     console.error("[WhatsApp Setup] templates failed:", result.error);
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  const failed = result.data.results.filter((r) => r.action === "failed");
   console.log("[WhatsApp Setup] Templates submitted", {
     created: result.data.results.filter((r) => r.action === "created").length,
-    failed: result.data.results.filter((r) => r.action === "failed").length,
+    failed: failed.length,
   });
+  for (const f of failed) {
+    console.error(`[WhatsApp Setup] template ${f.name}/${f.language} failed: ${f.error}`);
+  }
   return NextResponse.json(result.data);
 }
