@@ -9,6 +9,7 @@ import {
 } from "@/lib/notifications/admin-notify";
 import { getDefaultOwnerBalance } from "@/lib/owners/balance";
 import { getExpensesSummary } from "@/lib/expenses/summary";
+import { findUndeliveredTenants } from "@/lib/whatsapp/delivery-receipts";
 import { checkBearer } from "@/lib/crypto/safe-compare";
 
 export const maxDuration = 60;
@@ -391,6 +392,30 @@ export async function runAdminSummary(
       });
     }
 
+    // Tenants whose WhatsApp reminders are not getting through — the closest
+    // signal WhatsApp gives that a tenant blocked the number. Email lists
+    // them; the WhatsApp brief gets a one-line count (folded into {{11}}).
+    const undelivered = await findUndeliveredTenants(supabase, { days: 30 }).catch(() => []);
+    const undeliveredLine =
+      undelivered.length > 0
+        ? `⚠️ *Undelivered reminders:* ${undelivered.length} tenant${undelivered.length !== 1 ? "s" : ""} (${undelivered
+            .slice(0, 3)
+            .map((u) => u.tenantName)
+            .join(", ")}${undelivered.length > 3 ? ", …" : ""})`
+        : "";
+    if (undelivered.length > 0) {
+      emailSections.push({
+        heading: `⚠️ Undelivered WhatsApp reminders (${undelivered.length})`,
+        items: [
+          ...undelivered.slice(0, 10).map((u) =>
+            `${u.tenantName} — ${u.phone || "no phone"} — ${u.attempts} undelivered, last ${new Date(u.lastSentAt).toISOString().slice(0, 10)}${u.lastStatus === "failed" ? ` — <em>${u.lastError || "failed"}</em>` : ""}`
+          ),
+          ...(undelivered.length > 10 ? [`<em>...and ${undelivered.length - 10} more</em>`] : []),
+          `<em>WhatsApp accepted these but never delivered them. A tenant who blocked the number looks exactly like this. Check the Reminders page.</em>`,
+        ],
+      });
+    }
+
     if (expensesSummary) {
       emailSections.push({
         heading: `🧾 Expenses (excl. business fees & commission)`,
@@ -448,6 +473,7 @@ export async function runAdminSummary(
       `📊 *Open Maintenance:* ${openMaintenance.length}`,
       ...(ownerBalanceLine ? [ownerBalanceLine] : []),
       ...(expensesLine ? [expensesLine] : []),
+      ...(undeliveredLine ? [undeliveredLine] : []),
     ];
 
     if (invoicesPending.length > 0) {
@@ -507,7 +533,7 @@ export async function runAdminSummary(
           // re-approval of the daily_briefs template). sanitiseTemplateParam
           // collapses any stray whitespace; the emoji prefixes keep the two
           // halves visually distinct on one line.
-          [ownerBalanceLine, expensesLine].filter(Boolean).join(" ") || "—",
+          [ownerBalanceLine, expensesLine, undeliveredLine].filter(Boolean).join(" ") || "—",
         ].map(sanitiseTemplateParam),
       },
     });

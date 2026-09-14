@@ -44,6 +44,13 @@ export const reminderLogs = pgTable("reminder_logs", {
   status: reminderStatusEnum("status").notNull().default("pending"),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   errorMessage: text("error_message"),
+  /** Meta message id (wamid) for WhatsApp sends; matches delivery receipts. */
+  providerMessageId: text("provider_message_id"),
+  /** Latest WhatsApp receipt: sent | delivered | read | failed. */
+  deliveryStatus: text("delivery_status"),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  deliveryError: text("delivery_error"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -65,6 +72,8 @@ export const reminderSettings = pgTable("reminder_settings", {
   reminderType: reminderTypeEnum("reminder_type").notNull().unique(),
   daysBefore: integer("days_before").array().notNull().default(sql`'{}'`),
   repeatIntervalDays: integer("repeat_interval_days"),
+  /** Overdue only: notices per newly overdue invoice (null = default 3). */
+  maxRepeats: integer("max_repeats"),
   isEnabled: boolean("is_enabled").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

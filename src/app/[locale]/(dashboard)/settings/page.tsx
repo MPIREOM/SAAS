@@ -12,6 +12,7 @@ import {
   Bot,
   FileText,
   Wrench,
+  Link2,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -369,6 +370,27 @@ export default async function SettingsPage({
           }
         />
       </SettingsSection>
+
+      {/* WhatsApp Setup (super admin) */}
+      {isSuperAdmin && (
+        <SettingsSection
+          id="whatsapp-setup"
+          icon={<Link2 className="h-5 w-5 text-accent" />}
+          title={t("whatsappSetup")}
+          description={t("whatsappSetupDescription")}
+          action={
+            <a
+              href={`/${locale}/settings/whatsapp-setup`}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition-all duration-200 hover:border-accent/30 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              <Link2 aria-hidden="true" className="h-4 w-4 text-accent" />
+              {t("openWhatsappSetup")}
+            </a>
+          }
+        >
+          <p className="text-sm text-text-secondary">{t("whatsappSetupSubtitle")}</p>
+        </SettingsSection>
+      )}
 
       {/* WhatsApp Test */}
       <SettingsSection

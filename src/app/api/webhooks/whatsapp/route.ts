@@ -5,6 +5,14 @@ import { safeEqual } from "@/lib/crypto/safe-compare";
 import { processWhatsAppMessage, type InlineImage } from "@/lib/whatsapp/agent";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp/client";
 import {
+  handleWhatsAppAccountEvent,
+  isAccountEventField,
+} from "@/lib/whatsapp/account-events";
+import {
+  applyDeliveryReceipts,
+  type WhatsAppStatusReceipt,
+} from "@/lib/whatsapp/delivery-receipts";
+import {
   downloadWhatsAppMedia,
   extensionForMime,
   type DownloadedMedia,
@@ -151,6 +159,36 @@ export async function POST(request: NextRequest) {
     const changes = entry.changes || [];
     for (const change of changes) {
       const value = change.value;
+
+      // Account-level events (ban, restriction, quality downgrade,
+      // Coexistence disconnect, review outcome): log loudly, email the
+      // admins, and move on — there is no message to answer.
+      if (isAccountEventField(change.field)) {
+        await handleWhatsAppAccountEvent(
+          change.field,
+          (value ?? {}) as Record<string, unknown>,
+          typeof entry.id === "string" ? entry.id : undefined,
+        );
+        continue;
+      }
+
+      // Delivery receipts for our own sends (reminders). Receipts for
+      // messages we never logged are ignored inside.
+      const statuses = (value?.statuses || []) as WhatsAppStatusReceipt[];
+      if (statuses.length > 0) {
+        try {
+          const supabase = createSupabaseAdmin(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          );
+          const receipts = await applyDeliveryReceipts(supabase, statuses);
+          if (receipts.updated > 0) {
+            console.log("[WhatsApp Webhook] Delivery receipts applied:", receipts);
+          }
+        } catch (err) {
+          console.error("[WhatsApp Webhook] Delivery receipts failed:", err);
+        }
+      }
 
       // Handle incoming messages — text and image (image is treated as a
       // receipt photo for an expense the user is about to describe).

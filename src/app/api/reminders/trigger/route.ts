@@ -5,6 +5,7 @@ import { sendWhatsAppTemplate, buildRentReminderComponents, buildOverdueReminder
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, differenceInCalendarDays, lastDayOfMonth, parseISO, startOfMonth } from "date-fns";
+import { decideOverdueSend, loadOverdueSendHistory } from "@/lib/reminders/overdue-cap";
 
 export const maxDuration = 60;
 
@@ -79,13 +80,15 @@ interface ReminderSettingRow {
   reminder_type: string;
   days_before: number[];
   repeat_interval_days: number | null;
+  /** Overdue only: notices per newly overdue invoice (null = default). */
+  max_repeats?: number | null;
   is_enabled: boolean;
 }
 
 // Defaults used when no DB settings exist
 const defaultSettings: Record<string, ReminderSettingRow> = {
   rent_upcoming: { reminder_type: "rent_upcoming", days_before: [3], repeat_interval_days: null, is_enabled: true },
-  rent_overdue: { reminder_type: "rent_overdue", days_before: [1], repeat_interval_days: 3, is_enabled: true },
+  rent_overdue: { reminder_type: "rent_overdue", days_before: [1], repeat_interval_days: 7, max_repeats: 3, is_enabled: true },
   lease_expiry: { reminder_type: "lease_expiry", days_before: [60, 30, 7], repeat_interval_days: null, is_enabled: true },
   cheque_due: { reminder_type: "cheque_due", days_before: [3], repeat_interval_days: null, is_enabled: true },
 };
@@ -268,7 +271,25 @@ async function gatherReminders(
           .lt("due_date", todayStr)
           .order("due_date", { ascending: true });
 
-        if (overdueInvs && overdueInvs.length > 0) {
+        // The manual trigger obeys the same per-tenant cap as the daily
+        // cron: a tenant already chased max_repeats times for their latest
+        // overdue invoice, or chased within the repeat interval, is skipped.
+        // Without this, every click on "Send reminders" re-messaged every
+        // overdue tenant regardless of what the cron had already sent.
+        const overdueDecision =
+          overdueInvs && overdueInvs.length > 0
+            ? decideOverdueSend(
+                overdueSetting,
+                await loadOverdueSendHistory(
+                  supabase,
+                  tenant.id as string,
+                  overdueInvs[overdueInvs.length - 1].due_date as string
+                ),
+                today
+              )
+            : null;
+
+        if (overdueInvs && overdueInvs.length > 0 && overdueDecision?.send) {
           const overdueInvoices: OverdueInvoice[] = overdueInvs.map(
             (inv: Record<string, unknown>) => ({
               amount: String(Number(inv.amount || 0) - Number(inv.paid_amount || 0)),
@@ -658,6 +679,9 @@ async function sendReminder(
       status: whatsappResult.success ? "sent" : "failed",
       sent_at: new Date().toISOString(),
       error_message: whatsappResult.error || null,
+      // Meta's message id, so delivery receipts can be matched back.
+      provider_message_id: whatsappResult.messageId || null,
+      delivery_status: whatsappResult.success ? "sent" : null,
     });
   }
 
