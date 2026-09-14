@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
-import { sendWhatsAppTemplate, buildRentReminderComponents, buildOverdueReminderComponents } from "@/lib/whatsapp/client";
+import {
+  sendWhatsAppTemplate,
+  buildRentReminderComponents,
+  buildOverdueReminderComponents,
+  buildLeaseExpiryComponents,
+} from "@/lib/whatsapp/client";
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, differenceInCalendarDays, lastDayOfMonth, parseISO, startOfMonth } from "date-fns";
@@ -655,13 +660,20 @@ async function sendReminder(
             totalOverdue: params.totalOverdue || params.amount,
             overdueDetails: buildOverdueDetailsInline(params.overdueInvoices, langCode),
           })
-        : buildRentReminderComponents({
-            tenantName: params.tenantName,
-            unitNumber: params.unitNumber,
-            propertyName: params.propertyName,
-            amount: params.amount,
-            dueDate: params.dueDate,
-          }),
+        : params.reminderType === "lease_expiry"
+          ? buildLeaseExpiryComponents({
+              tenantName: params.tenantName,
+              unitNumber: params.unitNumber,
+              propertyName: params.propertyName,
+              endDate: params.dueDate,
+            })
+          : buildRentReminderComponents({
+              tenantName: params.tenantName,
+              unitNumber: params.unitNumber,
+              propertyName: params.propertyName,
+              amount: params.amount,
+              dueDate: params.dueDate,
+            }),
     });
 
     const renderedMessage = waTemplate

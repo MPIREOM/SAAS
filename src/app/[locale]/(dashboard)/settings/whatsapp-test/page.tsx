@@ -35,6 +35,9 @@ const rentParamFields: ParamFieldConfig[] = [
   { key: "dueDate", label: "Due Date", placeholder: "2026-04-01", defaultValue: "2026-04-01" },
 ];
 
+// Lease expiry templates carry no amount: 4 variables, end date last.
+const leaseExpiryParamFields: ParamFieldConfig[] = rentParamFields.filter((f) => f.key !== "amount");
+
 const summaryParamFields: ParamFieldConfig[] = [
   { key: "date", label: "Date", placeholder: "Thursday, 27 March 2026", defaultValue: "Thursday, 27 March 2026" },
   { key: "invoicesDue", label: "Invoices Due Count", placeholder: "3", defaultValue: "3" },
@@ -52,8 +55,8 @@ const templateParamConfig: Record<string, { fields: ParamFieldConfig[]; defaults
   mpire_rent_upcoming_ar: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
   mpire_rent_overdue_en: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
   mpire_rent_overdue_ar: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
-  mpire_lease_expiry_en: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
-  mpire_lease_expiry_ar: { fields: rentParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", amount: "500", dueDate: "2026-04-01" } },
+  mpire_lease_expiry_en: { fields: leaseExpiryParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", dueDate: "2026-04-01" } },
+  mpire_lease_expiry_ar: { fields: leaseExpiryParamFields, defaults: { tenantName: "Test Tenant", unitNumber: "101", propertyName: "Test Property", dueDate: "2026-04-01" } },
   daily_briefs: { fields: summaryParamFields, defaults: { date: "Thursday, 27 March 2026", invoicesDue: "3", invoicesDueAmount: "1500.00", overdueCount: "2", overdueAmount: "800.00", chequesCount: "1", chequesAmount: "500.00", newMaintenance: "1", openMaintenance: "4" } },
 };
 

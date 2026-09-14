@@ -8,8 +8,10 @@ import type { TemplateComponent, TemplateCreateInput } from "./admin";
 // the setup page creates them from.
 //
 // Positional variables follow the parameter order in the senders:
-//   reminders (client.ts buildRentReminderComponents):
+//   rent upcoming / cheque due (client.ts buildRentReminderComponents):
 //     {{1}} tenant name, {{2}} unit, {{3}} property, {{4}} amount, {{5}} due date
+//   lease expiry (buildLeaseExpiryComponents):
+//     {{1}} tenant name, {{2}} unit, {{3}} property, {{4}} lease end date
 //   overdue (buildOverdueReminderComponents):
 //     {{1}} tenant name, {{2}} unit, {{3}} property, {{4}} total overdue, {{5}} details
 //   daily_briefs (admin-summary): 11 parameters, see below
@@ -26,7 +28,7 @@ export interface TemplateDefinition extends TemplateCreateInput {
 
 const REMINDER_PLACEHOLDERS: Record<string, Record<string, number>> = {
   rent_upcoming: { tenant_name: 1, unit_number: 2, unit: 2, property_name: 3, property: 3, amount: 4, due_date: 5 },
-  lease_expiry: { tenant_name: 1, unit_number: 2, unit: 2, property_name: 3, property: 3, amount: 4, due_date: 5 },
+  lease_expiry: { tenant_name: 1, unit_number: 2, unit: 2, property_name: 3, property: 3, due_date: 4 },
   cheque_due: { tenant_name: 1, unit_number: 2, unit: 2, property_name: 3, property: 3, amount: 4, due_date: 5 },
   rent_overdue: {
     tenant_name: 1,
@@ -42,7 +44,7 @@ const REMINDER_PLACEHOLDERS: Record<string, Record<string, number>> = {
 
 const REMINDER_EXAMPLES: Record<string, string[]> = {
   rent_upcoming: ["Ahmed Al Balushi", "12", "Bousher Ameen Mosque", "350.00", "01 Oct 2026"],
-  lease_expiry: ["Ahmed Al Balushi", "12", "Bousher Ameen Mosque", "350.00", "31 Dec 2026"],
+  lease_expiry: ["Ahmed Al Balushi", "12", "Bousher Ameen Mosque", "31 Dec 2026"],
   cheque_due: ["Ahmed Al Balushi", "12", "Bousher Ameen Mosque", "350.00", "15 Oct 2026"],
   rent_overdue: ["Ahmed Al Balushi", "12", "Bousher Ameen Mosque", "700.00", "• Aug 2026: 350.00 OMR • Sep 2026: 350.00 OMR"],
 };
