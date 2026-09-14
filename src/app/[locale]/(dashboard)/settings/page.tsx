@@ -13,6 +13,7 @@ import {
   FileText,
   Wrench,
   Link2,
+  Landmark,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -28,6 +29,8 @@ import { TenantNotificationToggles } from "@/components/settings/tenant-notifica
 import { WhatsAppAgentSetup } from "@/components/settings/whatsapp-agent-setup";
 import { AutoInvoiceSettings } from "@/components/settings/auto-invoice-settings";
 import { PropertyMaintenanceLinks } from "@/components/settings/property-maintenance-links";
+import { EMandateProviderPanel } from "@/components/settings/e-mandate-provider-panel";
+import { providerStatus } from "@/lib/e-mandates/provider";
 
 /** Presentational section card shared by every settings block. */
 function SettingsSection({
@@ -389,6 +392,18 @@ export default async function SettingsPage({
           }
         >
           <p className="text-sm text-text-secondary">{t("whatsappSetupSubtitle")}</p>
+        </SettingsSection>
+      )}
+
+      {/* Bank e-mandates (super admin) */}
+      {isSuperAdmin && (
+        <SettingsSection
+          id="e-mandates"
+          icon={<Landmark className="h-5 w-5 text-accent" />}
+          title={t("eMandatesTitle")}
+          description={t("eMandatesDescription")}
+        >
+          <EMandateProviderPanel status={providerStatus()} />
         </SettingsSection>
       )}
 

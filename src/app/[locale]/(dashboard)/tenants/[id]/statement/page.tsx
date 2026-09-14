@@ -69,7 +69,7 @@ export default async function TenantStatementPage({
   // Build ledger entries
   const entries: LedgerEntry[] = [];
 
-  const formatMethod = (m: string) => m === "bank_transfer" ? "Bank Transfer" : m === "cash" ? "Cash" : m === "cheque" ? "Cheque" : m;
+  const formatMethod = (m: string) => m === "bank_transfer" ? "Bank Transfer" : m === "cash" ? "Cash" : m === "cheque" ? "Cheque" : m === "direct_debit" ? "Direct Debit" : m;
 
   (invoices || []).forEach((inv) => {
     const unit = inv.units as unknown as { unit_number: string; properties: { name: string } };

@@ -18,6 +18,7 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "cash",
   "bank_transfer",
   "cheque",
+  "direct_debit",
 ]);
 
 export const chequeStatusEnum = pgEnum("cheque_status", [

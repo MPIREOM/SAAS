@@ -7,7 +7,7 @@ import { Check, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 
-const METHODS = ["cash", "bank_transfer", "cheque"] as const;
+const METHODS = ["cash", "bank_transfer", "cheque", "direct_debit"] as const;
 type PaymentMethod = (typeof METHODS)[number];
 
 interface Props {

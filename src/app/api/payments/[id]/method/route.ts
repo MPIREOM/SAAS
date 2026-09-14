@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 
-const ALLOWED_METHODS = ["cash", "bank_transfer", "cheque"] as const;
+const ALLOWED_METHODS = ["cash", "bank_transfer", "cheque", "direct_debit"] as const;
 type PaymentMethod = (typeof ALLOWED_METHODS)[number];
 
 export async function PATCH(

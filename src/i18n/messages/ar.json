@@ -530,7 +530,9 @@
       "cash": "نقداً",
       "bankTransfer": "تحويل بنكي",
       "bank_transfer": "تحويل بنكي",
-      "cheque": "شيك"
+      "cheque": "شيك",
+      "direct_debit": "خصم مباشر",
+      "directDebit": "خصم مباشر"
     },
     "selectCheque": "اختر الشيك",
     "chooseCheque": "اختر شيكاً...",
@@ -1036,7 +1038,18 @@
     "whatsappTestSubtitle": "أرسل رسالة تجريبية عبر واجهة Meta WhatsApp Cloud API",
     "whatsappTestSend": "إرسال رسالة تجريبية",
     "whatsappTestPhoneLabel": "رقم الهاتف",
-    "whatsappTestPhoneHelp": "أدخل رمز الدولة (مثال: ‎+968 لعُمان)"
+    "whatsappTestPhoneHelp": "أدخل رمز الدولة (مثال: ‎+968 لعُمان)",
+    "eMandatesTitle": "التفويضات البنكية الإلكترونية",
+    "eMandatesDescription": "حالة مزود الخصم المباشر. تُنشأ التفويضات لكل مستأجر من صفحة المستأجر.",
+    "eMandatesActiveProvider": "المزود الفعّال:",
+    "eMandatesMockProvider": "تجريبي",
+    "eMandatesMockWarning": "البنك التجريبي قيد الاستخدام: لا تُحوَّل أموال حقيقية. رمز التحقق للمستأجر هو {otp} ونتيجة كل تحصيل \"{result}\". يُفعَّل بنك مسقط تلقائياً بعد ضبط متغيراته.",
+    "eMandatesBankMuscatVars": "متغيرات بنك مسقط",
+    "eMandatesBankMuscatReady": "جميع متغيرات بنك مسقط مضبوطة.",
+    "eMandatesBankMuscatMissing": "أضف هذه المتغيرات في Vercel ثم أعد النشر:",
+    "eMandatesWebhookUrl": "رابط Webhook لتزويد البنك به",
+    "eMandatesCronSchedule": "تشغيل التحصيل",
+    "eMandatesDocsHint": "خطوات الإعداد وقائمة الأسئلة للبنك موجودة في docs/e-mandates.md."
   },
   "dashboard": {
     "title": "لوحة القيادة",
@@ -1279,10 +1292,116 @@
     "methods": {
       "cash": "نقداً",
       "bank_transfer": "تحويل بنكي",
-      "cheque": "شيك"
+      "cheque": "شيك",
+      "direct_debit": "خصم مباشر"
     },
     "whatsappMessage": "مرحباً! يمكنك استخدام هذا الرابط لعرض تفاصيل إيجارك والمستندات وسجل المدفوعات:",
     "openDocument": "فتح المستند"
+  },
+  "eMandates": {
+    "title": "التفويض البنكي الإلكتروني",
+    "sectionDescription": "خصم مباشر يعتمده المستأجر لدى بنكه. يُحصَّل الإيجار تلقائياً في يوم التحصيل.",
+    "setUp": "إعداد تفويض إلكتروني",
+    "createAtBank": "إنشاء لدى البنك",
+    "dialogDescription": "تسجيل تفويض خصم مباشر لـ {name}. يرسل البنك رمز تحقق للمستأجر عبر الرسائل النصية؛ شارك الرابط أدناه ليؤكده.",
+    "createdPendingOtp": "تم إنشاء التفويض. أرسل هذا الرابط للمستأجر ليُدخل رمز التحقق من بنكه.",
+    "createdActive": "تم إنشاء التفويض وهو فعّال.",
+    "otpLinkExpiry": "تنتهي صلاحية الرابط ورمز التحقق بعد 15 دقيقة. استخدم إعادة إرسال الرمز إذا فات المستأجر.",
+    "copyLink": "نسخ الرابط",
+    "shareWhatsApp": "مشاركة عبر واتساب",
+    "resendOtp": "إعادة إرسال الرمز",
+    "collectNow": "تحصيل الآن",
+    "cancel": "إلغاء التفويض",
+    "confirmCancel": "إلغاء هذا التفويض لدى البنك؟ لن يُحصَّل الإيجار تلقائياً بعد ذلك.",
+    "whatsappMessage": "مرحباً! يرجى تأكيد تفويض الخصم المباشر للإيجار. افتح هذا الرابط وأدخل رمز التحقق الذي يرسله بنكك عبر الرسائل النصية:",
+    "emptyTitle": "لا يوجد تفويض إلكتروني بعد",
+    "emptyDescription": "أنشئ تفويضاً ليُحصَّل الإيجار من حساب المستأجر البنكي تلقائياً.",
+    "emptyNoLease": "يلزم وجود عقد إيجار فعّال قبل إنشاء التفويض.",
+    "fields": {
+      "lease": "عقد الإيجار",
+      "amount": "المبلغ الشهري",
+      "collectionDay": "يوم التحصيل",
+      "collectionDayHelp": "يوم من الشهر، 1–28",
+      "account": "الحساب",
+      "provider": "البنك",
+      "debtorName": "اسم صاحب الحساب",
+      "accountNumber": "رقم حساب المستأجر / IBAN",
+      "accountNumberHelp": "يُرسل إلى البنك مرة واحدة؛ تُحفظ آخر 4 أرقام فقط.",
+      "bankCode": "رمز البنك (اختياري)",
+      "bankCodeHelp": "فقط إذا كان حساب المستأجر في بنك آخر."
+    },
+    "status": {
+      "pending_otp": "بانتظار رمز التحقق",
+      "active": "فعّال",
+      "suspended": "موقوف",
+      "cancelled": "ملغى",
+      "failed": "فشل",
+      "expired": "منتهي"
+    },
+    "collectionStatus": {
+      "scheduled": "مجدول",
+      "submitted": "أُرسل للبنك",
+      "settled": "تمت التسوية",
+      "failed": "فشل",
+      "returned": "مرتجع",
+      "cancelled": "ملغى"
+    },
+    "providers": {
+      "bank_muscat": "بنك مسقط",
+      "mock": "تجريبي"
+    },
+    "collections": {
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "reference": "مرجع البنك"
+    },
+    "errors": {
+      "leaseRequired": "اختر عقد إيجار",
+      "accountRequired": "أدخل رقم حساب المستأجر",
+      "createFailed": "تعذر إنشاء التفويض"
+    },
+    "skipReasons": {
+      "already_collected_today": "تم التحصيل اليوم بالفعل",
+      "no_unpaid_invoice": "لا توجد فاتورة إيجار غير مدفوعة للتحصيل",
+      "nothing_owed": "لا يوجد مبلغ مستحق على الفاتورة",
+      "invoice_already_in_collection": "هذه الفاتورة لديها عملية تحصيل جارية",
+      "mandate_expired": "انتهت صلاحية التفويض",
+      "mandate_pending_otp": "لم يؤكد المستأجر التفويض بعد",
+      "mandate_suspended": "التفويض موقوف",
+      "mandate_cancelled": "التفويض ملغى"
+    },
+    "toasts": {
+      "created": "تم إنشاء التفويض",
+      "cancelled": "تم إلغاء التفويض",
+      "otpResent": "تم إرسال رمز جديد",
+      "actionFailed": "فشل الإجراء",
+      "collect_settled": "تم تحصيل الإيجار وتحديد الفاتورة كمدفوعة",
+      "collect_submitted": "أُرسل طلب التحصيل إلى البنك",
+      "collect_failed": "رفض البنك عملية التحصيل"
+    },
+    "portal": {
+      "title": "الخصم المباشر للإيجار",
+      "subtitle": "تأكيد التفويض الإلكتروني",
+      "invalidTitle": "رابط غير صالح أو منتهي",
+      "invalidMessage": "هذا الرابط لم يعد صالحاً. يرجى طلب رابط جديد من مدير العقار.",
+      "unit": "الوحدة",
+      "amount": "المبلغ الشهري",
+      "collectionDay": "يُحصَّل في",
+      "dayOfMonth": "اليوم {day} من كل شهر",
+      "account": "من الحساب",
+      "otpInstructions": "أرسل بنكك رمز تحقق لمرة واحدة إلى رقم هاتفك المسجل. أدخله أدناه لاعتماد الخصم المباشر.",
+      "otpLabel": "رمز التحقق (OTP)",
+      "attemptsLeft": "{count} محاولات متبقية",
+      "confirm": "تأكيد التفويض",
+      "consent": "بتأكيدك، تفوّض بنكك بدفع {amount} إلى MPIRE لإدارة العقارات في اليوم {day} من كل شهر حتى إلغاء التفويض.",
+      "otpFailed": "تعذر التحقق من الرمز",
+      "stillPending": "لم يفعّل البنك التفويض بعد. يرجى المحاولة بعد قليل.",
+      "doneTitle": "التفويض فعّال",
+      "doneMessage": "شكراً لك. سيُحصَّل إيجارك تلقائياً.",
+      "lockedTitle": "محاولات كثيرة جداً",
+      "lockedMessage": "هذا الرابط مقفل. يرجى التواصل مع مدير العقار للحصول على رابط جديد."
+    }
   },
   "owners": {
     "title": "دفتر المالك",
@@ -1334,7 +1453,9 @@
     "methods": {
       "cash": "نقداً",
       "bankTransfer": "تحويل بنكي",
-      "cheque": "شيك"
+      "cheque": "شيك",
+      "direct_debit": "خصم مباشر",
+      "directDebit": "خصم مباشر"
     },
     "ref": "مرجع {number}",
     "asOf": "حتى تاريخ",

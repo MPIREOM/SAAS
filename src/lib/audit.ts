@@ -15,7 +15,9 @@ type AuditAction =
   | "status_update"
   | "export_report"
   | "cancel_invoice"
-  | "revert_payment";
+  | "revert_payment"
+  | "cancel_mandate"
+  | "collect_mandate";
 
 type EntityType =
   | "tenant"
@@ -32,7 +34,8 @@ type EntityType =
   | "user"
   | "owner"
   | "owner_settlement"
-  | "owner_business_fee";
+  | "owner_business_fee"
+  | "e_mandate";
 
 interface AuditLogEntry {
   action: AuditAction;

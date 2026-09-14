@@ -212,7 +212,9 @@ function fmt(n: number): string {
 }
 
 function methodKey(method: string): string {
-  return method === "bank_transfer" ? "bankTransfer" : method;
+  if (method === "bank_transfer") return "bankTransfer";
+  if (method === "direct_debit") return "directDebit";
+  return method;
 }
 
 function formatMonthLabel(month: string, locale: string): string {

@@ -216,7 +216,7 @@ export default async function OwnerDetailPage({
     const method = (p.method as string) || "cash";
     const paymentDate = p.payment_date as string;
     if (
-      (method === "cash" || method === "bank_transfer") &&
+      (method === "cash" || method === "bank_transfer" || method === "direct_debit") &&
       rentExcludedUntil !== null &&
       paymentDate <= rentExcludedUntil
     ) {
@@ -227,7 +227,7 @@ export default async function OwnerDetailPage({
     bucket.count += 1;
     rentAgg.set(method, bucket);
   }
-  const rentByMethod = ["cash", "bank_transfer", "cheque"]
+  const rentByMethod = ["cash", "bank_transfer", "direct_debit", "cheque"]
     .filter((m) => rentAgg.has(m))
     .map((m) => ({ method: m, amount: round2(rentAgg.get(m)!.amount), count: rentAgg.get(m)!.count }));
 

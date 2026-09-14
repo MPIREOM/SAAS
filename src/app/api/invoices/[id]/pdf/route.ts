@@ -82,7 +82,7 @@ export async function GET(
   const invoiceReference = invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase();
 
   const formatAmount = (n: number) => n.toLocaleString("en", { minimumFractionDigits: 2 });
-  const formatMethod = (m: string) => m === "bank_transfer" ? "Bank Transfer" : m === "cash" ? "Cash" : m === "cheque" ? "Cheque" : m;
+  const formatMethod = (m: string) => m === "bank_transfer" ? "Bank Transfer" : m === "cash" ? "Cash" : m === "cheque" ? "Cheque" : m === "direct_debit" ? "Direct Debit" : m;
 
   const payments = paymentRecords || [];
   const paymentRows = payments.map((p) => {

@@ -12,7 +12,7 @@ export type TenantStatus = "active" | "archived";
 
 export type PaymentStatus = "paid" | "partial" | "overdue" | "upcoming";
 
-export type PaymentMethod = "cash" | "bank_transfer" | "cheque";
+export type PaymentMethod = "cash" | "bank_transfer" | "cheque" | "direct_debit";
 
 export type ChequeStatus = "pending" | "cleared" | "bounced" | "cancelled";
 
