@@ -291,6 +291,23 @@ export function WhatsAppSetupPanel() {
           <Mono>{status.wabaId ?? "—"}</Mono>
           {!status.wabaId && <span className="text-xs text-text-secondary">{status.wabaNotes.join("; ")}</span>}
         </Row>
+        <Row label={t("setupAccountReview")}>
+          {status.wabaError ? (
+            <span className="text-xs text-destructive">{status.wabaError}</span>
+          ) : (
+            <>
+              <Badge variant={status.waba?.accountReviewStatus === "APPROVED" ? "success" : "warning"}>
+                {status.waba?.accountReviewStatus ?? "—"}
+              </Badge>
+              {status.waba?.name && <span className="text-xs text-text-secondary">{status.waba.name}</span>}
+            </>
+          )}
+        </Row>
+        <Row label={t("setupBusinessVerification")}>
+          <Badge variant={status.waba?.businessVerificationStatus === "verified" ? "success" : "warning"}>
+            {status.waba?.businessVerificationStatus ?? "—"}
+          </Badge>
+        </Row>
         <Row label={t("setupAppSubscribed")}>
           {status.subscribedAppsError ? (
             <span className="text-xs text-destructive">{status.subscribedAppsError}</span>

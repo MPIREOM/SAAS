@@ -7,6 +7,7 @@ import {
   discoverWabaId,
   getAppSubscriptions,
   getPhoneNumber,
+  getWabaInfo,
   getWabaSubscribedApps,
   listTemplates,
   registerPhoneNumber,
@@ -20,6 +21,7 @@ import {
   type PhoneNumberInfo,
   type SubscribedApp,
   type TokenInfo,
+  type WabaInfo,
   type WhatsAppAdminEnv,
 } from "./admin";
 import { allTemplateDefinitions, type TemplateDefinition } from "./template-definitions";
@@ -70,6 +72,8 @@ export interface WhatsAppSetupStatus {
   phoneError: string | null;
   wabaId: string | null;
   wabaNotes: string[];
+  waba: WabaInfo | null;
+  wabaError: string | null;
   appId: string | null;
   subscribedApps: SubscribedApp[];
   subscribedAppsError: string | null;
@@ -110,7 +114,8 @@ export async function loadWhatsAppSetup(
   const wabaId = discovery.wabaId;
   const appId = token?.appId ?? null;
 
-  const [appsRes, subRes, templatesRes] = await Promise.all([
+  const [wabaRes, appsRes, subRes, templatesRes] = await Promise.all([
+    wabaId ? getWabaInfo(wabaId, env) : Promise.resolve(null),
     wabaId ? getWabaSubscribedApps(wabaId, env) : Promise.resolve(null),
     appId ? getAppSubscriptions(appId, env) : Promise.resolve(null),
     wabaId ? listTemplates(wabaId, Array.from(new Set(definitions.map((d) => d.name))), env) : Promise.resolve(null),
@@ -134,6 +139,8 @@ export async function loadWhatsAppSetup(
     phoneError: phoneRes.ok ? null : phoneRes.error,
     wabaId,
     wabaNotes: discovery.notes,
+    waba: wabaRes?.ok ? wabaRes.data : null,
+    wabaError: wabaRes && !wabaRes.ok ? wabaRes.error : null,
     appId,
     subscribedApps,
     subscribedAppsError: appsRes && !appsRes.ok ? appsRes.error : null,

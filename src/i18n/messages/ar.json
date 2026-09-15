@@ -977,6 +977,8 @@
     "setupWebhooks": "الحساب والويب هوك",
     "setupAccount": "حساب واتساب للأعمال",
     "setupAppSubscribed": "التطبيق مشترك في الحساب",
+    "setupAccountReview": "مراجعة الحساب",
+    "setupBusinessVerification": "التحقق من النشاط التجاري",
     "setupFields": "الحقول",
     "setupMissing": "ناقص",
     "setupPointsHere": "ترسل Meta أحداث هذا الرقم إلى هذا النشر.",
