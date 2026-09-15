@@ -977,6 +977,8 @@
     "setupWebhooks": "Account and webhooks",
     "setupAccount": "WhatsApp Business Account",
     "setupAppSubscribed": "App subscribed to the account",
+    "setupAccountReview": "Account review",
+    "setupBusinessVerification": "Business verification",
     "setupFields": "Fields",
     "setupMissing": "Missing",
     "setupPointsHere": "Meta sends this number's events to this deployment.",

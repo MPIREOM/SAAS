@@ -321,6 +321,51 @@ export async function discoverWabaId(env: WhatsAppAdminEnv, token: TokenInfo | n
   return { wabaId: null, notes };
 }
 
+export interface WabaInfo {
+  id: string;
+  name: string | null;
+  /** PENDING while Meta reviews a new account; APPROVED unlocks number registration. */
+  accountReviewStatus: string | null;
+  ownershipType: string | null;
+  /** Business verification of the owning portfolio, when the token may read it. */
+  businessVerificationStatus: string | null;
+}
+
+export async function getWabaInfo(wabaId: string, env: WhatsAppAdminEnv): Promise<GraphResult<WabaInfo>> {
+  const missing = needToken(env);
+  if (missing) return missing;
+  const r = await graph<{
+    id?: string;
+    name?: string;
+    account_review_status?: string;
+    ownership_type?: string;
+    owner_business_info?: { id?: string; name?: string };
+  }>(wabaId, {
+    token: env.accessToken!,
+    query: { fields: "name,account_review_status,ownership_type,owner_business_info" },
+  });
+  if (!r.ok) return r;
+  let businessVerificationStatus: string | null = null;
+  const bizId = r.data.owner_business_info?.id;
+  if (bizId) {
+    const b = await graph<{ verification_status?: string }>(String(bizId), {
+      token: env.accessToken!,
+      query: { fields: "verification_status" },
+    });
+    if (b.ok) businessVerificationStatus = b.data.verification_status ?? null;
+  }
+  return {
+    ok: true,
+    data: {
+      id: r.data.id ?? wabaId,
+      name: r.data.name ?? null,
+      accountReviewStatus: r.data.account_review_status ?? null,
+      ownershipType: r.data.ownership_type ?? null,
+      businessVerificationStatus,
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Webhooks
 // ---------------------------------------------------------------------------
