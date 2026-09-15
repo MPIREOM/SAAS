@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { LogOut, Plus, X, FileText, Download } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
+import { Alert } from "@/components/ui/alert";
+import { Select } from "@/components/ui/select";
 import { getEarlyTerminationCommissionForLease, type EarlyTerminationCommissionPreview } from "@/lib/owners/balance";
 
 interface OutstandingInvoice {
@@ -57,54 +59,106 @@ interface PropertyDefaults {
   earlyTerminationRate: number; // decimal (e.g. 0.12)
 }
 
+/**
+ * One active lease of the tenant, with everything the move-out form needs
+ * about it. A tenant can hold several active leases at once (a company
+ * renting multiple units, or a tenant relocating within a property whose new
+ * lease was created before the old one was closed), so the page loads all of
+ * them and lets the user pick which unit is being vacated.
+ */
+interface ActiveLeaseOption {
+  leaseCtx: LeaseContext;
+  previewCtx: PreviewContext;
+  propertyDefaults: PropertyDefaults;
+}
+
+interface ActiveLeaseRow {
+  id: string;
+  unit_id: string;
+  end_date: string;
+  monthly_rent: string | number | null;
+  tenants: {
+    full_name: string;
+    phone: string | null;
+    email: string | null;
+  };
+  units: {
+    unit_number: string;
+    floor: number | null;
+    property_id: string;
+    properties: {
+      name: string;
+      location: string | null;
+      cleaning_fee_default: string | number | null;
+      painting_fee_default: string | number | null;
+      early_termination_rate: string | number | null;
+    };
+  };
+}
+
 const newRowId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `row-${Math.random().toString(36).slice(2)}-${Date.now()}`;
 
+const fmt = (n: number) =>
+  n.toLocaleString("en-OM", { minimumFractionDigits: 2 });
+
+function toLeaseOption(row: ActiveLeaseRow): ActiveLeaseOption {
+  const unit = row.units;
+  const tenant = row.tenants;
+  return {
+    leaseCtx: {
+      leaseId: row.id,
+      unitId: row.unit_id,
+      propertyId: unit.property_id,
+      monthlyRent: Number(row.monthly_rent || 0),
+      endDate: row.end_date,
+    },
+    previewCtx: {
+      tenantName: tenant.full_name,
+      tenantPhone: tenant.phone || "",
+      tenantEmail: tenant.email || "",
+      propertyName: unit.properties.name,
+      propertyLocation: unit.properties.location || "",
+      unitNumber: unit.unit_number,
+      unitFloor: unit.floor,
+    },
+    propertyDefaults: {
+      cleaningFee: Number(unit.properties.cleaning_fee_default || 0),
+      paintingFee: Number(unit.properties.painting_fee_default || 0),
+      earlyTerminationRate: Number(unit.properties.early_termination_rate || 0),
+    },
+  };
+}
+
 export default function MoveOutPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const t = useTranslations("tenants");
   const tc = useTranslations("common");
-  const locale = useLocale();
-  const dateLocale = `${locale}-u-nu-latn`;
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [invoices, setInvoices] = useState<OutstandingInvoice[]>([]);
-  const [invoiceActions, setInvoiceActions] = useState<Record<string, InvoiceAction>>({});
-  const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({});
-  const [loadingInvoices, setLoadingInvoices] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<{ locale: string; id: string } | null>(null);
-  const [leaseCtx, setLeaseCtx] = useState<LeaseContext | null>(null);
-  const [previewCtx, setPreviewCtx] = useState<PreviewContext | null>(null);
-  const [propertyDefaults, setPropertyDefaults] = useState<PropertyDefaults | null>(null);
-  const [vacateDate, setVacateDate] = useState("");
-  const [reason, setReason] = useState("");
-  const [notes, setNotes] = useState("");
-  const [finalInspection, setFinalInspection] = useState(false);
-  const [keysReturned, setKeysReturned] = useState(false);
-  const [depositStatus, setDepositStatus] = useState("pending");
-  const [commissionPreview, setCommissionPreview] = useState<EarlyTerminationCommissionPreview | null>(null);
-  const [loadingCommission, setLoadingCommission] = useState(false);
-  const [fees, setFees] = useState<FeeRow[]>([]);
-  const [feesInitialized, setFeesInitialized] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null);
-  const [createdInvoiceNumber, setCreatedInvoiceNumber] = useState<string | null>(null);
+  // null while loading; [] when the tenant has no active lease
+  const [leaseOptions, setLeaseOptions] = useState<ActiveLeaseOption[] | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [selectedLeaseId, setSelectedLeaseId] = useState<string | null>(null);
 
-  // Resolve params, fetch lease/property/tenant context, outstanding invoices
+  // Resolve params and load every active lease of the tenant. The unit page
+  // links here with `?lease=<id>` so the unit the user came from is
+  // preselected; with a single active lease it is selected automatically.
   useEffect(() => {
+    let cancelled = false;
     const init = async () => {
-      const { locale, id } = await params;
-      setResolvedParams({ locale, id });
+      const [{ locale, id }, search] = await Promise.all([params, searchParams]);
+      const requested = typeof search?.lease === "string" ? search.lease : null;
 
       const supabase = createClient();
-
-      const { data: activeLease } = await supabase
+      const { data, error } = await supabase
         .from("leases")
         .select(
           `id, unit_id, end_date, monthly_rent,
@@ -114,76 +168,289 @@ export default function MoveOutPage({
         )
         .eq("tenant_id", id)
         .eq("is_active", true)
-        .single();
+        .order("start_date", { ascending: true });
 
-      if (activeLease) {
-        const unit = (activeLease.units as unknown) as {
-          unit_number: string;
-          floor: number | null;
-          property_id: string;
-          properties: {
-            name: string;
-            location: string;
-            cleaning_fee_default: string | number;
-            painting_fee_default: string | number;
-            early_termination_rate: string | number;
-          };
-        };
-        const tenant = (activeLease.tenants as unknown) as {
-          full_name: string;
-          phone: string;
-          email: string;
-        };
+      if (cancelled) return;
+      setResolvedParams({ locale, id });
+      if (error) {
+        setLoadError(error.message);
+        setLeaseOptions([]);
+        return;
+      }
+      const options = ((data ?? []) as unknown as ActiveLeaseRow[]).map(toLeaseOption);
+      setLeaseOptions(options);
+      const preselected =
+        options.find((o) => o.leaseCtx.leaseId === requested) ??
+        (options.length === 1 ? options[0] : null);
+      setSelectedLeaseId(preselected?.leaseCtx.leaseId ?? null);
+    };
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, [params, searchParams]);
 
-        setLeaseCtx({
-          leaseId: activeLease.id,
-          unitId: activeLease.unit_id,
-          propertyId: unit.property_id,
-          monthlyRent: Number(activeLease.monthly_rent || 0),
-          endDate: activeLease.end_date as string,
+  const selectedLease =
+    leaseOptions?.find((o) => o.leaseCtx.leaseId === selectedLeaseId) ?? null;
+
+  let body: React.ReactNode;
+  if (!resolvedParams || leaseOptions === null) {
+    body = (
+      <Spinner
+        label={tc("loading")}
+        sizeClassName="h-8 w-8"
+        className="min-h-[200px]"
+      />
+    );
+  } else if (loadError) {
+    body = (
+      <div className="space-y-4">
+        <Alert variant="destructive" title={t("moveOutLease.loadError")}>
+          {loadError}
+        </Alert>
+        <BackButton label={tc("back")} onClick={() => router.back()} />
+      </div>
+    );
+  } else if (leaseOptions.length === 0) {
+    body = (
+      <div className="space-y-4">
+        <Alert variant="warning">{t("moveOutLease.noActiveLease")}</Alert>
+        <BackButton label={tc("back")} onClick={() => router.back()} />
+      </div>
+    );
+  } else if (!selectedLease) {
+    body = (
+      <div className="space-y-4">
+        <UnitToVacateCard
+          options={leaseOptions}
+          selected={null}
+          onSelect={setSelectedLeaseId}
+        />
+        <BackButton label={tc("cancel")} onClick={() => router.back()} />
+      </div>
+    );
+  } else {
+    body = (
+      <MoveOutForm
+        // Remount on lease change so fees, invoices and form fields are
+        // re-seeded for the selected unit / property.
+        key={selectedLease.leaseCtx.leaseId}
+        locale={resolvedParams.locale}
+        tenantId={resolvedParams.id}
+        lease={selectedLease}
+        leaseOptions={leaseOptions}
+        onSelectLease={setSelectedLeaseId}
+      />
+    );
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-text-primary font-display flex items-center gap-2">
+          <LogOut aria-hidden="true" className="h-6 w-6 text-text-secondary" />
+          {t("moveOut")}
+        </h1>
+        <p className="text-sm text-text-secondary mt-1">
+          {t("moveOutDescription")}
+        </p>
+      </div>
+      {body}
+    </div>
+  );
+}
+
+function BackButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    >
+      {label}
+    </button>
+  );
+}
+
+/**
+ * "Unit to vacate" card. With several active leases it renders a picker;
+ * with one it just states which unit is being vacated. Either way it tells
+ * the user whether the tenant stays active on other units afterwards.
+ */
+function UnitToVacateCard({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: ActiveLeaseOption[];
+  selected: ActiveLeaseOption | null;
+  onSelect: (leaseId: string) => void;
+}) {
+  const t = useTranslations("tenants");
+  const locale = useLocale();
+  const dateLocale = `${locale}-u-nu-latn`;
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(dateLocale, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+  const optionLabel = (o: ActiveLeaseOption) =>
+    t("moveOutLease.optionLabel", {
+      property: o.previewCtx.propertyName,
+      unit: o.previewCtx.unitNumber,
+      rent: fmt(o.leaseCtx.monthlyRent),
+      currency: CURRENCY.code,
+      endDate: formatDate(o.leaseCtx.endDate),
+    });
+
+  const otherActiveLeases = options.length - 1;
+
+  return (
+    <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+      <h3 className="text-sm font-medium text-text-primary uppercase tracking-wider">
+        {t("moveOutLease.title")}
+      </h3>
+
+      {options.length > 1 ? (
+        <Select
+          label={t("moveOutLease.selectLabel")}
+          placeholder={t("moveOutLease.selectPlaceholder")}
+          helperText={t("moveOutLease.selectHint")}
+          value={selected?.leaseCtx.leaseId ?? ""}
+          onChange={(e) => onSelect(e.target.value)}
+        >
+          {options.map((o) => (
+            <option key={o.leaseCtx.leaseId} value={o.leaseCtx.leaseId}>
+              {optionLabel(o)}
+            </option>
+          ))}
+        </Select>
+      ) : (
+        <div>
+          <p className="text-sm font-medium text-text-primary">
+            {options[0].previewCtx.propertyName}
+            <span className="text-text-secondary"> · </span>
+            {t("moveOutFees.preview.unitNumber")} {options[0].previewCtx.unitNumber}
+          </p>
+          <p className="text-xs text-text-secondary mt-0.5">
+            <span className="font-mono tabular-nums ltr-nums">
+              {fmt(options[0].leaseCtx.monthlyRent)} {CURRENCY.code}
+            </span>
+            <span className="mx-1">·</span>
+            {t("moveOutLease.leaseEnds", {
+              endDate: formatDate(options[0].leaseCtx.endDate),
+            })}
+          </p>
+        </div>
+      )}
+
+      {selected && otherActiveLeases > 0 && (
+        <Alert variant="info">
+          {t("moveOutLease.remainsActive", { count: otherActiveLeases })}
+        </Alert>
+      )}
+      {selected && otherActiveLeases === 0 && (
+        <p className="text-xs text-text-secondary">{t("moveOutLease.lastLease")}</p>
+      )}
+    </div>
+  );
+}
+
+function MoveOutForm({
+  locale,
+  tenantId,
+  lease,
+  leaseOptions,
+  onSelectLease,
+}: {
+  locale: string;
+  tenantId: string;
+  lease: ActiveLeaseOption;
+  leaseOptions: ActiveLeaseOption[];
+  onSelectLease: (leaseId: string) => void;
+}) {
+  const t = useTranslations("tenants");
+  const tc = useTranslations("common");
+  const dateLocale = `${locale}-u-nu-latn`;
+  const router = useRouter();
+  const { leaseCtx, previewCtx, propertyDefaults } = lease;
+  // Active leases the tenant keeps after this one is closed.
+  const otherActiveLeases = leaseOptions.length - 1;
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [invoices, setInvoices] = useState<OutstandingInvoice[]>([]);
+  const [invoiceActions, setInvoiceActions] = useState<Record<string, InvoiceAction>>({});
+  const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({});
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [vacateDate, setVacateDate] = useState("");
+  const [reason, setReason] = useState("");
+  const [notes, setNotes] = useState("");
+  const [finalInspection, setFinalInspection] = useState(false);
+  const [keysReturned, setKeysReturned] = useState(false);
+  const [depositStatus, setDepositStatus] = useState("pending");
+  const [commissionPreview, setCommissionPreview] = useState<EarlyTerminationCommissionPreview | null>(null);
+  const [loadingCommission, setLoadingCommission] = useState(false);
+  // Cleaning and painting are always present so the user sees them
+  // prefilled from the property defaults.
+  const [fees, setFees] = useState<FeeRow[]>(() => [
+    {
+      id: newRowId(),
+      kind: "cleaning",
+      description: t("moveOutFees.cleaningLabel"),
+      amount: String(propertyDefaults.cleaningFee || 0),
+    },
+    {
+      id: newRowId(),
+      kind: "painting",
+      description: t("moveOutFees.paintingLabel"),
+      amount: String(propertyDefaults.paintingFee || 0),
+    },
+  ]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null);
+  const [createdInvoiceNumber, setCreatedInvoiceNumber] = useState<string | null>(null);
+
+  // Outstanding rent invoices of the lease being closed.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const supabase = createClient();
+      const { data: outstandingInvoices, error: invoicesError } = await supabase
+        .from("invoices")
+        .select("id, amount, paid_amount, due_date, status, period_start, period_end, lease_id, tenant_id, unit_id")
+        .eq("lease_id", leaseCtx.leaseId)
+        .eq("invoice_type", "rent")
+        .in("status", ["pending", "overdue", "partial"])
+        .order("due_date", { ascending: true });
+
+      if (cancelled) return;
+      if (invoicesError) {
+        setError(invoicesError.message);
+      } else if (outstandingInvoices && outstandingInvoices.length > 0) {
+        setInvoices(outstandingInvoices);
+        const defaults: Record<string, InvoiceAction> = {};
+        outstandingInvoices.forEach((inv) => {
+          defaults[inv.id] = "leave_open";
         });
-        setPreviewCtx({
-          tenantName: tenant.full_name,
-          tenantPhone: tenant.phone || "",
-          tenantEmail: tenant.email || "",
-          propertyName: unit.properties.name,
-          propertyLocation: unit.properties.location || "",
-          unitNumber: unit.unit_number,
-          unitFloor: unit.floor,
-        });
-        setPropertyDefaults({
-          cleaningFee: Number(unit.properties.cleaning_fee_default || 0),
-          paintingFee: Number(unit.properties.painting_fee_default || 0),
-          earlyTerminationRate: Number(unit.properties.early_termination_rate || 0),
-        });
-
-        const { data: outstandingInvoices } = await supabase
-          .from("invoices")
-          .select("id, amount, paid_amount, due_date, status, period_start, period_end, lease_id, tenant_id, unit_id")
-          .eq("lease_id", activeLease.id)
-          .eq("invoice_type", "rent")
-          .in("status", ["pending", "overdue", "partial"])
-          .order("due_date", { ascending: true });
-
-        if (outstandingInvoices && outstandingInvoices.length > 0) {
-          setInvoices(outstandingInvoices);
-          const defaults: Record<string, InvoiceAction> = {};
-          outstandingInvoices.forEach((inv) => {
-            defaults[inv.id] = "leave_open";
-          });
-          setInvoiceActions(defaults);
-        }
+        setInvoiceActions(defaults);
       }
       setLoadingInvoices(false);
     };
-    init();
-  }, [params]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [leaseCtx.leaseId]);
 
   // Refresh the early-termination commission catch-up whenever the vacate
   // date changes. The form gates rendering on `vacateDate`, so we don't need
   // to clear the preview imperatively when it goes blank.
   useEffect(() => {
-    if (!leaseCtx || !vacateDate) return;
+    if (!vacateDate) return;
     let cancelled = false;
     const run = async () => {
       setLoadingCommission(true);
@@ -205,28 +472,7 @@ export default function MoveOutPage({
     return () => {
       cancelled = true;
     };
-  }, [leaseCtx, vacateDate]);
-
-  // Seed the fee rows once the property defaults are loaded. Cleaning and
-  // painting are always present so the user sees them prefilled.
-  useEffect(() => {
-    if (feesInitialized || !propertyDefaults) return;
-    setFees([
-      {
-        id: newRowId(),
-        kind: "cleaning",
-        description: t("moveOutFees.cleaningLabel"),
-        amount: String(propertyDefaults.cleaningFee || 0),
-      },
-      {
-        id: newRowId(),
-        kind: "painting",
-        description: t("moveOutFees.paintingLabel"),
-        amount: String(propertyDefaults.paintingFee || 0),
-      },
-    ]);
-    setFeesInitialized(true);
-  }, [propertyDefaults, feesInitialized, t]);
+  }, [leaseCtx.leaseId, vacateDate]);
 
   // Auto-populate (and refresh) the early-termination fee whenever the
   // vacate date moves into / out of the contract window. The fee is
@@ -234,8 +480,6 @@ export default function MoveOutPage({
   // Stops touching the row if the user has manually edited it.
   const [earlyTermTouched, setEarlyTermTouched] = useState(false);
   useEffect(() => {
-    if (!leaseCtx || !propertyDefaults) return;
-
     const applicable =
       vacateDate &&
       leaseCtx.endDate &&
@@ -375,12 +619,7 @@ export default function MoveOutPage({
     setLoading(true);
     setError("");
 
-    if (!resolvedParams || !leaseCtx) {
-      setError("Missing context");
-      setLoading(false);
-      return;
-    }
-    const { locale, id } = resolvedParams;
+    const id = tenantId;
     const supabase = createClient();
     const {
       data: { user },
@@ -445,14 +684,18 @@ export default function MoveOutPage({
       }
     }
 
-    const { error: tenantError } = await supabase
-      .from("tenants")
-      .update({ status: "archived" })
-      .eq("id", id);
-    if (tenantError) {
-      setError(tenantError.message);
-      setLoading(false);
-      return;
+    // Only archive the tenant when this was their last active lease; a
+    // tenant vacating one of several units stays active on the others.
+    if (otherActiveLeases === 0) {
+      const { error: tenantError } = await supabase
+        .from("tenants")
+        .update({ status: "archived" })
+        .eq("id", id);
+      if (tenantError) {
+        setError(tenantError.message);
+        setLoading(false);
+        return;
+      }
     }
 
     const { error: leaseError } = await supabase
@@ -581,65 +824,56 @@ export default function MoveOutPage({
       return sum + Math.max(bal - settle, 0);
     }, 0);
 
-  const fmt = (n: number) =>
-    n.toLocaleString("en-OM", { minimumFractionDigits: 2 });
-
   // Successful submission with an invoice → show a small confirmation card
   // with a Download PDF link before redirecting.
-  if (createdInvoiceId && resolvedParams) {
+  if (createdInvoiceId) {
     return (
-      <div className="max-w-2xl">
-        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
-          <div className="flex items-center gap-2 text-success">
-            <FileText className="h-5 w-5" />
-            <h2 className="text-lg font-semibold">
-              {t("moveOutFees.success.title")}
-            </h2>
-          </div>
-          <p className="text-sm text-text-secondary">
-            {t("moveOutFees.success.description", {
-              invoiceNumber: createdInvoiceNumber || "",
-            })}
-          </p>
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <a
-              href={`/api/invoices/${createdInvoiceId}/pdf`}
-              target="_blank"
-              rel="noreferrer"
-              className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors inline-flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {t("moveOutFees.success.downloadPdf")}
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                router.push(`/${resolvedParams.locale}/tenants`);
-                router.refresh();
-              }}
-              className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
-            >
-              {t("moveOutFees.success.backToTenants")}
-            </button>
-          </div>
+      <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
+        <div className="flex items-center gap-2 text-success">
+          <FileText aria-hidden="true" className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">
+            {t("moveOutFees.success.title")}
+          </h2>
+        </div>
+        <p className="text-sm text-text-secondary">
+          {t("moveOutFees.success.description", {
+            invoiceNumber: createdInvoiceNumber || "",
+          })}
+        </p>
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <a
+            href={`/api/invoices/${createdInvoiceId}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors inline-flex items-center gap-2"
+          >
+            <Download aria-hidden="true" className="h-4 w-4" />
+            {t("moveOutFees.success.downloadPdf")}
+          </a>
+          <button
+            type="button"
+            onClick={() => {
+              router.push(`/${locale}/tenants`);
+              router.refresh();
+            }}
+            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
+          >
+            {t("moveOutFees.success.backToTenants")}
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary font-display flex items-center gap-2">
-          <LogOut className="h-6 w-6 text-text-secondary" />
-          {t("moveOut")}
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          {t("moveOutDescription")}
-        </p>
-      </div>
-
+    <>
       <form onSubmit={openPreview} className="space-y-5">
+        <UnitToVacateCard
+          options={leaseOptions}
+          selected={lease}
+          onSelect={onSelectLease}
+        />
+
         {/* Move-out Details */}
         <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
           <h3 className="text-sm font-medium text-text-primary uppercase tracking-wider">
@@ -783,11 +1017,11 @@ export default function MoveOutPage({
                       ) : (
                         <p className="text-sm text-text-primary font-medium">
                           {fee.description}
-                          {isEarlyTerm && commissionPreview?.monthsRemainingAtVacate && propertyDefaults ? (
+                          {isEarlyTerm && commissionPreview?.monthsRemainingAtVacate ? (
                             <span className="block text-[11px] text-text-secondary font-normal mt-0.5">
                               {t("moveOutFees.earlyTerminationFormula", {
                                 months: commissionPreview.monthsRemainingAtVacate,
-                                rent: fmt(leaseCtx?.monthlyRent || 0),
+                                rent: fmt(leaseCtx.monthlyRent),
                                 rate: (propertyDefaults.earlyTerminationRate * 100).toFixed(2),
                               })}
                             </span>
@@ -1115,7 +1349,7 @@ export default function MoveOutPage({
         </div>
 
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <Alert variant="destructive">{error}</Alert>
         )}
 
         <div className="flex items-center gap-3">
@@ -1124,7 +1358,7 @@ export default function MoveOutPage({
             disabled={loading}
             className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50 inline-flex items-center gap-2"
           >
-            <FileText className="h-4 w-4" />
+            <FileText aria-hidden="true" className="h-4 w-4" />
             {t("moveOutFees.reviewAndConfirm")}
           </button>
           <button
@@ -1137,12 +1371,12 @@ export default function MoveOutPage({
         </div>
       </form>
 
-      {previewOpen && previewCtx && (
+      {previewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
           <div className="bg-surface border border-border rounded-lg w-full max-w-2xl my-8 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface">
               <h2 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                <FileText className="h-4 w-4" />
+                <FileText aria-hidden="true" className="h-4 w-4" />
                 {t("moveOutFees.preview.title")}
               </h2>
               <button
@@ -1247,8 +1481,14 @@ export default function MoveOutPage({
                 </table>
               </div>
 
+              {otherActiveLeases > 0 && (
+                <Alert variant="info">
+                  {t("moveOutLease.remainsActive", { count: otherActiveLeases })}
+                </Alert>
+              )}
+
               {error && (
-                <p className="text-sm text-destructive">{error}</p>
+                <Alert variant="destructive">{error}</Alert>
               )}
             </div>
 
@@ -1273,7 +1513,7 @@ export default function MoveOutPage({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
