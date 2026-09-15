@@ -26,8 +26,9 @@ const METHOD_COLORS: Record<string, string> = {
   cash: "var(--color-chart-1)",
   bank_transfer: "var(--color-chart-2)",
   cheque: "var(--color-chart-3)",
+  direct_debit: "var(--color-chart-4)",
 };
-const FALLBACK_COLOR = "var(--color-chart-4)";
+const FALLBACK_COLOR = "var(--color-chart-5)";
 const KNOWN_METHODS = new Set(Object.keys(METHOD_COLORS));
 
 export function PaymentMethodChart() {

@@ -6,6 +6,8 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { SharePortalButton } from "@/components/tenants/share-portal-button";
 import { EditPaymentMethod } from "@/components/payments/edit-payment-method";
+import { EMandatePanel, type LeaseOption } from "@/components/tenants/e-mandate-panel";
+import { listMandatesForTenant } from "@/lib/e-mandates/service";
 import {
   User,
   FileText,
@@ -27,6 +29,7 @@ import {
   RefreshCw,
   ScrollText,
   FileDown,
+  Landmark,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { PageHeader } from "@/components/ui/page-header";
@@ -87,6 +90,7 @@ export default async function TenantDetailPage({
   const ti = await getTranslations("invoices");
   const tm = await getTranslations("maintenance");
   const tl = await getTranslations("leases");
+  const te = await getTranslations("eMandates");
   const supabase = await createClient();
 
   const { data: tenant } = await supabase
@@ -150,6 +154,19 @@ export default async function TenantDetailPage({
   const maintenance = maintenanceRes.data;
   const documents = documentsRes.data;
   const cheques = chequesRes.data;
+
+  const { mandates, collections } = await listMandatesForTenant(supabase, id);
+  const leaseOptions: LeaseOption[] = (leases ?? []).map((l: Record<string, unknown>) => {
+    const unit = l.units as Record<string, unknown> | null;
+    const property = unit?.properties as Record<string, unknown> | null;
+    return {
+      id: l.id as string,
+      label: `${(property?.name as string) ?? ""} · ${tc("unit")} ${(unit?.unit_number as string) ?? ""}`.trim(),
+      monthlyRent: Number(l.monthly_rent || 0),
+      paymentDueDay: Number(l.payment_due_day || 1),
+      isActive: !!l.is_active,
+    };
+  });
 
   // Generate signed URLs for document downloads
   const docUrlMap = documents && documents.length > 0
@@ -562,6 +579,7 @@ export default async function TenantDetailPage({
                               | "cash"
                               | "bank_transfer"
                               | "cheque"
+                              | "direct_debit"
                               | null) ?? null
                           }
                         />
@@ -611,6 +629,7 @@ export default async function TenantDetailPage({
                           | "cash"
                           | "bank_transfer"
                           | "cheque"
+                          | "direct_debit"
                           | null) ?? null
                       }
                     />
@@ -752,6 +771,19 @@ export default async function TenantDetailPage({
             title={tch("noCheques")}
           />
         )}
+      </section>
+
+      {/* E-Mandate Section */}
+      <section id="e-mandates-section">
+        <SectionHeading icon={Landmark} title={te("title")} count={mandates.length} />
+        <EMandatePanel
+          tenantName={tenant.full_name}
+          tenantPhone={tenant.phone}
+          locale={locale}
+          leases={leaseOptions}
+          mandates={mandates}
+          collections={collections}
+        />
       </section>
 
       {/* Documents Section */}

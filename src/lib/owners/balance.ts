@@ -187,7 +187,7 @@ export async function getOwnerBalance(
         rentExcludedUntil !== null && paymentDate <= rentExcludedUntil;
       // Cash & bank transfer hit our account → we owe owner.
       // Cheques go direct to owner → no balance change for the rent itself.
-      if (method === "cash" || method === "bank_transfer") {
+      if (method === "cash" || method === "bank_transfer" || method === "direct_debit") {
         if (!rentAlreadyInOpening) {
           rentToCompany += amount;
           if (inCurrentMonth(paymentDate)) rentToCompanyCur += amount;

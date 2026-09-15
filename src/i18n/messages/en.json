@@ -530,7 +530,9 @@
       "cash": "Cash",
       "bankTransfer": "Bank Transfer",
       "bank_transfer": "Bank Transfer",
-      "cheque": "Cheque"
+      "cheque": "Cheque",
+      "direct_debit": "Direct Debit",
+      "directDebit": "Direct Debit"
     },
     "selectCheque": "Select Cheque",
     "chooseCheque": "Choose a cheque...",
@@ -1036,7 +1038,18 @@
     "whatsappTestSubtitle": "Send a test message via Meta WhatsApp Cloud API",
     "whatsappTestSend": "Send Test Message",
     "whatsappTestPhoneLabel": "Phone Number",
-    "whatsappTestPhoneHelp": "Include country code (e.g. +968 for Oman)"
+    "whatsappTestPhoneHelp": "Include country code (e.g. +968 for Oman)",
+    "eMandatesTitle": "Bank E-Mandates",
+    "eMandatesDescription": "Direct-debit provider status. Mandates are created per tenant from the tenant page.",
+    "eMandatesActiveProvider": "Active provider:",
+    "eMandatesMockProvider": "Test (mock)",
+    "eMandatesMockWarning": "The mock bank is in use: no real money moves. The tenant OTP is {otp} and every collection results in \"{result}\". Bank Muscat switches on automatically once its variables are set.",
+    "eMandatesBankMuscatVars": "Bank Muscat variables",
+    "eMandatesBankMuscatReady": "All Bank Muscat variables are set.",
+    "eMandatesBankMuscatMissing": "Add these in Vercel, then redeploy:",
+    "eMandatesWebhookUrl": "Webhook URL to give the bank",
+    "eMandatesCronSchedule": "Collection run",
+    "eMandatesDocsHint": "Setup steps and the list of questions for the bank are in docs/e-mandates.md."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1279,10 +1292,116 @@
     "methods": {
       "cash": "Cash",
       "bank_transfer": "Bank Transfer",
-      "cheque": "Cheque"
+      "cheque": "Cheque",
+      "direct_debit": "Direct Debit"
     },
     "whatsappMessage": "Hi! You can use this link to view your tenancy details, documents, and payment history:",
     "openDocument": "Open document"
+  },
+  "eMandates": {
+    "title": "Bank E-Mandate",
+    "sectionDescription": "Direct debit authorised by the tenant at their bank. Rent is pulled automatically on the collection day.",
+    "setUp": "Set up e-mandate",
+    "createAtBank": "Create at bank",
+    "dialogDescription": "Register a direct-debit mandate for {name}. The bank sends the tenant an OTP by SMS; share the link below so they can confirm it.",
+    "createdPendingOtp": "Mandate created. Send the tenant this link so they can enter the OTP from their bank.",
+    "createdActive": "Mandate created and active.",
+    "otpLinkExpiry": "The link and OTP expire after 15 minutes. Use Resend OTP if the tenant missed it.",
+    "copyLink": "Copy link",
+    "shareWhatsApp": "Share on WhatsApp",
+    "resendOtp": "Resend OTP",
+    "collectNow": "Collect now",
+    "cancel": "Cancel mandate",
+    "confirmCancel": "Cancel this mandate at the bank? Future rent will no longer be collected automatically.",
+    "whatsappMessage": "Hi! Please confirm your rent direct-debit mandate. Open this link and enter the OTP your bank sends by SMS:",
+    "emptyTitle": "No e-mandate yet",
+    "emptyDescription": "Set up a mandate so rent is collected from the tenant's bank account automatically.",
+    "emptyNoLease": "An active lease is required before a mandate can be created.",
+    "fields": {
+      "lease": "Lease",
+      "amount": "Monthly amount",
+      "collectionDay": "Collection day",
+      "collectionDayHelp": "Day of month, 1–28",
+      "account": "Account",
+      "provider": "Bank",
+      "debtorName": "Account holder name",
+      "accountNumber": "Tenant account number / IBAN",
+      "accountNumberHelp": "Sent to the bank once; only the last 4 digits are stored.",
+      "bankCode": "Bank code (optional)",
+      "bankCodeHelp": "Only if the tenant banks elsewhere."
+    },
+    "status": {
+      "pending_otp": "Awaiting OTP",
+      "active": "Active",
+      "suspended": "Suspended",
+      "cancelled": "Cancelled",
+      "failed": "Failed",
+      "expired": "Expired"
+    },
+    "collectionStatus": {
+      "scheduled": "Scheduled",
+      "submitted": "Sent to bank",
+      "settled": "Settled",
+      "failed": "Failed",
+      "returned": "Returned",
+      "cancelled": "Cancelled"
+    },
+    "providers": {
+      "bank_muscat": "Bank Muscat",
+      "mock": "Test (mock)"
+    },
+    "collections": {
+      "date": "Date",
+      "amount": "Amount",
+      "status": "Status",
+      "reference": "Bank reference"
+    },
+    "errors": {
+      "leaseRequired": "Choose a lease",
+      "accountRequired": "Enter the tenant's account number",
+      "createFailed": "Could not create the mandate"
+    },
+    "skipReasons": {
+      "already_collected_today": "Already collected today",
+      "no_unpaid_invoice": "No unpaid rent invoice to collect",
+      "nothing_owed": "Nothing is owed on the invoice",
+      "invoice_already_in_collection": "This invoice already has a collection in progress",
+      "mandate_expired": "The mandate has expired",
+      "mandate_pending_otp": "The tenant has not confirmed the mandate yet",
+      "mandate_suspended": "The mandate is suspended",
+      "mandate_cancelled": "The mandate is cancelled"
+    },
+    "toasts": {
+      "created": "Mandate created",
+      "cancelled": "Mandate cancelled",
+      "otpResent": "New OTP sent",
+      "actionFailed": "Action failed",
+      "collect_settled": "Rent collected and invoice marked paid",
+      "collect_submitted": "Collection sent to the bank",
+      "collect_failed": "The bank rejected the collection"
+    },
+    "portal": {
+      "title": "Rent Direct Debit",
+      "subtitle": "Confirm your e-mandate",
+      "invalidTitle": "Invalid or Expired Link",
+      "invalidMessage": "This link is no longer valid. Please ask your property manager for a new one.",
+      "unit": "Unit",
+      "amount": "Monthly amount",
+      "collectionDay": "Collected on",
+      "dayOfMonth": "Day {day} of each month",
+      "account": "From account",
+      "otpInstructions": "Your bank has sent a one-time code to your registered mobile number. Enter it below to authorise the direct debit.",
+      "otpLabel": "One-time code (OTP)",
+      "attemptsLeft": "{count} attempts left",
+      "confirm": "Confirm mandate",
+      "consent": "By confirming, you authorise your bank to pay {amount} to MPIRE Property Management on day {day} of each month until the mandate is cancelled.",
+      "otpFailed": "The code could not be verified",
+      "stillPending": "The bank has not activated the mandate yet. Please try again shortly.",
+      "doneTitle": "Mandate active",
+      "doneMessage": "Thank you. Your rent will be collected automatically.",
+      "lockedTitle": "Too many attempts",
+      "lockedMessage": "This link is locked. Please contact your property manager for a new one."
+    }
   },
   "owners": {
     "title": "Owner ledger",
@@ -1334,7 +1453,9 @@
     "methods": {
       "cash": "Cash",
       "bankTransfer": "Bank transfer",
-      "cheque": "Cheque"
+      "cheque": "Cheque",
+      "direct_debit": "Direct Debit",
+      "directDebit": "Direct Debit"
     },
     "ref": "Ref {number}",
     "asOf": "As of",

@@ -309,6 +309,8 @@ function labelMethod(m: string, t: ReturnType<typeof useTranslations>) {
       return t("methods.cash");
     case "bank_transfer":
       return t("methods.bankTransfer");
+    case "direct_debit":
+      return t("methods.directDebit");
     case "cheque":
       return t("methods.cheque");
     default:

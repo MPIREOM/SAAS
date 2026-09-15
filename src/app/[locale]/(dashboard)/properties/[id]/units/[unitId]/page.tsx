@@ -954,6 +954,7 @@ export default async function UnitDetailPage({
                               | "cash"
                               | "bank_transfer"
                               | "cheque"
+                              | "direct_debit"
                               | null) ?? null
                           }
                         />
@@ -1005,6 +1006,7 @@ export default async function UnitDetailPage({
                           | "cash"
                           | "bank_transfer"
                           | "cheque"
+                          | "direct_debit"
                           | null) ?? null
                       }
                     />

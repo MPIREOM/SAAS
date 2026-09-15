@@ -69,6 +69,8 @@ export function InvoicePaymentsPicker({
             ? t(
                 p.method === "bank_transfer"
                   ? "methods.bankTransfer"
+                  : p.method === "direct_debit"
+                    ? "methods.directDebit"
                   : p.method === "cheque"
                     ? "methods.cheque"
                     : "methods.cash",
