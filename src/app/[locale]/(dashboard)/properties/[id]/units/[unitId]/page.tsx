@@ -432,7 +432,7 @@ export default async function UnitDetailPage({
                   </Link>
                 )}
                 <Link
-                  href={`/${locale}/tenants/${currentTenant.id}/move-out`}
+                  href={`/${locale}/tenants/${currentTenant.id}/move-out${activeLease?.id ? `?lease=${activeLease.id}` : ""}`}
                   className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-lg hover:bg-border/30 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   <LogOut aria-hidden="true" className="h-3.5 w-3.5" />

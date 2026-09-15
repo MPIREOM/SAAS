@@ -406,6 +406,18 @@
         "backToTenants": "Back to tenants"
       }
     },
+    "moveOutLease": {
+      "title": "Unit to vacate",
+      "selectLabel": "Which unit is being vacated?",
+      "selectPlaceholder": "Select a unit",
+      "selectHint": "This tenant holds more than one active lease. Only the selected unit will be vacated.",
+      "optionLabel": "{property} · Unit {unit} · {rent} {currency}/month · until {endDate}",
+      "leaseEnds": "Lease ends {endDate}",
+      "remainsActive": "{count, plural, one {The tenant keeps # other active lease and will stay active after this move-out.} other {The tenant keeps # other active leases and will stay active after this move-out.}}",
+      "lastLease": "This is the tenant's only active lease. The tenant will be archived after the move-out.",
+      "noActiveLease": "This tenant has no active lease to move out.",
+      "loadError": "Could not load the tenant's leases."
+    },
     "outstandingInvoices": "Outstanding Invoices",
     "invoiceResolutionDescription": "Choose how to handle each outstanding invoice before completing the move-out.",
     "bulkAction": "Set all to",
