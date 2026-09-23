@@ -598,7 +598,13 @@
       "confirm": "إرجاع إلى غير مسددة",
       "success": "تمت إعادة الفاتورة إلى غير مسددة",
       "failed": "فشل التراجع عن الدفعة"
-    }
+    },
+    "statementOfAccount": "كشف حساب",
+    "statementOfAccountDescription": "كشف شهري بالإيجارات المدفوعة والمستحقة للمستأجر الحالي",
+    "statementRangeHint": "اترك الشهرين فارغين لعرض كامل مدة العقد. أي مبالغ مستحقة قبل شهر البداية تظهر كرصيد مرحّل.",
+    "statementFrom": "من شهر",
+    "statementTo": "إلى شهر",
+    "generateStatement": "فتح الكشف"
   },
   "cheques": {
     "title": "الشيكات",

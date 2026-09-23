@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
+import { StatementOfAccountButton } from "@/components/units/statement-of-account-button";
 import { AddChequeDialog } from "@/components/cheques/add-cheque-dialog";
 import { EditPaymentMethod } from "@/components/payments/edit-payment-method";
 import { ChequeActions } from "@/components/cheques/cheque-actions";
@@ -422,6 +423,7 @@ export default async function UnitDetailPage({
                   <FileDown aria-hidden="true" className="h-3.5 w-3.5" />
                   {ti("downloadUnpaidPDF")}
                 </Link>
+                <StatementOfAccountButton unitId={unitId} />
                 {currentTenant.status === "active" && (
                   <Link
                     href={`/${locale}/tenants/${currentTenant.id}/renew-lease`}

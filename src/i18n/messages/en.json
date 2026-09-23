@@ -598,7 +598,13 @@
       "confirm": "Return to unpaid",
       "success": "Invoice returned to unpaid",
       "failed": "Failed to revert payment"
-    }
+    },
+    "statementOfAccount": "Statement of Account",
+    "statementOfAccountDescription": "Month-by-month statement of paid and pending rent for the current tenant",
+    "statementRangeHint": "Leave both months empty to include the whole lease. Anything owed before the start month is carried in as a brought-forward balance.",
+    "statementFrom": "From month",
+    "statementTo": "To month",
+    "generateStatement": "Open statement"
   },
   "cheques": {
     "title": "Cheques",
