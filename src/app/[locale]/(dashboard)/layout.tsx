@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { ToastProvider } from "@/components/ui/toast";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export default async function DashboardLayout({
   children,
@@ -35,6 +36,7 @@ export default async function DashboardLayout({
         />
         <main className="p-4 md:p-8"><ToastProvider>{children}</ToastProvider></main>
       </div>
+      {context.role === "super_admin" && <AssistantWidget locale={locale} />}
     </div>
   );
 }

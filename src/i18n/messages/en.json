@@ -1584,5 +1584,46 @@
       "asOfDate": "As of date",
       "notesPlaceholder": "Anything worth remembering about this owner"
     }
+  },
+  "assistant": {
+    "title": "MPIRE Assistant",
+    "open": "Open AI assistant",
+    "history": "Chat history",
+    "newChat": "New chat",
+    "deleteChat": "Delete chat",
+    "deleteConfirm": "Delete this conversation?",
+    "noHistory": "No conversations yet",
+    "untitled": "Untitled chat",
+    "welcomeTitle": "How can I help?",
+    "welcomeBody": "Ask about tenants, invoices, payments, owners or expenses — or ask me to make a change.",
+    "suggestions": {
+      "overdue": "Who has overdue invoices right now?",
+      "ownerBalance": "What is the current owner balance?",
+      "expiring": "Which leases end in the next 60 days?"
+    },
+    "placeholder": "Ask anything…",
+    "send": "Send",
+    "thinking": "Working on it…",
+    "toolsUsed": "{count, plural, one {Checked the system once} other {Checked the system # times}}",
+    "confirmTitle": "Confirm this action",
+    "confirmBody": "The assistant wants to make the change below. Nothing happens until you confirm.",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "rateLimited": "The assistant is busy right now. Please try again in a minute.",
+      "unavailable": "The AI service is unavailable right now. Please try again shortly."
+    },
+    "actions": {
+      "delete_expense": "Delete expense",
+      "delete_owner_settlement": "Delete owner settlement",
+      "cancel_invoice": "Cancel invoice",
+      "revert_invoice_to_unpaid": "Revert invoice to unpaid",
+      "move_out_tenant": "Move tenant out",
+      "renew_lease": "Renew lease",
+      "update_lease": "Update lease",
+      "update_lease_rent": "Change rent",
+      "update_invoice": "Update invoice",
+      "update_tenant": "Update tenant details",
+      "update_payment_method": "Change payment method"
+    }
   }
 }

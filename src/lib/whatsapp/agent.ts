@@ -83,7 +83,7 @@ async function callClaude(
 
 // ── Tool definitions for Claude ───────────────────────────────────────────
 
-const tools: Anthropic.Tool[] = [
+export const tools: Anthropic.Tool[] = [
   {
     name: "search_tenants",
     description:
@@ -1027,7 +1027,7 @@ const tools: Anthropic.Tool[] = [
 
 // ── Tool execution ────────────────────────────────────────────────────────
 
-async function executeTool(
+export async function executeTool(
   toolName: string,
   input: Record<string, unknown>,
   userId: string
