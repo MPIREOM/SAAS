@@ -645,8 +645,9 @@ async function sendReminder(
     const metaTemplateName = waTemplate?.whatsapp_template_name
       || `${defaultWhatsAppTemplates[params.reminderType]}_${langCode}`;
 
-    // All templates are registered as English in Meta, so always use "en"
-    const metaLanguageCode = "en";
+    // Templates are registered in Meta under their own language (Arabic
+    // templates as "ar"), so request the same language the name ends in.
+    const metaLanguageCode = langCode;
 
     const whatsappResult = await sendWhatsAppTemplate({
       to: formatPhone(params.phone),
