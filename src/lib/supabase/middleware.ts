@@ -42,7 +42,8 @@ export async function updateSession(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.includes("/auth/");
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const isPublicPage = request.nextUrl.pathname.includes("/maintenance-request/") ||
-    request.nextUrl.pathname.includes("/tenant-portal/");
+    request.nextUrl.pathname.includes("/tenant-portal/") ||
+    /^\/(en|ar)\/privacy\/?$/.test(request.nextUrl.pathname);
 
   if (!hasSession && !isAuthPage && !isApiRoute && !isPublicPage) {
     const pathLocale = request.nextUrl.pathname.split("/")[1] || "en";
