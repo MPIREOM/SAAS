@@ -193,9 +193,9 @@ export async function reminderTemplateDefinitions(supabase: SupabaseClient): Pro
     out.push({
       source: "notification_templates",
       name,
-      // The senders always send language "en" (all templates were registered
-      // as English in Meta, Arabic text included) — see cron/reminders.
-      language: "en",
+      // Must match the language the senders request (cron/reminders and
+      // reminders/trigger send the tenant's language, "en" or "ar").
+      language: lang,
       category: "UTILITY",
       components: [body(converted.text, REMINDER_EXAMPLES[row.reminder_type] ?? [])],
       issues: converted.issues,
