@@ -1625,5 +1625,52 @@
       "update_tenant": "Update tenant details",
       "update_payment_method": "Change payment method"
     }
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: 27 September 2026",
+    "intro": "This policy explains how MPIRE Property Management (\"MPIRE\", \"we\") collects, uses and protects personal information when you use our property management platform, our tenant portal, or message our WhatsApp Business number.",
+    "sections": {
+      "collect": {
+        "title": "Information we collect",
+        "body": "Account details for staff and property owners (name, email address, phone number). Records entered by property managers about properties, units, tenants, leases, invoices, payments and cheques. Maintenance requests, including descriptions and any photos you upload. Messages, media and phone numbers exchanged with our WhatsApp Business number. Basic technical data such as log entries needed to keep the service secure and working."
+      },
+      "use": {
+        "title": "How we use it",
+        "body": "To run the platform for property managers and owners; to send rent reminders, receipts, lease and maintenance updates and owner reports; to answer your questions and handle maintenance requests, including on WhatsApp; and to prevent fraud and keep the service secure. We do not sell personal information or use it for advertising."
+      },
+      "whatsapp": {
+        "title": "WhatsApp messaging",
+        "body": "Our WhatsApp messages are sent and received through the WhatsApp Business Platform provided by Meta, which processes them under its own terms and privacy policy. We only message numbers that were given to us for your tenancy or account. Some replies may be drafted automatically to help us respond faster. To stop receiving WhatsApp messages from us, reply to tell us or contact us using the details below."
+      },
+      "sharing": {
+        "title": "Who we share it with",
+        "body": "We share information only with service providers that help us run the platform: hosting (Vercel), database and file storage (Supabase), messaging (Meta WhatsApp Business Platform), email delivery (Resend) and AI assistance (Anthropic). They may only use it to provide their service to us. We may also disclose information when the law requires it."
+      },
+      "retention": {
+        "title": "How long we keep it",
+        "body": "We keep records for as long as the related account, property or lease is active, and afterwards for as long as needed to meet legal, accounting and tax obligations. We then delete or anonymise it."
+      },
+      "rights": {
+        "title": "Your choices and rights",
+        "body": "You can ask us to access, correct or delete your personal information, or to stop contacting you. Some records, such as payment history, may need to be kept for legal reasons; if so, we will tell you."
+      },
+      "deletion": {
+        "title": "Data deletion requests",
+        "body": "To delete your data, email us from the address or phone number linked to your account, or send the request through our WhatsApp number, and say what you want deleted. We will confirm and complete the request within 30 days."
+      },
+      "security": {
+        "title": "Security",
+        "body": "Data is encrypted in transit, access is restricted by role, and only authorised staff can view tenant and payment records. No system is perfectly secure, but we work to protect your information."
+      },
+      "changes": {
+        "title": "Changes to this policy",
+        "body": "We may update this policy. When we do, we will change the date at the top of this page."
+      },
+      "contact": {
+        "title": "Contact us",
+        "body": "Questions or requests about your privacy:"
+      }
+    }
   }
 }
