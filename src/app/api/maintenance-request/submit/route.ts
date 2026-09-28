@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { defaultTechnician } from "@/lib/maintenance/whatsapp";
+import {
+  adminWhatsAppTemplate,
+  loadRequest,
+  notifyTechnician,
+  notifyTenantOfStatus,
+} from "@/lib/maintenance/workflow";
 
 export const maxDuration = 60;
 
@@ -121,6 +128,9 @@ export async function POST(request: NextRequest) {
 
   const tenantId = (activeLease?.tenant_id as string | undefined) || null;
 
+  // Tenant submissions go straight to the fixed technician, if configured.
+  const technician = defaultTechnician();
+
   // Create maintenance request
   const { data: maintenanceRequest, error: insertError } = await supabase
     .from("maintenance_requests")
@@ -131,6 +141,8 @@ export async function POST(request: NextRequest) {
       description,
       urgency,
       status: "open",
+      assigned_to_name: technician?.name ?? null,
+      assigned_to_phone: technician?.phone ?? null,
     })
     .select("id")
     .single();
@@ -344,6 +356,21 @@ export async function POST(request: NextRequest) {
           footer: "This is an automatic alert from MPIRE Property Management.",
         }),
         whatsappText,
+        // Business-initiated messages only deliver outside the 24h window as
+        // an approved template; the rich text above is the fallback.
+        whatsappTemplate: adminWhatsAppTemplate(
+          {
+            requestId: maintenanceRequest.id,
+            propertyName: String(propertyName),
+            unitNumber: String(unitNumber),
+            category,
+            urgency,
+            description,
+            tenantName: tenantRes.data?.full_name ?? null,
+            tenantPhone,
+          },
+          dashboardLink
+        ),
       });
     }
   } catch (err) {
@@ -352,6 +379,20 @@ export async function POST(request: NextRequest) {
       err instanceof Error ? err.message : err
     );
     // Don't block the request — maintenance was already created
+  }
+
+  // Tenant confirmation + technician job card (non-blocking, same as above).
+  try {
+    const loaded = await loadRequest(supabase, maintenanceRequest.id);
+    if (loaded) {
+      await notifyTenantOfStatus(loaded, "open");
+      await notifyTechnician(loaded);
+    }
+  } catch (err) {
+    console.error(
+      "Tenant/technician notification failed:",
+      err instanceof Error ? err.message : err
+    );
   }
 
   return NextResponse.json({

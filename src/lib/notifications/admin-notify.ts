@@ -11,6 +11,11 @@ interface AdminNotifyOptions {
     name: string;
     languageCode: string;
     parameters: string[];
+    /**
+     * When the template send fails (e.g. not approved yet), retry as
+     * free-form whatsappText, which still delivers inside the 24h window.
+     */
+    fallbackToText?: boolean;
   };
 }
 
@@ -252,7 +257,7 @@ export async function notifyAdmins(
 
     if (r.notify_whatsapp && r.phone) {
       const phone = formatPhone(r.phone);
-      const result = options.whatsappTemplate
+      let result = options.whatsappTemplate
         ? await sendWhatsAppTemplateMessage(
             phone,
             options.whatsappTemplate.name,
@@ -260,6 +265,9 @@ export async function notifyAdmins(
             options.whatsappTemplate.parameters
           )
         : await sendWhatsAppText(phone, options.whatsappText);
+      if (!result.success && options.whatsappTemplate?.fallbackToText) {
+        result = await sendWhatsAppText(phone, options.whatsappText);
+      }
       if (result.success) whatsappSent++;
       else {
         errors++;

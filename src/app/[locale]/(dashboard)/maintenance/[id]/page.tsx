@@ -12,7 +12,12 @@ import {
   Paperclip,
   Video,
 } from "lucide-react";
-import MaintenanceActions from "./maintenance-actions";
+import {
+  MaintenanceAssignmentForm,
+  MaintenanceNoteForm,
+  MaintenanceStatusActions,
+} from "./maintenance-actions";
+import { STATUS_TRANSITIONS, isMaintenanceStatus } from "@/lib/maintenance/workflow";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +99,7 @@ export default async function MaintenanceDetailPage({
   const { data: notes } = await supabase
     .from("maintenance_notes")
     .select("*")
-    .eq("maintenance_request_id", id)
+    .eq("request_id", id)
     .order("created_at", { ascending: true });
 
   const { data: attachments } = await supabase
@@ -109,7 +114,10 @@ export default async function MaintenanceDetailPage({
 
   const statusFlow = ["open", "in_progress", "resolved", "closed"];
   const currentIndex = statusFlow.indexOf(request.status as string);
-  const nextStatus = currentIndex < statusFlow.length - 1 ? statusFlow[currentIndex + 1] : null;
+  const statusValue: unknown = request.status;
+  const transitions = isMaintenanceStatus(statusValue)
+    ? STATUS_TRANSITIONS[statusValue]
+    : [];
 
   const requestUrgency = (request.urgency as string) || "low";
   const requestStatus = (request.status as string) || "open";
@@ -318,10 +326,24 @@ export default async function MaintenanceDetailPage({
           }))}
           activeIndex={currentIndex}
         />
-        <MaintenanceActions
+        <MaintenanceStatusActions
           requestId={id}
           currentStatus={request.status as string}
-          nextStatus={nextStatus}
+          transitions={transitions}
+          actualCost={request.actual_cost != null ? Number(request.actual_cost) : null}
+        />
+      </section>
+
+      {/* Assignment & cost */}
+      <section className="bg-surface border border-border/60 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-text-primary font-display mb-4">
+          {t("assignmentAndCost")}
+        </h3>
+        <MaintenanceAssignmentForm
+          requestId={id}
+          assignedToName={(request.assigned_to_name as string | null) ?? null}
+          assignedToPhone={(request.assigned_to_phone as string | null) ?? null}
+          estimatedCost={request.estimated_cost != null ? Number(request.estimated_cost) : null}
         />
       </section>
 
@@ -349,10 +371,15 @@ export default async function MaintenanceDetailPage({
                 className="border-s-2 border-accent/30 ps-4 py-1.5"
               >
                 <p className="text-sm text-text-primary leading-relaxed">
-                  {note.content as string}
+                  {note.note as string}
                 </p>
-                <p className="text-xs text-text-secondary mt-1 font-mono ltr-nums">
-                  {new Date(note.created_at as string).toLocaleString()}
+                <p className="text-xs text-text-secondary mt-1">
+                  <span className="font-mono ltr-nums">
+                    {new Date(note.created_at as string).toLocaleString()}
+                  </span>
+                  {note.created_by_name ? (
+                    <> · {t("noteBy", { name: note.created_by_name as string })}</>
+                  ) : null}
                 </p>
               </li>
             ))}
@@ -363,12 +390,7 @@ export default async function MaintenanceDetailPage({
           </p>
         )}
 
-        <MaintenanceActions
-          requestId={id}
-          currentStatus={request.status as string}
-          nextStatus={nextStatus}
-          showNoteForm
-        />
+        <MaintenanceNoteForm requestId={id} />
       </section>
     </div>
   );

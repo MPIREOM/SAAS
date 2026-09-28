@@ -17,6 +17,9 @@ export const maintenanceCategoryEnum = pgEnum("maintenance_category", [
   "electrical",
   "ac",
   "structural",
+  "painting",
+  "cleaning",
+  "pest",
   "other",
 ]);
 

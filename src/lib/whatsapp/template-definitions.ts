@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TemplateComponent, TemplateCreateInput } from "./admin";
+import { MAINTENANCE_TEMPLATES } from "@/lib/maintenance/whatsapp";
 
 // Every Meta message template SAAS sends, in the exact shape the sending code
 // expects. Templates belong to a WhatsApp Business Account and do not move
@@ -16,6 +17,8 @@ import type { TemplateComponent, TemplateCreateInput } from "./admin";
 //     {{1}} tenant name, {{2}} unit, {{3}} property, {{4}} total overdue, {{5}} details
 //   daily_briefs (admin-summary): 11 parameters, see below
 //   owner_monthly_report (owner-reports): document header + 3 body parameters
+//   maintenance_* (lib/maintenance/whatsapp.ts): admin alert, technician
+//     job, tenant status update (en + ar)
 
 export interface TemplateDefinition extends TemplateCreateInput {
   /** Where the body came from, for the setup page. */
@@ -144,6 +147,18 @@ export function builtInTemplateDefinitions(): TemplateDefinition[] {
         { type: "FOOTER", text: "MPIRE Property Management" },
       ],
     },
+    // Maintenance workflow (src/lib/maintenance/whatsapp.ts owns the bodies
+    // so the sender and the template can't disagree on parameter order).
+    ...MAINTENANCE_TEMPLATES.map(
+      (t): TemplateDefinition => ({
+        source: "built-in",
+        name: t.name,
+        language: t.language,
+        category: "UTILITY",
+        issues: [],
+        components: [body(t.body, t.example)],
+      })
+    ),
   ];
 }
 
