@@ -18,6 +18,20 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
+// Rendered on the server (UTC), so pin Oman time explicitly. The time
+// matters: a morning failure and an afternoon retry share the same date.
+function formatSentAt(value: string): string {
+  return new Date(value).toLocaleString("en-US", {
+    timeZone: "Asia/Muscat",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export default async function RemindersPage({
   params,
 }: {
@@ -122,7 +136,7 @@ export default async function RemindersPage({
                     {t("undeliveredAttempts", { count: u.attempts })}
                   </span>
                   <span className="font-mono text-xs text-text-secondary ltr-nums">
-                    {t("lastAttempt")}: {new Date(u.lastSentAt).toLocaleDateString()}
+                    {t("lastAttempt")}: {formatSentAt(u.lastSentAt)}
                   </span>
                 </div>
                 {u.lastError && (
@@ -177,7 +191,7 @@ export default async function RemindersPage({
                     return (
                       <TableRow key={reminder.id as string}>
                         <TableCell className="px-4 whitespace-nowrap font-mono text-text-secondary ltr-nums">
-                          {new Date(reminder.created_at as string).toLocaleDateString()}
+                          {formatSentAt(reminder.created_at as string)}
                         </TableCell>
                         <TableCell className="px-4 font-medium text-text-primary">
                           {(tenant?.full_name as string) || "—"}
@@ -241,7 +255,7 @@ export default async function RemindersPage({
                         </p>
                       </div>
                       <span className="shrink-0 font-mono text-xs text-text-secondary ltr-nums">
-                        {new Date(reminder.created_at as string).toLocaleDateString()}
+                        {formatSentAt(reminder.created_at as string)}
                       </span>
                     </div>
                     <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
