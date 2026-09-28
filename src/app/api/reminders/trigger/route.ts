@@ -16,6 +16,7 @@ import {
   loadOverdueSendRows,
   summariseHistory,
 } from "@/lib/reminders/overdue-cap";
+import { combineByTenant } from "@/lib/reminders/combine";
 
 export const maxDuration = 300;
 
@@ -477,7 +478,8 @@ async function gatherReminders(
     }
   }
 
-  return gathered;
+  // One message per tenant per notice, however many units they rent.
+  return combineByTenant(gathered);
 }
 
 // ── Template helpers ──

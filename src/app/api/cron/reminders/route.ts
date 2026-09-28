@@ -16,6 +16,7 @@ import {
   loadOverdueSendHistory,
   type OverdueCapSetting,
 } from "@/lib/reminders/overdue-cap";
+import { combineByTenant } from "@/lib/reminders/combine";
 
 // Vercel Cron: runs daily at 8:00 AM (configured in vercel.json)
 export const maxDuration = 300;
@@ -130,6 +131,10 @@ export async function GET(request: NextRequest) {
       `)
       .eq("is_active", true);
 
+    // Gathered per lease, then merged so a tenant with several units gets
+    // one message per notice instead of one per unit.
+    const leaseReminders: ReminderParams[] = [];
+
     if (activeLeases) {
       for (const lease of activeLeases) {
         try {
@@ -206,7 +211,7 @@ export async function GET(request: NextRequest) {
                 parseISO(todayStr)
               );
               if (daysUntilDue > 0 && upcomingSetting.days_before.includes(daysUntilDue)) {
-                await sendReminder(supabase, templateIndex, {
+                leaseReminders.push({
                   tenantId: tenant.id as string,
                   tenantName: tenant.full_name as string,
                   phone: tenant.phone as string,
@@ -218,7 +223,6 @@ export async function GET(request: NextRequest) {
                   dueDate: upcomingDueDateStr,
                   reminderType: "rent_upcoming",
                 });
-                results.rentUpcoming++;
               }
             }
           }
@@ -263,7 +267,7 @@ export async function GET(request: NextRequest) {
                   .reduce((sum, inv) => sum + Number(inv.amount), 0)
                   .toFixed(2);
 
-                await sendReminder(supabase, templateIndex, {
+                leaseReminders.push({
                   tenantId: tenant.id as string,
                   tenantName: tenant.full_name as string,
                   phone: tenant.phone as string,
@@ -277,7 +281,6 @@ export async function GET(request: NextRequest) {
                   overdueInvoices,
                   totalOverdue,
                 });
-                results.rentOverdue++;
               }
             }
           }
@@ -287,7 +290,7 @@ export async function GET(request: NextRequest) {
             const leaseEnd = parseISO(lease.end_date);
             const daysUntilExpiry = differenceInDays(leaseEnd, today);
             if (daysUntilExpiry > 0 && expirySetting.days_before.includes(daysUntilExpiry)) {
-              await sendReminder(supabase, templateIndex, {
+              leaseReminders.push({
                 tenantId: tenant.id as string,
                 tenantName: tenant.full_name as string,
                 phone: tenant.phone as string,
@@ -299,13 +302,24 @@ export async function GET(request: NextRequest) {
                 dueDate: lease.end_date,
                 reminderType: "lease_expiry",
               });
-              results.leaseExpiry++;
             }
           }
         } catch (error) {
-          console.error("Reminder failed for lease tenant:", error instanceof Error ? error.message : error);
+          console.error("Reminder check failed for lease tenant:", error instanceof Error ? error.message : error);
           results.errors++;
         }
+      }
+    }
+
+    for (const params of combineByTenant(leaseReminders)) {
+      try {
+        await sendReminder(supabase, templateIndex, params);
+        if (params.reminderType === "rent_upcoming") results.rentUpcoming++;
+        else if (params.reminderType === "rent_overdue") results.rentOverdue++;
+        else results.leaseExpiry++;
+      } catch (error) {
+        console.error("Reminder failed for lease tenant:", error instanceof Error ? error.message : error);
+        results.errors++;
       }
     }
 
