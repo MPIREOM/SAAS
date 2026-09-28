@@ -10,9 +10,14 @@ import {
 import { sendEmail, buildReminderEmailHtml } from "@/lib/email/client";
 import { CURRENCY } from "@/lib/currency";
 import { addDays, format, differenceInDays, differenceInCalendarDays, lastDayOfMonth, parseISO, startOfMonth } from "date-fns";
-import { decideOverdueSend, loadOverdueSendHistory } from "@/lib/reminders/overdue-cap";
+import {
+  FAIL_CLOSED_HISTORY,
+  decideOverdueSend,
+  loadOverdueSendRows,
+  summariseHistory,
+} from "@/lib/reminders/overdue-cap";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function createSupabaseAdmin() {
   return createServerClient(
@@ -132,6 +137,61 @@ function shouldSendOverdue(
   return false;
 }
 
+// ── Batched invoice reads ──
+
+type InvoiceRow = {
+  lease_id: string;
+  amount: number | string | null;
+  paid_amount: number | string | null;
+  due_date: string;
+  period_start: string | null;
+  period_end: string | null;
+  status: string;
+};
+
+const LEASE_CHUNK = 150;
+const PAGE_SIZE = 1000;
+
+/**
+ * Invoices for many leases in a few round trips, grouped by lease and sorted
+ * by due date. Querying per lease (3–4 awaits each) pushed the manual
+ * trigger past its time limit once the portfolio grew.
+ */
+async function loadInvoicesByLease(
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  leaseIds: string[],
+  filter: { statuses?: string[]; periodStarts?: string[] }
+): Promise<Map<string, InvoiceRow[]>> {
+  const byLease = new Map<string, InvoiceRow[]>();
+  for (let i = 0; i < leaseIds.length; i += LEASE_CHUNK) {
+    const chunk = leaseIds.slice(i, i + LEASE_CHUNK);
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let query = supabase
+        .from("invoices")
+        .select("lease_id, amount, paid_amount, due_date, period_start, period_end, status")
+        .in("lease_id", chunk);
+      if (filter.statuses) query = query.in("status", filter.statuses);
+      else query = query.neq("status", "cancelled");
+      if (filter.periodStarts) query = query.in("period_start", filter.periodStarts);
+      const { data, error } = await query
+        .order("id", { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw new Error(`invoice lookup failed: ${error.message}`);
+      const rows = (data ?? []) as InvoiceRow[];
+      for (const r of rows) {
+        const list = byLease.get(r.lease_id) ?? [];
+        list.push(r);
+        byLease.set(r.lease_id, list);
+      }
+      if (rows.length < PAGE_SIZE) break;
+    }
+  }
+  for (const list of byLease.values()) {
+    list.sort((a, b) => (a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : 0));
+  }
+  return byLease;
+}
+
 // ── Gather reminders that match today's schedule ──
 
 async function gatherReminders(
@@ -171,6 +231,80 @@ async function gatherReminders(
     const overdueSetting = settings.get("rent_overdue")!;
     const expirySetting = settings.get("lease_expiry")!;
 
+    const leaseIds = activeLeases.map((l) => l.id as string);
+
+    // Every unpaid invoice (upcoming or overdue) in one pass.
+    const unpaidByLease =
+      upcomingSetting.is_enabled || overdueSetting.is_enabled
+        ? await loadInvoicesByLease(supabase, leaseIds, {
+            statuses: ["overdue", "partial", "pending"],
+          })
+        : new Map<string, InvoiceRow[]>();
+
+    // The billing period a lease with no upcoming invoice would fall in:
+    // this month's due day, or next month's once it has passed.
+    const candidateDueDate = (lease: Record<string, unknown>): Date => {
+      const dueDay = (lease.payment_due_day as number) || 1;
+      const currentMonth = omanNow.getMonth();
+      const currentYear = omanNow.getFullYear();
+      let candidate = new Date(
+        currentYear,
+        currentMonth,
+        Math.min(dueDay, lastDayOfMonth(new Date(currentYear, currentMonth, 1)).getDate())
+      );
+      if (format(candidate, "yyyy-MM-dd") < todayStr) {
+        const nextMonth = new Date(currentYear, currentMonth + 1, 1);
+        candidate = new Date(
+          nextMonth.getFullYear(),
+          nextMonth.getMonth(),
+          Math.min(dueDay, lastDayOfMonth(nextMonth).getDate())
+        );
+      }
+      return candidate;
+    };
+
+    // Which of those candidate periods are already invoiced (any status
+    // but cancelled) — at most two distinct months across all leases.
+    const invoicedPeriods = new Set<string>();
+    if (upcomingSetting.is_enabled) {
+      const periodStarts = [
+        ...new Set(
+          activeLeases.map((l) =>
+            format(startOfMonth(candidateDueDate(l)), "yyyy-MM-dd")
+          )
+        ),
+      ];
+      const periodInvs = await loadInvoicesByLease(supabase, leaseIds, { periodStarts });
+      for (const [leaseId, invs] of periodInvs) {
+        for (const inv of invs) invoicedPeriods.add(`${leaseId}:${inv.period_start}`);
+      }
+    }
+
+    // Overdue invoices per lease, and the send history of every tenant
+    // who has any, in one pass.
+    const overdueByLease = new Map<string, InvoiceRow[]>();
+    if (overdueSetting.is_enabled) {
+      for (const [leaseId, invs] of unpaidByLease) {
+        const overdue = invs.filter((inv) => inv.due_date < todayStr);
+        if (overdue.length > 0) overdueByLease.set(leaseId, overdue);
+      }
+    }
+    const overdueTenantIds = [
+      ...new Set(
+        activeLeases
+          .filter((l) => overdueByLease.has(l.id as string))
+          .map((l) => (l.tenants as Record<string, unknown> | null)?.id as string | undefined)
+          .filter((id): id is string => !!id)
+      ),
+    ];
+    const earliestEpisode = [...overdueByLease.values()]
+      .map((invs) => invs[invs.length - 1].due_date)
+      .reduce<string | null>((a, b) => (a === null || b < a ? b : a), null);
+    const sentRows =
+      overdueTenantIds.length > 0 && earliestEpisode
+        ? await loadOverdueSendRows(supabase, overdueTenantIds, earliestEpisode)
+        : new Map();
+
     for (const lease of activeLeases) {
       const tenant = lease.tenants as Record<string, unknown>;
       const unit = lease.units as Record<string, unknown>;
@@ -202,52 +336,29 @@ async function gatherReminders(
       // invoice exists yet does the lease's payment_due_day decide,
       // rolling into next month once this month's due day has passed.
       if (upcomingSetting.is_enabled) {
-        const { data: upcomingInvs } = await supabase
-          .from("invoices")
-          .select("amount, paid_amount, due_date")
-          .eq("lease_id", lease.id)
-          .in("status", ["pending", "partial"])
-          .gte("due_date", todayStr)
-          .order("due_date", { ascending: true })
-          .limit(1);
+        const upcomingInvs = (unpaidByLease.get(lease.id as string) ?? []).filter(
+          (inv) =>
+            (inv.status === "pending" || inv.status === "partial") &&
+            inv.due_date >= todayStr
+        );
 
         let upcomingDueDateStr: string | null = null;
         let upcomingAmount = String(lease.monthly_rent);
 
-        if (upcomingInvs && upcomingInvs.length > 0) {
+        if (upcomingInvs.length > 0) {
           const inv = upcomingInvs[0];
-          upcomingDueDateStr = inv.due_date as string;
+          upcomingDueDateStr = inv.due_date;
           upcomingAmount = String(
             Number(inv.amount || 0) - Number(inv.paid_amount || 0)
           );
         } else {
-          const dueDay = (lease.payment_due_day as number) || 1;
-          const currentMonth = omanNow.getMonth();
-          const currentYear = omanNow.getFullYear();
-          let candidate = new Date(
-            currentYear,
-            currentMonth,
-            Math.min(dueDay, lastDayOfMonth(new Date(currentYear, currentMonth, 1)).getDate())
-          );
-          if (format(candidate, "yyyy-MM-dd") < todayStr) {
-            const nextMonth = new Date(currentYear, currentMonth + 1, 1);
-            candidate = new Date(
-              nextMonth.getFullYear(),
-              nextMonth.getMonth(),
-              Math.min(dueDay, lastDayOfMonth(nextMonth).getDate())
-            );
-          }
           // If that period is already invoiced (paid or overdue), the
           // invoice paths own it — no lease-based reminder.
-          const { data: periodInv } = await supabase
-            .from("invoices")
-            .select("id")
-            .eq("lease_id", lease.id)
-            .eq("period_start", format(startOfMonth(candidate), "yyyy-MM-dd"))
-            .neq("status", "cancelled")
-            .limit(1)
-            .maybeSingle();
-          if (!periodInv) upcomingDueDateStr = format(candidate, "yyyy-MM-dd");
+          const candidate = candidateDueDate(lease);
+          const periodKey = `${lease.id}:${format(startOfMonth(candidate), "yyyy-MM-dd")}`;
+          if (!invoicedPeriods.has(periodKey)) {
+            upcomingDueDateStr = format(candidate, "yyyy-MM-dd");
+          }
         }
 
         if (upcomingDueDateStr) {
@@ -268,13 +379,7 @@ async function gatherReminders(
 
       // Overdue rent — find all overdue/unpaid invoices with due_date < today
       if (overdueSetting.is_enabled) {
-        const { data: overdueInvs } = await supabase
-          .from("invoices")
-          .select("amount, paid_amount, due_date, period_start, period_end")
-          .eq("lease_id", lease.id)
-          .in("status", ["overdue", "partial", "pending"])
-          .lt("due_date", todayStr)
-          .order("due_date", { ascending: true });
+        const overdueInvs = overdueByLease.get(lease.id as string) ?? [];
 
         // The manual trigger obeys the same per-tenant cap as the daily
         // cron: a tenant already chased max_repeats times for their latest
@@ -282,26 +387,27 @@ async function gatherReminders(
         // Without this, every click on "Send reminders" re-messaged every
         // overdue tenant regardless of what the cron had already sent.
         const overdueDecision =
-          overdueInvs && overdueInvs.length > 0
+          overdueInvs.length > 0
             ? decideOverdueSend(
                 overdueSetting,
-                await loadOverdueSendHistory(
-                  supabase,
-                  tenant.id as string,
-                  overdueInvs[overdueInvs.length - 1].due_date as string
-                ),
+                sentRows
+                  ? summariseHistory(
+                      sentRows.get(tenant.id as string) ?? [],
+                      overdueInvs[overdueInvs.length - 1].due_date
+                    )
+                  : FAIL_CLOSED_HISTORY,
                 today
               )
             : null;
 
-        if (overdueInvs && overdueInvs.length > 0 && overdueDecision?.send) {
+        if (overdueDecision?.send) {
           const overdueInvoices: OverdueInvoice[] = overdueInvs.map(
-            (inv: Record<string, unknown>) => ({
+            (inv) => ({
               amount: String(Number(inv.amount || 0) - Number(inv.paid_amount || 0)),
-              dueDate: inv.due_date as string,
+              dueDate: inv.due_date,
               periodLabel: inv.period_start
-                ? `${format(parseISO(inv.period_start as string), "MMM yyyy")}`
-                : format(parseISO(inv.due_date as string), "MMM yyyy"),
+                ? `${format(parseISO(inv.period_start), "MMM yyyy")}`
+                : format(parseISO(inv.due_date), "MMM yyyy"),
             })
           );
 
@@ -312,7 +418,7 @@ async function gatherReminders(
           gathered.push({
             ...baseParams,
             amount: totalOverdue,
-            dueDate: overdueInvs[0].due_date as string,
+            dueDate: overdueInvs[0].due_date,
             reminderType: "rent_overdue",
             overdueInvoices,
             totalOverdue,

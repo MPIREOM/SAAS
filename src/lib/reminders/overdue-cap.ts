@@ -41,6 +41,42 @@ export interface OverdueSendHistory {
   lastSentAt: Date | null;
 }
 
+// PostgREST caps a response at 1000 rows and a request URL at a few KB, so
+// id lists are sent in chunks and each chunk is read page by page.
+const ID_CHUNK = 150;
+const PAGE_SIZE = 1000;
+
+/**
+ * Only messages that plausibly reached the tenant count as a notice. A
+ * WhatsApp send is logged as "sent" the moment Meta accepts it; if Meta
+ * later reports it failed (e.g. #131042, the business account's billing
+ * isn't set up), the receipt only flips delivery_status. Counting those
+ * would lock tenants out of the retry once the underlying problem is fixed.
+ */
+const REACHED_TENANT = "delivery_status.is.null,delivery_status.neq.failed";
+
+export type SentRow = { tenant_id: string; sent_at: string | null };
+
+/** Fold logged sends into the notice count for one episode. */
+export function summariseHistory(rows: SentRow[], episodeStart: string): OverdueSendHistory {
+  const days = new Set<string>();
+  let newest: string | null = null;
+  for (const r of rows) {
+    if (!r.sent_at) continue;
+    const day = String(r.sent_at).slice(0, 10);
+    if (day < episodeStart) continue;
+    days.add(day);
+    if (!newest || r.sent_at > newest) newest = r.sent_at;
+  }
+  return { noticesSent: days.size, lastSentAt: newest ? new Date(newest) : null };
+}
+
+/** Stand-in history when the log can't be read: blocks every send. */
+export const FAIL_CLOSED_HISTORY: OverdueSendHistory = {
+  noticesSent: Number.MAX_SAFE_INTEGER,
+  lastSentAt: null,
+};
+
 /**
  * How many overdue notices this tenant has already received since
  * `episodeStart` (ISO date, YYYY-MM-DD). Pass the due date of the tenant's
@@ -56,29 +92,54 @@ export async function loadOverdueSendHistory(
   tenantId: string,
   episodeStart: string
 ): Promise<OverdueSendHistory> {
-  const { data, error } = await supabase
-    .from("reminder_logs")
-    .select("sent_at")
-    .eq("tenant_id", tenantId)
-    .eq("reminder_type", "rent_overdue")
-    .eq("status", "sent")
-    .gte("sent_at", episodeStart)
-    .order("sent_at", { ascending: false });
+  const rows = await loadOverdueSendRows(supabase, [tenantId], episodeStart);
+  if (!rows) return FAIL_CLOSED_HISTORY;
+  return summariseHistory(rows.get(tenantId) ?? [], episodeStart);
+}
 
-  if (error) {
-    // Fail closed: if we cannot read the history we must not assume it is
-    // empty, or a transient DB error would re-send to everyone at once.
-    console.error("[reminders] overdue history query failed:", error.message);
-    return { noticesSent: Number.MAX_SAFE_INTEGER, lastSentAt: null };
-  }
+/**
+ * Overdue notices logged for many tenants since `since`, grouped by tenant,
+ * in a handful of queries instead of one per tenant. Summarise each with
+ * summariseHistory and that tenant's own episode start. Returns null when
+ * the log can't be read, so callers fail closed.
+ */
+export async function loadOverdueSendRows(
+  supabase: SupabaseClient,
+  tenantIds: string[],
+  since: string
+): Promise<Map<string, SentRow[]> | null> {
+  const byTenant = new Map<string, SentRow[]>();
+  for (let i = 0; i < tenantIds.length; i += ID_CHUNK) {
+    const chunk = tenantIds.slice(i, i + ID_CHUNK);
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("reminder_logs")
+        .select("tenant_id, sent_at")
+        .in("tenant_id", chunk)
+        .eq("reminder_type", "rent_overdue")
+        .eq("status", "sent")
+        .or(REACHED_TENANT)
+        .gte("sent_at", since)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
 
-  const rows = (data ?? []) as Array<{ sent_at: string | null }>;
-  const days = new Set<string>();
-  for (const r of rows) {
-    if (r.sent_at) days.add(String(r.sent_at).slice(0, 10));
+      if (error) {
+        // Fail closed: if we cannot read the history we must not assume it
+        // is empty, or a transient DB error would re-send to everyone at once.
+        console.error("[reminders] overdue history query failed:", error.message);
+        return null;
+      }
+
+      const rows = (data ?? []) as SentRow[];
+      for (const r of rows) {
+        const list = byTenant.get(r.tenant_id) ?? [];
+        list.push(r);
+        byTenant.set(r.tenant_id, list);
+      }
+      if (rows.length < PAGE_SIZE) break;
+    }
   }
-  const newest = rows.find((r) => r.sent_at)?.sent_at ?? null;
-  return { noticesSent: days.size, lastSentAt: newest ? new Date(newest) : null };
+  return byTenant;
 }
 
 export type OverdueSendDecision =
