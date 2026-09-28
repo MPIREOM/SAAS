@@ -87,18 +87,6 @@ export default function NewMaintenanceRequestPage({
 
     try {
       const formData = new FormData(e.currentTarget);
-      const supabase = createClient();
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        setError(t("authError"));
-        setLoading(false);
-        return;
-      }
 
       const unitId = formData.get("unit_id") as string;
       if (!unitId) {
@@ -107,33 +95,28 @@ export default function NewMaintenanceRequestPage({
         return;
       }
 
-      const payload: Record<string, unknown> = {
-        unit_id: unitId,
-        category: formData.get("category") as string,
-        description: formData.get("description") as string,
-        urgency: formData.get("urgency") as string,
-        status: "open",
-        created_by: user.id,
-      };
-
-      const tenantId = formData.get("tenant_id") as string;
-      if (tenantId) payload.tenant_id = tenantId;
-
-      const assignedName = formData.get("assigned_to_name") as string;
-      if (assignedName) payload.assigned_to_name = assignedName;
-
-      const assignedPhone = formData.get("assigned_to_phone") as string;
-      if (assignedPhone) payload.assigned_to_phone = assignedPhone;
-
       const estimatedCost = formData.get("estimated_cost") as string;
-      if (estimatedCost) payload.estimated_cost = parseFloat(estimatedCost);
 
-      const { error: insertError } = await supabase
-        .from("maintenance_requests")
-        .insert(payload);
+      // Created server-side so the tenant and technician get their
+      // WhatsApp messages and the fixed technician can be auto-assigned.
+      const res = await fetch("/api/maintenance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          unit_id: unitId,
+          tenant_id: (formData.get("tenant_id") as string) || null,
+          category: formData.get("category") as string,
+          description: formData.get("description") as string,
+          urgency: formData.get("urgency") as string,
+          assigned_to_name: (formData.get("assigned_to_name") as string) || null,
+          assigned_to_phone: (formData.get("assigned_to_phone") as string) || null,
+          estimated_cost: estimatedCost ? parseFloat(estimatedCost) : null,
+        }),
+      });
 
-      if (insertError) {
-        setError(insertError.message);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(res.status === 401 ? t("authError") : data.error || t("unexpectedError"));
         setLoading(false);
         return;
       }
@@ -208,6 +191,9 @@ export default function NewMaintenanceRequestPage({
                   <option value="electrical">{t("categories.electrical")}</option>
                   <option value="ac">{t("categories.ac")}</option>
                   <option value="structural">{t("categories.structural")}</option>
+                  <option value="painting">{t("categories.painting")}</option>
+                  <option value="cleaning">{t("categories.cleaning")}</option>
+                  <option value="pest">{t("categories.pest")}</option>
                   <option value="other">{t("categories.other")}</option>
                 </Select>
 

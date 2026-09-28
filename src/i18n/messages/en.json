@@ -715,7 +715,19 @@
     "actualCostInput": "Actual Cost",
     "requestNumber": "Request #{id}",
     "attachments": "Attachments",
-    "noAttachments": "No files were attached to this request."
+    "noAttachments": "No files were attached to this request.",
+    "reopen": "Reopen",
+    "moveBackToOpen": "Move Back to Open",
+    "statusUpdated": "Status updated.",
+    "tenantNotified": "Tenant notified on WhatsApp.",
+    "tenantNotifyFailed": "Couldn't send the WhatsApp update to the tenant: {error}",
+    "technicianNotified": "Technician notified on WhatsApp.",
+    "technicianNotifyFailed": "Couldn't send the job to the technician on WhatsApp: {error}",
+    "statusWhatsAppHint": "The tenant gets a WhatsApp update when the request moves to In Progress or Resolved.",
+    "assignmentAndCost": "Assignment & Cost",
+    "assignmentHint": "Setting a new technician phone sends them the job details on WhatsApp.",
+    "saved": "Saved.",
+    "noteBy": "by {name}"
   },
   "documents": {
     "title": "Documents",

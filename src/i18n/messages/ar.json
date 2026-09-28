@@ -715,7 +715,19 @@
     "actualCostInput": "التكلفة الفعلية",
     "requestNumber": "طلب رقم #{id}",
     "attachments": "المرفقات",
-    "noAttachments": "لم تُرفق أي ملفات بهذا الطلب."
+    "noAttachments": "لم تُرفق أي ملفات بهذا الطلب.",
+    "reopen": "إعادة فتح",
+    "moveBackToOpen": "إرجاع إلى مفتوح",
+    "statusUpdated": "تم تحديث الحالة.",
+    "tenantNotified": "تم إشعار المستأجر عبر واتساب.",
+    "tenantNotifyFailed": "تعذّر إرسال تحديث واتساب إلى المستأجر: {error}",
+    "technicianNotified": "تم إشعار الفني عبر واتساب.",
+    "technicianNotifyFailed": "تعذّر إرسال تفاصيل العمل إلى الفني عبر واتساب: {error}",
+    "statusWhatsAppHint": "يتلقى المستأجر تحديثاً عبر واتساب عند انتقال الطلب إلى قيد التنفيذ أو تم الحل.",
+    "assignmentAndCost": "التعيين والتكلفة",
+    "assignmentHint": "عند إدخال رقم فني جديد تُرسل إليه تفاصيل العمل عبر واتساب.",
+    "saved": "تم الحفظ.",
+    "noteBy": "بواسطة {name}"
   },
   "documents": {
     "title": "المستندات",

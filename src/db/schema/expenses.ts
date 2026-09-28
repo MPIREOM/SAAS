@@ -45,6 +45,9 @@ export const expenses = pgTable("expenses", {
   expenseDate: date("expense_date").notNull(),
   vendor: text("vendor"),
   receiptUrl: text("receipt_url"),
+  // Set when the expense was auto-created by resolving a maintenance
+  // request; unique (partial index) so a request has at most one expense.
+  maintenanceRequestId: uuid("maintenance_request_id"),
   createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
