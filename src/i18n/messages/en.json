@@ -649,7 +649,24 @@
       "confirm": "Return to unpaid",
       "success": "Invoice returned to unpaid",
       "failed": "Failed to revert payment"
-    }
+    },
+    "edit": {
+      "title": "Edit invoice",
+      "save": "Save changes",
+      "saved": "Invoice updated",
+      "closedWarning": "This invoice is {status}. Editing it changes past records and owner reports.",
+      "itemisedHint": "Move-out invoices total their line items, so the amount can't be edited here.",
+      "paidSoFar": "{amount} {currency} already paid",
+      "statusWillChange": "Status will change from {from} to {to} to match the amount already paid.",
+      "errors": {
+        "amountPositive": "Amount must be greater than 0.",
+        "dueDateRequired": "Due date is required.",
+        "periodBothOrNone": "Fill in both period dates or leave both empty.",
+        "periodEndAfterStart": "Period end must be on or after period start."
+      }
+    },
+    "written_off": "Written Off",
+    "actions": "Actions"
   },
   "cheques": {
     "title": "Cheques",
