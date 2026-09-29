@@ -15,6 +15,7 @@ type AuditAction =
   | "status_update"
   | "export_report"
   | "cancel_invoice"
+  | "edit_invoice"
   | "revert_payment"
   | "cancel_mandate"
   | "collect_mandate";

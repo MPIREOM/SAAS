@@ -35,6 +35,10 @@ import {
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
 import { AddChequeDialog } from "@/components/cheques/add-cheque-dialog";
+import { MarkPaidButton } from "@/components/invoices/mark-paid-button";
+import { CancelInvoiceButton } from "@/components/invoices/cancel-invoice-button";
+import { RevertPaidButton } from "@/components/invoices/revert-paid-button";
+import { EditInvoiceButton } from "@/components/invoices/edit-invoice-button";
 import { EditPaymentMethod } from "@/components/payments/edit-payment-method";
 import { ChequeActions } from "@/components/cheques/cheque-actions";
 import { PageHeader } from "@/components/ui/page-header";
@@ -174,7 +178,7 @@ export default async function UnitDetailPage({
       activeLease
         ? supabase
             .from("invoices")
-            .select("id, amount, paid_amount, due_date, period_start, period_end, status")
+            .select("id, tenant_id, amount, paid_amount, due_date, period_start, period_end, status")
             .eq("lease_id", activeLease.id)
             .in("status", ["pending", "overdue", "partial", "paid"])
             .order("due_date", { ascending: false })
@@ -188,6 +192,7 @@ export default async function UnitDetailPage({
   const pastLeases = pastLeasesRes.data;
   const invoices = invoicesRes.data as Array<{
     id: string;
+    tenant_id: string;
     amount: number | string;
     paid_amount: number | string | null;
     due_date: string;
@@ -195,6 +200,8 @@ export default async function UnitDetailPage({
     period_end: string | null;
     status: "pending" | "overdue" | "partial" | "paid";
   }> | null;
+
+  const invoiceTenantName = (currentTenant?.full_name as string) || "—";
 
   // Roll up totals across the active lease's invoices for the summary cards.
   // Pending bucket includes overdue + partial (anything not fully settled).
@@ -446,7 +453,7 @@ export default async function UnitDetailPage({
                   className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-lg hover:bg-border/30 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
                   <LogOut aria-hidden="true" className="h-3.5 w-3.5" />
-                  {t("moveOutButton")}
+                  {tt("moveOutButton")}
                 </Link>
               </div>
             </div>
@@ -770,7 +777,7 @@ export default async function UnitDetailPage({
               <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
                 {/* Desktop table */}
                 <div className="hidden md:block">
-                  <Table className="min-w-[680px]">
+                  <Table className="min-w-[820px]">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="px-4">{ti("dueDate")}</TableHead>
@@ -781,6 +788,9 @@ export default async function UnitDetailPage({
                         <TableHead className="px-4 text-end">{ti("paidAmount")}</TableHead>
                         <TableHead className="px-4 text-end">{ti("remaining")}</TableHead>
                         <TableHead className="px-4">{ti("status")}</TableHead>
+                        <TableHead className="px-4 text-end">
+                          <span className="sr-only">{ti("actions")}</span>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -840,6 +850,9 @@ export default async function UnitDetailPage({
                               >
                                 {ti(inv.status)}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="px-4">
+                              <InvoiceRowActions inv={inv} tenantName={invoiceTenantName} />
                             </TableCell>
                           </TableRow>
                         );
@@ -903,6 +916,9 @@ export default async function UnitDetailPage({
                               </span>
                             </span>
                           )}
+                        </div>
+                        <div className="mt-3">
+                          <InvoiceRowActions inv={inv} tenantName={invoiceTenantName} />
                         </div>
                       </li>
                     );
@@ -1547,6 +1563,61 @@ function SectionHeading({
         <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
           {count}
         </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Per-invoice actions on the unit page — the same set the Invoices page
+ * offers: edit, undo a payment, cancel, and record a payment.
+ */
+function InvoiceRowActions({
+  inv,
+  tenantName,
+}: {
+  inv: {
+    id: string;
+    tenant_id: string;
+    amount: number | string;
+    paid_amount: number | string | null;
+    due_date: string;
+    period_start: string | null;
+    period_end: string | null;
+    status: "pending" | "overdue" | "partial" | "paid";
+  };
+  tenantName: string;
+}) {
+  const amount = String(inv.amount);
+  const paidAmount = String(inv.paid_amount || 0);
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <EditInvoiceButton invoiceId={inv.id} tenantName={tenantName} />
+      {(inv.status === "paid" || inv.status === "partial") && (
+        <RevertPaidButton
+          invoiceId={inv.id}
+          amount={amount}
+          paidAmount={paidAmount}
+          tenantName={tenantName}
+        />
+      )}
+      <CancelInvoiceButton
+        invoiceId={inv.id}
+        amount={amount}
+        paidAmount={paidAmount}
+        tenantName={tenantName}
+      />
+      {inv.status !== "paid" && (
+        <MarkPaidButton
+          invoiceId={inv.id}
+          amount={amount}
+          paidAmount={paidAmount}
+          tenantName={tenantName}
+          tenantId={inv.tenant_id}
+          periodStart={inv.period_start || undefined}
+          periodEnd={inv.period_end || undefined}
+          dueDate={inv.due_date || undefined}
+        />
       )}
     </div>
   );
