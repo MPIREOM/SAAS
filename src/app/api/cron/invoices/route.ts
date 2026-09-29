@@ -47,6 +47,25 @@ export async function GET(request: Request) {
     return !!data;
   }
 
+  // A lease+month that already has ANY invoice — including a cancelled or
+  // written-off one — is left alone: the admin voided it on purpose and
+  // issues a replacement by hand if one is needed. The unique index on
+  // (lease_id, period_start) ignores voided invoices (migration 045), so
+  // this check is what stops the cron from re-creating them.
+  async function leasePeriodAlreadyInvoiced(
+    leaseId: string,
+    periodStartStr: string
+  ): Promise<boolean> {
+    const { data } = await supabase
+      .from("invoices")
+      .select("id")
+      .eq("lease_id", leaseId)
+      .eq("period_start", periodStartStr)
+      .limit(1)
+      .maybeSingle();
+    return !!data;
+  }
+
   // Load invoice settings
   const { data: settings } = await supabase
     .from("invoice_settings")
@@ -95,7 +114,10 @@ export async function GET(request: Request) {
   let skipped = 0;
 
   for (const lease of currentMonthLeases || []) {
-    if (await unitPeriodAlreadyInvoiced(lease.unit_id, periodStart)) {
+    if (
+      (await unitPeriodAlreadyInvoiced(lease.unit_id, periodStart)) ||
+      (await leasePeriodAlreadyInvoiced(lease.id, periodStart))
+    ) {
       skipped++;
       continue;
     }
@@ -103,7 +125,7 @@ export async function GET(request: Request) {
     const dueDay = Math.min(lease.payment_due_day, lastDayOfMonth(omanToday).getDate());
     const dueDate = format(new Date(omanToday.getFullYear(), omanToday.getMonth(), dueDay), "yyyy-MM-dd");
 
-    const { error: insertError } = await supabase.from("invoices").upsert(
+    const { error: insertError } = await supabase.from("invoices").insert(
       {
         lease_id: lease.id,
         tenant_id: lease.tenant_id,
@@ -114,8 +136,7 @@ export async function GET(request: Request) {
         period_start: periodStart,
         period_end: periodEnd,
         status: "pending",
-      },
-      { onConflict: "lease_id,period_start", ignoreDuplicates: true }
+      }
     );
 
     if (insertError) {
@@ -156,14 +177,17 @@ export async function GET(request: Request) {
         // Check if today is within the advance window
         const advanceDate = addDays(nextDueDate, -daysBefore);
         if (today >= advanceDate) {
-          if (await unitPeriodAlreadyInvoiced(lease.unit_id, nextPeriodStart)) {
+          if (
+            (await unitPeriodAlreadyInvoiced(lease.unit_id, nextPeriodStart)) ||
+            (await leasePeriodAlreadyInvoiced(lease.id, nextPeriodStart))
+          ) {
             advanceSkipped++;
             continue;
           }
 
           const dueDateStr = format(nextDueDate, "yyyy-MM-dd");
 
-          const { error: insertError } = await supabase.from("invoices").upsert(
+          const { error: insertError } = await supabase.from("invoices").insert(
             {
               lease_id: lease.id,
               tenant_id: lease.tenant_id,
@@ -174,8 +198,7 @@ export async function GET(request: Request) {
               period_start: nextPeriodStart,
               period_end: nextPeriodEnd,
               status: "pending",
-            },
-            { onConflict: "lease_id,period_start", ignoreDuplicates: true }
+            }
           );
 
           if (insertError) {

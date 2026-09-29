@@ -1379,13 +1379,14 @@ export async function executeTool(
 
       // Check for duplicate. Match on unit+period (not just lease) so an early
       // renewal that overlaps the outgoing lease can't double-bill the same
-      // unit for the same month. Cancelled invoices don't block re-creation.
+      // unit for the same month. Cancelled and written-off invoices don't
+      // block re-creation.
       const { data: existing } = await supabase
         .from("invoices")
         .select("id, status")
         .eq("unit_id", unitId)
         .eq("period_start", periodStart)
-        .neq("status", "cancelled")
+        .not("status", "in", "(cancelled,written_off)")
         .limit(1)
         .maybeSingle();
 
@@ -1509,12 +1510,16 @@ export async function executeTool(
         for (const unit of activeUnits) {
           // Check for duplicate by unit+period (not just lease) so overlapping
           // renewal leases can't double-bill the same unit for the same month.
+          // Like the daily cron, bulk generation also leaves a month alone
+          // when this lease already has a cancelled / written-off invoice for
+          // it — replacements for voided invoices are created one at a time.
           const { data: existing } = await supabase
             .from("invoices")
             .select("id, status")
-            .eq("unit_id", unit.unit_id)
             .eq("period_start", periodStart)
-            .neq("status", "cancelled")
+            .or(
+              `and(unit_id.eq.${unit.unit_id},status.neq.cancelled),lease_id.eq.${unit.lease_id}`
+            )
             .limit(1)
             .maybeSingle();
 
