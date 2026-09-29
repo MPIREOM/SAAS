@@ -346,7 +346,8 @@
       "nonPayment": "عدم الدفع",
       "non_payment": "عدم الدفع",
       "personal": "أسباب شخصية",
-      "other": "أخرى"
+      "other": "أخرى",
+      "unit_transfer": "نقل إلى وحدة أخرى"
     },
     "moveOutNotes": "ملاحظات",
     "moveOutNotesPlaceholder": "ملاحظات إضافية حول الخروج...",
@@ -357,7 +358,8 @@
     "depositStatuses": {
       "pending": "قيد الانتظار",
       "refunded": "مسترد",
-      "deducted": "مخصوم"
+      "deducted": "مخصوم",
+      "transferred": "منقول"
     },
     "earlyTerminationCommission": {
       "title": "عمولة الإنهاء المبكر المستحقة",
@@ -466,7 +468,56 @@
     "importProcessFailed": "تعذّرت معالجة الملف. تحقق من التنسيق وحاول مرة أخرى.",
     "importFailed": "فشل الاستيراد",
     "importFailedRetry": "فشل الاستيراد. حاول مرة أخرى.",
-    "notFound": "المستأجر غير موجود"
+    "notFound": "المستأجر غير موجود",
+    "relocate": {
+      "title": "نقل المستأجر",
+      "description": "انقل المستأجر إلى وحدة أخرى بخطوة واحدة — دون الحاجة لإلغاء الفواتير.",
+      "button": "نقل",
+      "loadError": "تعذر تحميل عقود المستأجر.",
+      "noActiveLease": "لا يوجد عقد نشط لهذا المستأجر لنقله.",
+      "unitsTitle": "الوحدات",
+      "fromLabel": "من (الوحدة الحالية)",
+      "fromPlaceholder": "اختر الوحدة التي سيغادرها",
+      "toLabel": "إلى (الوحدة الجديدة)",
+      "toPlaceholder": "اختر وحدة شاغرة",
+      "toHint": "تظهر الوحدات الشاغرة فقط.",
+      "noVacantUnits": "لا توجد وحدات شاغرة",
+      "unitOption": "{property} · وحدة {unit} · {rent} {currency}/شهرياً",
+      "leaseTitle": "العقد الجديد",
+      "leaseDescription": "يتم إنشاء عقد جديد على الوحدة الجديدة. الإيجار معبأ مسبقاً من الوحدة الجديدة.",
+      "moveDate": "تاريخ النقل",
+      "moveDateHint": "اليوم الذي يغادر فيه المستأجر الوحدة الحالية. يبدأ العقد الجديد في هذا التاريخ افتراضياً.",
+      "monthlyRent": "الإيجار الشهري",
+      "paymentDueDay": "يوم استحقاق الدفع",
+      "depositHint": "يُنقل من العقد الحالي — لا حاجة للاسترداد.",
+      "notesPlaceholder": "سبب نقل المستأجر (اختياري)",
+      "invoicesTitle": "الفواتير المفتوحة المنقولة",
+      "invoicesDescription": "تنتقل كل فاتورة غير مدفوعة أو مدفوعة جزئياً إلى العقد الجديد كما هي — لا يتم إلغاء أي شيء. الشيكات والدفعات المرتبطة تتبع فواتيرها.",
+      "pickCurrentFirst": "اختر الوحدة الحالية لعرض فواتيرها المفتوحة.",
+      "noOpenInvoices": "لا توجد فواتير مفتوحة على الوحدة الحالية.",
+      "dueOn": "تستحق",
+      "invoiceStatus": {
+        "pending": "معلقة",
+        "overdue": "متأخرة",
+        "partial": "مدفوعة جزئياً"
+      },
+      "carriedTotal": "إجمالي المبلغ المنقول",
+      "ownerChangeWarning": "الوحدتان تعودان لمالكين مختلفين. سيُحتسب الرصيد المنقول لمالك الوحدة الجديدة في دفتر الملاك.",
+      "summaryTitle": "ما الذي سيحدث",
+      "summaryClose": "يُغلق عقد الوحدة {unit} بتاريخ {date} (السبب: نقل وحدة).",
+      "summaryOpen": "عقد جديد على الوحدة {unit} ({property}) بإيجار {rent} {currency}/شهرياً.",
+      "summaryInvoices": "{count, plural, =0 {لا توجد فواتير مفتوحة لنقلها.} one {تنتقل فاتورة مفتوحة واحدة ({total} {currency}) إلى العقد الجديد.} other {تنتقل # فواتير مفتوحة ({total} {currency}) إلى العقد الجديد.}}",
+      "summaryDeposit": "يُنقل مبلغ التأمين إلى العقد الجديد.",
+      "summaryNoFees": "لا تُفرض رسوم إخلاء أو تنظيف أو إنهاء مبكر.",
+      "submit": "نقل المستأجر",
+      "errors": {
+        "currentLeaseRequired": "اختر الوحدة التي يغادرها المستأجر.",
+        "newUnitRequired": "اختر الوحدة الجديدة.",
+        "endAfterStart": "يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء.",
+        "rentPositive": "يجب أن يكون الإيجار الشهري أكبر من 0.",
+        "depositNegative": "لا يمكن أن يكون مبلغ التأمين سالباً."
+      }
+    }
   },
   "leases": {
     "title": "العقود",

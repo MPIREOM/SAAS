@@ -30,6 +30,7 @@ import {
   FileDown,
   Receipt,
   RefreshCw,
+  ArrowRightLeft,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
@@ -422,6 +423,15 @@ export default async function UnitDetailPage({
                   <FileDown aria-hidden="true" className="h-3.5 w-3.5" />
                   {ti("downloadUnpaidPDF")}
                 </Link>
+                {currentTenant.status === "active" && (
+                  <Link
+                    href={`/${locale}/tenants/${currentTenant.id}/relocate${activeLease?.id ? `?lease=${activeLease.id}` : ""}`}
+                    className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-lg hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  >
+                    <ArrowRightLeft aria-hidden="true" className="h-3.5 w-3.5" />
+                    {tt("relocate.button")}
+                  </Link>
+                )}
                 {currentTenant.status === "active" && (
                   <Link
                     href={`/${locale}/tenants/${currentTenant.id}/renew-lease`}

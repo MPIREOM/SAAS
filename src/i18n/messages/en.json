@@ -346,7 +346,8 @@
       "nonPayment": "Non-Payment",
       "non_payment": "Non-Payment",
       "personal": "Personal Reasons",
-      "other": "Other"
+      "other": "Other",
+      "unit_transfer": "Unit Transfer"
     },
     "moveOutNotes": "Notes",
     "moveOutNotesPlaceholder": "Additional notes about the move-out...",
@@ -357,7 +358,8 @@
     "depositStatuses": {
       "pending": "Pending",
       "refunded": "Refunded",
-      "deducted": "Deducted"
+      "deducted": "Deducted",
+      "transferred": "Transferred"
     },
     "earlyTerminationCommission": {
       "title": "Early-termination commission owed",
@@ -466,7 +468,56 @@
     "importProcessFailed": "Failed to process file. Please check the format and try again.",
     "importFailed": "Import failed",
     "importFailedRetry": "Import failed. Please try again.",
-    "notFound": "Tenant not found"
+    "notFound": "Tenant not found",
+    "relocate": {
+      "title": "Relocate Tenant",
+      "description": "Move the tenant to another unit in one step — no invoices to cancel.",
+      "button": "Relocate",
+      "loadError": "Could not load the tenant's leases.",
+      "noActiveLease": "This tenant has no active lease to relocate.",
+      "unitsTitle": "Units",
+      "fromLabel": "From (current unit)",
+      "fromPlaceholder": "Select the unit being left",
+      "toLabel": "To (new unit)",
+      "toPlaceholder": "Select a vacant unit",
+      "toHint": "Only vacant units are listed.",
+      "noVacantUnits": "No vacant units available",
+      "unitOption": "{property} · Unit {unit} · {rent} {currency}/month",
+      "leaseTitle": "New Lease",
+      "leaseDescription": "A fresh contract is created on the new unit. Rent is pre-filled from the new unit.",
+      "moveDate": "Move date",
+      "moveDateHint": "The day the tenant leaves the current unit. The new lease starts on this date by default.",
+      "monthlyRent": "Monthly Rent",
+      "paymentDueDay": "Payment Due Day",
+      "depositHint": "Transferred from the current lease — no refund needed.",
+      "notesPlaceholder": "Why is the tenant relocating? (optional)",
+      "invoicesTitle": "Open Invoices Carried Over",
+      "invoicesDescription": "Every unpaid or partially paid invoice moves to the new lease as-is — nothing is cancelled. Linked cheques and payments follow their invoices.",
+      "pickCurrentFirst": "Select the current unit to see its open invoices.",
+      "noOpenInvoices": "No open invoices on the current unit.",
+      "dueOn": "Due",
+      "invoiceStatus": {
+        "pending": "Pending",
+        "overdue": "Overdue",
+        "partial": "Partially paid"
+      },
+      "carriedTotal": "Total carried over",
+      "ownerChangeWarning": "The two units belong to different owners. The carried-over balance will count towards the new unit's owner in the owner ledger.",
+      "summaryTitle": "What will happen",
+      "summaryClose": "Lease on unit {unit} closes on {date} (reason: unit transfer).",
+      "summaryOpen": "New lease on unit {unit} ({property}) at {rent} {currency}/month.",
+      "summaryInvoices": "{count, plural, =0 {No open invoices to carry over.} one {# open invoice ({total} {currency}) moves to the new lease.} other {# open invoices ({total} {currency}) move to the new lease.}}",
+      "summaryDeposit": "Security deposit is transferred to the new lease.",
+      "summaryNoFees": "No move-out, cleaning or early-termination fees are charged.",
+      "submit": "Relocate Tenant",
+      "errors": {
+        "currentLeaseRequired": "Select the unit the tenant is leaving.",
+        "newUnitRequired": "Select the new unit.",
+        "endAfterStart": "End date must be after start date.",
+        "rentPositive": "Monthly rent must be greater than 0.",
+        "depositNegative": "Security deposit cannot be negative."
+      }
+    }
   },
   "leases": {
     "title": "Leases",

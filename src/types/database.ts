@@ -16,7 +16,7 @@ export type PaymentMethod = "cash" | "bank_transfer" | "cheque" | "direct_debit"
 
 export type ChequeStatus = "pending" | "cleared" | "bounced" | "cancelled";
 
-export type DepositStatus = "pending" | "refunded" | "deducted";
+export type DepositStatus = "pending" | "refunded" | "deducted" | "transferred";
 
 export type MaintenanceStatus = "open" | "in_progress" | "resolved" | "closed";
 
@@ -136,6 +136,7 @@ export interface Lease {
   final_inspection: boolean;
   keys_returned: boolean;
   deposit_status: DepositStatus;
+  relocated_from_lease_id: string | null;
   created_at: string;
   updated_at: string;
   created_by: string;

@@ -63,6 +63,7 @@ export const depositStatusEnum = pgEnum("deposit_status", [
   "pending",
   "refunded",
   "deducted",
+  "transferred",
 ]);
 
 // ── Leases ─────────────────────────────────────────────────────────────────
@@ -92,6 +93,8 @@ export const leases = pgTable("leases", {
   finalInspection: boolean("final_inspection").default(false),
   keysReturned: boolean("keys_returned").default(false),
   depositStatus: depositStatusEnum("deposit_status").default("pending"),
+  // Set on the new lease when a tenant is relocated from another unit
+  relocatedFromLeaseId: uuid("relocated_from_lease_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

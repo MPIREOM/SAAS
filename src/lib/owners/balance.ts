@@ -294,7 +294,7 @@ export async function getOwnerBalance(
   if (leaseIds.length > 0) {
     const { data: vacatedLeases } = await supabase
       .from("leases")
-      .select("id, unit_id, start_date, end_date, vacate_date, monthly_rent")
+      .select("id, unit_id, start_date, end_date, vacate_date, vacate_reason, monthly_rent")
       .in("id", leaseIds)
       .eq("is_active", false)
       .not("vacate_date", "is", null)
@@ -311,6 +311,10 @@ export async function getOwnerBalance(
       // original contract end_date. End-of-lease moves don't trigger.
       if (!(vacateDate < endDate)) continue;
       if (monthlyRent <= 0) continue;
+      // A relocation to another unit is not an early termination: the
+      // tenant stays under management and their open invoices were carried
+      // over to the new lease (see relocate_tenant, migration 044).
+      if (lease.vacate_reason === "unit_transfer") continue;
 
       const unitId = lease.unit_id as string;
       const propId = leasePropertyMap.get(leaseId);

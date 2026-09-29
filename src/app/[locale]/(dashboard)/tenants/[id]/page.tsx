@@ -30,6 +30,7 @@ import {
   ScrollText,
   FileDown,
   Landmark,
+  ArrowRightLeft,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { PageHeader } from "@/components/ui/page-header";
@@ -240,6 +241,13 @@ export default async function TenantDetailPage({
             >
               <RefreshCw aria-hidden="true" className="h-4 w-4" />
               {tl("renewLease")}
+            </Link>
+            <Link
+              href={`/${locale}/tenants/${id}/relocate`}
+              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              <ArrowRightLeft aria-hidden="true" className="h-4 w-4" />
+              {t("relocate.button")}
             </Link>
             <Link
               href={`/${locale}/tenants/${id}/move-out`}
