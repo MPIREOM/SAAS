@@ -138,28 +138,26 @@ export function CreateInvoiceButton() {
     [units, selectedUnitId]
   );
 
-  // Derive the billing period from the due date: period runs from the
-  // due date to exactly one month later, so the admin only ever has to
-  // touch one field. Called wherever the due date changes.
+  // Derive the billing period from the due date: the calendar month the
+  // due date falls in, so the admin only ever has to touch one field.
+  // Periods always start on the 1st — the invoice cron and the reminder
+  // cron look invoices up by that month start, so a period starting on
+  // the due day would let the cron bill the same month twice.
   const applyDueDate = (value: string) => {
     setDueDate(value);
     if (!value) return;
-    setPeriodStart(value);
-    const d = new Date(`${value}T00:00:00`);
-    d.setMonth(d.getMonth() + 1);
-    const y = d.getFullYear();
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    setPeriodEnd(
-      `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-    );
+    const [y, m] = value.split("-").map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    const month = `${y}-${String(m).padStart(2, "0")}`;
+    setPeriodStart(`${month}-01`);
+    setPeriodEnd(`${month}-${String(lastDay).padStart(2, "0")}`);
   };
 
-  // Auto-fill amount and default the due date to the 1st of the current
-  // month when a unit is picked. The lease's payment_due_day is ignored
-  // here on purpose: the admin always wants the standard "rent-due on
-  // the 1st" calendar, and can type a different date if a specific
-  // lease needs one.
+  // Auto-fill amount and default the due date to the lease's payment due
+  // day in the current month when a unit is picked. Reminders and overdue
+  // notices are driven by the invoice's due date, so defaulting to the 1st
+  // here made tenants due on e.g. the 15th get "overdue" notices two weeks
+  // early. The admin can still type a different date.
   const handleUnitChange = (unitId: string) => {
     setSelectedUnitId(unitId);
     const unit = units.find((u) => u.unit_id === unitId);
@@ -169,7 +167,10 @@ export function CreateInvoiceButton() {
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth();
-    applyDueDate(`${y}-${String(m + 1).padStart(2, "0")}-01`);
+    const day = Math.min(unit.payment_due_day, new Date(y, m + 1, 0).getDate());
+    applyDueDate(
+      `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -366,6 +367,7 @@ export function CreateInvoiceButton() {
                     label={`${t("dueDate")} *`}
                     value={dueDate}
                     onChange={(e) => applyDueDate(e.target.value)}
+                    helperText={t("leaseDueDayHint", { day: selectedUnit.payment_due_day })}
                     className="font-mono ltr-nums"
                   />
 

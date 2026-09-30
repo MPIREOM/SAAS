@@ -561,6 +561,7 @@
     "pending": "Pending",
     "paid": "Paid",
     "dueDate": "Due Date",
+    "leaseDueDayHint": "Lease due day: {day} of each month",
     "tenant": "Tenant",
     "property": "Property",
     "unit": "Unit",
