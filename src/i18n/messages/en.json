@@ -1864,7 +1864,16 @@
     "msgTemplateReason": "WhatsApp said",
     "filterMsgFailed": "Message failed",
     "msgSkipNoPhone": "No phone number on file.",
-    "msgSkipNotificationsOff": "Tenant has WhatsApp notifications turned off."
+    "msgSkipNotificationsOff": "Tenant has WhatsApp notifications turned off.",
+    "crewLink": "Contractor link",
+    "crewIntro": "A read-only schedule for whoever does the visit (e.g. your pest control company): booked times with unit, tenant name and phone, plus the units that haven't booked. No login needed.",
+    "crewCreate": "Create contractor link",
+    "crewHelp": "Send this to the contractor. It shows tenant names and phone numbers and updates as tenants book. Turn it off when the visit is done.",
+    "crewOpen": "Open contractor schedule",
+    "crewReplace": "New link",
+    "crewTurnOff": "Turn off",
+    "crewReplaced": "New contractor link created. The old link no longer works.",
+    "crewTurnedOff": "Contractor link turned off."
   },
   "visitBooking": {
     "subtitle": "Book a time for us to enter your apartment",
@@ -1918,5 +1927,20 @@
       "generic": "Something went wrong. Please try again."
     },
     "beforeWeArrive": "Before we arrive"
+  },
+  "visitSchedule": {
+    "subtitle": "Visit schedule",
+    "invalidLinkMessage": "This schedule link is invalid or has been turned off. Please ask the building management for a new link.",
+    "finished": "Finished",
+    "bookingsClosed": "Bookings closed",
+    "booked": "Booked",
+    "notBooked": "Not booked",
+    "schedule": "Schedule",
+    "noBookings": "No apartments have booked a time yet.",
+    "visitsCount": "{count, plural, one {# visit} other {# visits}}",
+    "unit": "Unit",
+    "notBookedTitle": "Not booked yet",
+    "notBookedHint": "These apartments haven't chosen a time. Check with the building management before entering.",
+    "updated": "Updated at {time} (Oman time). This page refreshes every {seconds} seconds."
   }
 }

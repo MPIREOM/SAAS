@@ -21,6 +21,8 @@ export interface VisitCampaign extends VisitWindow {
   title: string;
   notes: string | null;
   token: string;
+  /** Read-only contractor schedule link (048); null when not shared. */
+  crew_token: string | null;
   status: "open" | "closed";
   public_origin: string | null;
   created_at: string;
@@ -37,7 +39,7 @@ export interface OccupiedUnit {
 }
 
 export const CAMPAIGN_COLUMNS =
-  "id, property_id, title, notes, start_date, end_date, day_start, day_end, slot_minutes, token, status, public_origin, created_at";
+  "id, property_id, title, notes, start_date, end_date, day_start, day_end, slot_minutes, token, crew_token, status, public_origin, created_at";
 
 export function newVisitToken(): string {
   return randomBytes(16).toString("base64url");
@@ -74,6 +76,18 @@ export async function getCampaignByToken(
     .from("visit_campaigns")
     .select(`${CAMPAIGN_COLUMNS}, properties(name)`)
     .eq("token", token)
+    .maybeSingle();
+  return data ? withPropertyName(data as Record<string, unknown>) : null;
+}
+
+export async function getCampaignByCrewToken(
+  db: SupabaseClient,
+  crewToken: string
+): Promise<VisitCampaignWithProperty | null> {
+  const { data } = await db
+    .from("visit_campaigns")
+    .select(`${CAMPAIGN_COLUMNS}, properties(name)`)
+    .eq("crew_token", crewToken)
     .maybeSingle();
   return data ? withPropertyName(data as Record<string, unknown>) : null;
 }
