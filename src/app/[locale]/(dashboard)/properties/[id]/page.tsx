@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Wrench,
   Pencil,
+  CalendarClock,
 } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
@@ -27,6 +28,7 @@ export default async function PropertyDetailPage({
   const t = await getTranslations("properties");
   const tc = await getTranslations("common");
   const tu = await getTranslations("units");
+  const tv = await getTranslations("visits");
   const supabase = await createClient();
 
   const { data: property } = await supabase
@@ -123,6 +125,13 @@ export default async function PropertyDetailPage({
           { label: property.name },
         ]}
       >
+        <Link
+          href={`/${locale}/properties/${id}/visits`}
+          className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        >
+          <CalendarClock aria-hidden="true" className="h-4 w-4" />
+          {tv("title")}
+        </Link>
         <Link
           href={`/${locale}/properties/${id}/edit`}
           className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
