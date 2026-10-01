@@ -5,7 +5,7 @@ import {
   type TenantRecipient,
 } from "@/lib/maintenance/whatsapp";
 import { createVisitsAdminClient } from "./service";
-import { formatSlotRange, formatVisitDates } from "./slots";
+import { formatSlotRange, formatVisitDates, formatVisitDay } from "./slots";
 
 // WhatsApp messages for building-wide visits: the booking invite with the
 // shared link, the confirmation with the tenant's private manage link, and
@@ -138,6 +138,40 @@ export const VISIT_REMINDER_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
   },
 };
 
+// {{1}} tenant name, {{2}} visit title, {{3}} unit, {{4}} property, {{5}} date
+export const VISIT_DONE_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
+  en: {
+    name: "visit_booking_done_en",
+    language: "en",
+    body: [
+      "Dear {{1}},",
+      "",
+      "The {{2}} visit for your apartment (unit {{3}}, {{4}}) was completed on {{5}}.",
+      "",
+      "If you notice any problem, please contact the building management.",
+      "",
+      "Thank you,",
+      "MPIRE Property Management",
+    ].join("\n"),
+    example: ["Ahmed Al Balushi", "Pest control", "12", "Bousher Ameen Mosque", "Saturday 3 October"],
+  },
+  ar: {
+    name: "visit_booking_done_ar",
+    language: "ar",
+    body: [
+      "عزيزنا {{1}}،",
+      "",
+      "تم الانتهاء من زيارة {{2}} لشقتكم (الوحدة {{3}}، {{4}}) بتاريخ {{5}}.",
+      "",
+      "إذا لاحظتم أي مشكلة، يرجى التواصل مع إدارة المبنى.",
+      "",
+      "شكراً لكم،",
+      "MPIRE لإدارة العقارات",
+    ].join("\n"),
+    example: ["أحمد البلوشي", "مكافحة الحشرات", "12", "بوشر مسجد الأمين", "السبت، 3 أكتوبر"],
+  },
+};
+
 export const VISIT_TEMPLATES: MaintenanceTemplate[] = [
   VISIT_INVITE_TEMPLATES.en,
   VISIT_INVITE_TEMPLATES.ar,
@@ -145,6 +179,8 @@ export const VISIT_TEMPLATES: MaintenanceTemplate[] = [
   VISIT_CONFIRMED_TEMPLATES.ar,
   VISIT_REMINDER_TEMPLATES.en,
   VISIT_REMINDER_TEMPLATES.ar,
+  VISIT_DONE_TEMPLATES.en,
+  VISIT_DONE_TEMPLATES.ar,
 ];
 
 export function tenantLang(tenant: Pick<TenantRecipient, "language_preference">): Lang {
@@ -201,7 +237,7 @@ export interface VisitLogRef {
   bookingId?: string | null;
 }
 
-type MessageKind = "invite" | "confirmation" | "reminder";
+type MessageKind = "invite" | "confirmation" | "reminder" | "done";
 
 /**
  * Send (or skip) one visit message and record the outcome in
@@ -308,6 +344,24 @@ export async function sendVisitReminder(
       preparation(ctx, lang),
       manageLink(ctx.origin, lang, ctx.manageToken),
     ],
+    ctx.log
+  );
+}
+
+/** Tell the tenant their unit's visit was completed (contractor marked it done). */
+export async function sendVisitDone(
+  tenant: TenantRecipient,
+  ctx: Pick<VisitMessageContext, "title" | "propertyName" | "unitNumber"> & {
+    doneAt: string;
+    log: VisitLogRef;
+  }
+): Promise<SendResult> {
+  const lang = tenantLang(tenant);
+  return deliver(
+    "done",
+    tenant,
+    VISIT_DONE_TEMPLATES[lang],
+    [tenant.full_name, ctx.title, ctx.unitNumber, ctx.propertyName, formatVisitDay(ctx.doneAt, lang, "long")],
     ctx.log
   );
 }

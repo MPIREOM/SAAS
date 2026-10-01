@@ -4,6 +4,7 @@ import { Building2, Phone } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { AutoRefresh } from "@/components/visits/auto-refresh";
+import { WorkMarker, type WorkReason, type WorkStatus } from "@/components/visits/work-marker";
 import { PublicVisitMessage, PublicVisitShell } from "@/components/visits/public-shell";
 import { formatWhatsAppPhone } from "@/lib/maintenance/whatsapp";
 import { displayPhone } from "@/lib/visits/phone";
@@ -54,19 +55,30 @@ export default async function VisitSchedulePage({
 
   const [units, { data: bookings }] = await Promise.all([
     getPropertyUnits(db, campaign.property_id),
-    db.from("visit_bookings").select("unit_id, slot_start, contact_phone").eq("campaign_id", campaign.id).eq("status", "booked"),
+    db
+      .from("visit_bookings")
+      .select("id, unit_id, slot_start, contact_phone, work_status, work_reason, work_note").eq("campaign_id", campaign.id).eq("status", "booked"),
   ]);
 
   const unitById = new Map(units.map((u) => [u.unit_id, u]));
   // For bookings, call the number the tenant gave when booking (049); older
   // bookings fall back to the lease phone.
-  const booked = ((bookings || []) as { unit_id: string; slot_start: string; contact_phone: string | null }[])
+  type Row = {
+    id: string;
+    unit_id: string;
+    slot_start: string;
+    contact_phone: string | null;
+    work_status: WorkStatus | null;
+    work_reason: WorkReason | null;
+    work_note: string | null;
+  };
+  const booked = ((bookings || []) as Row[])
     .map((b) => {
       const unit = unitById.get(b.unit_id);
       const phone = b.contact_phone ? displayPhone(b.contact_phone) : (unit?.tenant?.phone ?? null);
-      return { start: slotKey(b.slot_start), unit, phone };
+      return { ...b, start: slotKey(b.slot_start), unit, phone };
     })
-    .filter((b): b is { start: string; unit: OccupiedUnit; phone: string | null } => Boolean(b.unit))
+    .filter((b): b is Row & { start: string; unit: OccupiedUnit; phone: string | null } => Boolean(b.unit))
     .sort((a, b) => a.start.localeCompare(b.start));
   const bookedIds = new Set(booked.map((b) => b.unit.unit_id));
   const notBooked = units.filter((u) => u.tenant && !bookedIds.has(u.unit_id));
@@ -104,7 +116,7 @@ export default async function VisitSchedulePage({
             <Badge variant="secondary">{over ? t("finished") : t("bookingsClosed")}</Badge>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <div className="rounded-lg border border-border/40 bg-surface-elevated/50 p-3">
             <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("booked")}</p>
             <p className="text-xl font-bold font-mono ltr-nums text-success">{booked.length}</p>
@@ -112,6 +124,12 @@ export default async function VisitSchedulePage({
           <div className="rounded-lg border border-border/40 bg-surface-elevated/50 p-3">
             <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("notBooked")}</p>
             <p className="text-xl font-bold font-mono ltr-nums text-warning">{notBooked.length}</p>
+          </div>
+          <div className="rounded-lg border border-border/40 bg-surface-elevated/50 p-3">
+            <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("doneCount")}</p>
+            <p className="text-xl font-bold font-mono ltr-nums text-accent">
+              {booked.filter((b) => b.work_status === "done").length}
+            </p>
           </div>
         </div>
         {campaign.notes && (
@@ -140,12 +158,19 @@ export default async function VisitSchedulePage({
                     <span className="font-mono ltr-nums text-sm font-semibold text-accent w-12 shrink-0 pt-0.5">
                       {formatSlotTime(b.start, locale)}
                     </span>
-                    <div className="min-w-0 space-y-0.5">
+                    <div className="min-w-0 flex-1 space-y-0.5">
                       <p className="text-sm font-semibold text-text-primary">
                         {t("unit")} <span className="font-mono ltr-nums">{b.unit.unit_number}</span>
                       </p>
                       {b.unit.tenant && <p className="text-sm text-text-secondary">{b.unit.tenant.full_name}</p>}
                       <PhoneLink phone={b.phone} />
+                      <WorkMarker
+                        crewToken={crewToken}
+                        bookingId={b.id}
+                        status={b.work_status}
+                        reason={b.work_reason}
+                        note={b.work_note}
+                      />
                     </div>
                   </li>
                 ))}

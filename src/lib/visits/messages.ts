@@ -1,7 +1,7 @@
 // Client-safe view of visit_message_logs (047): one WhatsApp message to a
 // unit's tenant and how far it got.
 
-export type VisitMessageKind = "invite" | "confirmation" | "reminder";
+export type VisitMessageKind = "invite" | "confirmation" | "reminder" | "done";
 
 /** Where a message ended up, most useful first for staff. */
 export type VisitMessageState = "read" | "delivered" | "sent" | "failed" | "skipped";
