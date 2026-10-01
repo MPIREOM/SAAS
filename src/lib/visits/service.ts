@@ -90,17 +90,30 @@ export async function getCampaignById(
   return data ? withPropertyName(data as Record<string, unknown>) : null;
 }
 
-/** Units of a property with their current tenant (null for vacant units), sorted by unit number. */
+/**
+ * Unit types that are never part of a building-wide visit. Visits are for
+ * entering apartments; shops (e.g. a café or butchery on the ground floor)
+ * don't get pest control or the other building visits.
+ */
+const EXCLUDED_UNIT_TYPES = new Set(["shop"]);
+
+/**
+ * Units of a property that take part in visits, with their current tenant
+ * (null for vacant units), sorted by unit number. Every visit surface
+ * (booking page, invites, staff board, counts) goes through this, so
+ * excluded unit types never appear anywhere in the feature.
+ */
 export async function getPropertyUnits(db: SupabaseClient, propertyId: string): Promise<OccupiedUnit[]> {
   const { data, error } = await db
     .from("units")
     .select(
-      "id, unit_number, leases(is_active, start_date, tenants(id, full_name, phone, language_preference, notifications_enabled))"
+      "id, unit_number, unit_type, leases(is_active, start_date, tenants(id, full_name, phone, language_preference, notifications_enabled))"
     )
     .eq("property_id", propertyId);
   if (error) throw new Error(error.message);
 
   return ((data || []) as Record<string, unknown>[])
+    .filter((u) => !EXCLUDED_UNIT_TYPES.has(u.unit_type as string))
     .map((u) => {
       const leases = ((u.leases as Record<string, unknown>[]) || [])
         .filter((l) => l.is_active === true)
