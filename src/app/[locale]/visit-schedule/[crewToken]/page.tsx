@@ -86,7 +86,7 @@ export default async function VisitSchedulePage({
             <div className="min-w-0">
               <p className="text-sm font-semibold text-text-primary truncate">{campaign.property_name}</p>
               <p className="text-xs text-text-secondary">
-                {formatVisitDates(campaign, locale)} ·{" "}
+                {formatVisitDates(campaign, locale, "long")} ·{" "}
                 <span className="ltr-nums">
                   {campaign.day_start.slice(0, 5)}–{campaign.day_end.slice(0, 5)}
                 </span>
@@ -122,7 +122,7 @@ export default async function VisitSchedulePage({
           Array.from(days).map(([day, rows]) => (
             <div key={day} className="bg-surface border border-border/60 rounded-xl overflow-hidden">
               <h3 className="px-4 py-2.5 border-b border-border/40 text-sm font-semibold text-text-primary">
-                {formatVisitDay(day, locale)}
+                {formatVisitDay(day, locale, "long")}
                 <span className="ms-2 text-xs font-normal text-text-secondary">
                   {t("visitsCount", { count: rows.length })}
                 </span>

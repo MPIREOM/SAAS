@@ -97,17 +97,24 @@ function intlLocale(locale: string): string {
   return locale === "ar" ? "ar-OM-u-nu-latn" : "en-GB";
 }
 
-/** "Sat 4 Oct" in Muscat time. */
-export function formatVisitDay(dateOrInstant: string, locale: string): string {
+/**
+ * Date length: "short" ("Sat 4 Oct") for staff tables, "long"
+ * ("Saturday, 4 October") wherever a tenant or contractor needs to be sure
+ * which day it is.
+ */
+export type DateStyle = "short" | "long";
+
+/** "Sat 4 Oct" / "Saturday, 4 October" in Muscat time. */
+export function formatVisitDay(dateOrInstant: string, locale: string, style: DateStyle = "short"): string {
   // Bare dates are pinned to Muscat noon so they never shift a day.
   const instant = /^\d{4}-\d{2}-\d{2}$/.test(dateOrInstant)
     ? new Date(`${dateOrInstant}T12:00:00${MUSCAT_OFFSET}`)
     : new Date(dateOrInstant);
   return new Intl.DateTimeFormat(intlLocale(locale), {
     timeZone: MUSCAT_TZ,
-    weekday: "short",
+    weekday: style,
     day: "numeric",
-    month: "short",
+    month: style,
   }).format(instant);
 }
 
@@ -121,18 +128,27 @@ export function formatSlotTime(instant: string, locale: string): string {
   }).format(new Date(instant));
 }
 
-/** "Sat 4 Oct, 10:20–10:30" in Muscat time. */
-export function formatSlotRange(instant: string, slotMinutes: number, locale: string): string {
+/** "Sat 4 Oct, 10:20–10:30" (or the long date) in Muscat time. */
+export function formatSlotRange(
+  instant: string,
+  slotMinutes: number,
+  locale: string,
+  style: DateStyle = "short"
+): string {
   const end = new Date(new Date(instant).getTime() + slotMinutes * 60 * 1000).toISOString();
   const times = `${formatSlotTime(instant, locale)}–${formatSlotTime(end, locale)}`;
   // In Arabic the LTR time range is isolated (U+2066..U+2069) so the bidi
   // algorithm can't flip it to "end–start" inside right-to-left text.
-  if (locale === "ar") return `${formatVisitDay(instant, locale)}، \u2066${times}\u2069`;
-  return `${formatVisitDay(instant, locale)}, ${times}`;
+  if (locale === "ar") return `${formatVisitDay(instant, locale, style)}، \u2066${times}\u2069`;
+  return `${formatVisitDay(instant, locale, style)}, ${times}`;
 }
 
-/** "Sat 4 Oct – Mon 6 Oct" or a single day. */
-export function formatVisitDates(w: Pick<VisitWindow, "start_date" | "end_date">, locale: string): string {
-  const from = formatVisitDay(w.start_date, locale);
-  return w.start_date === w.end_date ? from : `${from} – ${formatVisitDay(w.end_date, locale)}`;
+/** "Sat 4 Oct – Mon 6 Oct" or a single day (short or long). */
+export function formatVisitDates(
+  w: Pick<VisitWindow, "start_date" | "end_date">,
+  locale: string,
+  style: DateStyle = "short"
+): string {
+  const from = formatVisitDay(w.start_date, locale, style);
+  return w.start_date === w.end_date ? from : `${from} – ${formatVisitDay(w.end_date, locale, style)}`;
 }

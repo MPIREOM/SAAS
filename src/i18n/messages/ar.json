@@ -1926,7 +1926,11 @@
       "pickSlot": "يرجى اختيار موعد.",
       "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
     },
-    "beforeWeArrive": "قبل وصولنا"
+    "beforeWeArrive": "قبل وصولنا",
+    "visitDate": "تاريخ الزيارة",
+    "visitDates": "تواريخ الزيارة",
+    "yourVisit": "موعد زيارتك",
+    "dayHeading": "الأوقات يوم {day}"
   },
   "visitSchedule": {
     "subtitle": "جدول الزيارات",

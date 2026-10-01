@@ -1926,7 +1926,11 @@
       "pickSlot": "Please choose a time.",
       "generic": "Something went wrong. Please try again."
     },
-    "beforeWeArrive": "Before we arrive"
+    "beforeWeArrive": "Before we arrive",
+    "visitDate": "Visit date",
+    "visitDates": "Visit dates",
+    "yourVisit": "Your visit",
+    "dayHeading": "Times on {day}"
   },
   "visitSchedule": {
     "subtitle": "Visit schedule",

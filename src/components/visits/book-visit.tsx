@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Building2, CalendarCheck } from "lucide-react";
+import { Building2, CalendarCheck, CalendarDays } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { formatVisitDates } from "@/lib/visits/slots";
+import { formatSlotRange, formatVisitDates } from "@/lib/visits/slots";
 import {
   PublicVisitLoading,
   PublicVisitMessage,
@@ -129,9 +129,15 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
           <div className="h-10 w-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
             <Building2 aria-hidden="true" className="h-5 w-5 text-accent" />
           </div>
+          <p className="text-sm font-semibold text-text-primary truncate min-w-0">{campaign.property_name}</p>
+        </div>
+        <div className="flex items-center gap-3 rounded-lg border border-accent/30 bg-accent/10 p-3">
+          <CalendarDays aria-hidden="true" className="h-6 w-6 text-accent shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-text-primary truncate">{campaign.property_name}</p>
-            <p className="text-xs text-text-secondary">{formatVisitDates(campaign, locale)}</p>
+            <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              {campaign.start_date === campaign.end_date ? t("visitDate") : t("visitDates")}
+            </p>
+            <p className="text-lg font-bold text-text-primary">{formatVisitDates(campaign, locale, "long")}</p>
           </div>
         </div>
         {campaign.notes && (
@@ -180,6 +186,18 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
           </div>
           <SlotPicker slots={slots} value={slot} onChange={setSlot} locale={locale} />
         </section>
+
+        {slot && (
+          <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 p-4" aria-live="polite">
+            <CalendarCheck aria-hidden="true" className="h-5 w-5 text-success shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("yourVisit")}</p>
+              <p className="text-base font-semibold text-text-primary">
+                {formatSlotRange(slot, campaign.slot_minutes, locale, "long")}
+              </p>
+            </div>
+          </div>
+        )}
 
         {error && <Alert variant="destructive">{error}</Alert>}
 

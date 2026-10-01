@@ -180,7 +180,7 @@ export function ManageVisit({
               cancelled ? "text-text-secondary line-through" : "text-text-primary"
             }`}
           >
-            {formatSlotRange(booking.slot_start, campaign.slot_minutes, locale)}
+            {formatSlotRange(booking.slot_start, campaign.slot_minutes, locale, "long")}
           </p>
         </div>
 
@@ -200,7 +200,7 @@ export function ManageVisit({
               <h2 className="text-sm font-semibold text-text-primary font-display">
                 {cancelled ? t("pickNewTime") : t("changeTime")}
               </h2>
-              <p className="text-xs text-text-secondary mt-1">{formatVisitDates(campaign, locale)}</p>
+              <p className="text-xs text-text-secondary mt-1">{formatVisitDates(campaign, locale, "long")}</p>
             </div>
             <SlotPicker
               slots={slots}
