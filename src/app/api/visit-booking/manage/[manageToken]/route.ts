@@ -134,6 +134,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     try {
       await sendVisitConfirmation(booking.tenants, {
         title: campaign.title,
+        notes: campaign.notes,
         propertyName: campaign.property_name,
         unitNumber: booking.units?.unit_number ?? "",
         origin: request.nextUrl.origin,

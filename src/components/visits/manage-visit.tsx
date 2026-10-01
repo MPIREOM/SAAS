@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Building2, CalendarClock, Info, XCircle } from "lucide-react";
+import { Building2, CalendarClock, XCircle } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -187,10 +187,9 @@ export function ManageVisit({
         {!cancelled && <p className="text-xs text-text-secondary">{t("entryNote")}</p>}
 
         {campaign.notes && (
-          <p className="flex gap-2 text-sm text-text-secondary whitespace-pre-line border-t border-border/40 pt-3">
-            <Info aria-hidden="true" className="h-4 w-4 shrink-0 mt-0.5 text-accent" />
-            <span>{campaign.notes}</span>
-          </p>
+          <Alert variant="warning" title={t("beforeWeArrive")}>
+            <span className="whitespace-pre-line">{campaign.notes}</span>
+          </Alert>
         )}
       </div>
 

@@ -92,6 +92,7 @@ export function VisitCampaignForm({ propertyId, locale, occupiedUnits, today }: 
         <Textarea
           label={t("form.notes")}
           placeholder={t("form.notesPlaceholder")}
+          helperText={t("form.notesHelp")}
           rows={3}
           maxLength={1000}
           value={notes}

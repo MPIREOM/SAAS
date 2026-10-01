@@ -1770,7 +1770,8 @@
       "titlePlaceholder": "e.g. Pest control",
       "titleHelp": "Shown to tenants on the booking page and in WhatsApp messages.",
       "notes": "Instructions for tenants",
-      "notesPlaceholder": "e.g. Please clear the cupboards under the kitchen sink.",
+      "notesPlaceholder": "e.g. Please empty your kitchen cupboards so they can be sprayed.",
+      "notesHelp": "Included in the WhatsApp invite, confirmation and reminder, and shown on the booking page.",
       "whenSection": "When",
       "startDate": "First day",
       "endDate": "Last day",
@@ -1891,6 +1892,7 @@
       "tooLate": "This visit is too close to change online. Please contact the building management.",
       "pickSlot": "Please choose a time.",
       "generic": "Something went wrong. Please try again."
-    }
+    },
+    "beforeWeArrive": "Before we arrive"
   }
 }

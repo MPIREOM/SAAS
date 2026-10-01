@@ -67,6 +67,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     try {
       const result = await sendVisitConfirmation(unit.tenant, {
         title: campaign.title,
+        notes: campaign.notes,
         propertyName: campaign.property_name,
         unitNumber: unit.unit_number,
         origin: request.nextUrl.origin,

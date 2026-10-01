@@ -15,7 +15,7 @@ import { formatSlotRange, formatVisitDates } from "./slots";
 type Lang = "en" | "ar";
 
 // {{1}} tenant name, {{2}} visit title, {{3}} property, {{4}} dates,
-// {{5}} unit, {{6}} booking link
+// {{5}} unit, {{6}} preparation instructions, {{7}} booking link
 export const VISIT_INVITE_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
   en: {
     name: "visit_booking_invite_en",
@@ -25,13 +25,15 @@ export const VISIT_INVITE_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
       "",
       "We will be carrying out {{2}} at {{3}} on {{4}}, and need to enter your apartment (unit {{5}}).",
       "",
+      "Before we arrive: {{6}}",
+      "",
       "Please choose a time that suits you here:",
-      "{{6}}",
+      "{{7}}",
       "",
       "Thank you,",
       "MPIRE Property Management",
     ].join("\n"),
-    example: ["Ahmed Al Balushi", "Pest control", "Bousher Ameen Mosque", "Sat 4 Oct", "12", "https://example.com/en/visit-booking/abc123"],
+    example: ["Ahmed Al Balushi", "Pest control", "Bousher Ameen Mosque", "Sat 4 Oct", "12", "Please empty your kitchen cupboards so they can be sprayed.", "https://example.com/en/visit-booking/abc123"],
   },
   ar: {
     name: "visit_booking_invite_ar",
@@ -41,18 +43,20 @@ export const VISIT_INVITE_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
       "",
       "سنقوم بأعمال {{2}} في {{3}} بتاريخ {{4}}، ونحتاج إلى دخول شقتكم (الوحدة {{5}}).",
       "",
+      "قبل وصولنا: {{6}}",
+      "",
       "يرجى اختيار الوقت المناسب لكم من هنا:",
-      "{{6}}",
+      "{{7}}",
       "",
       "شكراً لكم،",
       "MPIRE لإدارة العقارات",
     ].join("\n"),
-    example: ["أحمد البلوشي", "مكافحة الحشرات", "بوشر مسجد الأمين", "السبت 4 أكتوبر", "12", "https://example.com/ar/visit-booking/abc123"],
+    example: ["أحمد البلوشي", "مكافحة الحشرات", "بوشر مسجد الأمين", "السبت 4 أكتوبر", "12", "يرجى إفراغ خزائن المطبخ ليتم رشها.", "https://example.com/ar/visit-booking/abc123"],
   },
 };
 
 // {{1}} tenant name, {{2}} visit title, {{3}} unit, {{4}} property,
-// {{5}} slot, {{6}} manage link
+// {{5}} slot, {{6}} preparation instructions, {{7}} manage link
 export const VISIT_CONFIRMED_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
   en: {
     name: "visit_booking_confirmed_en",
@@ -62,13 +66,15 @@ export const VISIT_CONFIRMED_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
       "",
       "Your {{2}} visit for unit {{3}}, {{4}} is booked for {{5}}.",
       "",
+      "Before we arrive: {{6}}",
+      "",
       "To change or cancel your time, use this link:",
-      "{{6}}",
+      "{{7}}",
       "",
       "Thank you,",
       "MPIRE Property Management",
     ].join("\n"),
-    example: ["Ahmed Al Balushi", "Pest control", "12", "Bousher Ameen Mosque", "Sat 4 Oct, 10:20–10:30", "https://example.com/en/my-visit/xyz789"],
+    example: ["Ahmed Al Balushi", "Pest control", "12", "Bousher Ameen Mosque", "Sat 4 Oct, 10:20–10:30", "Please empty your kitchen cupboards so they can be sprayed.", "https://example.com/en/my-visit/xyz789"],
   },
   ar: {
     name: "visit_booking_confirmed_ar",
@@ -78,18 +84,20 @@ export const VISIT_CONFIRMED_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
       "",
       "تم حجز موعد {{2}} للوحدة {{3}}، {{4}} في {{5}}.",
       "",
+      "قبل وصولنا: {{6}}",
+      "",
       "لتغيير الموعد أو إلغائه، استخدم هذا الرابط:",
-      "{{6}}",
+      "{{7}}",
       "",
       "شكراً لكم،",
       "MPIRE لإدارة العقارات",
     ].join("\n"),
-    example: ["أحمد البلوشي", "مكافحة الحشرات", "12", "بوشر مسجد الأمين", "السبت 4 أكتوبر، 10:20–10:30", "https://example.com/ar/my-visit/xyz789"],
+    example: ["أحمد البلوشي", "مكافحة الحشرات", "12", "بوشر مسجد الأمين", "السبت 4 أكتوبر، 10:20–10:30", "يرجى إفراغ خزائن المطبخ ليتم رشها.", "https://example.com/ar/my-visit/xyz789"],
   },
 };
 
 // {{1}} tenant name, {{2}} unit, {{3}} property, {{4}} visit title,
-// {{5}} slot, {{6}} manage link
+// {{5}} slot, {{6}} preparation instructions, {{7}} manage link
 export const VISIT_REMINDER_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
   en: {
     name: "visit_booking_reminder_en",
@@ -99,13 +107,15 @@ export const VISIT_REMINDER_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
       "",
       "A reminder that our team will enter unit {{2}}, {{3}} for {{4}} on {{5}}.",
       "",
+      "Before we arrive: {{6}}",
+      "",
       "If you need to change or cancel, please use this link:",
-      "{{6}}",
+      "{{7}}",
       "",
       "Thank you,",
       "MPIRE Property Management",
     ].join("\n"),
-    example: ["Ahmed Al Balushi", "12", "Bousher Ameen Mosque", "Pest control", "Sat 4 Oct, 10:20–10:30", "https://example.com/en/my-visit/xyz789"],
+    example: ["Ahmed Al Balushi", "12", "Bousher Ameen Mosque", "Pest control", "Sat 4 Oct, 10:20–10:30", "Please empty your kitchen cupboards so they can be sprayed.", "https://example.com/en/my-visit/xyz789"],
   },
   ar: {
     name: "visit_booking_reminder_ar",
@@ -115,13 +125,15 @@ export const VISIT_REMINDER_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
       "",
       "نذكركم بأن فريقنا سيدخل الوحدة {{2}}، {{3}} لأعمال {{4}} في {{5}}.",
       "",
+      "قبل وصولنا: {{6}}",
+      "",
       "إذا احتجتم إلى تغيير الموعد أو إلغائه، يرجى استخدام هذا الرابط:",
-      "{{6}}",
+      "{{7}}",
       "",
       "شكراً لكم،",
       "MPIRE لإدارة العقارات",
     ].join("\n"),
-    example: ["أحمد البلوشي", "12", "بوشر مسجد الأمين", "مكافحة الحشرات", "السبت 4 أكتوبر، 10:20–10:30", "https://example.com/ar/my-visit/xyz789"],
+    example: ["أحمد البلوشي", "12", "بوشر مسجد الأمين", "مكافحة الحشرات", "السبت 4 أكتوبر، 10:20–10:30", "يرجى إفراغ خزائن المطبخ ليتم رشها.", "https://example.com/ar/my-visit/xyz789"],
   },
 };
 
@@ -148,12 +160,23 @@ export function manageLink(origin: string, lang: Lang, manageToken: string): str
 
 export interface VisitMessageContext {
   title: string;
+  /** The visit's instructions for tenants (e.g. empty the kitchen cupboards). */
+  notes: string | null;
   propertyName: string;
   unitNumber: string;
   origin: string;
   start_date: string;
   end_date: string;
   slot_minutes: number;
+}
+
+const NO_PREPARATION: Record<Lang, string> = {
+  en: "No special preparation needed.",
+  ar: "لا يلزم أي تحضير خاص.",
+};
+
+function preparation(ctx: VisitMessageContext, lang: Lang): string {
+  return ctx.notes?.trim() || NO_PREPARATION[lang];
 }
 
 function checkRecipient(tenant: TenantRecipient): SendResult | null {
@@ -177,6 +200,7 @@ export async function sendVisitInvite(
     ctx.propertyName,
     formatVisitDates(ctx, lang),
     ctx.unitNumber,
+    preparation(ctx, lang),
     bookingLink(ctx.origin, lang, ctx.campaignToken),
   ]);
 }
@@ -194,6 +218,7 @@ export async function sendVisitConfirmation(
     ctx.unitNumber,
     ctx.propertyName,
     formatSlotRange(ctx.slotStart, ctx.slot_minutes, lang),
+    preparation(ctx, lang),
     manageLink(ctx.origin, lang, ctx.manageToken),
   ]);
 }
@@ -211,6 +236,7 @@ export async function sendVisitReminder(
     ctx.propertyName,
     ctx.title,
     formatSlotRange(ctx.slotStart, ctx.slot_minutes, lang),
+    preparation(ctx, lang),
     manageLink(ctx.origin, lang, ctx.manageToken),
   ]);
 }

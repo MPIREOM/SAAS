@@ -21,6 +21,7 @@ interface ReminderRow {
   tenants: TenantRecipient | null;
   visit_campaigns: {
     title: string;
+    notes: string | null;
     status: string;
     start_date: string;
     end_date: string;
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
     const { data, error } = await admin
       .from("visit_bookings")
       .select(
-        "id, slot_start, manage_token, units(unit_number), tenants(full_name, phone, language_preference, notifications_enabled), visit_campaigns(title, status, start_date, end_date, slot_minutes, public_origin, properties(name))"
+        "id, slot_start, manage_token, units(unit_number), tenants(full_name, phone, language_preference, notifications_enabled), visit_campaigns(title, notes, status, start_date, end_date, slot_minutes, public_origin, properties(name))"
       )
       .eq("status", "booked")
       .is("reminder_sent_at", null)
@@ -64,6 +65,7 @@ export async function GET(request: Request) {
       }
       const result = await sendVisitReminder(row.tenants, {
         title: campaign.title,
+        notes: campaign.notes,
         propertyName: campaign.properties?.name ?? "",
         unitNumber: row.units?.unit_number ?? "",
         origin: campaign.public_origin || fallbackOrigin,
