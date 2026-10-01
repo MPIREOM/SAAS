@@ -33,6 +33,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils/cn";
+import {
+  isOutsideWindowError,
+  messageProblem,
+  messageState,
+  type VisitMessage,
+  type VisitMessageState,
+} from "@/lib/visits/messages";
 import { formatSlotRange, formatSlotTime, formatVisitDates, formatVisitDay, muscatDate } from "@/lib/visits/slots";
 
 export interface BoardUnit {
@@ -41,6 +48,8 @@ export interface BoardUnit {
   tenant_name: string | null;
   tenant_phone: string | null;
   booking: { id: string; slot_start: string; booked_by: string } | null;
+  /** Latest WhatsApp message to this unit's tenant for this visit. */
+  message: VisitMessage | null;
 }
 
 interface BoardCampaign {
@@ -65,7 +74,15 @@ interface Props {
   freeSlots: string[];
 }
 
-type Filter = "all" | "pending" | "booked";
+type Filter = "all" | "pending" | "booked" | "msgFailed";
+
+const STATE_BADGE: Record<VisitMessageState, "success" | "secondary" | "destructive" | "warning"> = {
+  read: "success",
+  delivered: "success",
+  sent: "secondary",
+  failed: "destructive",
+  skipped: "warning",
+};
 type View = "units" | "schedule";
 
 const subscribeNoop = () => () => {};
@@ -96,7 +113,21 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
   const vacant = units.length - occupied.length;
   const live = campaign.status === "open" && !campaign.over;
 
-  const shown = filter === "booked" ? booked : filter === "pending" ? pending : occupied;
+  const msgFailed = occupied.filter((u) => u.message && messageState(u.message) === "failed");
+  const shown =
+    filter === "booked" ? booked : filter === "pending" ? pending : filter === "msgFailed" ? msgFailed : occupied;
+
+  const messageCounts = useMemo(() => {
+    const counts: Record<VisitMessageState, number> = { read: 0, delivered: 0, sent: 0, failed: 0, skipped: 0 };
+    for (const u of occupied) if (u.message) counts[messageState(u.message)]++;
+    return counts;
+  }, [occupied]);
+  const messaged = Object.values(messageCounts).reduce((a, b) => a + b, 0);
+  // Messages that went out as plain text because the template was refused,
+  // and failures from Meta's 24h rule: both mean the template isn't usable yet.
+  const templateProblem =
+    occupied.map((u) => u.message).find((m) => m?.via === "text" && m.template_error)?.template_error ?? null;
+  const outsideWindow = occupied.some((u) => u.message && isOutsideWindowError(messageProblem(u.message)));
 
   const schedule = useMemo(() => {
     const rows = units
@@ -157,6 +188,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
       description: t("inviteResult", { sent: Number(body.sent ?? 0), skipped: Number(body.skipped ?? 0), failed: Number(body.failed ?? 0) }),
       variant: Number(body.failed ?? 0) > 0 ? "destructive" : "success",
     });
+    router.refresh();
   };
 
   const setStatus = async (status: "open" | "closed") => {
@@ -258,6 +290,30 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
       <span className="text-text-secondary">—</span>
     );
 
+  const messageCell = (u: BoardUnit) => {
+    if (!u.message) return <span className="text-xs text-text-secondary">{t("msgNone")}</span>;
+    const state = messageState(u.message);
+    const problem = messageProblem(u.message);
+    return (
+      <div className="space-y-1 max-w-56">
+        <Badge variant={STATE_BADGE[state]}>
+          {t(`msgKind.${u.message.kind}`)} · {t(`msgState.${state}`)}
+        </Badge>
+        {problem && (
+          <p className="text-[11px] leading-snug text-text-secondary line-clamp-2" title={problem}>
+            {isOutsideWindowError(problem)
+              ? t("msgOutsideWindow")
+              : problem === "tenant has no phone"
+                ? t("msgSkipNoPhone")
+                : problem === "tenant notifications disabled"
+                  ? t("msgSkipNotificationsOff")
+                  : problem}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Overview + share link */}
@@ -351,6 +407,39 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
         ))}
       </div>
 
+      {/* WhatsApp delivery summary */}
+      {messaged > 0 && (
+        <section className="bg-surface border border-border/60 rounded-xl p-4 space-y-3" aria-label={t("msgTitle")}>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <h2 className="text-sm font-semibold text-text-primary font-display">{t("msgTitle")}</h2>
+            {(["read", "delivered", "sent", "failed", "skipped"] as VisitMessageState[]).map((state) =>
+              messageCounts[state] > 0 ? (
+                <span key={state} className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
+                  <Badge variant={STATE_BADGE[state]}>{t(`msgState.${state}`)}</Badge>
+                  <span className="font-mono ltr-nums text-text-primary">{messageCounts[state]}</span>
+                </span>
+              ) : null
+            )}
+            {occupied.length - messaged > 0 && (
+              <span className="text-xs text-text-secondary">
+                {t("msgNotMessaged", { count: occupied.length - messaged })}
+              </span>
+            )}
+          </div>
+          {messageCounts.sent > 0 && <p className="text-xs text-text-secondary">{t("msgSentHint")}</p>}
+          {(templateProblem || outsideWindow) && (
+            <Alert variant="warning" title={t("msgTemplateTitle")}>
+              {t("msgTemplateBody")}
+              {templateProblem && (
+                <span className="block mt-1 text-xs opacity-80">
+                  {t("msgTemplateReason")}: {templateProblem}
+                </span>
+              )}
+            </Alert>
+          )}
+        </section>
+      )}
+
       {/* View switch */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex rounded-xl border border-border/60 p-1 bg-surface" role="group" aria-label={t("view")}>
@@ -376,6 +465,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                 ["all", t("filterAll"), occupied.length],
                 ["pending", t("filterPending"), pending.length],
                 ["booked", t("filterBooked"), booked.length],
+                ...(msgFailed.length > 0 ? [["msgFailed", t("filterMsgFailed"), msgFailed.length]] : []),
               ] as [Filter, string, number][]
             ).map(([key, label, count]) => (
               <button
@@ -415,6 +505,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                     <TableHead>{tc("tenant")}</TableHead>
                     <TableHead>{tc("status")}</TableHead>
                     <TableHead>{t("time")}</TableHead>
+                    <TableHead>{t("msgColumn")}</TableHead>
                     <TableHead className="text-end">{tc("actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -433,6 +524,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                           <span className="ms-2 text-[10px] uppercase tracking-wider text-text-secondary">{t("byStaff")}</span>
                         )}
                       </TableCell>
+                      <TableCell>{messageCell(u)}</TableCell>
                       <TableCell className="text-end">{rowActions(u)}</TableCell>
                     </TableRow>
                   ))}
@@ -453,6 +545,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                     {u.tenant_phone && <span className="font-mono ltr-nums"> · {u.tenant_phone}</span>}
                   </p>
                   {u.booking && <p className="text-sm text-text-primary">{slotText(u)}</p>}
+                  {messageCell(u)}
                   <div className="flex justify-end">{rowActions(u)}</div>
                 </li>
               ))}

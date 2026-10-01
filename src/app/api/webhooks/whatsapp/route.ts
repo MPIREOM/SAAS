@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Delivery receipts for our own sends (reminders). Receipts for
+      // Delivery receipts for our own sends (reminders, visit messages). Receipts for
       // messages we never logged are ignored inside.
       const statuses = (value?.statuses || []) as WhatsAppStatusReceipt[];
       if (statuses.length > 0) {
