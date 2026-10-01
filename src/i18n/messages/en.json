@@ -1873,7 +1873,8 @@
     "crewReplace": "New link",
     "crewTurnOff": "Turn off",
     "crewReplaced": "New contractor link created. The old link no longer works.",
-    "crewTurnedOff": "Contractor link turned off."
+    "crewTurnedOff": "Contractor link turned off.",
+    "bookedWith": "Contact:"
   },
   "visitBooking": {
     "subtitle": "Book a time for us to enter your apartment",
@@ -1886,8 +1887,9 @@
     "step2": "2. Choose a time",
     "unit": "Unit",
     "selectUnit": "Select your unit",
-    "phoneLast4": "Last 4 digits of your phone number",
-    "phoneLast4Help": "The phone number registered on your lease, so only you can book for your unit.",
+    "phone": "Your phone number",
+    "phoneHelp": "We'll send your booking confirmation to this number on WhatsApp.",
+    "phonePlaceholder": "e.g. 9123 4567",
     "slotLength": "Each visit takes about {minutes} minutes. Crossed-out times are already taken.",
     "booking": "Booking…",
     "confirm": "Confirm booking",
@@ -1915,16 +1917,15 @@
     "noticeMoved": "Your visit has been moved to the new time.",
     "noticeCancelled": "Your visit has been cancelled.",
     "errors": {
-      "phoneMismatch": "Those digits don't match the phone number on file for this unit.",
-      "locked": "Too many wrong attempts. Please try again in an hour or contact the building management.",
       "unitNotFound": "We couldn't find that unit. Please check the unit number.",
       "slotTaken": "Sorry, that time was just taken. Please choose another.",
       "closed": "Bookings for this visit are closed.",
-      "alreadyBooked": "This unit already has a booking.",
+      "alreadyBooked": "This unit already has a booking. Use the link in your WhatsApp confirmation to change it, or contact the building management.",
       "alreadyBookedOther": "This unit already has another booking for this visit.",
       "tooLate": "This visit is too close to change online. Please contact the building management.",
       "pickSlot": "Please choose a time.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "invalidPhone": "Please enter a valid phone number."
     },
     "beforeWeArrive": "Before we arrive",
     "visitDate": "Visit date",

@@ -30,8 +30,7 @@ type LoadState =
   | { kind: "ready"; data: BookingData };
 
 const ERROR_KEYS: Record<string, string> = {
-  phone_mismatch: "errors.phoneMismatch",
-  locked: "errors.locked",
+  invalid_phone: "errors.invalidPhone",
   unit_not_found: "errors.unitNotFound",
   slot_taken: "errors.slotTaken",
   invalid_slot: "errors.slotTaken",
@@ -58,7 +57,7 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
 
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [unit, setUnit] = useState("");
-  const [digits, setDigits] = useState("");
+  const [phone, setPhone] = useState("");
   const [slot, setSlot] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -87,15 +86,11 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
       const res = await fetch(`/api/visit-booking/${encodeURIComponent(token)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ unit_number: unit, phone_last4: digits, slot_start: slot }),
+        body: JSON.stringify({ unit_number: unit, phone, slot_start: slot }),
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok && body.manage_token) {
         router.push(`/${locale}/my-visit/${body.manage_token}?booked=1`);
-        return;
-      }
-      if (body.error === "already_booked" && body.manage_token) {
-        router.push(`/${locale}/my-visit/${body.manage_token}?existing=1`);
         return;
       }
       setError(t(ERROR_KEYS[body.error] ?? "errors.generic"));
@@ -164,16 +159,18 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
             ))}
           </Select>
           <Input
-            label={`${t("phoneLast4")} *`}
-            helperText={t("phoneLast4Help")}
+            type="tel"
+            label={`${t("phone")} *`}
+            helperText={t("phoneHelp")}
+            placeholder={t("phonePlaceholder")}
             required
-            inputMode="numeric"
-            autoComplete="off"
-            pattern="\d{4}"
-            maxLength={4}
-            value={digits}
-            onChange={(e) => setDigits(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            className="font-mono ltr-nums tracking-[0.3em]"
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={30}
+            dir="ltr"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="font-mono ltr-nums text-start"
           />
         </section>
 
