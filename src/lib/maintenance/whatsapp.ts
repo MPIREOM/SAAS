@@ -180,7 +180,8 @@ function render(template: MaintenanceTemplate, params: string[]): string {
 
 export type SendResult = { success: boolean; via?: "template" | "text"; error?: string };
 
-async function sendMaintenanceMessage(
+/** Send as an approved template, falling back to free-form text. Also used by lib/visits. */
+export async function sendMaintenanceMessage(
   phone: string,
   template: MaintenanceTemplate,
   rawParams: string[]
