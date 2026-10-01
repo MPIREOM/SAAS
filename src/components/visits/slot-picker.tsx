@@ -79,10 +79,16 @@ export function SlotPicker({ slots, value, onChange, locale, currentSlot }: Prop
       )}
 
       {current && (
+        <p id="slot-day-heading" className="text-sm font-semibold text-text-primary">
+          {t("dayHeading", { day: formatVisitDay(current.day, locale, "long") })}
+        </p>
+      )}
+
+      {current && (
         <div
           className="grid grid-cols-3 sm:grid-cols-5 gap-2"
           role="radiogroup"
-          aria-label={t("chooseTime")}
+          aria-labelledby="slot-day-heading"
         >
           {current.slots.map((slot) => {
             const selected = slot.start === value;
