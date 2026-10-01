@@ -50,7 +50,16 @@ export interface BoardUnit {
   tenant_name: string | null;
   tenant_phone: string | null;
   /** contact_phone: the number the tenant typed when booking (049). */
-  booking: { id: string; slot_start: string; booked_by: string; contact_phone: string | null } | null;
+  /** work_*: what the contractor recorded for this unit (050). */
+  booking: {
+    id: string;
+    slot_start: string;
+    booked_by: string;
+    contact_phone: string | null;
+    work_status: "done" | "not_entered" | null;
+    work_reason: "not_home" | "refused" | "other" | null;
+    work_note: string | null;
+  } | null;
   /** Latest WhatsApp message to this unit's tenant for this visit. */
   message: VisitMessage | null;
 }
@@ -254,7 +263,22 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
 
   const statusBadge = (u: BoardUnit) =>
     u.booking ? (
-      <Badge variant="success">{t("unitBooked")}</Badge>
+      <div className="flex flex-col items-start gap-1">
+        <Badge variant="success">{t("unitBooked")}</Badge>
+        {u.booking.work_status && (
+          <Badge variant={u.booking.work_status === "done" ? "default" : "destructive"}>
+            {u.booking.work_status === "done" ? t("workDone") : t("workNotEntered")}
+            {u.booking.work_status === "not_entered" && u.booking.work_reason
+              ? ` · ${t(`workReasons.${u.booking.work_reason}`)}`
+              : ""}
+          </Badge>
+        )}
+        {u.booking.work_note && (
+          <p className="text-[11px] text-text-secondary max-w-48 line-clamp-2" title={u.booking.work_note}>
+            {u.booking.work_note}
+          </p>
+        )}
+      </div>
     ) : (
       <Badge variant="warning">{t("unitPending")}</Badge>
     );
@@ -407,9 +431,14 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
       </section>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: t("statBooked"), value: booked.length, tone: "text-success" },
+          {
+            label: t("statDone"),
+            value: booked.filter((u) => u.booking?.work_status === "done").length,
+            tone: "text-accent",
+          },
           { label: t("statPending"), value: pending.length, tone: "text-warning" },
           { label: t("statVacant"), value: vacant, tone: "text-text-secondary" },
         ].map((s) => (

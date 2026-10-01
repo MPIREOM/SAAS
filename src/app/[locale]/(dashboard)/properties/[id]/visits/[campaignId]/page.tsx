@@ -27,7 +27,7 @@ export default async function VisitDetailPage({
     getPropertyUnits(supabase, id),
     supabase
       .from("visit_bookings")
-      .select("id, unit_id, slot_start, booked_by, contact_phone")
+      .select("id, unit_id, slot_start, booked_by, contact_phone, work_status, work_reason, work_note")
       .eq("campaign_id", campaignId)
       .eq("status", "booked"),
     supabase
@@ -52,10 +52,21 @@ export default async function VisitDetailPage({
         slot_start: string;
         booked_by: string;
         contact_phone: string | null;
+        work_status: "done" | "not_entered" | null;
+        work_reason: "not_home" | "refused" | "other" | null;
+        work_note: string | null;
       }[]
     ).map((b) => [
       b.unit_id,
-      { id: b.id, slot_start: slotKey(b.slot_start), booked_by: b.booked_by, contact_phone: b.contact_phone },
+      {
+        id: b.id,
+        slot_start: slotKey(b.slot_start),
+        booked_by: b.booked_by,
+        contact_phone: b.contact_phone,
+        work_status: b.work_status,
+        work_reason: b.work_reason,
+        work_note: b.work_note,
+      },
     ])
   );
   const boardUnits: BoardUnit[] = units.map((u) => ({

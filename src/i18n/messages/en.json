@@ -1847,7 +1847,8 @@
     "msgKind": {
       "invite": "Invite",
       "confirmation": "Confirmation",
-      "reminder": "Reminder"
+      "reminder": "Reminder",
+      "done": "Visit done"
     },
     "msgState": {
       "read": "Read",
@@ -1874,7 +1875,15 @@
     "crewTurnOff": "Turn off",
     "crewReplaced": "New contractor link created. The old link no longer works.",
     "crewTurnedOff": "Contractor link turned off.",
-    "bookedWith": "Contact:"
+    "bookedWith": "Contact:",
+    "workDone": "Done",
+    "workNotEntered": "Couldn't enter",
+    "workReasons": {
+      "not_home": "Nobody home",
+      "refused": "Tenant refused",
+      "other": "Other"
+    },
+    "statDone": "Done"
   },
   "visitBooking": {
     "subtitle": "Book a time for us to enter your apartment",
@@ -1946,6 +1955,25 @@
     "unit": "Unit",
     "notBookedTitle": "Not booked yet",
     "notBookedHint": "These apartments haven't chosen a time. Check with the building management before entering.",
-    "updated": "Updated at {time} (Oman time). This page refreshes every {seconds} seconds."
+    "updated": "Updated at {time} (Oman time). This page refreshes every {seconds} seconds.",
+    "doneCount": "Done",
+    "outcome": "Outcome",
+    "markDone": "Done",
+    "couldntEnter": "Couldn't enter",
+    "reason": "Reason",
+    "reasons": {
+      "not_home": "Nobody home",
+      "refused": "Tenant refused",
+      "other": "Other"
+    },
+    "note": "Note (optional)",
+    "notePlaceholder": "e.g. heavy infestation in the kitchen",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "undo": "Undo",
+    "statusDone": "Done",
+    "statusNotEntered": "Couldn't enter",
+    "saveFailed": "Couldn't save. Check your connection and try again."
   }
 }

@@ -1847,7 +1847,8 @@
     "msgKind": {
       "invite": "دعوة",
       "confirmation": "تأكيد",
-      "reminder": "تذكير"
+      "reminder": "تذكير",
+      "done": "اكتمال الزيارة"
     },
     "msgState": {
       "read": "مقروءة",
@@ -1874,7 +1875,15 @@
     "crewTurnOff": "إيقاف",
     "crewReplaced": "تم إنشاء رابط جديد للمقاول. الرابط القديم لم يعد يعمل.",
     "crewTurnedOff": "تم إيقاف رابط المقاول.",
-    "bookedWith": "رقم التواصل:"
+    "bookedWith": "رقم التواصل:",
+    "workDone": "تم",
+    "workNotEntered": "تعذر الدخول",
+    "workReasons": {
+      "not_home": "لا أحد في المنزل",
+      "refused": "رفض المستأجر",
+      "other": "أخرى"
+    },
+    "statDone": "تم"
   },
   "visitBooking": {
     "subtitle": "احجز موعداً لدخول فريقنا إلى شقتك",
@@ -1946,6 +1955,25 @@
     "unit": "الوحدة",
     "notBookedTitle": "لم تحجز بعد",
     "notBookedHint": "لم تختر هذه الشقق موعداً. يرجى التنسيق مع إدارة المبنى قبل الدخول.",
-    "updated": "آخر تحديث {time} (بتوقيت عُمان). تتحدث هذه الصفحة كل {seconds} ثانية."
+    "updated": "آخر تحديث {time} (بتوقيت عُمان). تتحدث هذه الصفحة كل {seconds} ثانية.",
+    "doneCount": "تم",
+    "outcome": "النتيجة",
+    "markDone": "تم",
+    "couldntEnter": "تعذر الدخول",
+    "reason": "السبب",
+    "reasons": {
+      "not_home": "لا أحد في المنزل",
+      "refused": "رفض المستأجر",
+      "other": "أخرى"
+    },
+    "note": "ملاحظة (اختياري)",
+    "notePlaceholder": "مثال: إصابة كثيفة في المطبخ",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "undo": "تراجع",
+    "statusDone": "تم",
+    "statusNotEntered": "تعذر الدخول",
+    "saveFailed": "تعذر الحفظ. تحقق من الاتصال وحاول مرة أخرى."
   }
 }
