@@ -26,6 +26,7 @@ interface BookingRow {
   slot_start: string;
   status: "booked" | "cancelled";
   manage_token: string;
+  contact_phone: string | null;
   units: { unit_number: string } | null;
   tenants: (TenantRecipient & { id: string }) | null;
 }
@@ -36,7 +37,7 @@ async function load(db: Db, manageToken: string) {
   const { data } = await db
     .from("visit_bookings")
     .select(
-      "id, campaign_id, unit_id, slot_start, status, manage_token, units(unit_number), tenants(id, full_name, phone, language_preference, notifications_enabled)"
+      "id, campaign_id, unit_id, slot_start, status, manage_token, contact_phone, units(unit_number), tenants(id, full_name, phone, language_preference, notifications_enabled)"
     )
     .eq("manage_token", manageToken)
     .maybeSingle();
@@ -132,7 +133,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (booking.tenants) {
     try {
-      await sendVisitConfirmation(booking.tenants, {
+      // The number the tenant gave when booking (049), else the lease phone.
+      const recipient = { ...booking.tenants, phone: booking.contact_phone ?? booking.tenants.phone };
+      await sendVisitConfirmation(recipient, {
         title: campaign.title,
         notes: campaign.notes,
         propertyName: campaign.property_name,

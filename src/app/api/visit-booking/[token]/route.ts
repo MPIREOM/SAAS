@@ -6,20 +6,19 @@ import {
   getPropertyUnits,
   getTakenSlots,
   isUniqueViolation,
-  isVerificationLocked,
   isVisitOver,
   newVisitToken,
-  phoneLast4,
-  recordVerificationFailure,
   slotOptions,
   uniqueViolationKind,
 } from "@/lib/visits/service";
+import { normalizeContactPhone } from "@/lib/visits/phone";
 import { generateSlots, isBeforeCutoff, slotKey } from "@/lib/visits/slots";
 import { sendVisitConfirmation } from "@/lib/visits/whatsapp";
 
 // Public: the shared per-visit booking link. GET shows the visit, the
-// occupied units and the free slots; POST books a slot after checking the
-// last 4 digits of the phone number on the unit's active lease.
+// occupied units and the free slots; POST books a slot. The tenant gives a
+// phone number to be reached on (required, but not checked against the
+// unit's lease, 049); confirmations and reminders go to that number.
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -54,7 +53,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 const bookSchema = z.object({
   unit_number: z.string().trim().min(1).max(50),
-  phone_last4: z.string().regex(/^\d{4}$/),
+  phone: z.string().trim().min(1).max(30),
   slot_start: z.string().min(1).max(40),
 });
 
@@ -75,27 +74,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const unit = units.find((u) => u.unit_number.toLowerCase() === input.unit_number.toLowerCase());
   if (!unit || !unit.tenant) return NextResponse.json({ error: "unit_not_found" }, { status: 404 });
 
-  if (await isVerificationLocked(db, campaign.id, unit.unit_id)) {
-    return NextResponse.json({ error: "locked" }, { status: 429 });
-  }
-  const expected = phoneLast4(unit.tenant.phone);
-  if (!expected || expected !== input.phone_last4) {
-    await recordVerificationFailure(db, campaign.id, unit.unit_id);
-    return NextResponse.json({ error: "phone_mismatch" }, { status: 403 });
-  }
+  const contactPhone = normalizeContactPhone(input.phone);
+  if (!contactPhone) return NextResponse.json({ error: "invalid_phone" }, { status: 400 });
 
-  // Verified. If this unit already booked, hand back its manage link so a
-  // tenant who lost the WhatsApp message can still reschedule or cancel.
+  // Nothing proves who is booking, so an existing booking's manage link is
+  // never handed out here (that would let anyone cancel a neighbour's
+  // visit); the tenant has it in their WhatsApp confirmation.
   const { data: existing } = await db
     .from("visit_bookings")
-    .select("manage_token")
+    .select("id")
     .eq("campaign_id", campaign.id)
     .eq("unit_id", unit.unit_id)
     .eq("status", "booked")
     .maybeSingle();
-  if (existing) {
-    return NextResponse.json({ error: "already_booked", manage_token: existing.manage_token }, { status: 409 });
-  }
+  if (existing) return NextResponse.json({ error: "already_booked" }, { status: 409 });
 
   let slotStart: string;
   try {
@@ -116,6 +108,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       tenant_id: unit.tenant.id,
       slot_start: slotStart,
       manage_token: manageToken,
+      contact_phone: contactPhone,
       booked_by: "tenant",
     })
     .select("id")
@@ -130,7 +123,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    await sendVisitConfirmation(unit.tenant, {
+    await sendVisitConfirmation({ ...unit.tenant, phone: contactPhone }, {
       title: campaign.title,
       notes: campaign.notes,
       propertyName: campaign.property_name,

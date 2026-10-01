@@ -32,6 +32,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
+import { displayPhone } from "@/lib/visits/phone";
 import { ContractorLink } from "./contractor-link";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -48,7 +49,8 @@ export interface BoardUnit {
   unit_number: string;
   tenant_name: string | null;
   tenant_phone: string | null;
-  booking: { id: string; slot_start: string; booked_by: string } | null;
+  /** contact_phone: the number the tenant typed when booking (049). */
+  booking: { id: string; slot_start: string; booked_by: string; contact_phone: string | null } | null;
   /** Latest WhatsApp message to this unit's tenant for this visit. */
   message: VisitMessage | null;
 }
@@ -292,6 +294,13 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
       <span className="text-text-secondary">—</span>
     );
 
+  const contactLine = (u: BoardUnit) =>
+    u.booking?.contact_phone ? (
+      <div className="text-xs text-text-secondary">
+        {t("bookedWith")} <span className="font-mono ltr-nums">{displayPhone(u.booking.contact_phone)}</span>
+      </div>
+    ) : null;
+
   const messageCell = (u: BoardUnit) => {
     if (!u.message) return <span className="text-xs text-text-secondary">{t("msgNone")}</span>;
     const state = messageState(u.message);
@@ -527,6 +536,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                         {u.booking?.booked_by === "staff" && (
                           <span className="ms-2 text-[10px] uppercase tracking-wider text-text-secondary">{t("byStaff")}</span>
                         )}
+                        {contactLine(u)}
                       </TableCell>
                       <TableCell>{messageCell(u)}</TableCell>
                       <TableCell className="text-end">{rowActions(u)}</TableCell>
@@ -549,6 +559,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                     {u.tenant_phone && <span className="font-mono ltr-nums"> · {u.tenant_phone}</span>}
                   </p>
                   {u.booking && <p className="text-sm text-text-primary">{slotText(u)}</p>}
+                  {contactLine(u)}
                   {messageCell(u)}
                   <div className="flex justify-end">{rowActions(u)}</div>
                 </li>

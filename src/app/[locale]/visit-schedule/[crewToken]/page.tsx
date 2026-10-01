@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AutoRefresh } from "@/components/visits/auto-refresh";
 import { PublicVisitMessage, PublicVisitShell } from "@/components/visits/public-shell";
 import { formatWhatsAppPhone } from "@/lib/maintenance/whatsapp";
+import { displayPhone } from "@/lib/visits/phone";
 import {
   createVisitsAdminClient,
   getCampaignByCrewToken,
@@ -53,13 +54,19 @@ export default async function VisitSchedulePage({
 
   const [units, { data: bookings }] = await Promise.all([
     getPropertyUnits(db, campaign.property_id),
-    db.from("visit_bookings").select("unit_id, slot_start").eq("campaign_id", campaign.id).eq("status", "booked"),
+    db.from("visit_bookings").select("unit_id, slot_start, contact_phone").eq("campaign_id", campaign.id).eq("status", "booked"),
   ]);
 
   const unitById = new Map(units.map((u) => [u.unit_id, u]));
-  const booked = ((bookings || []) as { unit_id: string; slot_start: string }[])
-    .map((b) => ({ start: slotKey(b.slot_start), unit: unitById.get(b.unit_id) }))
-    .filter((b): b is { start: string; unit: OccupiedUnit } => Boolean(b.unit))
+  // For bookings, call the number the tenant gave when booking (049); older
+  // bookings fall back to the lease phone.
+  const booked = ((bookings || []) as { unit_id: string; slot_start: string; contact_phone: string | null }[])
+    .map((b) => {
+      const unit = unitById.get(b.unit_id);
+      const phone = b.contact_phone ? displayPhone(b.contact_phone) : (unit?.tenant?.phone ?? null);
+      return { start: slotKey(b.slot_start), unit, phone };
+    })
+    .filter((b): b is { start: string; unit: OccupiedUnit; phone: string | null } => Boolean(b.unit))
     .sort((a, b) => a.start.localeCompare(b.start));
   const bookedIds = new Set(booked.map((b) => b.unit.unit_id));
   const notBooked = units.filter((u) => u.tenant && !bookedIds.has(u.unit_id));
@@ -138,7 +145,7 @@ export default async function VisitSchedulePage({
                         {t("unit")} <span className="font-mono ltr-nums">{b.unit.unit_number}</span>
                       </p>
                       {b.unit.tenant && <p className="text-sm text-text-secondary">{b.unit.tenant.full_name}</p>}
-                      <PhoneLink phone={b.unit.tenant?.phone ?? null} />
+                      <PhoneLink phone={b.phone} />
                     </div>
                   </li>
                 ))}

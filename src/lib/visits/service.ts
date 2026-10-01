@@ -12,9 +12,6 @@ export function createVisitsAdminClient(): SupabaseClient {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-export const MAX_VERIFY_FAILURES = 5;
-const VERIFY_LOCK_MINUTES = 60;
-
 export interface VisitCampaign extends VisitWindow {
   id: string;
   property_id: string;
@@ -47,12 +44,6 @@ export function newVisitToken(): string {
 
 export function compareUnitNumbers(a: string, b: string): number {
   return a.localeCompare(b, "en", { numeric: true, sensitivity: "base" });
-}
-
-/** Last 4 digits of a phone number, or null if it has fewer than 4. */
-export function phoneLast4(phone: string | null | undefined): string | null {
-  const digits = (phone || "").replace(/\D/g, "");
-  return digits.length >= 4 ? digits.slice(-4) : null;
 }
 
 /** True once a visit's last day is over in Muscat (bookings no longer make sense). */
@@ -168,30 +159,6 @@ export function slotOptions(campaign: VisitWindow, taken: Set<string>, now: Date
     start,
     available: !taken.has(start) && isBeforeCutoff(start, now),
   }));
-}
-
-/** True if this unit has hit the wrong-digits limit for this visit. */
-export async function isVerificationLocked(
-  db: SupabaseClient,
-  campaignId: string,
-  unitId: string
-): Promise<boolean> {
-  const since = new Date(Date.now() - VERIFY_LOCK_MINUTES * 60 * 1000).toISOString();
-  const { count } = await db
-    .from("visit_verification_failures")
-    .select("id", { count: "exact", head: true })
-    .eq("campaign_id", campaignId)
-    .eq("unit_id", unitId)
-    .gte("created_at", since);
-  return (count ?? 0) >= MAX_VERIFY_FAILURES;
-}
-
-export async function recordVerificationFailure(
-  db: SupabaseClient,
-  campaignId: string,
-  unitId: string
-): Promise<void> {
-  await db.from("visit_verification_failures").insert({ campaign_id: campaignId, unit_id: unitId });
 }
 
 /** Postgres unique-violation code: the slot (or unit) was taken by a concurrent booking. */

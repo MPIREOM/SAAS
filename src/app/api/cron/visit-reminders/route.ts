@@ -21,6 +21,7 @@ interface ReminderRow {
   slot_start: string;
   manage_token: string;
   units: { unit_number: string } | null;
+  contact_phone: string | null;
   tenants: TenantRecipient | null;
   visit_campaigns: {
     title: string;
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
     const { data, error } = await admin
       .from("visit_bookings")
       .select(
-        "id, campaign_id, unit_id, tenant_id, slot_start, manage_token, units(unit_number), tenants(full_name, phone, language_preference, notifications_enabled), visit_campaigns(title, notes, status, start_date, end_date, slot_minutes, public_origin, properties(name))"
+        "id, campaign_id, unit_id, tenant_id, slot_start, manage_token, contact_phone, units(unit_number), tenants(full_name, phone, language_preference, notifications_enabled), visit_campaigns(title, notes, status, start_date, end_date, slot_minutes, public_origin, properties(name))"
       )
       .eq("status", "booked")
       .is("reminder_sent_at", null)
@@ -66,7 +67,9 @@ export async function GET(request: Request) {
         summary.skipped++;
         continue;
       }
-      const result = await sendVisitReminder(row.tenants, {
+      // The number the tenant gave when booking (049), else the lease phone.
+      const recipient = { ...row.tenants, phone: row.contact_phone ?? row.tenants.phone };
+      const result = await sendVisitReminder(recipient, {
         title: campaign.title,
         notes: campaign.notes,
         propertyName: campaign.properties?.name ?? "",
