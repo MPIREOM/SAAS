@@ -45,14 +45,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const manageToken = newVisitToken();
-  const { error } = await supabase.from("visit_bookings").insert({
-    campaign_id: campaign.id,
-    unit_id: unit.unit_id,
-    tenant_id: unit.tenant?.id ?? null,
-    slot_start: slotStart,
-    manage_token: manageToken,
-    booked_by: "staff",
-  });
+  const { data: inserted, error } = await supabase
+    .from("visit_bookings")
+    .insert({
+      campaign_id: campaign.id,
+      unit_id: unit.unit_id,
+      tenant_id: unit.tenant?.id ?? null,
+      slot_start: slotStart,
+      manage_token: manageToken,
+      booked_by: "staff",
+    })
+    .select("id")
+    .single();
   if (error) {
     if (isUniqueViolation(error)) {
       const kind = uniqueViolationKind(error);
@@ -76,6 +80,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         slot_minutes: campaign.slot_minutes,
         slotStart,
         manageToken,
+        log: { campaignId: campaign.id, unitId: unit.unit_id, tenantId: unit.tenant.id, bookingId: inserted.id },
       });
       notified = result.success;
     } catch (err) {

@@ -5,6 +5,7 @@ import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCampaignById, getPropertyUnits, isVisitOver } from "@/lib/visits/service";
 import { slotKey, upcomingFreeSlots } from "@/lib/visits/slots";
+import { VISIT_MESSAGE_COLUMNS, type VisitMessage } from "@/lib/visits/messages";
 import { VisitBoard, type BoardUnit } from "@/components/visits/visit-board";
 
 export default async function VisitDetailPage({
@@ -22,14 +23,26 @@ export default async function VisitDetailPage({
   const campaign = await getCampaignById(supabase, campaignId);
   if (!campaign || campaign.property_id !== id) notFound();
 
-  const [units, { data: bookings }] = await Promise.all([
+  const [units, { data: bookings }, { data: messages }] = await Promise.all([
     getPropertyUnits(supabase, id),
     supabase
       .from("visit_bookings")
       .select("id, unit_id, slot_start, booked_by")
       .eq("campaign_id", campaignId)
       .eq("status", "booked"),
+    supabase
+      .from("visit_message_logs")
+      .select(VISIT_MESSAGE_COLUMNS)
+      .eq("campaign_id", campaignId)
+      .order("created_at", { ascending: false })
+      .limit(2000),
   ]);
+
+  // Newest message per unit (rows arrive newest first).
+  const latestMessage = new Map<string, VisitMessage>();
+  for (const m of (messages || []) as (VisitMessage & { unit_id: string | null })[]) {
+    if (m.unit_id && !latestMessage.has(m.unit_id)) latestMessage.set(m.unit_id, m);
+  }
 
   const byUnit = new Map(
     ((bookings || []) as { id: string; unit_id: string; slot_start: string; booked_by: string }[]).map((b) => [
@@ -43,6 +56,7 @@ export default async function VisitDetailPage({
     tenant_name: u.tenant?.full_name ?? null,
     tenant_phone: u.tenant?.phone ?? null,
     booking: byUnit.get(u.unit_id) ?? null,
+    message: latestMessage.get(u.unit_id) ?? null,
   }));
 
   const taken = new Set(Array.from(byUnit.values()).map((b) => b.slot_start));

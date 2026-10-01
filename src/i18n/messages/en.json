@@ -1840,7 +1840,31 @@
     "cancelBooking": "Cancel booking",
     "cancelBookingTitle": "Cancel unit {unit}'s booking?",
     "cancelBookingBody": "The time is released for others. The tenant is not notified, but can book again with their link.",
-    "bookingCancelled": "Booking cancelled"
+    "bookingCancelled": "Booking cancelled",
+    "msgTitle": "WhatsApp messages",
+    "msgColumn": "WhatsApp",
+    "msgNone": "Not messaged",
+    "msgKind": {
+      "invite": "Invite",
+      "confirmation": "Confirmation",
+      "reminder": "Reminder"
+    },
+    "msgState": {
+      "read": "Read",
+      "delivered": "Delivered",
+      "sent": "Sent",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "msgNotMessaged": "{count, plural, one {# unit not messaged} other {# units not messaged}}",
+    "msgSentHint": "\"Sent\" means WhatsApp accepted the message but hasn't confirmed it reached the phone yet. It changes to Delivered or Read when the tenant's phone receives it.",
+    "msgOutsideWindow": "Not delivered: the WhatsApp template isn't approved yet, and plain messages only reach tenants who messaged you in the last 24 hours.",
+    "msgTemplateTitle": "The WhatsApp template isn't being used",
+    "msgTemplateBody": "Some messages went out as plain text because WhatsApp refused the template. Plain text only reaches tenants who messaged your business number in the last 24 hours. Check the template is approved on the WhatsApp setup page, then resend to the units marked Failed.",
+    "msgTemplateReason": "WhatsApp said",
+    "filterMsgFailed": "Message failed",
+    "msgSkipNoPhone": "No phone number on file.",
+    "msgSkipNotificationsOff": "Tenant has WhatsApp notifications turned off."
   },
   "visitBooking": {
     "subtitle": "Book a time for us to enter your apartment",

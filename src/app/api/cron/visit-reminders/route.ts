@@ -3,7 +3,7 @@ import { checkBearer } from "@/lib/crypto/safe-compare";
 import type { TenantRecipient } from "@/lib/maintenance/whatsapp";
 import { createVisitsAdminClient } from "@/lib/visits/service";
 import { muscatDate } from "@/lib/visits/slots";
-import { sendVisitReminder } from "@/lib/visits/whatsapp";
+import { isSkipped, sendVisitReminder } from "@/lib/visits/whatsapp";
 
 // Vercel Cron: daily at 14:00 UTC (18:00 Muscat). WhatsApps every tenant
 // booked for tomorrow (Muscat date) on an open visit, once per booking;
@@ -15,6 +15,9 @@ const CRON_NAME = "visit-reminders";
 
 interface ReminderRow {
   id: string;
+  campaign_id: string;
+  unit_id: string;
+  tenant_id: string | null;
   slot_start: string;
   manage_token: string;
   units: { unit_number: string } | null;
@@ -45,7 +48,7 @@ export async function GET(request: Request) {
     const { data, error } = await admin
       .from("visit_bookings")
       .select(
-        "id, slot_start, manage_token, units(unit_number), tenants(full_name, phone, language_preference, notifications_enabled), visit_campaigns(title, notes, status, start_date, end_date, slot_minutes, public_origin, properties(name))"
+        "id, campaign_id, unit_id, tenant_id, slot_start, manage_token, units(unit_number), tenants(full_name, phone, language_preference, notifications_enabled), visit_campaigns(title, notes, status, start_date, end_date, slot_minutes, public_origin, properties(name))"
       )
       .eq("status", "booked")
       .is("reminder_sent_at", null)
@@ -74,11 +77,12 @@ export async function GET(request: Request) {
         slot_minutes: campaign.slot_minutes,
         slotStart: row.slot_start,
         manageToken: row.manage_token,
+        log: { campaignId: row.campaign_id, unitId: row.unit_id, tenantId: row.tenant_id, bookingId: row.id },
       });
       if (result.success) {
         summary.sent++;
         await admin.from("visit_bookings").update({ reminder_sent_at: new Date().toISOString() }).eq("id", row.id);
-      } else if (result.error === "tenant has no phone" || result.error === "tenant notifications disabled") {
+      } else if (isSkipped(result)) {
         summary.skipped++;
       } else {
         summary.failed++;

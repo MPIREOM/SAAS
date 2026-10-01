@@ -4,6 +4,7 @@ import {
   type SendResult,
   type TenantRecipient,
 } from "@/lib/maintenance/whatsapp";
+import { createVisitsAdminClient } from "./service";
 import { formatSlotRange, formatVisitDates } from "./slots";
 
 // WhatsApp messages for building-wide visits: the booking invite with the
@@ -187,56 +188,126 @@ function checkRecipient(tenant: TenantRecipient): SendResult | null {
   return null;
 }
 
+/** True when a send was not attempted (no phone / notifications off). */
+export function isSkipped(result: SendResult): boolean {
+  return result.error === "tenant has no phone" || result.error === "tenant notifications disabled";
+}
+
+/** Which visit, unit, tenant and booking a message is about, for visit_message_logs. */
+export interface VisitLogRef {
+  campaignId: string;
+  unitId: string | null;
+  tenantId: string | null;
+  bookingId?: string | null;
+}
+
+type MessageKind = "invite" | "confirmation" | "reminder";
+
+/**
+ * Send (or skip) one visit message and record the outcome in
+ * visit_message_logs so staff can see it on the visit page; delivery
+ * receipts later fill in delivered / read / failed. Never throws.
+ */
+async function deliver(
+  kind: MessageKind,
+  tenant: TenantRecipient,
+  template: MaintenanceTemplate,
+  params: string[],
+  log: VisitLogRef
+): Promise<SendResult> {
+  let result: SendResult;
+  try {
+    result = checkRecipient(tenant) ?? (await sendMaintenanceMessage(tenant.phone!, template, params));
+  } catch (err) {
+    result = { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  try {
+    const { error } = await createVisitsAdminClient()
+      .from("visit_message_logs")
+      .insert({
+        campaign_id: log.campaignId,
+        unit_id: log.unitId,
+        tenant_id: log.tenantId,
+        booking_id: log.bookingId ?? null,
+        kind,
+        phone: tenant.phone,
+        send_status: result.success ? "sent" : isSkipped(result) ? "skipped" : "failed",
+        via: result.via ?? null,
+        error: result.success ? null : result.error ?? null,
+        template_error: result.templateError ?? null,
+        provider_message_id: result.messageId ?? null,
+        delivery_status: result.success && result.messageId ? "sent" : null,
+      });
+    if (error) console.error("[visits] message log insert failed", error.message);
+  } catch (err) {
+    console.error("[visits] message log insert failed", err);
+  }
+  return result;
+}
+
 export async function sendVisitInvite(
   tenant: TenantRecipient,
-  ctx: VisitMessageContext & { campaignToken: string }
+  ctx: VisitMessageContext & { campaignToken: string; log: VisitLogRef }
 ): Promise<SendResult> {
-  const blocked = checkRecipient(tenant);
-  if (blocked) return blocked;
   const lang = tenantLang(tenant);
-  return sendMaintenanceMessage(tenant.phone!, VISIT_INVITE_TEMPLATES[lang], [
-    tenant.full_name,
-    ctx.title,
-    ctx.propertyName,
-    formatVisitDates(ctx, lang),
-    ctx.unitNumber,
-    preparation(ctx, lang),
-    bookingLink(ctx.origin, lang, ctx.campaignToken),
-  ]);
+  return deliver(
+    "invite",
+    tenant,
+    VISIT_INVITE_TEMPLATES[lang],
+    [
+      tenant.full_name,
+      ctx.title,
+      ctx.propertyName,
+      formatVisitDates(ctx, lang),
+      ctx.unitNumber,
+      preparation(ctx, lang),
+      bookingLink(ctx.origin, lang, ctx.campaignToken),
+    ],
+    ctx.log
+  );
 }
 
 export async function sendVisitConfirmation(
   tenant: TenantRecipient,
-  ctx: VisitMessageContext & { slotStart: string; manageToken: string }
+  ctx: VisitMessageContext & { slotStart: string; manageToken: string; log: VisitLogRef }
 ): Promise<SendResult> {
-  const blocked = checkRecipient(tenant);
-  if (blocked) return blocked;
   const lang = tenantLang(tenant);
-  return sendMaintenanceMessage(tenant.phone!, VISIT_CONFIRMED_TEMPLATES[lang], [
-    tenant.full_name,
-    ctx.title,
-    ctx.unitNumber,
-    ctx.propertyName,
-    formatSlotRange(ctx.slotStart, ctx.slot_minutes, lang),
-    preparation(ctx, lang),
-    manageLink(ctx.origin, lang, ctx.manageToken),
-  ]);
+  return deliver(
+    "confirmation",
+    tenant,
+    VISIT_CONFIRMED_TEMPLATES[lang],
+    [
+      tenant.full_name,
+      ctx.title,
+      ctx.unitNumber,
+      ctx.propertyName,
+      formatSlotRange(ctx.slotStart, ctx.slot_minutes, lang),
+      preparation(ctx, lang),
+      manageLink(ctx.origin, lang, ctx.manageToken),
+    ],
+    ctx.log
+  );
 }
 
 export async function sendVisitReminder(
   tenant: TenantRecipient,
-  ctx: VisitMessageContext & { slotStart: string; manageToken: string }
+  ctx: VisitMessageContext & { slotStart: string; manageToken: string; log: VisitLogRef }
 ): Promise<SendResult> {
-  const blocked = checkRecipient(tenant);
-  if (blocked) return blocked;
   const lang = tenantLang(tenant);
-  return sendMaintenanceMessage(tenant.phone!, VISIT_REMINDER_TEMPLATES[lang], [
-    tenant.full_name,
-    ctx.unitNumber,
-    ctx.propertyName,
-    ctx.title,
-    formatSlotRange(ctx.slotStart, ctx.slot_minutes, lang),
-    preparation(ctx, lang),
-    manageLink(ctx.origin, lang, ctx.manageToken),
-  ]);
+  return deliver(
+    "reminder",
+    tenant,
+    VISIT_REMINDER_TEMPLATES[lang],
+    [
+      tenant.full_name,
+      ctx.unitNumber,
+      ctx.propertyName,
+      ctx.title,
+      formatSlotRange(ctx.slotStart, ctx.slot_minutes, lang),
+      preparation(ctx, lang),
+      manageLink(ctx.origin, lang, ctx.manageToken),
+    ],
+    ctx.log
+  );
 }

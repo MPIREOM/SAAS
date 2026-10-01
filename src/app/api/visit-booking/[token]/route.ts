@@ -108,14 +108,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const manageToken = newVisitToken();
-  const { error: insertError } = await db.from("visit_bookings").insert({
-    campaign_id: campaign.id,
-    unit_id: unit.unit_id,
-    tenant_id: unit.tenant.id,
-    slot_start: slotStart,
-    manage_token: manageToken,
-    booked_by: "tenant",
-  });
+  const { data: inserted, error: insertError } = await db
+    .from("visit_bookings")
+    .insert({
+      campaign_id: campaign.id,
+      unit_id: unit.unit_id,
+      tenant_id: unit.tenant.id,
+      slot_start: slotStart,
+      manage_token: manageToken,
+      booked_by: "tenant",
+    })
+    .select("id")
+    .single();
   if (insertError) {
     if (isUniqueViolation(insertError)) {
       const kind = uniqueViolationKind(insertError);
@@ -137,6 +141,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       slot_minutes: campaign.slot_minutes,
       slotStart,
       manageToken,
+      log: { campaignId: campaign.id, unitId: unit.unit_id, tenantId: unit.tenant.id, bookingId: inserted.id },
     });
   } catch (err) {
     // The booking stands; the tenant also lands on the manage page directly.

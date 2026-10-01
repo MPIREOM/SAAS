@@ -143,6 +143,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         slot_minutes: campaign.slot_minutes,
         slotStart,
         manageToken: booking.manage_token,
+        log: {
+          campaignId: campaign.id,
+          unitId: booking.unit_id,
+          tenantId: booking.tenants.id,
+          bookingId: booking.id,
+        },
       });
     } catch (err) {
       console.error("[visit-booking] confirmation failed", err);

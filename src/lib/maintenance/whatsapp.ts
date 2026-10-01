@@ -178,7 +178,14 @@ function render(template: MaintenanceTemplate, params: string[]): string {
   return template.body.replace(/\{\{(\d+)\}\}/g, (_m, n: string) => params[Number(n) - 1] ?? "");
 }
 
-export type SendResult = { success: boolean; via?: "template" | "text"; error?: string };
+export type SendResult = {
+  success: boolean;
+  via?: "template" | "text";
+  messageId?: string;
+  error?: string;
+  /** Why the template was rejected when the text fallback was used. */
+  templateError?: string;
+};
 
 /** Send as an approved template, falling back to free-form text. Also used by lib/visits. */
 export async function sendMaintenanceMessage(
@@ -196,12 +203,14 @@ export async function sendMaintenanceMessage(
     languageCode: template.language,
     components: [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }],
   });
-  if (templateResult.success) return { success: true, via: "template" };
+  if (templateResult.success) return { success: true, via: "template", messageId: templateResult.messageId };
 
   // Template missing / not yet approved: free-form text still reaches anyone
   // who has messaged the business number in the last 24h.
   const textResult = await sendWhatsAppTextMessage(to, render(template, params));
-  if (textResult.success) return { success: true, via: "text" };
+  if (textResult.success) {
+    return { success: true, via: "text", messageId: textResult.messageId, templateError: templateResult.error };
+  }
 
   console.error("[maintenance-whatsapp] send failed", {
     to,

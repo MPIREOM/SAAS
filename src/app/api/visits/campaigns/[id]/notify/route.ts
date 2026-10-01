@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCampaignById, getPropertyUnits, isVisitOver } from "@/lib/visits/service";
-import { sendVisitInvite } from "@/lib/visits/whatsapp";
+import { isSkipped, sendVisitInvite } from "@/lib/visits/whatsapp";
 
 // Staff: WhatsApp the shared booking link to tenants who haven't booked yet
 // (all of them, or just the units passed in unit_ids). Reads go through the
@@ -42,10 +42,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let failed = 0;
   for (const unit of targets) {
     const tenant = unit.tenant!;
-    if (!tenant.phone || tenant.notifications_enabled === false) {
-      skipped++;
-      continue;
-    }
     try {
       const result = await sendVisitInvite(tenant, {
         title: campaign.title,
@@ -57,8 +53,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         end_date: campaign.end_date,
         slot_minutes: campaign.slot_minutes,
         campaignToken: campaign.token,
+        log: { campaignId: campaign.id, unitId: unit.unit_id, tenantId: tenant.id },
       });
       if (result.success) sent++;
+      else if (isSkipped(result)) skipped++;
       else failed++;
     } catch (err) {
       console.error("[visits] invite failed", { unit: unit.unit_number, err });

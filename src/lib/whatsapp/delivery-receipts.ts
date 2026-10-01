@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// WhatsApp delivery receipts for reminders.
+// WhatsApp delivery receipts for reminders and visit messages.
 //
 // Meta reports each outbound message's progress (sent → delivered → read, or
 // failed) through the `statuses` array of the messages webhook. Matching
@@ -46,10 +46,14 @@ function receiptError(r: WhatsAppStatusReceipt): string {
   return e?.code ? `(#${e.code}) ${text}` : text;
 }
 
+/** Tables that log our own WhatsApp sends by Meta message id (wamid). */
+const RECEIPT_TABLES = ["reminder_logs", "visit_message_logs"] as const;
+
 /**
- * Apply a batch of status receipts to reminder_logs. Receipts for messages
- * we did not log (agent replies, hotel messages relayed from SAMA-CRM) are
- * ignored. Never throws — the webhook must always ACK.
+ * Apply a batch of status receipts to every send log (reminders and visit
+ * messages). Receipts for messages we did not log (agent replies, hotel
+ * messages relayed from SAMA-CRM) are ignored. Never throws — the webhook
+ * must always ACK.
  */
 export async function applyDeliveryReceipts(
   supabase: SupabaseClient,
@@ -58,13 +62,27 @@ export async function applyDeliveryReceipts(
   const valid = receipts.filter((r) => typeof r.id === "string" && r.id && isDeliveryStatus(r.status));
   if (valid.length === 0) return { matched: 0, updated: 0 };
 
+  const totals = { matched: 0, updated: 0 };
+  for (const table of RECEIPT_TABLES) {
+    const result = await applyToTable(supabase, table, valid);
+    totals.matched += result.matched;
+    totals.updated += result.updated;
+  }
+  return totals;
+}
+
+async function applyToTable(
+  supabase: SupabaseClient,
+  table: (typeof RECEIPT_TABLES)[number],
+  valid: WhatsAppStatusReceipt[]
+): Promise<{ matched: number; updated: number }> {
   const ids = Array.from(new Set(valid.map((r) => r.id as string)));
   const { data: rows, error } = await supabase
-    .from("reminder_logs")
+    .from(table)
     .select("id, provider_message_id, delivery_status")
     .in("provider_message_id", ids);
   if (error) {
-    console.error("[WhatsApp Webhook] receipt lookup failed:", error.message);
+    console.error(`[WhatsApp Webhook] ${table} receipt lookup failed:`, error.message);
     return { matched: 0, updated: 0 };
   }
   const byMessage = new Map<string, { id: string; delivery_status: DeliveryStatus | null }>();
@@ -89,9 +107,9 @@ export async function applyDeliveryReceipts(
     }
     if (next === "failed") patch.delivery_error = receiptError(r);
 
-    const { error: updErr } = await supabase.from("reminder_logs").update(patch).eq("id", row.id);
+    const { error: updErr } = await supabase.from(table).update(patch).eq("id", row.id);
     if (updErr) {
-      console.error("[WhatsApp Webhook] receipt update failed:", updErr.message);
+      console.error(`[WhatsApp Webhook] ${table} receipt update failed:`, updErr.message);
       continue;
     }
     row.delivery_status = next;
