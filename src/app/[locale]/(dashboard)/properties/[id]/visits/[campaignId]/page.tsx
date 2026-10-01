@@ -81,6 +81,7 @@ export default async function VisitDetailPage({
           title: campaign.title,
           notes: campaign.notes,
           token: campaign.token,
+          crew_token: campaign.crew_token,
           status: campaign.status,
           over: isVisitOver(campaign),
           start_date: campaign.start_date,

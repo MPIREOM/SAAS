@@ -32,6 +32,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
+import { ContractorLink } from "./contractor-link";
 import { cn } from "@/lib/utils/cn";
 import {
   isOutsideWindowError,
@@ -57,6 +58,7 @@ interface BoardCampaign {
   title: string;
   notes: string | null;
   token: string;
+  crew_token: string | null;
   status: "open" | "closed";
   over: boolean;
   start_date: string;
@@ -366,6 +368,8 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
         ) : (
           <Alert variant="info">{campaign.over ? t("finishedNote") : t("closedNote")}</Alert>
         )}
+
+        <ContractorLink campaignId={campaign.id} locale={locale} initialToken={campaign.crew_token} />
 
         <div className="flex flex-wrap gap-2 border-t border-border/40 pt-4">
           {live && (
