@@ -296,14 +296,20 @@ export async function sendTenantStatusUpdate(
 }
 
 /**
- * The fixed maintenance technician, configured via environment:
- * MAINTENANCE_TECHNICIAN_PHONE (required to enable) and
- * MAINTENANCE_TECHNICIAN_NAME (optional). New requests are auto-assigned to
- * this technician when no one else is assigned.
+ * The building watchman, who receives every new maintenance job unless the
+ * environment names someone else.
  */
-export function defaultTechnician(): { name: string; phone: string } | null {
+const WATCHMAN = { name: "Watchman", phone: "96894246200" };
+
+/**
+ * The fixed maintenance technician: MAINTENANCE_TECHNICIAN_PHONE (and
+ * optional MAINTENANCE_TECHNICIAN_NAME) when set, otherwise the watchman.
+ * New requests are auto-assigned to this technician when no one else is
+ * assigned, and get the job card on WhatsApp.
+ */
+export function defaultTechnician(): { name: string; phone: string } {
   const phone = process.env.MAINTENANCE_TECHNICIAN_PHONE?.trim();
-  if (!phone) return null;
+  if (!phone) return WATCHMAN;
   const name = process.env.MAINTENANCE_TECHNICIAN_NAME?.trim() || "Maintenance Technician";
   return { name, phone };
 }
