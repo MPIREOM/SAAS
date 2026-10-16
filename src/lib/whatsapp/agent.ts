@@ -21,10 +21,15 @@ const anthropic = new Anthropic({
   // stacked with ours). A per-request timeout keeps a hung Claude call from
   // stalling the WhatsApp webhook indefinitely.
   maxRetries: 0,
-  timeout: 60_000,
+  timeout: 90_000,
 });
 
-const CLAUDE_MODEL = "claude-sonnet-4-6";
+// Opus 5.5 always thinks (adaptive) — effort is the only depth control, and
+// its default is "medium". max_tokens has to leave room for the thinking on
+// top of the short WhatsApp reply, so it is much higher than the reply needs.
+const CLAUDE_MODEL = "claude-opus-5-5";
+const CLAUDE_EFFORT = "medium" as const;
+const CLAUDE_MAX_TOKENS = 16000;
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 2000;
 
@@ -45,7 +50,11 @@ async function callClaude(
 ): Promise<Anthropic.Message> {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      return await anthropic.messages.create(params);
+      return await anthropic.messages.create({
+        thinking: { type: "adaptive" },
+        output_config: { effort: CLAUDE_EFFORT },
+        ...params,
+      });
     } catch (error: unknown) {
       const status =
         error instanceof Anthropic.APIError ? error.status : undefined;
@@ -4616,6 +4625,29 @@ export async function processWhatsAppMessage(
 TODAY: ${today}
 CURRENCY: OMR (Omani Rial)
 
+FIRST, CLASSIFY EVERY MONEY MESSAGE — MONEY IN or MONEY OUT?
+The user is the property manager. Before calling ANY tool on a message that mentions an amount or "paid", decide which way the money moved:
+
+• MONEY OUT = an EXPENSE (the user/company paid someone) → add_expense. Signals:
+   - The work or thing paid for: maintenance, repair, fix, plumber, plumbing, electrician, AC, painting, cleaning, pest control, water/electricity/utility bill, insurance, legal, municipality, materials, spare parts, contractor, labour, cement, tiles, pump, tank.
+   - A vendor/contractor/company name, or "to <someone who isn't a tenant>".
+   - "I paid", "we paid", "paid X for <work>", "spent", "cost", "bought", "advance/first/second/final payment" for a job.
+   - A building named with NO tenant name and NO "rent" (e.g. "Paid 200 second payment alkhuwair villa maintenance" = 200 OMR MAINTENANCE EXPENSE at Alkhuwair Villa, description "Maintenance – second payment").
+• MONEY IN = a RENT/INVOICE PAYMENT (a tenant paid the company) → mark_invoice_paid. Signals:
+   - A tenant's name or a unit number as the one who paid ("Ahmad paid", "unit 12 paid", "tenant in villa paid").
+   - "rent", "received", "collected", "got", "deposit from", "cheque from", "transfer from".
+• MONEY TO/FROM THE OWNER → record_owner_settlement ("paid the owner", "owner gave me").
+
+RULES:
+- If ANY expense signal is present and no tenant is named as the payer, it is an EXPENSE. Do NOT look up tenants or invoices for it, and do NOT ask "expense or rent?". Record it straight away:
+   1. search_properties for the building the user named (tolerate misspellings: "alkhuwair" = "Al Khuwair", "maintnance" = maintenance) and pass its property_id.
+   2. add_expense with the best category, the amount, a short description keeping the user's own words ("second payment", vendor, what was fixed), and expense_date = today unless they gave a date.
+   3. Reply with a short ✅ confirmation (amount, category, property, date) and add: _Reply "undo" if this was wrong._
+   If "undo"/"wrong" comes next, delete that expense with delete_expense.
+- Typos, missing words and mixed English/Arabic are normal on WhatsApp — read for intent, don't demand perfect wording.
+- Only when there is truly NO signal either way (e.g. "200 alkhuwair villa"): look up the tenant at that property and their unpaid invoices. If one unpaid invoice matches the amount, treat it as their rent payment (still follow the PAYMENT METHOD rule). If nothing matches, ask ONE short line: "Was the 200 OMR at Alkhuwair Villa an *expense* you paid, or *rent* received from the tenant?"
+- NEVER answer an expense message with "there are no unpaid invoices" — unpaid invoices are irrelevant to expenses.
+
 YOU CAN:
 1. Record payments — "Ahmad paid", "register payment for Fatma", "tenant in unit 101 paid 200 OMR"
 2. Add expenses — "add expense 50 OMR plumbing at Sunset Tower", "electricity bill 30 OMR"
@@ -4680,13 +4712,13 @@ YOU CAN:
     - If the user just wants to change HOW it was paid (cash vs cheque), do NOT revert — use update_payment_method.
 
 BEHAVIOR RULES:
-- ALWAYS take action. When the user says "register payment" or "add payment" or "tenant paid", search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
-- "Register payment", "add payment", "record payment", "tenant paid" ALL mean the same thing: mark their invoice as paid using mark_invoice_paid.
+- ALWAYS take action. When a TENANT paid ("register payment for Ahmad", "add payment for unit 5", "tenant paid"), search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.
+- "Register payment", "add payment", "record payment", "tenant paid" ALL mean the same thing WHEN THE PAYER IS A TENANT: mark their invoice as paid using mark_invoice_paid. When the USER paid someone for work or a bill ("paid 200 maintenance", "paid the plumber"), it is an expense — see the CLASSIFY section above.
 - When the user mentions a tenant name, ALWAYS search for them first using search_tenants.
 - If a tenant has exactly ONE unpaid invoice, just pay it without asking.
 - If a tenant has MULTIPLE unpaid invoices, ask which one (show the list with dates and amounts).
 - If no unpaid invoices exist, tell the user and offer to create one.
-- When adding expenses, search for the property first, then pick the best category from context.
+- When adding expenses, search for the property first (if the user named one), then pick the best category from context. Don't ask for confirmation of a clear expense — record it and offer "undo".
 - Be concise — this is WhatsApp. Use short confirmations with key details.
 - Use bullet points and line breaks for readability.
 - FORMATTING — WhatsApp uses SINGLE asterisks for bold (e.g. *Tenant:* Ammar). NEVER use double asterisks (**Tenant:**) — WhatsApp renders them as literal stars. Use single * for bold and _ for italic. No Markdown headings (#).
@@ -4790,7 +4822,7 @@ BEHAVIOR RULES:
   try {
     response = await callClaude({
       model: CLAUDE_MODEL,
-      max_tokens: 2048,
+      max_tokens: CLAUDE_MAX_TOKENS,
       system: systemBlocks,
       tools,
       messages,
@@ -4856,7 +4888,7 @@ BEHAVIOR RULES:
 
       response = await callClaude({
         model: CLAUDE_MODEL,
-        max_tokens: 2048,
+        max_tokens: CLAUDE_MAX_TOKENS,
         system: systemBlocks,
         tools,
         messages,
@@ -4897,7 +4929,7 @@ BEHAVIOR RULES:
     try {
       const followUp = await callClaude({
         model: CLAUDE_MODEL,
-        max_tokens: 1024,
+        max_tokens: CLAUDE_MAX_TOKENS,
         system: systemBlocks,
         // Disable tools on the retry so we are guaranteed a text answer.
         messages,
