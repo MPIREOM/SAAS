@@ -4,9 +4,8 @@
 -- from the building's meter sheet. Only empty fields are filled, so numbers
 -- corrected later on the unit page are not overwritten if this runs again.
 --
--- NOTE: the sheet gives water meter 90525089 to both flats 31 and 57, and
--- 90525076 to both flats 35 and 47 (90525069 and 90525070 are unused).
--- They are loaded as given; correct the wrong ones on the unit page.
+-- Water meters for flats 47 and 57 are as corrected by the building
+-- manager (the sheet repeated flat 35's and 31's numbers for them).
 
 UPDATE units u
 SET
@@ -44,7 +43,7 @@ FROM (VALUES
   ('44', 'Q146725', '90525100'),
   ('45', 'Q146696', '90525077'),
   ('46', 'Q146718', '90525107'),
-  ('47', 'Q146719', '90525076'),
+  ('47', 'Q146719', '90525070'),
   ('48', 'Q146688', '90525064'),
   ('51', 'Q146724', '90525087'),
   ('52', 'Q146712', '90525093'),
@@ -52,7 +51,7 @@ FROM (VALUES
   ('54', 'Q146722', '90525099'),
   ('55', 'Q146720', '90525078'),
   ('56', 'Q146706', '90525108'),
-  ('57', 'Q146705', '90525089'),
+  ('57', 'Q146705', '90525069'),
   ('58', 'Q146732', '90525063'),
   ('61', 'Q146713', '90525086'),
   ('62', 'Q146692', '90525092'),
