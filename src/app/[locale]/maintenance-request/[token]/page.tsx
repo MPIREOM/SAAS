@@ -11,6 +11,28 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { createClient } from "@/lib/supabase/client";
+import {
+  MAINTENANCE_MEDIA_BUCKET,
+  type UploadedAttachment,
+} from "@/lib/maintenance/public-upload";
+
+// Some mobile browsers leave File.type empty; fall back to the extension.
+const EXT_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  heic: "image/heic",
+  heif: "image/heif",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+};
+function mimeOf(file: File): string {
+  if (file.type) return file.type === "video/mov" ? "video/quicktime" : file.type;
+  return EXT_MIME[file.name.split(".").pop()?.toLowerCase() ?? ""] ?? "";
+}
 
 interface TokenInfo {
   property_id: string;
@@ -70,11 +92,49 @@ export default function PublicMaintenanceRequestPage({
     const formData = new FormData(form);
     formData.set("token", token);
 
-    // Append media files
-    photos.forEach((file) => formData.append("files", file));
-    if (video) formData.append("files", video);
-
     try {
+      // Upload media straight to storage (signed URLs) — Vercel rejects
+      // function request bodies over 4.5MB, so a phone video can't be
+      // posted to the submit route itself.
+      const files = video ? [...photos, video] : photos;
+      const attachments: UploadedAttachment[] = [];
+      if (files.length > 0) {
+        const meta = files.map((f) => ({ name: f.name, type: mimeOf(f), size: f.size }));
+        const urlRes = await fetch("/api/maintenance-request/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, files: meta }),
+        });
+        const urlData = (await urlRes.json().catch(() => ({}))) as {
+          uploads?: { path: string; token: string }[];
+          error?: string;
+        };
+        if (!urlRes.ok || !urlData.uploads) {
+          setError(urlData.error || t("uploadFailed"));
+          setSubmitting(false);
+          return;
+        }
+
+        const storage = createClient().storage.from(MAINTENANCE_MEDIA_BUCKET);
+        const results = await Promise.all(
+          files.map((file, i) =>
+            storage.uploadToSignedUrl(urlData.uploads![i].path, urlData.uploads![i].token, file, {
+              contentType: meta[i].type,
+            })
+          )
+        );
+        const failed = results.findIndex((r) => r.error);
+        if (failed !== -1) {
+          setError(`${files[failed].name}: ${t("uploadFailed")}`);
+          setSubmitting(false);
+          return;
+        }
+        files.forEach((file, i) =>
+          attachments.push({ path: urlData.uploads![i].path, name: file.name, type: meta[i].type, size: file.size })
+        );
+      }
+      formData.set("attachments", JSON.stringify(attachments));
+
       const res = await fetch("/api/maintenance-request/submit", {
         method: "POST",
         body: formData,
