@@ -153,7 +153,7 @@ CREATE POLICY "tenant_violations_insert" ON tenant_violations FOR INSERT WITH CH
 
 -- ── Documents attached to a unit ──────────────────────────────────────────
 -- Same rule as 034 plus unit documents, readable by anyone with access to
--- the unit's property.
+-- the unit's property. Keeps the pinned search_path the live function has.
 CREATE OR REPLACE FUNCTION can_read_document_object(object_name TEXT)
 RETURNS BOOLEAN AS $$
   SELECT is_super_admin() OR EXISTS (
@@ -167,7 +167,7 @@ RETURNS BOOLEAN AS $$
               SELECT 1 FROM units u WHERE u.id = d.entity_id AND has_property_access(u.property_id)))
       )
   );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = pg_catalog, public;
 
 -- ── Violation invoice numbers ─────────────────────────────────────────────
 -- Same scheme as next_move_out_invoice_number (032): <CODE>-VIO-<year>-0001
