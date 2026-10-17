@@ -237,7 +237,10 @@
     "vacateReason": "السبب",
     "markVacant": "تحديد كشاغرة",
     "markMaintenance": "تحديد كتحت الصيانة",
-    "statusUpdated": "تم تحديث حالة الوحدة إلى {status}"
+    "statusUpdated": "تم تحديث حالة الوحدة إلى {status}",
+    "utilityAccounts": "عدادات الخدمات",
+    "electricityMeterNo": "رقم عداد الكهرباء",
+    "waterMeterNo": "رقم عداد المياه"
   },
   "tenants": {
     "title": "المستأجرين",

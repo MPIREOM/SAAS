@@ -237,7 +237,10 @@
     "vacateReason": "Reason",
     "markVacant": "Mark as Vacant",
     "markMaintenance": "Mark as Under Maintenance",
-    "statusUpdated": "Unit marked as {status}"
+    "statusUpdated": "Unit marked as {status}",
+    "utilityAccounts": "Utility meters",
+    "electricityMeterNo": "Electricity meter no.",
+    "waterMeterNo": "Water meter no."
   },
   "tenants": {
     "title": "Tenants",

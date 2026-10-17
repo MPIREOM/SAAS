@@ -1,5 +1,5 @@
 // The building-rules agreement every tenant signs (garbage chute, gate keys,
-// alterations to the apartment), in English and Arabic.
+// alterations, smoking, notice and unpaid rent), in English and Arabic.
 // Client-safe: the public signing page renders these clauses, and the PDF
 // (pdf.tsx) prints the same ones side by side, so what the tenant reads is
 // exactly what they sign.
@@ -38,6 +38,9 @@ export interface AgreementCopy {
     nationalId: string;
     unit: string;
     leaseStart: string;
+    securityDeposit: string;
+    electricityMeter: string;
+    waterMeter: string;
     gateKeys: string;
     reference: string;
   };
@@ -57,6 +60,9 @@ export function agreementCopy(lang: AgreementLang, t: AgreementTermsInput): Agre
         nationalId: "رقم الهوية / جواز السفر",
         unit: "المبنى / الوحدة",
         leaseStart: "تاريخ بدء الإيجار",
+        securityDeposit: "مبلغ التأمين",
+        electricityMeter: "رقم عداد الكهرباء",
+        waterMeter: "رقم عداد المياه",
         gateKeys: "مفاتيح البوابة المسلّمة",
         reference: "رقم المرجع",
       },
@@ -105,14 +111,36 @@ export function agreementCopy(lang: AgreementLang, t: AgreementTermsInput): Agre
           ],
         },
         {
-          heading: "رابعاً: أحكام عامة",
+          heading: "رابعاً: التدخين",
           clauses: [
             {
               number: "4.1",
+              text: "يُمنع التدخين داخل الشقة لأن الرائحة قد تصل إلى المستأجرين الآخرين، ويُسمح بالتدخين في الشرفة أو خارج المبنى فقط.",
+            },
+          ],
+        },
+        {
+          heading: "خامساً: الإخطار ودفع الإيجار",
+          clauses: [
+            {
+              number: "5.1",
+              text: "يجب على المستأجر إخطار إدارة المبنى قبل ثلاثة (3) أشهر على الأقل من تاريخ انتهاء عقد الإيجار في حال رغبته في إخلاء الشقة.",
+            },
+            {
+              number: "5.2",
+              text: "في حال تأخر المستأجر عن دفع الإيجار لأكثر من شهرين، ستتخذ إدارة المبنى الإجراءات القانونية بحقه.",
+            },
+          ],
+        },
+        {
+          heading: "سادساً: أحكام عامة",
+          clauses: [
+            {
+              number: "6.1",
               text: "تُضاف الرسوم المترتبة بموجب هذه الاتفاقية إلى حساب المستأجر وتُستحق مع فاتورة الإيجار التالية.",
             },
             {
-              number: "4.2",
+              number: "6.2",
               text: "هذه الاتفاقية مكمّلة لعقد الإيجار ولا تحل محل أي من بنوده.",
             },
           ],
@@ -131,6 +159,9 @@ export function agreementCopy(lang: AgreementLang, t: AgreementTermsInput): Agre
       nationalId: "ID / Passport no.",
       unit: "Building / Unit",
       leaseStart: "Lease start date",
+      securityDeposit: "Security deposit",
+      electricityMeter: "Electricity meter no.",
+      waterMeter: "Water meter no.",
       gateKeys: "Gate keys issued",
       reference: "Reference",
     },
@@ -179,14 +210,36 @@ export function agreementCopy(lang: AgreementLang, t: AgreementTermsInput): Agre
         ],
       },
       {
-        heading: "4. General",
+        heading: "4. Smoking",
         clauses: [
           {
             number: "4.1",
+            text: "Smoking is not allowed inside the apartment, as the smell can reach other tenants. Smoking is permitted only on the balcony or outside the building.",
+          },
+        ],
+      },
+      {
+        heading: "5. Notice and rent payment",
+        clauses: [
+          {
+            number: "5.1",
+            text: "The tenant must notify building management at least 3 months before the lease expiry date if they intend to leave the apartment.",
+          },
+          {
+            number: "5.2",
+            text: "If rent remains unpaid for more than 2 months, building management will take legal action against the tenant.",
+          },
+        ],
+      },
+      {
+        heading: "6. General",
+        clauses: [
+          {
+            number: "6.1",
             text: "Fees under this agreement are added to the tenant's account and are payable with the next rent invoice.",
           },
           {
-            number: "4.2",
+            number: "6.2",
             text: "This agreement is in addition to the lease and does not replace any of its terms.",
           },
         ],

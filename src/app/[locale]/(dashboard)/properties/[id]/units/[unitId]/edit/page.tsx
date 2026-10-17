@@ -42,6 +42,8 @@ export default function EditUnitPage() {
   const [sizeSqm, setSizeSqm] = useState("");
   const [rentAmount, setRentAmount] = useState("");
   const [status, setStatus] = useState("vacant");
+  const [electricityMeterNo, setElectricityMeterNo] = useState("");
+  const [waterMeterNo, setWaterMeterNo] = useState("");
 
   useEffect(() => {
     async function fetchUnit() {
@@ -68,6 +70,8 @@ export default function EditUnitPage() {
       setSizeSqm(data.size_sqm?.toString() || "");
       setRentAmount(data.rent_amount?.toString() || "");
       setStatus(data.status || "vacant");
+      setElectricityMeterNo(data.electricity_meter_no || "");
+      setWaterMeterNo(data.water_meter_no || "");
       setLoading(false);
     }
     fetchUnit();
@@ -97,6 +101,8 @@ export default function EditUnitPage() {
     if (unitType) payload.unit_type = unitType;
     payload.bedrooms = bedrooms !== "" ? parseInt(bedrooms) : null;
     if (sizeSqm) payload.size_sqm = parseFloat(sizeSqm);
+    payload.electricity_meter_no = electricityMeterNo.trim() || null;
+    payload.water_meter_no = waterMeterNo.trim() || null;
 
     const { error: updateError } = await supabase
       .from("units")
@@ -226,6 +232,31 @@ export default function EditUnitPage() {
                 </option>
               ))}
             </Select>
+          </CardContent>
+        </Card>
+
+        {/* Utility accounts (printed on the tenant's building-rules agreement) */}
+        <Card className="animate-fade-in-up">
+          <CardHeader className="pb-5">
+            <CardTitle className="text-base">{t("utilityAccounts")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                type="text"
+                value={electricityMeterNo}
+                onChange={(e) => setElectricityMeterNo(e.target.value)}
+                label={t("electricityMeterNo")}
+                className="font-mono ltr-nums"
+              />
+              <Input
+                type="text"
+                value={waterMeterNo}
+                onChange={(e) => setWaterMeterNo(e.target.value)}
+                label={t("waterMeterNo")}
+                className="font-mono ltr-nums"
+              />
+            </div>
           </CardContent>
         </Card>
 

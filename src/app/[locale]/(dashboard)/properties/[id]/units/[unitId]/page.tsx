@@ -365,6 +365,18 @@ export default async function UnitDetailPage({
       mono: true,
       highlight: true,
     },
+    {
+      label: t("electricityMeterNo"),
+      value: unit.electricity_meter_no || "—",
+      icon: Hash,
+      mono: true,
+    },
+    {
+      label: t("waterMeterNo"),
+      value: unit.water_meter_no || "—",
+      icon: Hash,
+      mono: true,
+    },
   ];
 
   return (
@@ -410,7 +422,7 @@ export default async function UnitDetailPage({
 
       {/* Unit facts */}
       <section className="bg-surface border border-border/60 rounded-xl p-5 animate-fade-in-up">
-        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-5">
+        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
           {unitFacts.map((item) => {
             const Icon = item.icon;
             return (

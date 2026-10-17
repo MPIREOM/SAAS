@@ -1,7 +1,7 @@
 import { Document, Image, Page, Text, View, StyleSheet, Font, pdf } from "@react-pdf/renderer";
 import fs from "node:fs";
 import path from "node:path";
-import { agreementCopy, type AgreementCopy, type AgreementTermsInput } from "./terms";
+import { agreementCopy, formatOmr, type AgreementCopy, type AgreementTermsInput } from "./terms";
 
 // One A4 page on the Mpire letterhead, with the agreement in English (left)
 // and Arabic (right) side by side, then the tenant's signature.
@@ -69,10 +69,10 @@ const styles = StyleSheet.create({
   // ~101pt) and contact strip (from ~772pt).
   page: {
     fontFamily: ACTIVE_FONT,
-    fontSize: 8,
+    fontSize: 7.6,
     color: colors.ink,
     paddingTop: LETTERHEAD ? 100 : 0,
-    paddingBottom: LETTERHEAD ? 76 : 54,
+    paddingBottom: LETTERHEAD ? 72 : 54,
   },
   // Absolute boxes are sized against the padded content area, so give the
   // A4 size in points explicitly.
@@ -90,8 +90,8 @@ const styles = StyleSheet.create({
   brand: { fontSize: 20, fontWeight: 700, color: colors.gold, letterSpacing: 1 },
   brandSub: { fontSize: 8.5, color: colors.muted, marginTop: 2 },
   brandAr: { fontSize: 11, fontWeight: 700, color: colors.ink, textAlign: "right" },
-  body: { marginHorizontal: 36, marginTop: 12 },
-  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 7 },
+  body: { marginHorizontal: 36, marginTop: 6 },
+  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5 },
   title: { fontSize: 11.5, fontWeight: 700 },
   titleAr: { fontSize: 11.5, fontWeight: 700, textAlign: "right" },
   facts: {
@@ -108,16 +108,16 @@ const styles = StyleSheet.create({
   factValue: { fontWeight: 700, fontSize: 8.4, textAlign: "center", marginTop: 1 },
   columns: { flexDirection: "row", gap: 16 },
   column: { flex: 1 },
-  intro: { marginBottom: 3, lineHeight: 0.9 },
-  introAr: { marginBottom: 3, lineHeight: 0.9, textAlign: "right" },
-  heading: { fontWeight: 700, color: colors.gold, marginTop: 4, marginBottom: 2, fontSize: 8.6 },
-  headingAr: { fontWeight: 700, color: colors.gold, marginTop: 4, marginBottom: 2, fontSize: 8.6, textAlign: "right" },
-  clause: { flexDirection: "row", marginBottom: 2 },
+  intro: { marginBottom: 3, lineHeight: 0.7 },
+  introAr: { marginBottom: 3, lineHeight: 0.7, textAlign: "right" },
+  heading: { fontWeight: 700, color: colors.gold, marginTop: 3, marginBottom: 1, fontSize: 8.2 },
+  headingAr: { fontWeight: 700, color: colors.gold, marginTop: 3, marginBottom: 1, fontSize: 8.2, textAlign: "right" },
+  clause: { flexDirection: "row", marginBottom: 1 },
   clauseNum: { width: 20, color: colors.muted },
-  clauseText: { flex: 1, lineHeight: 0.9 },
-  clauseAr: { flexDirection: "row-reverse", marginBottom: 2 },
+  clauseText: { flex: 1, lineHeight: 0.7 },
+  clauseAr: { flexDirection: "row-reverse", marginBottom: 1 },
   clauseNumAr: { width: 20, color: colors.muted, textAlign: "right" },
-  clauseTextAr: { flex: 1, lineHeight: 0.95, textAlign: "right" },
+  clauseTextAr: { flex: 1, lineHeight: 0.75, textAlign: "right" },
   signatureBlock: {
     marginTop: 8,
     borderTopWidth: 1,
@@ -129,15 +129,15 @@ const styles = StyleSheet.create({
   sigCol: { width: "48%" },
   sigLabelRow: { flexDirection: "row", justifyContent: "space-between", color: colors.muted, marginBottom: 2 },
   sigBox: {
-    height: 46,
+    height: 34,
     borderBottomWidth: 1,
     borderBottomColor: colors.ink,
     justifyContent: "flex-end",
     alignItems: "center",
   },
-  sigImage: { height: 42, objectFit: "contain" },
+  sigImage: { height: 31, objectFit: "contain" },
   sigValue: { fontSize: 10, fontWeight: 700, textAlign: "center", paddingBottom: 4 },
-  audit: { marginTop: 8, fontSize: 7, color: colors.muted, alignItems: "center", gap: 2 },
+  audit: { marginTop: 3, fontSize: 6.5, color: colors.muted, alignItems: "center", gap: 1 },
   textFooter: {
     position: "absolute",
     bottom: 20,
@@ -159,6 +159,10 @@ export interface AgreementPdfData extends AgreementTermsInput {
   propertyName: string;
   unitNumber: string;
   leaseStart: string | null;
+  /** OMR; null when the lease has none. */
+  securityDeposit: number | null;
+  electricityMeter: string | null;
+  waterMeter: string | null;
   /** Present once signed. */
   signed?: {
     signerName: string;
@@ -241,7 +245,10 @@ export function AgreementDocument({ data }: { data: AgreementPdfData }) {
     [en.fields.nationalId, data.nationalId || "—", ar.fields.nationalId],
     [en.fields.unit, `${data.propertyName} — ${data.unitNumber}`, ar.fields.unit],
     [en.fields.leaseStart, formatDate(data.leaseStart), ar.fields.leaseStart],
+    [en.fields.securityDeposit, data.securityDeposit ? formatOmr(data.securityDeposit, "en") : "—", ar.fields.securityDeposit],
     [en.fields.gateKeys, String(data.gateKeys), ar.fields.gateKeys],
+    [en.fields.electricityMeter, data.electricityMeter || "—", ar.fields.electricityMeter],
+    [en.fields.waterMeter, data.waterMeter || "—", ar.fields.waterMeter],
     [en.fields.reference, data.reference, ar.fields.reference],
   ];
 
@@ -306,21 +313,21 @@ export function AgreementDocument({ data }: { data: AgreementPdfData }) {
               <View style={styles.sigBox}>
                 {data.signed ? <Text style={styles.sigValue}>{formatDate(data.signed.signedAt)}</Text> : null}
               </View>
+              {data.signed ? (
+                // Under the date, level with the signer's name. Arabic and
+                // Latin in separate Text runs: mixed in one run the bidi
+                // reordering scrambles the date.
+                <View style={styles.audit}>
+                  <Text>
+                    {`${en.signedElectronically} · ${formatDateTime(data.signed.signedAt)}${
+                      data.signed.ip ? ` · IP ${data.signed.ip}` : ""
+                    }`}
+                  </Text>
+                  <Text>{`${ar.signedElectronically} · ${data.reference}`}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
-
-          {data.signed ? (
-            // Arabic and Latin on separate lines: mixed in one line the
-            // bidi reordering scrambles the date.
-            <View style={styles.audit}>
-              <Text>
-                {`${en.signedElectronically} · ${formatDateTime(data.signed.signedAt)}${
-                  data.signed.ip ? ` · IP ${data.signed.ip}` : ""
-                } · ${data.reference}`}
-              </Text>
-              <Text>{ar.signedElectronically}</Text>
-            </View>
-          ) : null}
         </View>
 
         {!LETTERHEAD && (

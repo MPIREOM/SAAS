@@ -71,6 +71,8 @@ export default function NewUnitPage({
       unit_type: selectedType || null,
       bedrooms: bedrooms !== "" ? parseInt(bedrooms) : null,
       size_sqm: parseFloat(formData.get("size_sqm") as string) || null,
+      electricity_meter_no: (formData.get("electricity_meter_no") as string)?.trim() || null,
+      water_meter_no: (formData.get("water_meter_no") as string)?.trim() || null,
       rent_amount: rentAmount,
       status: "vacant",
     });
@@ -206,6 +208,29 @@ export default function NewUnitPage({
               <p className="text-xs text-text-secondary">
                 {t("unitCategoryHint")}
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Utility accounts (printed on the tenant's building-rules agreement) */}
+        <Card className="animate-fade-in-up">
+          <CardHeader className="pb-5">
+            <CardTitle className="text-base">{t("utilityAccounts")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                name="electricity_meter_no"
+                type="text"
+                label={t("electricityMeterNo")}
+                className="font-mono ltr-nums"
+              />
+              <Input
+                name="water_meter_no"
+                type="text"
+                label={t("waterMeterNo")}
+                className="font-mono ltr-nums"
+              />
             </div>
           </CardContent>
         </Card>

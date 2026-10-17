@@ -7,7 +7,7 @@ import { CheckCircle2, Download, Eraser, FileSignature } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { agreementCopy, type AgreementLang } from "@/lib/agreements/terms";
+import { agreementCopy, formatOmr, type AgreementLang } from "@/lib/agreements/terms";
 import { SignaturePad, type SignaturePadHandle } from "./signature-pad";
 
 // The tenant's private signing page (linked from WhatsApp / email). Shows
@@ -22,6 +22,9 @@ interface AgreementData {
   unit_number: string;
   property_name: string;
   lease_start: string | null;
+  security_deposit: number | null;
+  electricity_meter: string | null;
+  water_meter: string | null;
   gate_keys: number;
   garbage_fee: number;
   key_fee: number;
@@ -136,6 +139,9 @@ export function SignAgreement({ token, locale }: { token: string; locale: string
     [copy.fields.nationalId, data.national_id || "—", true],
     [copy.fields.unit, `${data.property_name} — ${data.unit_number}`, false],
     [copy.fields.leaseStart, formatDate(data.lease_start, locale), false],
+    [copy.fields.securityDeposit, data.security_deposit ? formatOmr(data.security_deposit, lang) : "—", true],
+    [copy.fields.electricityMeter, data.electricity_meter || "—", true],
+    [copy.fields.waterMeter, data.water_meter || "—", true],
     [copy.fields.gateKeys, String(data.gate_keys), true],
     [copy.fields.reference, data.reference, true],
   ];

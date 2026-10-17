@@ -56,14 +56,23 @@ export interface AgreementContext {
   propertyId: string;
   propertyName: string;
   leaseStart: string | null;
+  securityDeposit: number | null;
+  electricityMeter: string | null;
+  waterMeter: string | null;
 }
 
-const CONTEXT_SELECT = `${AGREEMENT_COLUMNS}, tenants(id, full_name, phone, email, national_id, language_preference, notifications_enabled), units(unit_number, property_id, properties(name)), leases(start_date)`;
+const CONTEXT_SELECT = `${AGREEMENT_COLUMNS}, tenants(id, full_name, phone, email, national_id, language_preference, notifications_enabled), units(unit_number, property_id, electricity_meter_no, water_meter_no, properties(name)), leases(start_date, security_deposit)`;
 
 interface ContextRow extends AgreementRow {
   tenants: AgreementTenant | null;
-  units: { unit_number: string; property_id: string; properties: { name: string } | null } | null;
-  leases: { start_date: string } | null;
+  units: {
+    unit_number: string;
+    property_id: string;
+    electricity_meter_no: string | null;
+    water_meter_no: string | null;
+    properties: { name: string } | null;
+  } | null;
+  leases: { start_date: string; security_deposit: number | string | null } | null;
 }
 
 function toContext(row: ContextRow): AgreementContext | null {
@@ -76,6 +85,9 @@ function toContext(row: ContextRow): AgreementContext | null {
     propertyId: units.property_id,
     propertyName: units.properties?.name ?? "",
     leaseStart: leases?.start_date ?? null,
+    securityDeposit: leases?.security_deposit != null && Number(leases.security_deposit) > 0 ? Number(leases.security_deposit) : null,
+    electricityMeter: units.electricity_meter_no?.trim() || null,
+    waterMeter: units.water_meter_no?.trim() || null,
   };
 }
 
@@ -96,6 +108,9 @@ export function pdfDataFor(ctx: AgreementContext): AgreementPdfData {
     propertyName: ctx.propertyName,
     unitNumber: ctx.unitNumber,
     leaseStart: ctx.leaseStart,
+    securityDeposit: ctx.securityDeposit,
+    electricityMeter: ctx.electricityMeter,
+    waterMeter: ctx.waterMeter,
     gateKeys: ctx.agreement.gate_keys,
     garbageFee: Number(ctx.agreement.garbage_fee),
     keyFee: Number(ctx.agreement.key_fee),

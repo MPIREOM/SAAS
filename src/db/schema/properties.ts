@@ -103,6 +103,9 @@ export const units = pgTable(
     // settings on `properties` apply.
     commissionType: commissionTypeEnum("commission_type"),
     commissionRate: numeric("commission_rate"),
+    // Utility accounts for the apartment's meters (052)
+    electricityMeterNo: text("electricity_meter_no"),
+    waterMeterNo: text("water_meter_no"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .default(sql`now()`),
