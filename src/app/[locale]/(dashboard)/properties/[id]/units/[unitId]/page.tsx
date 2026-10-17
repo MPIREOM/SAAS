@@ -31,6 +31,8 @@ import {
   Receipt,
   RefreshCw,
   ArrowRightLeft,
+  FileSignature,
+  AlertTriangle,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
@@ -41,6 +43,9 @@ import { RevertPaidButton } from "@/components/invoices/revert-paid-button";
 import { EditInvoiceButton } from "@/components/invoices/edit-invoice-button";
 import { EditPaymentMethod } from "@/components/payments/edit-payment-method";
 import { ChequeActions } from "@/components/cheques/cheque-actions";
+import { AgreementActions } from "@/components/agreements/agreement-actions";
+import { RecordViolationDialog } from "@/components/agreements/record-violation-dialog";
+import { GARBAGE_VIOLATION_FEE, LOST_KEY_FEE } from "@/lib/agreements/terms";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -81,6 +86,13 @@ const MAINTENANCE_STATUS_VARIANTS: Record<string, BadgeVariant> = {
   closed: "secondary",
 };
 
+const AGREEMENT_STATE_VARIANTS: Record<string, BadgeVariant> = {
+  signed: "success",
+  pending: "warning",
+  failed: "destructive",
+  none: "secondary",
+};
+
 const URGENCY_VARIANTS: Record<string, BadgeVariant> = {
   emergency: "destructive",
   high: "warning",
@@ -106,6 +118,7 @@ export default async function UnitDetailPage({
   const ti = await getTranslations("invoices");
   const tl = await getTranslations("leases");
   const tp = await getTranslations("properties");
+  const ta = await getTranslations("tenantAgreement");
   const supabase = await createClient();
 
   const { data: unit } = await supabase
@@ -140,7 +153,7 @@ export default async function UnitDetailPage({
   const tenantId = currentTenant?.id as string | undefined;
 
   // Fetch payment history, cheques, documents, maintenance in parallel
-  const [paymentsRes, chequesRes, documentsRes, maintenanceRes, pastLeasesRes, invoicesRes] =
+  const [paymentsRes, chequesRes, documentsRes, maintenanceRes, pastLeasesRes, invoicesRes, agreementRes, violationsRes] =
     await Promise.all([
       activeLease
         ? supabase
@@ -156,14 +169,17 @@ export default async function UnitDetailPage({
             .eq("tenant_id", tenantId)
             .order("cheque_date", { ascending: false })
         : Promise.resolve({ data: null }),
-      tenantId
-        ? supabase
-            .from("documents")
-            .select("*")
-            .eq("entity_type", "tenant")
-            .eq("entity_id", tenantId)
-            .order("uploaded_at", { ascending: false })
-        : Promise.resolve({ data: null }),
+      // The current tenant's documents plus the unit's own (signed
+      // building-rules agreements stay with the unit).
+      supabase
+        .from("documents")
+        .select("*")
+        .or(
+          tenantId
+            ? `and(entity_type.eq.tenant,entity_id.eq.${tenantId}),and(entity_type.eq.unit,entity_id.eq.${unitId})`
+            : `and(entity_type.eq.unit,entity_id.eq.${unitId})`
+        )
+        .order("uploaded_at", { ascending: false }),
       supabase
             .from("maintenance_requests")
             .select("*")
@@ -183,6 +199,22 @@ export default async function UnitDetailPage({
             .in("status", ["pending", "overdue", "partial", "paid"])
             .order("due_date", { ascending: false })
         : Promise.resolve({ data: null }),
+      tenantId
+        ? supabase
+            .from("tenant_agreements")
+            .select("id, reference, token, status, sent_at, last_sent_at, reminder_count, last_send_error, signed_at, signer_name, garbage_fee, key_fee")
+            .eq("tenant_id", tenantId)
+            .eq("unit_id", unitId)
+            .neq("status", "cancelled")
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("tenant_violations")
+        .select("id, kind, quantity, amount, occurred_on, notes, tenant_id, invoices(invoice_number, status)")
+        .eq("unit_id", unitId)
+        .order("occurred_on", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
   const payments = paymentsRes.data;
@@ -190,6 +222,39 @@ export default async function UnitDetailPage({
   const documents = documentsRes.data;
   const maintenance = maintenanceRes.data;
   const pastLeases = pastLeasesRes.data;
+  const agreement = agreementRes.data as {
+    id: string;
+    reference: string;
+    token: string;
+    status: "pending" | "signed";
+    sent_at: string | null;
+    last_sent_at: string | null;
+    reminder_count: number;
+    last_send_error: string | null;
+    signed_at: string | null;
+    signer_name: string | null;
+    garbage_fee: number | string;
+    key_fee: number | string;
+  } | null;
+  const violations = (violationsRes.data ?? []) as unknown as Array<{
+    id: string;
+    kind: "garbage" | "lost_key";
+    quantity: number;
+    amount: number | string;
+    occurred_on: string;
+    notes: string | null;
+    tenant_id: string;
+    invoices: { invoice_number: string | null; status: string } | null;
+  }>;
+  const agreementState: "none" | "pending" | "signed" | "failed" = !agreement
+    ? "none"
+    : agreement.status === "signed"
+      ? "signed"
+      : agreement.last_send_error && !agreement.sent_at
+        ? "failed"
+        : agreement.sent_at
+          ? "pending"
+          : "none";
   const invoices = invoicesRes.data as Array<{
     id: string;
     tenant_id: string;
@@ -300,6 +365,18 @@ export default async function UnitDetailPage({
       mono: true,
       highlight: true,
     },
+    {
+      label: t("electricityMeterNo"),
+      value: unit.electricity_meter_no || "—",
+      icon: Hash,
+      mono: true,
+    },
+    {
+      label: t("waterMeterNo"),
+      value: unit.water_meter_no || "—",
+      icon: Hash,
+      mono: true,
+    },
   ];
 
   return (
@@ -345,7 +422,7 @@ export default async function UnitDetailPage({
 
       {/* Unit facts */}
       <section className="bg-surface border border-border/60 rounded-xl p-5 animate-fade-in-up">
-        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-5">
+        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
           {unitFacts.map((item) => {
             const Icon = item.icon;
             return (
@@ -569,6 +646,96 @@ export default async function UnitDetailPage({
           />
         )}
       </section>
+
+      {/* Building rules agreement + violations */}
+      {currentTenant && activeLease && (
+        <section>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <SectionHeading icon={FileSignature} title={ta("staff.title")} className="mb-0" />
+            <RecordViolationDialog
+              unitId={unitId}
+              garbageFee={Number(agreement?.garbage_fee ?? GARBAGE_VIOLATION_FEE)}
+              keyFee={Number(agreement?.key_fee ?? LOST_KEY_FEE)}
+            />
+          </div>
+          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+            <div className="p-5 flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={AGREEMENT_STATE_VARIANTS[agreementState]}>
+                    {ta(`staff.states.${agreementState}`)}
+                  </Badge>
+                  {agreement && (
+                    <span className="text-xs text-text-secondary font-mono ltr-nums">{agreement.reference}</span>
+                  )}
+                </div>
+                <p className="text-sm text-text-secondary">
+                  {agreementState === "signed" && agreement?.signed_at
+                    ? ta("staff.signedOn", {
+                        name: agreement.signer_name ?? "",
+                        date: new Date(agreement.signed_at).toLocaleDateString(),
+                      })
+                    : agreementState === "pending" && agreement?.last_sent_at
+                      ? ta("staff.sentOn", {
+                          date: new Date(agreement.last_sent_at).toLocaleDateString(),
+                          reminders: agreement.reminder_count,
+                        })
+                      : agreementState === "failed"
+                        ? ta("staff.failed", { error: agreement?.last_send_error ?? "" })
+                        : ta("staff.notSent")}
+                </p>
+              </div>
+              <AgreementActions
+                leaseId={activeLease.id as string}
+                status={agreementState === "signed" ? "signed" : agreement?.sent_at ? "pending" : "none"}
+                signingUrl={agreement ? `/${currentTenant.language_preference === "ar" ? "ar" : "en"}/tenant-agreement/${agreement.token}` : null}
+              />
+            </div>
+
+            {violations.length > 0 && (
+              <div className="border-t border-border/40">
+                <h3 className="px-5 pt-4 pb-2 text-xs font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 text-destructive" />
+                  {ta("violations.title")}
+                </h3>
+                <ul className="divide-y divide-border/40">
+                  {violations.map((v) => (
+                    <li key={v.id} className="px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm text-text-primary">
+                          {ta(`violations.list.${v.kind}`, { count: v.quantity })}
+                          {v.tenant_id !== tenantId && (
+                            <span className="ms-2 text-xs text-text-secondary">({ta("violations.previousTenant")})</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-text-secondary">
+                          <span className="font-mono ltr-nums">{new Date(v.occurred_on).toLocaleDateString()}</span>
+                          {v.invoices?.invoice_number && (
+                            <span className="font-mono ltr-nums"> · {v.invoices.invoice_number}</span>
+                          )}
+                          {v.notes ? ` · ${v.notes}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {v.invoices?.status && (
+                          <Badge variant={INVOICE_STATUS_VARIANTS[v.invoices.status] ?? "secondary"} className="text-[10px] px-1.5">
+                            {["pending", "overdue", "partial", "paid", "cancelled", "written_off"].includes(v.invoices.status)
+                              ? ti(v.invoices.status)
+                              : v.invoices.status}
+                          </Badge>
+                        )}
+                        <span className="text-sm font-semibold font-mono ltr-nums tabular-nums text-destructive">
+                          {Number(v.amount).toFixed(3)} {CURRENCY.code}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Previous Tenants */}
       {pastLeases && pastLeases.length > 0 && (

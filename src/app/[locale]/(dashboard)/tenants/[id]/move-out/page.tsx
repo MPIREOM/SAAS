@@ -414,7 +414,7 @@ function MoveOutForm({
   const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null);
   const [createdInvoiceNumber, setCreatedInvoiceNumber] = useState<string | null>(null);
 
-  // Outstanding rent invoices of the lease being closed.
+  // Outstanding rent / violation invoices of the lease being closed.
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -423,7 +423,8 @@ function MoveOutForm({
         .from("invoices")
         .select("id, amount, paid_amount, due_date, status, period_start, period_end, lease_id, tenant_id, unit_id")
         .eq("lease_id", leaseCtx.leaseId)
-        .eq("invoice_type", "rent")
+        // Rent and building-rules violation fees (not earlier move-out bills).
+        .neq("invoice_type", "move_out")
         .in("status", ["pending", "overdue", "partial"])
         .order("due_date", { ascending: true });
 

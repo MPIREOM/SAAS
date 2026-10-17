@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
     "/api/owners/[id]/monthly-report/pdf": ["./public/fonts/**/*"],
     "/api/cron/owner-reports": ["./public/fonts/**/*"],
     "/api/cron/owner-reports-monthly": ["./public/fonts/**/*"],
+    // Signed building-rules agreement PDF (src/lib/agreements/pdf.tsx):
+    // fonts plus the letterhead artwork in public/letterhead/.
+    "/api/tenant-agreement/*": ["./public/fonts/**/*", "./public/letterhead/**/*"],
+    "/api/tenant-agreement/[token]": ["./public/fonts/**/*", "./public/letterhead/**/*"],
   },
   // Baseline security headers. `Referrer-Policy: strict-origin-when-cross-origin`
   // also stops the bearer token in portal/maintenance URLs from leaking (only

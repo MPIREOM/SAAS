@@ -237,7 +237,10 @@
     "vacateReason": "Reason",
     "markVacant": "Mark as Vacant",
     "markMaintenance": "Mark as Under Maintenance",
-    "statusUpdated": "Unit marked as {status}"
+    "statusUpdated": "Unit marked as {status}",
+    "utilityAccounts": "Utility meters",
+    "electricityMeterNo": "Electricity meter no.",
+    "waterMeterNo": "Water meter no."
   },
   "tenants": {
     "title": "Tenants",
@@ -820,7 +823,8 @@
       "titleDeed": "Title Deed",
       "permit": "Permit",
       "insurance": "Insurance",
-      "custom": "Custom"
+      "custom": "Custom",
+      "tenantAgreement": "Building Rules Agreement"
     },
     "noDocuments": "No documents found",
     "entityType": "Entity Type",
@@ -1976,5 +1980,86 @@
     "statusDone": "Done",
     "statusNotEntered": "Couldn't enter",
     "saveFailed": "Couldn't save. Check your connection and try again."
+  },
+  "tenantAgreement": {
+    "title": "Building rules agreement",
+    "invalidLink": "This link is invalid or has expired. Please contact MPIRE Property Management.",
+    "switchLanguage": "العربية",
+    "bilingualNote": "Your signed copy is a one-page PDF with the agreement in English and Arabic.",
+    "signedTitle": "Agreement signed",
+    "signedBy": "Signed by {name} on {date}. Thank you.",
+    "downloadCopy": "Download signed copy (PDF)",
+    "signHeading": "Sign the agreement",
+    "fullName": "Full name",
+    "clear": "Clear",
+    "signatureArea": "Signature area. Draw your signature with your finger or mouse.",
+    "signHint": "Draw your signature in the white box with your finger or mouse.",
+    "accept": "I have read and agree to the building rules above.",
+    "submit": "Sign agreement",
+    "errors": {
+      "alreadySigned": "This agreement has already been signed.",
+      "signatureRequired": "Please draw your signature.",
+      "nameRequired": "Please enter your full name.",
+      "acceptRequired": "Please tick the box to confirm you agree.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "staff": {
+      "title": "Building rules agreement",
+      "states": {
+        "none": "Not sent",
+        "pending": "Waiting for signature",
+        "signed": "Signed",
+        "failed": "Not delivered"
+      },
+      "signedOn": "Signed by {name} on {date}. The PDF is in the documents below.",
+      "sentOn": "Sent {date} · {reminders, plural, =0 {no reminders yet} one {# reminder sent} other {# reminders sent}}",
+      "failed": "Could not be delivered: {error}",
+      "notSent": "The signing link hasn't been sent to this tenant yet.",
+      "send": "Send for signature",
+      "resend": "Resend link",
+      "signInPerson": "Sign in person",
+      "sent": "Signing link sent to the tenant",
+      "alreadySigned": "The tenant has already signed",
+      "notDelivered": "Not delivered: {error}",
+      "sendFailed": "Could not send the agreement"
+    },
+    "violations": {
+      "title": "Violations",
+      "record": "Record violation",
+      "description": "Charge the current tenant under the building rules agreement.",
+      "kind": "Violation",
+      "kinds": {
+        "garbage": "Garbage left outside the chute ({fee} OMR)",
+        "lost_key": "Lost / extra gate key ({fee} OMR per key)",
+        "alteration": "Unapproved hole / alteration (repair cost)"
+      },
+      "quantity": "Number of keys",
+      "date": "Date",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "e.g. two bags next to the chute on floor 3",
+      "total": "Fee",
+      "billingNote": "An invoice is created for the tenant, due with their next rent, and they are notified on WhatsApp and email.",
+      "submit": "Record and bill",
+      "recorded": "Violation recorded and billed: {amount} OMR. The tenant has been notified.",
+      "failed": "Could not record the violation",
+      "list": {
+        "garbage": "Garbage left outside the chute",
+        "lost_key": "{count, plural, one {Lost / extra gate key} other {Lost / extra gate keys × #}}",
+        "alteration": "Unapproved hole / alteration"
+      },
+      "previousTenant": "previous tenant",
+      "repairCost": "Repair cost (OMR)",
+      "repairCostRequired": "Enter the repair cost",
+      "recordedNotNotified": "Violation recorded and billed: {amount} OMR. The tenant could not be notified (no phone/email or notifications off)."
+    },
+    "bulk": {
+      "button": "Send rules agreement",
+      "title": "Send the building rules agreement to current tenants",
+      "description": "Every tenant with an active lease who hasn't been sent the agreement yet will get the signing link on WhatsApp and email.",
+      "note": "Tenants who already signed or were already sent the link are skipped, so this is safe to run again.",
+      "confirm": "Send to tenants",
+      "result": "Sent: {sent} · Already sent or signed: {already} · Failed: {failed}",
+      "failed": "Could not send the agreements"
+    }
   }
 }

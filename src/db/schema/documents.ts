@@ -10,7 +10,7 @@ import {
 
 // ── Enums ──────────────────────────────────────────────────────────────────
 
-export const entityTypeEnum = pgEnum("entity_type", ["tenant", "property"]);
+export const entityTypeEnum = pgEnum("entity_type", ["tenant", "property", "unit"]);
 
 export const documentTypeEnum = pgEnum("document_type", [
   "lease_agreement",
@@ -22,6 +22,7 @@ export const documentTypeEnum = pgEnum("document_type", [
   "permit",
   "insurance",
   "custom",
+  "tenant_agreement",
 ]);
 
 // ── Documents ──────────────────────────────────────────────────────────────

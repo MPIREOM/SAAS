@@ -225,15 +225,19 @@ export async function getOwnerBalance(
     // Because the calling code only destructured `data`, the error was
     // silently dropped and commissionEarned ended up at 0.
     //
-    // invoice_type = 'rent' only: move-out invoices carry cleaning / painting /
-    // early-termination fees (the early-termination fee is the owner's 3%
-    // municipality tax + the company's 9%, billed to the tenant) — they must
-    // NOT generate management commission on top.
+    // Rent and building-rules violation invoices only: move-out invoices
+    // carry cleaning / painting / early-termination fees (the
+    // early-termination fee is the owner's 3% municipality tax + the
+    // company's 9%, billed to the tenant) — they must NOT generate management
+    // commission on top. Violation fees go to the owner like rent and carry
+    // commission. Filtered here rather than with .in("invoice_type", ...):
+    // naming 'violation' in the query fails on a database without that enum
+    // value yet (migration 051), which would zero the commission.
     const { data: invoices, error: invErr } = await supabase
       .from("invoices")
-      .select("amount, lease_id, status, period_start, due_date")
+      .select("amount, lease_id, status, period_start, due_date, invoice_type")
       .in("lease_id", leaseIds)
-      .eq("invoice_type", "rent")
+      .neq("invoice_type", "move_out")
       .in("status", ["pending", "paid", "overdue", "partial"]);
     if (invErr) {
       // Surface in the server log so a future enum mismatch isn't silent.
@@ -241,6 +245,8 @@ export async function getOwnerBalance(
     }
 
     for (const inv of invoices || []) {
+      const isViolation = inv.invoice_type === "violation";
+      if (inv.invoice_type !== "rent" && !isViolation) continue;
       const periodAnchor =
         (inv.period_start as string | null) ||
         (inv.due_date as string | null);
@@ -263,10 +269,14 @@ export async function getOwnerBalance(
 
       const c = Number(inv.amount || 0) * (config.rate / 100);
       commissionEarned += c;
-      billedCommissionByLease.set(
-        leaseId,
-        (billedCommissionByLease.get(leaseId) || 0) + c,
-      );
+      // Only rent counts toward the contract months the early-termination
+      // catch-up below subtracts; violation commission is on top.
+      if (!isViolation) {
+        billedCommissionByLease.set(
+          leaseId,
+          (billedCommissionByLease.get(leaseId) || 0) + c,
+        );
+      }
       if (inCurrentMonth(periodAnchor)) commissionEarnedCur += c;
     }
   }

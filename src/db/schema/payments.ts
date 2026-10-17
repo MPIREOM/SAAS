@@ -37,13 +37,16 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
   "cancelled",
 ]);
 
-export const invoiceTypeEnum = pgEnum("invoice_type", ["rent", "move_out"]);
+export const invoiceTypeEnum = pgEnum("invoice_type", ["rent", "move_out", "violation"]);
 
 export const invoiceItemKindEnum = pgEnum("invoice_item_kind", [
   "cleaning",
   "painting",
   "early_termination",
   "custom",
+  "garbage_violation",
+  "lost_key",
+  "alteration",
 ]);
 
 // ── Invoices ──────────────────────────────────────────────────────────────

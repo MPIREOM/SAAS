@@ -31,9 +31,11 @@ export async function GET(
   }
 
   const isMoveOut = invoice.invoice_type === "move_out";
+  const isViolation = invoice.invoice_type === "violation";
+  const isItemized = isMoveOut || isViolation;
 
-  // Line items for itemized invoices (move-out)
-  const { data: lineItems } = isMoveOut
+  // Line items for itemized invoices (move-out, building-rules violations)
+  const { data: lineItems } = isItemized
     ? await supabase
         .from("invoice_items")
         .select("kind, description, amount, sort_order")
@@ -78,7 +80,7 @@ export async function GET(
   const statusLabel = invoice.status === "paid" ? "PAID" : invoice.status === "partial" ? "PARTIAL" : invoice.status === "overdue" ? "OVERDUE" : "PENDING";
   const statusColor = invoice.status === "paid" ? "#16a34a" : invoice.status === "partial" ? "#3b82f6" : invoice.status === "overdue" ? "#dc2626" : "#ca8a04";
 
-  const documentTitle = isMoveOut ? "MOVE-OUT INVOICE" : "INVOICE";
+  const documentTitle = isMoveOut ? "MOVE-OUT INVOICE" : isViolation ? "VIOLATION INVOICE" : "INVOICE";
   const invoiceReference = invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase();
 
   const formatAmount = (n: number) => n.toLocaleString("en", { minimumFractionDigits: 2 });
@@ -97,14 +99,14 @@ export async function GET(
 
   // Move-out invoices show each fee as its own row. Rent invoices keep
   // their single "Monthly Rent" row.
-  const itemsRows = isMoveOut && lineItems && lineItems.length > 0
+  const itemsRows = isItemized && lineItems && lineItems.length > 0
     ? lineItems.map((it) => `<tr>
         <td>${escapeHtml(it.description as string)}</td>
         <td>${invoiceDate}</td>
         <td>${formatAmount(parseFloat(it.amount as string))} ${CURRENCY.code}</td>
       </tr>`).join("")
     : `<tr>
-        <td>${isMoveOut ? "Move-out charges" : `Monthly Rent - Unit ${unit.unit_number}`}</td>
+        <td>${isMoveOut ? "Move-out charges" : isViolation ? "Building rules violation" : `Monthly Rent - Unit ${unit.unit_number}`}</td>
         <td>${invoice.period_start ? `${invoice.period_start} to ${invoice.period_end}` : invoiceDate}</td>
         <td>${formatAmount(totalAmount)} ${CURRENCY.code}</td>
       </tr>`;

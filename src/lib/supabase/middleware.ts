@@ -46,6 +46,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.includes("/visit-booking/") ||
     request.nextUrl.pathname.includes("/my-visit/") ||
     request.nextUrl.pathname.includes("/visit-schedule/") ||
+    request.nextUrl.pathname.includes("/tenant-agreement/") ||
     /^\/(en|ar)\/privacy\/?$/.test(request.nextUrl.pathname);
 
   if (!hasSession && !isAuthPage && !isApiRoute && !isPublicPage) {

@@ -92,6 +92,8 @@ export const leases = pgTable("leases", {
   vacateNotes: text("vacate_notes"),
   finalInspection: boolean("final_inspection").default(false),
   keysReturned: boolean("keys_returned").default(false),
+  // Gate keys handed to the tenant (051); lost / extra keys are billed per key
+  gateKeysIssued: integer("gate_keys_issued").notNull().default(2),
   depositStatus: depositStatusEnum("deposit_status").default("pending"),
   // Set on the new lease when a tenant is relocated from another unit
   relocatedFromLeaseId: uuid("relocated_from_lease_id"),

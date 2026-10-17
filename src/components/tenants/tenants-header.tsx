@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Plus, FileSpreadsheet } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
+import { BulkSendAgreementsButton } from "@/components/agreements/bulk-send-button";
 import { ImportTenantsDialog } from "./import-dialog";
 
 export function TenantsHeader({ locale }: { locale: string }) {
@@ -14,7 +15,8 @@ export function TenantsHeader({ locale }: { locale: string }) {
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <BulkSendAgreementsButton />
         <Button variant="secondary" onClick={() => setImportOpen(true)}>
           <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
           {t("importExcel")}
