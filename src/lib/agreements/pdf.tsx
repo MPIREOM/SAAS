@@ -205,9 +205,37 @@ function Clauses({ copy, rtl }: { copy: AgreementCopy; rtl: boolean }) {
   );
 }
 
+/**
+ * Arabic as react-pdf can draw it with Thmanyah: vowel marks (tanween,
+ * damma, shadda, ...) are misplaced onto neighbouring letters, and a full
+ * stop or colon ending a paragraph lands at the start of its last line, so
+ * both are dropped. The web page keeps the original text.
+ */
+function pdfArabic(text: string): string {
+  return text.replace(/[\u064B-\u0652\u0670]/g, "").replace(/[.:]\s*$/, "");
+}
+
+function arabicCopyForPdf(copy: AgreementCopy): AgreementCopy {
+  return {
+    ...copy,
+    title: pdfArabic(copy.title),
+    intro: pdfArabic(copy.intro),
+    fields: Object.fromEntries(
+      Object.entries(copy.fields).map(([k, v]) => [k, pdfArabic(v)])
+    ) as AgreementCopy["fields"],
+    sections: copy.sections.map((section) => ({
+      heading: pdfArabic(section.heading),
+      clauses: section.clauses.map((c) => ({ ...c, text: pdfArabic(c.text) })),
+    })),
+    signature: pdfArabic(copy.signature),
+    date: pdfArabic(copy.date),
+    signedElectronically: pdfArabic(copy.signedElectronically),
+  };
+}
+
 export function AgreementDocument({ data }: { data: AgreementPdfData }) {
   const en = agreementCopy("en", data);
-  const ar = agreementCopy("ar", data);
+  const ar = arabicCopyForPdf(agreementCopy("ar", data));
   const facts: [string, string, string][] = [
     [en.fields.tenantName, data.tenantName, ar.fields.tenantName],
     [en.fields.nationalId, data.nationalId || "—", ar.fields.nationalId],
