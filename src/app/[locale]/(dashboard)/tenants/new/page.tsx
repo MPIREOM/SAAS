@@ -1,5 +1,6 @@
 "use client";
 
+import { requestAgreementForLease } from "@/lib/agreements/client";
 import { useState, useRef, useEffect, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -331,7 +332,7 @@ export default function NewTenantPage({
         (formData.get("security_deposit") as string) || null;
       const paymentDueDay = formData.get("payment_due_day") as string;
 
-      const { error: leaseError } = await supabase.from("leases").insert({
+      const { data: lease, error: leaseError } = await supabase.from("leases").insert({
         tenant_id: tenantId,
         unit_id: unitId,
         start_date: startDate,
@@ -341,10 +342,10 @@ export default function NewTenantPage({
         payment_due_day: parseInt(paymentDueDay) || 1,
         is_active: true,
         created_by: user?.id,
-      });
+      }).select("id").single();
 
-      if (leaseError) {
-        setError(leaseError.message);
+      if (leaseError || !lease) {
+        setError(leaseError?.message || t("failedToCreate"));
         setLoading(false);
         return;
       }
@@ -385,6 +386,9 @@ export default function NewTenantPage({
           return;
         }
       }
+
+      // WhatsApp / email the tenant the building-rules agreement to sign.
+      await requestAgreementForLease(lease.id);
 
       // Navigate back to the unit page
       router.push(`/${locale}/properties/${propertyId}/units/${unitId}`);

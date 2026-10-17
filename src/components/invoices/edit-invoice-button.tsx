@@ -122,7 +122,7 @@ export function EditInvoiceButton({ invoiceId, tenantName }: EditInvoiceButtonPr
     setLoadingInvoice(false);
   }
 
-  const itemised = invoice?.invoice_type === "move_out";
+  const itemised = invoice?.invoice_type === "move_out" || invoice?.invoice_type === "violation";
   const amountNum = Number(amount);
   const nextStatus =
     invoice && Number.isFinite(amountNum)

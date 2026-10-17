@@ -16,6 +16,7 @@ interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  attachments?: { filename: string; content: Buffer }[];
 }
 
 export async function sendEmail(
@@ -33,6 +34,7 @@ export async function sendEmail(
       to: options.to,
       subject: options.subject,
       html: options.html,
+      ...(options.attachments?.length && { attachments: options.attachments }),
     });
 
     if (error) {

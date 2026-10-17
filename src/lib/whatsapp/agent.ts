@@ -14,6 +14,11 @@ import {
   type InvoiceForRevert,
   type InvoicePaymentCandidate,
 } from "@/lib/invoices/revert-payment";
+import {
+  createAndSendForLease,
+  recordViolation,
+  resolveAppOrigin,
+} from "@/lib/agreements/service";
 
 const anthropic = new Anthropic({
   // callClaude() below owns retry logic, so disable the SDK's built-in retries
@@ -1003,6 +1008,69 @@ export const tools: Anthropic.Tool[] = [
             required: ["kind", "amount"],
           },
         },
+      },
+      required: ["lease_id"],
+    },
+  },
+  {
+    name: "record_violation",
+    description:
+      "Record a building-rules violation by a unit's CURRENT tenant and bill the fee (each tenant signed the building rules agreement that sets these fees). kind='garbage' = garbage/trash/rubbish/bags left OUTSIDE the garbage chute, in the corridor, stairs or common areas instead of inside the chute (fee 10 OMR per violation). kind='lost_key' = a gate key lost, damaged, not returned, or an extra key requested (fee 7 OMR per key; pass quantity for several keys). Creates a 'violation' invoice due with the tenant's next rent. Use for 'unit 12 left garbage outside the chute', 'fine flat 5 for the trash', 'tenant in 7 lost his gate key', 'unit 3 wants 2 extra keys', Arabic 'زبالة برا', 'رمى القمامة خارج المجرى', 'ضاع مفتاح البوابة'. Resolve the unit first with get_unit_by_number and pass its unit_id. One call per violation incident.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        unit_id: { type: "string", description: "The unit UUID (from get_unit_by_number). Its active lease's tenant is charged." },
+        kind: {
+          type: "string",
+          enum: ["garbage", "lost_key"],
+          description: "garbage = garbage left outside the chute; lost_key = lost / extra gate key.",
+        },
+        quantity: {
+          type: "number",
+          description: "Number of keys for lost_key (default 1). Always 1 for garbage — record separate incidents with separate calls.",
+        },
+        occurred_on: { type: "string", description: "Date of the violation YYYY-MM-DD. Defaults to today." },
+        notes: { type: "string", description: "Optional short note in the user's words (where, what was found)." },
+      },
+      required: ["unit_id", "kind"],
+    },
+  },
+  {
+    name: "list_violations",
+    description:
+      "List recorded building-rules violations (garbage outside the chute, lost gate keys) with their fee, date and invoice status. Filter by unit_id or tenant_id, or omit both for the most recent across all buildings. Use for 'how many violations does unit 12 have?', 'show garbage fines this month', 'did we charge flat 5 for the key?'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        unit_id: { type: "string", description: "Optional unit UUID." },
+        tenant_id: { type: "string", description: "Optional tenant UUID." },
+        kind: { type: "string", enum: ["garbage", "lost_key"], description: "Optional filter by type." },
+        days: { type: "number", description: "How many days back to look. Default 90." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_agreement_status",
+    description:
+      "Check whether a tenant has signed the building rules agreement (garbage chute + gate keys) that is sent automatically when they are registered. Pass unit_id (from get_unit_by_number) or tenant_id. Returns status (pending / signed), when it was sent and signed, reminders sent, and the number of gate keys issued. Use for 'did unit 12 sign the agreement?', 'who hasn't signed the rules yet?' (omit both ids to list everyone still pending).",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        unit_id: { type: "string", description: "Optional unit UUID." },
+        tenant_id: { type: "string", description: "Optional tenant UUID." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "send_tenant_agreement",
+    description:
+      "Send (or resend) the building rules agreement signing link to a tenant on WhatsApp and email. Creates the agreement if the tenant doesn't have one yet. Use for 'resend the agreement to unit 12', 'send the rules agreement to Ahmad'. Pass the tenant's active lease_id (from get_unit_by_number or search_tenants).",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        lease_id: { type: "string", description: "The tenant's active lease UUID." },
       },
       required: ["lease_id"],
     },
@@ -2723,6 +2791,17 @@ export async function executeTool(
               .from("units")
               .update({ status: "occupied", updated_at: new Date().toISOString() })
               .eq("id", unitId);
+            // Send the building rules agreement to sign, as the dashboard does.
+            const origin = await resolveAppOrigin(supabase);
+            if (lease?.id && origin) {
+              const sent = await createAndSendForLease(supabase, lease.id, { origin, createdBy: userId });
+              result.agreement_sent = sent.ok && sent.sent;
+              if (!sent.ok || !sent.sent) {
+                result.agreement_warning = sent.ok
+                  ? `Agreement created but not delivered: ${sent.outcome?.whatsapp.error ?? "unknown error"}`
+                  : `Agreement not sent: ${sent.error}`;
+              }
+            }
           }
         }
       }
@@ -3784,6 +3863,147 @@ export async function executeTool(
       });
     }
 
+    case "record_violation": {
+      const kind = input.kind as string;
+      if (kind !== "garbage" && kind !== "lost_key")
+        return JSON.stringify({ error: "kind must be 'garbage' or 'lost_key'" });
+      const result = await recordViolation(supabase, {
+        unitId: input.unit_id as string,
+        kind,
+        quantity: kind === "lost_key" && input.quantity !== undefined ? Number(input.quantity) : 1,
+        occurredOn: (input.occurred_on as string) || undefined,
+        notes: (input.notes as string) || null,
+        userId,
+        source: "whatsapp_agent",
+      });
+      if (!result.ok) return JSON.stringify({ error: result.error });
+      return JSON.stringify({
+        success: true,
+        tenant_name: result.tenantName,
+        unit_number: result.unitNumber,
+        property: result.propertyName,
+        kind,
+        amount_omr: result.amount.toFixed(3),
+        invoice_number: result.invoiceNumber,
+        invoice_id: result.invoiceId,
+        due_date: result.dueDate,
+        agreement_signed: result.agreementSigned,
+      });
+    }
+
+    case "list_violations": {
+      const days = Math.min(Math.max(Number(input.days) || 90, 1), 730);
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      let query = supabase
+        .from("tenant_violations")
+        .select(
+          "id, kind, quantity, amount, occurred_on, notes, source, tenants(full_name), units(unit_number, properties(name)), invoices(invoice_number, status)"
+        )
+        .gte("occurred_on", since)
+        .order("occurred_on", { ascending: false })
+        .limit(50);
+      if (input.unit_id) query = query.eq("unit_id", input.unit_id as string);
+      if (input.tenant_id) query = query.eq("tenant_id", input.tenant_id as string);
+      if (input.kind) query = query.eq("kind", input.kind as string);
+      const { data, error } = await query;
+      if (error) return JSON.stringify({ error: error.message });
+      const rows = (data ?? []) as unknown as Array<{
+        kind: string;
+        quantity: number;
+        amount: number | string;
+        occurred_on: string;
+        notes: string | null;
+        tenants: { full_name: string } | null;
+        units: { unit_number: string; properties: { name: string } | null } | null;
+        invoices: { invoice_number: string | null; status: string } | null;
+      }>;
+      const total = rows.reduce((sum, r) => sum + Number(r.amount), 0);
+      return JSON.stringify({
+        since,
+        count: rows.length,
+        total_omr: total.toFixed(3),
+        violations: rows.map((r) => ({
+          date: r.occurred_on,
+          kind: r.kind === "garbage" ? "Garbage outside the chute" : `Lost / extra gate key × ${r.quantity}`,
+          tenant: r.tenants?.full_name ?? "N/A",
+          unit: r.units?.unit_number ?? "N/A",
+          property: r.units?.properties?.name ?? "N/A",
+          amount_omr: Number(r.amount).toFixed(3),
+          invoice_number: r.invoices?.invoice_number ?? null,
+          invoice_status: r.invoices?.status ?? null,
+          notes: r.notes,
+        })),
+      });
+    }
+
+    case "get_agreement_status": {
+      let query = supabase
+        .from("tenant_agreements")
+        .select(
+          "reference, status, gate_keys, sent_at, last_sent_at, reminder_count, last_send_error, signed_at, signer_name, tenants(full_name, phone), units(unit_number, properties(name))"
+        )
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (input.unit_id) query = query.eq("unit_id", input.unit_id as string);
+      if (input.tenant_id) query = query.eq("tenant_id", input.tenant_id as string);
+      if (!input.unit_id && !input.tenant_id) query = query.eq("status", "pending");
+      const { data, error } = await query;
+      if (error) return JSON.stringify({ error: error.message });
+      const rows = (data ?? []) as unknown as Array<{
+        reference: string;
+        status: string;
+        gate_keys: number;
+        sent_at: string | null;
+        last_sent_at: string | null;
+        reminder_count: number;
+        last_send_error: string | null;
+        signed_at: string | null;
+        signer_name: string | null;
+        tenants: { full_name: string; phone: string | null } | null;
+        units: { unit_number: string; properties: { name: string } | null } | null;
+      }>;
+      if (rows.length === 0)
+        return JSON.stringify({
+          agreements: [],
+          note:
+            input.unit_id || input.tenant_id
+              ? "No agreement found — it has not been sent to this tenant yet. Offer send_tenant_agreement."
+              : "Every agreement that was sent has been signed.",
+        });
+      return JSON.stringify({
+        agreements: rows.map((r) => ({
+          reference: r.reference,
+          tenant: r.tenants?.full_name ?? "N/A",
+          unit: r.units?.unit_number ?? "N/A",
+          property: r.units?.properties?.name ?? "N/A",
+          status: r.status,
+          gate_keys: r.gate_keys,
+          sent_at: r.sent_at,
+          last_sent_at: r.last_sent_at,
+          reminders_sent: r.reminder_count,
+          send_error: r.sent_at ? null : r.last_send_error,
+          signed_at: r.signed_at,
+          signed_by: r.signer_name,
+        })),
+      });
+    }
+
+    case "send_tenant_agreement": {
+      const leaseId = input.lease_id as string;
+      if (!leaseId) return JSON.stringify({ error: "lease_id is required" });
+      const origin = await resolveAppOrigin(supabase);
+      if (!origin) return JSON.stringify({ error: "App URL is not configured, so no signing link can be sent." });
+      const result = await createAndSendForLease(supabase, leaseId, { origin, createdBy: userId, resend: true });
+      if (!result.ok) return JSON.stringify({ error: result.error });
+      if (result.status === "signed") return JSON.stringify({ success: true, already_signed: true });
+      return JSON.stringify({
+        success: result.sent,
+        whatsapp: result.outcome?.whatsapp ?? null,
+        email: result.outcome?.email ?? null,
+      });
+    }
+
     case "list_recent_owner_activity": {
       let ownerId = input.owner_id as string | undefined;
       const days = Number(input.days) > 0 ? Number(input.days) : 14;
@@ -4710,6 +4930,14 @@ YOU CAN:
     - Because this deletes financial records, confirm with the user before calling it unless they were explicit ("undo it", "yes revert it").
     - If the user wants the PAID invoice gone entirely ("cancel that invoice, it should never have existed"), use cancel_invoice with action='cancelled' instead — it also removes the payment(s) and follows the same needs_confirmation flow.
     - If the user just wants to change HOW it was paid (cash vs cheque), do NOT revert — use update_payment_method.
+
+23. Building rules violations — the tenant signed an agreement: garbage must go INSIDE the garbage chute (10 OMR per violation), and lost / extra gate keys cost 7 OMR per key. Every tenant gets 2 gate keys.
+    - Recognise it in any wording or language: "unit 12 left garbage outside", "trash in the corridor from flat 5", "bags next to the chute", "fine unit 7 for the rubbish", "زبالة برا", "رمى القمامة خارج المجرى", "كيس زبالة عند الدرج" → kind garbage. "lost his key", "needs another gate key", "2 extra keys for unit 3", "didn't return the keys", "ضاع المفتاح", "يبي مفتاح زيادة" → kind lost_key (quantity = number of keys).
+    - It is NOT an expense and NOT a rent payment: do not call add_expense or mark_invoice_paid for it. (If the USER paid a locksmith or cleaner, that IS an expense.)
+    - Steps: get_unit_by_number for the unit → record_violation with that unit_id, the kind, quantity (keys) and the date if given. If the user didn't name the unit or tenant, ask which unit — never guess. Several incidents ("unit 4 did it twice this week") = one call per incident.
+    - Reply with the tenant, unit, fee, invoice number and due date from the tool result. If agreement_signed is false, add that the tenant hasn't signed the building rules agreement yet.
+    - Use list_violations to answer "how many violations / fines" questions, get_agreement_status for "did they sign the agreement?" / "who hasn't signed?", and send_tenant_agreement to resend the signing link.
+    - register_tenant sends the agreement automatically when it creates a lease; mention agreement_warning if it comes back.
 
 BEHAVIOR RULES:
 - ALWAYS take action. When a TENANT paid ("register payment for Ahmad", "add payment for unit 5", "tenant paid"), search for the tenant and their unpaid invoices, then mark the invoice as paid. Do NOT say you can't do it.

@@ -91,20 +91,27 @@ export default async function DocumentsPage({
   const docs = documents || [];
   const tenantIds = docs.filter(d => d.entity_type === "tenant").map(d => d.entity_id);
   const propertyIds = docs.filter(d => d.entity_type === "property").map(d => d.entity_id);
+  const unitIds = docs.filter(d => d.entity_type === "unit").map(d => d.entity_id);
 
-  // Both name lookups run in parallel
-  const [{ data: tenants }, { data: properties }] = await Promise.all([
+  // Name lookups run in parallel
+  const [{ data: tenants }, { data: properties }, { data: units }] = await Promise.all([
     tenantIds.length > 0
       ? supabase.from("tenants").select("id, full_name").in("id", tenantIds)
       : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
     propertyIds.length > 0
       ? supabase.from("properties").select("id, name").in("id", propertyIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    unitIds.length > 0
+      ? supabase.from("units").select("id, unit_number, properties(name)").in("id", unitIds)
+      : Promise.resolve({ data: [] as { id: string; unit_number: string; properties: { name: string } | null }[] }),
   ]);
 
   const entityMap = new Map<string, string>();
   (tenants || []).forEach(t => entityMap.set(t.id, t.full_name));
   (properties || []).forEach(p => entityMap.set(p.id, p.name));
+  ((units || []) as unknown as { id: string; unit_number: string; properties: { name: string } | null }[]).forEach(u =>
+    entityMap.set(u.id, u.properties?.name ? `${u.properties.name} — ${u.unit_number}` : u.unit_number)
+  );
 
   const enrichedDocs: Document[] = docs.map(d => ({
     ...d,
@@ -133,6 +140,7 @@ export default async function DocumentsPage({
     permit: "permit",
     insurance: "insurance",
     custom: "custom",
+    tenant_agreement: "tenantAgreement",
   };
 
   const entityTypeLabel = (entityType: string) =>
@@ -140,7 +148,9 @@ export default async function DocumentsPage({
       ? tc("tenant")
       : entityType === "property"
         ? tc("property")
-        : entityType;
+        : entityType === "unit"
+          ? tc("unit")
+          : entityType;
 
   const summaryCards = [
     {

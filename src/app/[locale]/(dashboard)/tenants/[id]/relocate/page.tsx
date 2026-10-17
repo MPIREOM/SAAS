@@ -1,5 +1,6 @@
 "use client";
 
+import { requestAgreementForLease } from "@/lib/agreements/client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -276,7 +277,7 @@ export default function RelocateTenantPage() {
     setError("");
 
     const supabase = createClient();
-    const { error: rpcError } = await supabase.rpc("relocate_tenant", {
+    const { data: relocated, error: rpcError } = await supabase.rpc("relocate_tenant", {
       p_old_lease_id: currentLease!.id,
       p_new_unit_id: newUnit!.id,
       p_move_date: moveDate,
@@ -293,6 +294,10 @@ export default function RelocateTenantPage() {
       setSaving(false);
       return;
     }
+
+    // The new unit needs its own building-rules agreement.
+    const newLeaseId = (relocated as { new_lease_id?: string } | null)?.new_lease_id;
+    if (newLeaseId) await requestAgreementForLease(newLeaseId);
 
     router.push(`/${locale}/tenants/${tenantId}`);
     router.refresh();
