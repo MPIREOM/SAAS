@@ -1015,15 +1015,20 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "record_violation",
     description:
-      "Record a building-rules violation by a unit's CURRENT tenant and bill the fee (each tenant signed the building rules agreement that sets these fees). kind='garbage' = garbage/trash/rubbish/bags left OUTSIDE the garbage chute, in the corridor, stairs or common areas instead of inside the chute (fee 10 OMR per violation). kind='lost_key' = a gate key lost, damaged, not returned, or an extra key requested (fee 7 OMR per key; pass quantity for several keys). Creates a 'violation' invoice due with the tenant's next rent. Use for 'unit 12 left garbage outside the chute', 'fine flat 5 for the trash', 'tenant in 7 lost his gate key', 'unit 3 wants 2 extra keys', Arabic 'زبالة برا', 'رمى القمامة خارج المجرى', 'ضاع مفتاح البوابة'. Resolve the unit first with get_unit_by_number and pass its unit_id. One call per violation incident.",
+      "Record a building-rules violation by a unit's CURRENT tenant and bill the fee (each tenant signed the building rules agreement that sets these fees). kind='garbage' = garbage/trash/rubbish/bags left OUTSIDE the garbage chute, in the corridor, stairs or common areas instead of inside the chute (fee 10 OMR per violation). kind='lost_key' = a gate key lost, damaged, not returned, or an extra key requested (fee 7 OMR per key; pass quantity for several keys). kind='alteration' = holes drilled or alterations made to the apartment (walls, floors, ceilings, fixtures, structure) WITHOUT building management's approval, charged at the repair cost — pass amount (OMR); ask the user for it if they didn't say. Creates a 'violation' invoice due with the tenant's next rent. Use for 'unit 12 left garbage outside the chute', 'fine flat 5 for the trash', 'tenant in 7 lost his gate key', 'unit 3 wants 2 extra keys', Arabic 'زبالة برا', 'رمى القمامة خارج المجرى', 'ضاع مفتاح البوابة', 'خرّم الجدار', 'سوّى ثقوب'. Resolve the unit first with get_unit_by_number and pass its unit_id. One call per violation incident.",
     input_schema: {
       type: "object" as const,
       properties: {
         unit_id: { type: "string", description: "The unit UUID (from get_unit_by_number). Its active lease's tenant is charged." },
         kind: {
           type: "string",
-          enum: ["garbage", "lost_key"],
-          description: "garbage = garbage left outside the chute; lost_key = lost / extra gate key.",
+          enum: ["garbage", "lost_key", "alteration"],
+          description:
+            "garbage = garbage left outside the chute; lost_key = lost / extra gate key; alteration = holes / alterations without approval.",
+        },
+        amount: {
+          type: "number",
+          description: "Repair cost in OMR. Required for alteration (ask the user); ignored for the other kinds, whose fees are fixed.",
         },
         quantity: {
           type: "number",
@@ -1038,13 +1043,13 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "list_violations",
     description:
-      "List recorded building-rules violations (garbage outside the chute, lost gate keys) with their fee, date and invoice status. Filter by unit_id or tenant_id, or omit both for the most recent across all buildings. Use for 'how many violations does unit 12 have?', 'show garbage fines this month', 'did we charge flat 5 for the key?'.",
+      "List recorded building-rules violations (garbage outside the chute, lost gate keys, unapproved holes / alterations) with their fee, date and invoice status. Filter by unit_id or tenant_id, or omit both for the most recent across all buildings. Use for 'how many violations does unit 12 have?', 'show garbage fines this month', 'did we charge flat 5 for the key?'.",
     input_schema: {
       type: "object" as const,
       properties: {
         unit_id: { type: "string", description: "Optional unit UUID." },
         tenant_id: { type: "string", description: "Optional tenant UUID." },
-        kind: { type: "string", enum: ["garbage", "lost_key"], description: "Optional filter by type." },
+        kind: { type: "string", enum: ["garbage", "lost_key", "alteration"], description: "Optional filter by type." },
         days: { type: "number", description: "How many days back to look. Default 90." },
       },
       required: [],
@@ -3865,12 +3870,13 @@ export async function executeTool(
 
     case "record_violation": {
       const kind = input.kind as string;
-      if (kind !== "garbage" && kind !== "lost_key")
-        return JSON.stringify({ error: "kind must be 'garbage' or 'lost_key'" });
+      if (kind !== "garbage" && kind !== "lost_key" && kind !== "alteration")
+        return JSON.stringify({ error: "kind must be 'garbage', 'lost_key' or 'alteration'" });
       const result = await recordViolation(supabase, {
         unitId: input.unit_id as string,
         kind,
         quantity: kind === "lost_key" && input.quantity !== undefined ? Number(input.quantity) : 1,
+        amount: input.amount !== undefined ? Number(input.amount) : undefined,
         occurredOn: (input.occurred_on as string) || undefined,
         notes: (input.notes as string) || null,
         userId,
@@ -3924,7 +3930,12 @@ export async function executeTool(
         total_omr: total.toFixed(3),
         violations: rows.map((r) => ({
           date: r.occurred_on,
-          kind: r.kind === "garbage" ? "Garbage outside the chute" : `Lost / extra gate key × ${r.quantity}`,
+          kind:
+            r.kind === "garbage"
+              ? "Garbage outside the chute"
+              : r.kind === "alteration"
+                ? "Unapproved hole / alteration"
+                : `Lost / extra gate key × ${r.quantity}`,
           tenant: r.tenants?.full_name ?? "N/A",
           unit: r.units?.unit_number ?? "N/A",
           property: r.units?.properties?.name ?? "N/A",
@@ -4931,8 +4942,8 @@ YOU CAN:
     - If the user wants the PAID invoice gone entirely ("cancel that invoice, it should never have existed"), use cancel_invoice with action='cancelled' instead — it also removes the payment(s) and follows the same needs_confirmation flow.
     - If the user just wants to change HOW it was paid (cash vs cheque), do NOT revert — use update_payment_method.
 
-23. Building rules violations — the tenant signed an agreement: garbage must go INSIDE the garbage chute (10 OMR per violation), and lost / extra gate keys cost 7 OMR per key. Every tenant gets 2 gate keys.
-    - Recognise it in any wording or language: "unit 12 left garbage outside", "trash in the corridor from flat 5", "bags next to the chute", "fine unit 7 for the rubbish", "زبالة برا", "رمى القمامة خارج المجرى", "كيس زبالة عند الدرج" → kind garbage. "lost his key", "needs another gate key", "2 extra keys for unit 3", "didn't return the keys", "ضاع المفتاح", "يبي مفتاح زيادة" → kind lost_key (quantity = number of keys).
+23. Building rules violations — the tenant signed an agreement: garbage must go INSIDE the garbage chute (10 OMR per violation), lost / extra gate keys cost 7 OMR per key (every tenant gets 2), and no holes or alterations to the apartment without building management's approval (charged at the repair cost).
+    - Recognise it in any wording or language: "unit 12 left garbage outside", "trash in the corridor from flat 5", "bags next to the chute", "fine unit 7 for the rubbish", "زبالة برا", "رمى القمامة خارج المجرى", "كيس زبالة عند الدرج" → kind garbage. "lost his key", "needs another gate key", "2 extra keys for unit 3", "didn't return the keys", "ضاع المفتاح", "يبي مفتاح زيادة" → kind lost_key (quantity = number of keys). "drilled holes in the wall", "put up shelves / TV mount without asking", "removed a wall / changed the kitchen", "خرّم الجدار", "سوّى ثقوب", "غيّر في الشقة بدون إذن" → kind alteration with amount = the repair cost; if the user didn't give the cost, ask "What is the repair cost to charge?" before recording.
     - It is NOT an expense and NOT a rent payment: do not call add_expense or mark_invoice_paid for it. (If the USER paid a locksmith or cleaner, that IS an expense.)
     - Steps: get_unit_by_number for the unit → record_violation with that unit_id, the kind, quantity (keys) and the date if given. If the user didn't name the unit or tenant, ask which unit — never guess. Several incidents ("unit 4 did it twice this week") = one call per incident.
     - Reply with the tenant, unit, fee, invoice number and due date from the tool result. If agreement_signed is false, add that the tenant hasn't signed the building rules agreement yet.

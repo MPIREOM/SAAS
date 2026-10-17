@@ -25,7 +25,7 @@ export const AGREEMENT_REQUEST_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
     body: [
       "Dear {{1}},",
       "",
-      "Welcome to unit {{2}}, {{3}}. Please read and sign the building rules agreement (garbage chute and gate keys). It takes about a minute:",
+      "Welcome to unit {{2}}, {{3}}. Please read and sign the building rules agreement (garbage chute, gate keys and alterations to the apartment). It takes about a minute:",
       "{{4}}",
       "",
       "Thank you,",
@@ -39,7 +39,7 @@ export const AGREEMENT_REQUEST_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
     body: [
       "عزيزنا {{1}}،",
       "",
-      "أهلاً بكم في الوحدة {{2}}، {{3}}. يرجى قراءة اتفاقية قواعد المبنى (مجرى القمامة ومفاتيح البوابة) والتوقيع عليها، ولن يستغرق ذلك أكثر من دقيقة:",
+      "أهلاً بكم في الوحدة {{2}}، {{3}}. يرجى قراءة اتفاقية قواعد المبنى (مجرى القمامة ومفاتيح البوابة والتعديلات على الشقة) والتوقيع عليها، ولن يستغرق ذلك أكثر من دقيقة:",
       "{{4}}",
       "",
       "شكراً لكم،",

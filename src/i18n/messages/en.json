@@ -2027,7 +2027,8 @@
       "kind": "Violation",
       "kinds": {
         "garbage": "Garbage left outside the chute ({fee} OMR)",
-        "lost_key": "Lost / extra gate key ({fee} OMR per key)"
+        "lost_key": "Lost / extra gate key ({fee} OMR per key)",
+        "alteration": "Unapproved hole / alteration (repair cost)"
       },
       "quantity": "Number of keys",
       "date": "Date",
@@ -2040,9 +2041,12 @@
       "failed": "Could not record the violation",
       "list": {
         "garbage": "Garbage left outside the chute",
-        "lost_key": "{count, plural, one {Lost / extra gate key} other {Lost / extra gate keys × #}}"
+        "lost_key": "{count, plural, one {Lost / extra gate key} other {Lost / extra gate keys × #}}",
+        "alteration": "Unapproved hole / alteration"
       },
-      "previousTenant": "previous tenant"
+      "previousTenant": "previous tenant",
+      "repairCost": "Repair cost (OMR)",
+      "repairCostRequired": "Enter the repair cost"
     },
     "bulk": {
       "button": "Send rules agreement",

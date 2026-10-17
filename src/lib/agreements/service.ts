@@ -208,11 +208,11 @@ const EMAIL_COPY: Record<AgreementMessageKind, Record<"en" | "ar", { subject: st
   request: {
     en: {
       subject: "Please sign your building rules agreement",
-      body: "Welcome to unit {unit}, {property}. Please read and sign the building rules agreement (garbage chute and gate keys). It takes about a minute.",
+      body: "Welcome to unit {unit}, {property}. Please read and sign the building rules agreement (garbage chute, gate keys and alterations to the apartment). It takes about a minute.",
     },
     ar: {
       subject: "يرجى توقيع اتفاقية قواعد المبنى",
-      body: "أهلاً بكم في الوحدة {unit}، {property}. يرجى قراءة اتفاقية قواعد المبنى (مجرى القمامة ومفاتيح البوابة) والتوقيع عليها، ولن يستغرق ذلك أكثر من دقيقة.",
+      body: "أهلاً بكم في الوحدة {unit}، {property}. يرجى قراءة اتفاقية قواعد المبنى (مجرى القمامة ومفاتيح البوابة والتعديلات على الشقة) والتوقيع عليها، ولن يستغرق ذلك أكثر من دقيقة.",
     },
   },
   reminder: {
@@ -477,7 +477,8 @@ export async function downloadSignedPdf(db: SupabaseClient, token: string): Prom
 
 // ── Violations ────────────────────────────────────────────────────────────
 
-export type ViolationKind = "garbage" | "lost_key";
+/** alteration = holes / changes made without approval, billed at the repair cost. */
+export type ViolationKind = "garbage" | "lost_key" | "alteration";
 
 export interface RecordViolationInput {
   /** Either the unit (its active lease is used) or the lease. */
@@ -485,6 +486,8 @@ export interface RecordViolationInput {
   leaseId?: string;
   kind: ViolationKind;
   quantity?: number;
+  /** Repair cost in OMR; required for (and only used by) alteration. */
+  amount?: number;
   occurredOn?: string;
   notes?: string | null;
   userId: string | null;
@@ -522,6 +525,13 @@ export function nextDueDate(paymentDueDay: number, today = muscatToday()): strin
 const VIOLATION_DESCRIPTIONS: Record<ViolationKind, (qty: number, date: string) => string> = {
   garbage: (_qty, date) => `Garbage left outside the chute (${date})`,
   lost_key: (qty) => `Lost / extra gate key × ${qty}`,
+  alteration: (_qty, date) => `Unapproved hole / alteration – repair cost (${date})`,
+};
+
+const ITEM_KINDS: Record<ViolationKind, string> = {
+  garbage: "garbage_violation",
+  lost_key: "lost_key",
+  alteration: "alteration",
 };
 
 /**
@@ -529,10 +539,13 @@ const VIOLATION_DESCRIPTIONS: Record<ViolationKind, (qty: number, date: string) 
  * 'violation'), due with the tenant's next rent.
  */
 export async function recordViolation(db: SupabaseClient, input: RecordViolationInput): Promise<RecordViolationResult> {
-  const quantity = Math.floor(input.quantity ?? 1);
+  const quantity = input.kind === "lost_key" ? Math.floor(input.quantity ?? 1) : 1;
   if (!(quantity >= 1 && quantity <= 50)) return { ok: false, error: "quantity must be between 1 and 50" };
   const occurredOn = input.occurredOn || muscatToday();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) return { ok: false, error: "occurred_on must be YYYY-MM-DD" };
+  if (input.kind === "alteration" && !(Number(input.amount) > 0 && Number(input.amount) <= 10000)) {
+    return { ok: false, error: "amount (the repair cost in OMR) is required for an alteration" };
+  }
 
   let leaseQuery = db
     .from("leases")
@@ -561,11 +574,14 @@ export async function recordViolation(db: SupabaseClient, input: RecordViolation
     .neq("status", "cancelled")
     .maybeSingle();
 
-  // Fees as written in the tenant's agreement, else the current defaults.
+  // Fees as written in the tenant's agreement, else the current defaults;
+  // alterations are charged at the repair cost.
   const unitAmount =
-    input.kind === "garbage"
-      ? Number(agreement?.garbage_fee ?? GARBAGE_VIOLATION_FEE)
-      : Number(agreement?.key_fee ?? LOST_KEY_FEE);
+    input.kind === "alteration"
+      ? Number(Number(input.amount).toFixed(3))
+      : input.kind === "garbage"
+        ? Number(agreement?.garbage_fee ?? GARBAGE_VIOLATION_FEE)
+        : Number(agreement?.key_fee ?? LOST_KEY_FEE);
   const amount = Number((unitAmount * quantity).toFixed(3));
   const dueDate = nextDueDate(lease.payment_due_day);
 
@@ -598,7 +614,7 @@ export async function recordViolation(db: SupabaseClient, input: RecordViolation
 
   const { error: itemError } = await db.from("invoice_items").insert({
     invoice_id: invoice.id,
-    kind: input.kind === "garbage" ? "garbage_violation" : "lost_key",
+    kind: ITEM_KINDS[input.kind],
     description,
     amount,
     sort_order: 0,

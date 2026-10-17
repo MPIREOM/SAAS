@@ -3,12 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { agreementCopy, type AgreementCopy, type AgreementTermsInput } from "./terms";
 
-// One A4 page: Mpire letterhead, then the agreement in English (left) and
-// Arabic (right) side by side, then the tenant's signature.
+// One A4 page on the Mpire letterhead, with the agreement in English (left)
+// and Arabic (right) side by side, then the tenant's signature.
 //
-// Letterhead: drop the letterhead artwork into public/letterhead/ as
-// header.png (full-width banner) and optionally footer.png; they are used
-// when present. Without them a text letterhead is printed instead.
+// Letterhead: public/letterhead/page.jpg is the full A4 letterhead (logo and
+// company details at the top, contact strip at the bottom), drawn behind
+// the page. The content is padded to sit between the two. Without the file
+// a text letterhead is printed instead.
 
 const FONT_FAMILY = "ThmanyahSans";
 const FONT_FALLBACK = "Helvetica";
@@ -31,7 +32,8 @@ function fontDataUrl(filename: string): string | null {
 
 function imageDataUrl(filename: string): string | null {
   const buf = readPublicFile("letterhead", filename);
-  return buf ? `data:image/png;base64,${buf.toString("base64")}` : null;
+  const mime = filename.endsWith(".png") ? "image/png" : "image/jpeg";
+  return buf ? `data:${mime};base64,${buf.toString("base64")}` : null;
 }
 
 const regularSrc = fontDataUrl("ThmanyahSans-Regular.otf");
@@ -52,8 +54,7 @@ if (FONT_LOADED) {
 Font.registerHyphenationCallback((word) => [word]);
 const ACTIVE_FONT = FONT_LOADED ? FONT_FAMILY : FONT_FALLBACK;
 
-const HEADER_IMAGE = imageDataUrl("header.png");
-const FOOTER_IMAGE = imageDataUrl("footer.png");
+const LETTERHEAD = imageDataUrl("page.jpg");
 
 const colors = {
   ink: "#1A1A1F",
@@ -64,8 +65,18 @@ const colors = {
 };
 
 const styles = StyleSheet.create({
-  page: { fontFamily: ACTIVE_FONT, fontSize: 8.6, color: colors.ink, paddingBottom: 54 },
-  headerImage: { width: "100%" },
+  // With the letterhead, the content sits between its header band (to
+  // ~101pt) and contact strip (from ~772pt).
+  page: {
+    fontFamily: ACTIVE_FONT,
+    fontSize: 8,
+    color: colors.ink,
+    paddingTop: LETTERHEAD ? 100 : 0,
+    paddingBottom: LETTERHEAD ? 76 : 54,
+  },
+  // Absolute boxes are sized against the padded content area, so give the
+  // A4 size in points explicitly.
+  letterhead: { position: "absolute", top: 0, left: 0, width: 595.28, height: 841.89 },
   textHeader: {
     marginHorizontal: 36,
     marginTop: 28,
@@ -79,54 +90,54 @@ const styles = StyleSheet.create({
   brand: { fontSize: 20, fontWeight: 700, color: colors.gold, letterSpacing: 1 },
   brandSub: { fontSize: 8.5, color: colors.muted, marginTop: 2 },
   brandAr: { fontSize: 11, fontWeight: 700, color: colors.ink, textAlign: "right" },
-  body: { marginHorizontal: 36, marginTop: 14 },
-  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  title: { fontSize: 12.5, fontWeight: 700 },
-  titleAr: { fontSize: 12.5, fontWeight: 700, textAlign: "right" },
+  body: { marginHorizontal: 36, marginTop: 12 },
+  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 7 },
+  title: { fontSize: 11.5, fontWeight: 700 },
+  titleAr: { fontSize: 11.5, fontWeight: 700, textAlign: "right" },
   facts: {
     backgroundColor: colors.panel,
     borderRadius: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginBottom: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    marginBottom: 6,
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
-  factRow: { flexDirection: "row", alignItems: "center", paddingVertical: 2 },
-  factLabelEn: { width: "26%", color: colors.muted },
-  factValue: { width: "48%", fontWeight: 700, textAlign: "center" },
-  factLabelAr: { width: "26%", color: colors.muted, textAlign: "right" },
+  fact: { width: "33.33%", paddingVertical: 2, paddingHorizontal: 2 },
+  factLabels: { flexDirection: "row", justifyContent: "space-between", color: colors.muted, fontSize: 6.8 },
+  factValue: { fontWeight: 700, fontSize: 8.4, textAlign: "center", marginTop: 1 },
   columns: { flexDirection: "row", gap: 16 },
   column: { flex: 1 },
-  intro: { marginBottom: 6, lineHeight: 0.9 },
-  introAr: { marginBottom: 6, lineHeight: 0.9, textAlign: "right" },
-  heading: { fontWeight: 700, color: colors.gold, marginTop: 6, marginBottom: 3, fontSize: 9.2 },
-  headingAr: { fontWeight: 700, color: colors.gold, marginTop: 6, marginBottom: 3, fontSize: 9.2, textAlign: "right" },
-  clause: { flexDirection: "row", marginBottom: 3 },
+  intro: { marginBottom: 3, lineHeight: 0.9 },
+  introAr: { marginBottom: 3, lineHeight: 0.9, textAlign: "right" },
+  heading: { fontWeight: 700, color: colors.gold, marginTop: 4, marginBottom: 2, fontSize: 8.6 },
+  headingAr: { fontWeight: 700, color: colors.gold, marginTop: 4, marginBottom: 2, fontSize: 8.6, textAlign: "right" },
+  clause: { flexDirection: "row", marginBottom: 2 },
   clauseNum: { width: 20, color: colors.muted },
   clauseText: { flex: 1, lineHeight: 0.9 },
-  clauseAr: { flexDirection: "row-reverse", marginBottom: 3 },
+  clauseAr: { flexDirection: "row-reverse", marginBottom: 2 },
   clauseNumAr: { width: 20, color: colors.muted, textAlign: "right" },
   clauseTextAr: { flex: 1, lineHeight: 0.95, textAlign: "right" },
   signatureBlock: {
-    marginTop: 14,
+    marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: colors.rule,
-    paddingTop: 10,
+    paddingTop: 6,
     flexDirection: "row",
     justifyContent: "space-between",
   },
   sigCol: { width: "48%" },
-  sigLabelRow: { flexDirection: "row", justifyContent: "space-between", color: colors.muted, marginBottom: 4 },
+  sigLabelRow: { flexDirection: "row", justifyContent: "space-between", color: colors.muted, marginBottom: 2 },
   sigBox: {
-    height: 62,
+    height: 46,
     borderBottomWidth: 1,
     borderBottomColor: colors.ink,
     justifyContent: "flex-end",
     alignItems: "center",
   },
-  sigImage: { height: 56, objectFit: "contain" },
+  sigImage: { height: 42, objectFit: "contain" },
   sigValue: { fontSize: 10, fontWeight: 700, textAlign: "center", paddingBottom: 4 },
   audit: { marginTop: 8, fontSize: 7, color: colors.muted, alignItems: "center", gap: 2 },
-  footerImage: { position: "absolute", bottom: 0, left: 0, right: 0, width: "100%" },
   textFooter: {
     position: "absolute",
     bottom: 20,
@@ -209,9 +220,9 @@ export function AgreementDocument({ data }: { data: AgreementPdfData }) {
   return (
     <Document title={`${en.title} — ${data.reference}`} author="MPIRE Property Management">
       <Page size="A4" style={styles.page}>
-        {HEADER_IMAGE ? (
+        {LETTERHEAD ? (
           // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt
-          <Image src={HEADER_IMAGE} style={styles.headerImage} fixed />
+          <Image src={LETTERHEAD} style={styles.letterhead} fixed />
         ) : (
           <View style={styles.textHeader} fixed>
             <View>
@@ -230,10 +241,12 @@ export function AgreementDocument({ data }: { data: AgreementPdfData }) {
 
           <View style={styles.facts}>
             {facts.map(([labelEn, value, labelAr]) => (
-              <View key={labelEn} style={styles.factRow}>
-                <Text style={styles.factLabelEn}>{labelEn}</Text>
+              <View key={labelEn} style={styles.fact}>
+                <View style={styles.factLabels}>
+                  <Text>{labelEn}</Text>
+                  <Text>{labelAr}</Text>
+                </View>
                 <Text style={styles.factValue}>{value}</Text>
-                <Text style={styles.factLabelAr}>{labelAr}</Text>
               </View>
             ))}
           </View>
@@ -282,10 +295,7 @@ export function AgreementDocument({ data }: { data: AgreementPdfData }) {
           ) : null}
         </View>
 
-        {FOOTER_IMAGE ? (
-          // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt
-          <Image src={FOOTER_IMAGE} style={styles.footerImage} fixed />
-        ) : (
+        {!LETTERHEAD && (
           <Text style={styles.textFooter} fixed>
             MPIRE Property Management · Sultanate of Oman
           </Text>

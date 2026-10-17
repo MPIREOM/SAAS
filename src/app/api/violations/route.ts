@@ -4,13 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { recordViolation } from "@/lib/agreements/service";
 
 // Staff: record a building-rules violation (garbage outside the chute, lost
-// / extra gate keys) for a unit's current tenant and bill it. Goes through
+// / extra gate keys, unapproved holes / alterations) for a unit's current tenant and bill it. Goes through
 // the user's RLS client.
 
 const schema = z.object({
   unit_id: z.string().uuid(),
-  kind: z.enum(["garbage", "lost_key"]),
+  kind: z.enum(["garbage", "lost_key", "alteration"]),
   quantity: z.number().int().min(1).max(50).optional(),
+  amount: z.number().positive().max(10000).optional(),
   occurred_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   notes: z.string().max(500).optional(),
 });
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
     unitId: parsed.data.unit_id,
     kind: parsed.data.kind,
     quantity: parsed.data.quantity,
+    amount: parsed.data.amount,
     occurredOn: parsed.data.occurred_on,
     notes: parsed.data.notes,
     userId: user.id,

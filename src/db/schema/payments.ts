@@ -46,6 +46,7 @@ export const invoiceItemKindEnum = pgEnum("invoice_item_kind", [
   "custom",
   "garbage_violation",
   "lost_key",
+  "alteration",
 ]);
 
 // ── Invoices ──────────────────────────────────────────────────────────────

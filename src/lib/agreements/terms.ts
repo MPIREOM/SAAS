@@ -1,4 +1,5 @@
-// The building-rules agreement every tenant signs, in English and Arabic.
+// The building-rules agreement every tenant signs (garbage chute, gate keys,
+// alterations to the apartment), in English and Arabic.
 // Client-safe: the public signing page renders these clauses, and the PDF
 // (pdf.tsx) prints the same ones side by side, so what the tenant reads is
 // exactly what they sign.
@@ -14,7 +15,8 @@ export const DEFAULT_GATE_KEYS = 2;
 /** OMR amounts are written with 3 decimals (baisa). */
 export function formatOmr(amount: number, lang: AgreementLang): string {
   const n = Number(amount).toFixed(3);
-  return lang === "ar" ? `${n} ر.ع` : `OMR ${n}`;
+  // Plain spaces: react-pdf mis-shapes Arabic around non-breaking spaces.
+  return lang === "ar" ? `${n} ريال عماني` : `OMR ${n}`;
 }
 
 export interface AgreementTermsInput {
@@ -81,7 +83,7 @@ export function agreementCopy(lang: AgreementLang, t: AgreementTermsInput): Agre
             },
             {
               number: "2.2",
-              text: `تبلغ تكلفة كل مفتاح بديل أو إضافي، سواء كان مفقوداً أو تالفاً أو مطلوباً، ${formatOmr(t.keyFee, "ar")}.`,
+              text: `تبلغ تكلفة كل مفتاح بديل أو إضافي ${formatOmr(t.keyFee, "ar")}، سواء كان المفتاح مفقوداً أو تالفاً أو مطلوباً.`,
             },
             {
               number: "2.3",
@@ -90,14 +92,27 @@ export function agreementCopy(lang: AgreementLang, t: AgreementTermsInput): Agre
           ],
         },
         {
-          heading: "ثالثاً: أحكام عامة",
+          heading: "ثالثاً: التعديلات على الشقة",
           clauses: [
             {
               number: "3.1",
-              text: "تُضاف الرسوم المترتبة بموجب هذه الاتفاقية إلى حساب المستأجر وتُستحق مع فاتورة الإيجار التالية.",
+              text: "لا يجوز عمل أي ثقوب أو إجراء أي تعديلات على جدران الشقة أو أرضياتها أو أسقفها أو تجهيزاتها أو هيكلها دون الحصول على موافقة مسبقة من إدارة المبنى.",
             },
             {
               number: "3.2",
+              text: "تقوم إدارة المبنى بإصلاح أي ثقب أو تعديل غير معتمد وإعادته إلى حالته الأصلية على نفقة المستأجر، وتُضاف التكلفة إلى حساب المستأجر.",
+            },
+          ],
+        },
+        {
+          heading: "رابعاً: أحكام عامة",
+          clauses: [
+            {
+              number: "4.1",
+              text: "تُضاف الرسوم المترتبة بموجب هذه الاتفاقية إلى حساب المستأجر وتُستحق مع فاتورة الإيجار التالية.",
+            },
+            {
+              number: "4.2",
               text: "هذه الاتفاقية مكمّلة لعقد الإيجار ولا تحل محل أي من بنوده.",
             },
           ],
@@ -151,14 +166,27 @@ export function agreementCopy(lang: AgreementLang, t: AgreementTermsInput): Agre
         ],
       },
       {
-        heading: "3. General",
+        heading: "3. Alterations to the apartment",
         clauses: [
           {
             number: "3.1",
-            text: "Fees under this agreement are added to the tenant's account and are payable with the next rent invoice.",
+            text: "No holes may be drilled and no alterations made to the walls, floors, ceilings, fixtures or structure of the apartment without prior approval from building management.",
           },
           {
             number: "3.2",
+            text: "Any unapproved hole or alteration will be repaired and restored by building management at the tenant's cost, charged to the tenant's account.",
+          },
+        ],
+      },
+      {
+        heading: "4. General",
+        clauses: [
+          {
+            number: "4.1",
+            text: "Fees under this agreement are added to the tenant's account and are payable with the next rent invoice.",
+          },
+          {
+            number: "4.2",
             text: "This agreement is in addition to the lease and does not replace any of its terms.",
           },
         ],

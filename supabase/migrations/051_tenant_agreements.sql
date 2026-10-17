@@ -1,7 +1,8 @@
 -- 051_tenant_agreements.sql
 --
--- Building-rules agreement every tenant signs (garbage chute + gate keys),
--- and the violation fees it allows staff to charge.
+-- Building-rules agreement every tenant signs (garbage chute, gate keys,
+-- no holes / alterations without approval), and the violation fees it
+-- allows staff to charge.
 --
 -- When a lease is created the app creates a tenant_agreements row for the
 -- tenant + unit and WhatsApps / emails the tenant a private signing link
@@ -12,7 +13,8 @@
 -- the daily cron (api/cron/agreement-reminders).
 --
 -- tenant_violations records each breach (garbage left outside the chute,
--- lost / extra gate keys). Each one is billed on its own invoice
+-- lost / extra gate keys, unapproved holes or alterations - billed at the
+-- repair cost staff enter). Each one is billed on its own invoice
 -- (invoice_type 'violation') with a single invoice_items line.
 --
 -- The public signing page goes through the service role, so there are no
@@ -26,6 +28,7 @@ ALTER TYPE document_type ADD VALUE IF NOT EXISTS 'tenant_agreement';
 ALTER TYPE invoice_type ADD VALUE IF NOT EXISTS 'violation';
 ALTER TYPE invoice_item_kind ADD VALUE IF NOT EXISTS 'garbage_violation';
 ALTER TYPE invoice_item_kind ADD VALUE IF NOT EXISTS 'lost_key';
+ALTER TYPE invoice_item_kind ADD VALUE IF NOT EXISTS 'alteration';
 
 -- ── Gate keys handed over with the lease ──────────────────────────────────
 ALTER TABLE leases
@@ -95,7 +98,7 @@ CREATE TABLE IF NOT EXISTS tenant_violations (
   unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
   lease_id UUID REFERENCES leases(id) ON DELETE SET NULL,
   agreement_id UUID REFERENCES tenant_agreements(id) ON DELETE SET NULL,
-  kind TEXT NOT NULL CHECK (kind IN ('garbage', 'lost_key')),
+  kind TEXT NOT NULL CHECK (kind IN ('garbage', 'lost_key', 'alteration')),
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
   unit_amount NUMERIC(10, 3) NOT NULL CHECK (unit_amount >= 0),
   amount NUMERIC(10, 3) NOT NULL CHECK (amount >= 0),
