@@ -1318,6 +1318,7 @@
     "submit": "Submit Request",
     "submitting": "Submitting...",
     "submitFailed": "Failed to submit request",
+    "uploadFailed": "Failed to upload media. Please check your connection and try again.",
     "submitGenericError": "Something went wrong. Please try again.",
     "successTitle": "Request Submitted!",
     "successMessage": "Your maintenance request has been submitted successfully. The property management team will review it and get back to you shortly.",

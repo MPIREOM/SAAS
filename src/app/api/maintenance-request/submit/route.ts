@@ -3,6 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { defaultTechnician } from "@/lib/maintenance/whatsapp";
 import {
+  ALLOWED_MIME,
+  MAINTENANCE_MEDIA_BUCKET,
+  MAX_FILES,
+  MAX_FILE_SIZE,
+} from "@/lib/maintenance/public-upload";
+import {
   adminWhatsAppTemplate,
   loadRequest,
   notifyTechnician,
@@ -11,22 +17,20 @@ import {
 
 export const maxDuration = 60;
 
-// This endpoint is UNAUTHENTICATED (public tenant form), so the upload path is
-// an anonymous write primitive. Bound it: cap the number/size of files and
-// allow only image/video MIME types so it can't be abused to host arbitrary
-// content under the app's storage domain.
-const MAX_FILES = 5;
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB per file
-const ALLOWED_MIME = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-  "video/mp4",
-  "video/quicktime",
-  "video/webm",
-  "video/3gpp",
-]);
+// This endpoint is UNAUTHENTICATED (public tenant form). Media is NOT sent
+// here: the browser uploads it directly to storage via signed URLs from
+// /api/maintenance-request/upload-url (Vercel caps function request bodies at
+// 4.5MB, so a phone video would be rejected before this route ever ran).
+// This route only receives the resulting storage paths and verifies each one
+// belongs to the token's property and actually exists.
+const attachmentsSchema = z
+  .array(
+    z.object({
+      path: z.string().min(1),
+      name: z.string().min(1).max(255),
+    })
+  )
+  .max(MAX_FILES);
 
 // Escape user-supplied values before embedding them in notification email
 // HTML. The maintenance description/unit/filename are attacker-controlled on
@@ -70,6 +74,17 @@ export async function POST(request: NextRequest) {
       { error: parsed.error.issues[0]?.message || "Invalid input" },
       { status: 400 }
     );
+  }
+
+  let rawAttachments: unknown = [];
+  try {
+    rawAttachments = JSON.parse(String(formData.get("attachments") ?? "[]"));
+  } catch {
+    return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
+  }
+  const parsedAttachments = attachmentsSchema.safeParse(rawAttachments);
+  if (!parsedAttachments.success) {
+    return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
   }
 
   const { token, unit_number, category, description, urgency } = parsed.data;
@@ -154,57 +169,48 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Upload files. Paths are namespaced by property now (since tenant_id
-  // may be null for vacant-unit submissions).
-  const files = (formData.getAll("files") as File[])
-    .filter((f) => f && f.size > 0)
-    .slice(0, MAX_FILES);
+  // Verify the browser-uploaded files. Paths must sit directly under this
+  // token's property folder, and size/MIME come from storage metadata — not
+  // the client — so the same limits as the bucket/upload-url route apply.
   const attachments: { file_url: string; file_name: string; file_type: string; file_size: number }[] = [];
   const uploadErrors: string[] = [];
+  const pathPattern = new RegExp(`^${tokenData.property_id}/[A-Za-z0-9.-]+$`);
 
-  for (const file of files) {
-    if (!file || file.size === 0) continue;
-
-    // Reject oversized files and disallowed types rather than uploading them.
-    if (file.size > MAX_FILE_SIZE) {
-      uploadErrors.push(`${file.name}: file exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`);
+  for (const { path, name } of parsedAttachments.data) {
+    if (!pathPattern.test(path)) {
+      uploadErrors.push(`${name}: invalid upload path`);
       continue;
     }
-    if (!ALLOWED_MIME.has(file.type)) {
-      uploadErrors.push(`${file.name}: unsupported file type`);
-      continue;
-    }
-
-    const ext = file.name.split(".").pop() || "bin";
-    const isVideo = file.type.startsWith("video/");
-    const filePath = `${tokenData.property_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("maintenance-media")
-      .upload(filePath, file, {
-        contentType: file.type,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      // Most common cause: bucket "maintenance-media" doesn't exist or is
-      // private with no anon write. Log clearly so it shows up in Vercel.
+    const objectName = path.slice(path.indexOf("/") + 1);
+    const { data: listed, error: listError } = await supabase.storage
+      .from(MAINTENANCE_MEDIA_BUCKET)
+      .list(tokenData.property_id, { search: objectName, limit: 1 });
+    const object = listed?.find((o) => o.name === objectName);
+    if (listError || !object) {
       console.error(
-        `[maintenance-submit] Upload failed for ${file.name} (${file.type}, ${file.size}b) → ${uploadError.message}`
+        `[maintenance-submit] Uploaded file missing for ${name} (${path}) → ${listError?.message ?? "not found"}`
       );
-      uploadErrors.push(`${file.name}: ${uploadError.message}`);
+      uploadErrors.push(`${name}: upload not found`);
+      continue;
+    }
+
+    const mimeType = String(object.metadata?.mimetype ?? "");
+    const size = Number(object.metadata?.size ?? 0);
+    if (!ALLOWED_MIME.has(mimeType) || size > MAX_FILE_SIZE) {
+      await supabase.storage.from(MAINTENANCE_MEDIA_BUCKET).remove([path]);
+      uploadErrors.push(`${name}: unsupported file`);
       continue;
     }
 
     const { data: urlData } = supabase.storage
-      .from("maintenance-media")
-      .getPublicUrl(filePath);
+      .from(MAINTENANCE_MEDIA_BUCKET)
+      .getPublicUrl(path);
 
     attachments.push({
       file_url: urlData.publicUrl,
-      file_name: file.name,
-      file_type: isVideo ? "video" : "photo",
-      file_size: file.size,
+      file_name: name,
+      file_type: mimeType.startsWith("video/") ? "video" : "photo",
+      file_size: size,
     });
   }
 
