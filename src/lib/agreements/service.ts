@@ -4,7 +4,13 @@ import type { TenantRecipient } from "@/lib/maintenance/whatsapp";
 import { buildReminderEmailHtml, sendEmail } from "@/lib/email/client";
 import { renderAgreementPdf, type AgreementPdfData } from "./pdf";
 import { DEFAULT_GATE_KEYS, GARBAGE_VIOLATION_FEE, LOST_KEY_FEE } from "./terms";
-import { agreementLink, sendAgreementWhatsApp, tenantLang, type AgreementMessageKind } from "./whatsapp";
+import {
+  agreementLink,
+  sendAgreementWhatsApp,
+  sendViolationNotice,
+  tenantLang,
+  type AgreementMessageKind,
+} from "./whatsapp";
 
 // Server-side logic for the building-rules agreement and violation fees.
 // Callers pass the Supabase client: the service role for the public signing
@@ -521,6 +527,8 @@ export type RecordViolationResult =
       unitNumber: string;
       propertyName: string;
       agreementSigned: boolean;
+      /** Whether the tenant was told by WhatsApp or email. */
+      tenantNotified: boolean;
     }
   | { ok: false; error: string };
 
@@ -564,7 +572,7 @@ export async function recordViolation(db: SupabaseClient, input: RecordViolation
 
   let leaseQuery = db
     .from("leases")
-    .select("id, tenant_id, unit_id, payment_due_day, tenants(full_name), units(unit_number, property_id, properties(name))")
+    .select("id, tenant_id, unit_id, payment_due_day, tenants(id, full_name, phone, email, language_preference, notifications_enabled), units(unit_number, property_id, properties(name))")
     .eq("is_active", true);
   if (input.leaseId) leaseQuery = leaseQuery.eq("id", input.leaseId);
   else if (input.unitId) leaseQuery = leaseQuery.eq("unit_id", input.unitId);
@@ -576,7 +584,7 @@ export async function recordViolation(db: SupabaseClient, input: RecordViolation
     tenant_id: string;
     unit_id: string;
     payment_due_day: number;
-    tenants: { full_name: string } | null;
+    tenants: (TenantRecipient & { id: string; email: string | null }) | null;
     units: { unit_number: string; property_id: string; properties: { name: string } | null } | null;
   };
   if (!lease.units) return { ok: false, error: "Unit not found" };
@@ -671,6 +679,18 @@ export async function recordViolation(db: SupabaseClient, input: RecordViolation
     metadata: { kind: input.kind, quantity, amount, invoice_id: invoice.id, source: input.source },
   });
 
+  const tenantNotified = lease.tenants
+    ? await notifyViolation(lease.tenants, {
+        kind: input.kind,
+        quantity,
+        occurredOn,
+        amount,
+        dueDate,
+        unitNumber: lease.units.unit_number,
+        propertyName: lease.units.properties?.name ?? "",
+      })
+    : false;
+
   return {
     ok: true,
     violationId: violation.id,
@@ -682,5 +702,96 @@ export async function recordViolation(db: SupabaseClient, input: RecordViolation
     unitNumber: lease.units.unit_number,
     propertyName: lease.units.properties?.name ?? "",
     agreementSigned: agreement?.status === "signed",
+    tenantNotified,
   };
+}
+
+function formatNoticeDate(iso: string, lang: "en" | "ar"): string {
+  return new Date(`${iso}T00:00:00+04:00`).toLocaleDateString(lang === "ar" ? "ar-OM-u-nu-latn" : "en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Muscat",
+  });
+}
+
+const NOTICE_DESCRIPTIONS: Record<ViolationKind, Record<"en" | "ar", (qty: number, date: string) => string>> = {
+  garbage: {
+    en: (_q, date) => `Garbage left outside the garbage chute on ${date}`,
+    ar: (_q, date) => `ترك القمامة خارج مجرى القمامة بتاريخ ${date}`,
+  },
+  lost_key: {
+    en: (q) => (q === 1 ? "1 lost / extra gate key" : `${q} lost / extra gate keys`),
+    ar: (q) => `مفاتيح بوابة مفقودة / إضافية (العدد: ${q})`,
+  },
+  alteration: {
+    en: (_q, date) => `Hole / alteration in the apartment without approval (${date}), charged at the repair cost`,
+    ar: (_q, date) => `ثقب / تعديل في الشقة دون موافقة (${date})، بتكلفة الإصلاح`,
+  },
+};
+
+const NOTICE_EMAIL: Record<"en" | "ar", { subject: string; greeting: (name: string) => string; body: string; fee: string }> = {
+  en: {
+    subject: "Building rules violation recorded",
+    greeting: (name) => `Dear ${name},`,
+    body: "A building rules violation has been recorded for unit {unit}, {property}:",
+    fee: "A fee of {amount} OMR has been added to your account, due on {due} with your next rent. If you have any questions, please reply to this email.",
+  },
+  ar: {
+    subject: "تسجيل مخالفة لقواعد المبنى",
+    greeting: (name) => `عزيزنا ${name}،`,
+    body: "تم تسجيل مخالفة لقواعد المبنى للوحدة {unit}، {property}:",
+    fee: "تمت إضافة رسوم قدرها {amount} ريال عماني إلى حسابكم، وتُستحق بتاريخ {due} مع الإيجار القادم. لأي استفسار، يرجى الرد على هذا البريد.",
+  },
+};
+
+/** WhatsApp + email the tenant about a violation fee. Never throws. */
+async function notifyViolation(
+  tenant: TenantRecipient & { email: string | null },
+  v: {
+    kind: ViolationKind;
+    quantity: number;
+    occurredOn: string;
+    amount: number;
+    dueDate: string;
+    unitNumber: string;
+    propertyName: string;
+  }
+): Promise<boolean> {
+  if (tenant.notifications_enabled === false) return false;
+  const lang = tenantLang(tenant);
+  const description = NOTICE_DESCRIPTIONS[v.kind][lang](v.quantity, formatNoticeDate(v.occurredOn, lang));
+  const amount = v.amount.toFixed(3);
+  const due = formatNoticeDate(v.dueDate, lang);
+
+  const whatsapp = sendViolationNotice(tenant, {
+    unitNumber: v.unitNumber,
+    propertyName: v.propertyName,
+    description,
+    amount,
+    dueDate: due,
+  });
+  const to = tenant.email?.trim();
+  const copy = NOTICE_EMAIL[lang];
+  const email = to
+    ? sendEmail({
+        to,
+        subject: copy.subject,
+        html: buildReminderEmailHtml({
+          tenantName: tenant.full_name,
+          isRtl: lang === "ar",
+          bodyContent: [
+            escapeHtml(copy.greeting(tenant.full_name)),
+            escapeHtml(copy.body.replace("{unit}", v.unitNumber).replace("{property}", v.propertyName)),
+            `<strong>${escapeHtml(description)}</strong>`,
+            escapeHtml(copy.fee.replace("{amount}", amount).replace("{due}", due)),
+          ].join("<br><br>"),
+        }),
+      }).catch((err) => ({ success: false, error: err instanceof Error ? err.message : String(err) }))
+    : Promise.resolve(null);
+
+  const [w, e] = await Promise.all([whatsapp, email]);
+  if (!w.success) console.error("[violations] WhatsApp notice not sent", { error: w.error });
+  if (e && !e.success) console.error("[violations] email notice not sent", { error: e.error });
+  return w.success || !!e?.success;
 }

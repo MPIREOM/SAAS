@@ -2038,9 +2038,9 @@
       "notes": "Notes (optional)",
       "notesPlaceholder": "e.g. two bags next to the chute on floor 3",
       "total": "Fee",
-      "billingNote": "An invoice is created for the tenant, due with their next rent.",
+      "billingNote": "An invoice is created for the tenant, due with their next rent, and they are notified on WhatsApp and email.",
       "submit": "Record and bill",
-      "recorded": "Violation recorded and billed: {amount} OMR",
+      "recorded": "Violation recorded and billed: {amount} OMR. The tenant has been notified.",
       "failed": "Could not record the violation",
       "list": {
         "garbage": "Garbage left outside the chute",
@@ -2049,7 +2049,8 @@
       },
       "previousTenant": "previous tenant",
       "repairCost": "Repair cost (OMR)",
-      "repairCostRequired": "Enter the repair cost"
+      "repairCostRequired": "Enter the repair cost",
+      "recordedNotNotified": "Violation recorded and billed: {amount} OMR. The tenant could not be notified (no phone/email or notifications off)."
     },
     "bulk": {
       "button": "Send rules agreement",

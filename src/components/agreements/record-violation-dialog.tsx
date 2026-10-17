@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 // Staff: record a building-rules violation for the unit's current tenant.
-// The fee is billed on its own invoice, due with the next rent.
+// The fee is billed on its own invoice, due with the next rent, and the
+// tenant is told on WhatsApp / email.
 
 type Kind = "garbage" | "lost_key" | "alteration";
 
@@ -65,7 +66,10 @@ export function RecordViolationDialog({
       if (!res.ok) {
         toast({ title: body.error || t("failed"), variant: "destructive" });
       } else {
-        toast({ title: t("recorded", { amount: Number(body.amount).toFixed(3) }), variant: "success" });
+        toast({
+          title: t(body.tenantNotified ? "recorded" : "recordedNotNotified", { amount: Number(body.amount).toFixed(3) }),
+          variant: "success",
+        });
         setOpen(false);
         setKind("garbage");
         setQuantity(1);

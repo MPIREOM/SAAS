@@ -6,7 +6,8 @@ import {
 } from "@/lib/maintenance/whatsapp";
 
 // WhatsApp messages for the building-rules agreement: the signing link,
-// the reminder, and the signed-copy confirmation. Same template-then-text
+// the reminder, the signed-copy confirmation, and the notice sent when a
+// violation fee is charged. Same template-then-text
 // approach as maintenance and visits.
 //
 // NOT YET SUBMITTED TO META: these bodies are pending review, so they are
@@ -112,6 +113,64 @@ export const AGREEMENT_SIGNED_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
     example: ["أحمد البلوشي", "12", "بوشر مسجد الأمين", "https://example.com/ar/tenant-agreement/abc123"],
   },
 };
+
+// {{1}} tenant name, {{2}} unit, {{3}} property, {{4}} what happened,
+// {{5}} fee in OMR, {{6}} due date
+export const VIOLATION_NOTICE_TEMPLATES: Record<Lang, MaintenanceTemplate> = {
+  en: {
+    name: "tenant_violation_notice_en",
+    language: "en",
+    body: [
+      "Dear {{1}},",
+      "",
+      "A building rules violation has been recorded for unit {{2}}, {{3}}:",
+      "{{4}}",
+      "",
+      "A fee of {{5}} OMR has been added to your account, due on {{6}} with your next rent.",
+      "",
+      "If you have any questions, please reply to this message.",
+      "MPIRE Property Management",
+    ].join("\n"),
+    example: ["Ahmed Al Balushi", "12", "Bousher Ameen Mosque", "Garbage left outside the garbage chute on 17 Oct 2026", "10.000", "1 Nov 2026"],
+  },
+  ar: {
+    name: "tenant_violation_notice_ar",
+    language: "ar",
+    body: [
+      "عزيزنا {{1}}،",
+      "",
+      "تم تسجيل مخالفة لقواعد المبنى للوحدة {{2}}، {{3}}:",
+      "{{4}}",
+      "",
+      "تمت إضافة رسوم قدرها {{5}} ريال عماني إلى حسابكم، وتُستحق بتاريخ {{6}} مع الإيجار القادم.",
+      "",
+      "لأي استفسار، يرجى الرد على هذه الرسالة.",
+      "MPIRE لإدارة العقارات",
+    ].join("\n"),
+    example: ["أحمد البلوشي", "12", "بوشر مسجد الأمين", "ترك القمامة خارج مجرى القمامة بتاريخ 17 Oct 2026", "10.000", "1 Nov 2026"],
+  },
+};
+
+/** Tell the tenant a violation fee was charged. Never throws. */
+export async function sendViolationNotice(
+  tenant: TenantRecipient,
+  ctx: { unitNumber: string; propertyName: string; description: string; amount: string; dueDate: string }
+): Promise<SendResult> {
+  if (!tenant.phone) return { success: false, error: "tenant has no phone" };
+  if (tenant.notifications_enabled === false) return { success: false, error: "tenant notifications disabled" };
+  try {
+    return await sendMaintenanceMessage(tenant.phone, VIOLATION_NOTICE_TEMPLATES[tenantLang(tenant)], [
+      tenant.full_name,
+      ctx.unitNumber,
+      ctx.propertyName,
+      ctx.description,
+      ctx.amount,
+      ctx.dueDate,
+    ]);
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
 
 export type AgreementMessageKind = "request" | "reminder" | "signed";
 

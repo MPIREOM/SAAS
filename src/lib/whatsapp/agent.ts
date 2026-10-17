@@ -3013,12 +3013,12 @@ export async function executeTool(
       const unit = lease.units as unknown as Record<string, unknown> | null;
       const property = unit?.properties as unknown as Record<string, unknown> | null;
 
-      // Outstanding rent invoices for this lease.
+      // Outstanding rent and violation-fee invoices for this lease.
       const { data: outstandingInvoices } = await supabase
         .from("invoices")
         .select("id, amount, paid_amount, due_date, status, period_start, period_end")
         .eq("lease_id", leaseId)
-        .eq("invoice_type", "rent")
+        .neq("invoice_type", "move_out")
         .in("status", ["pending", "overdue", "partial"])
         .order("due_date", { ascending: true });
 
@@ -3231,7 +3231,7 @@ export async function executeTool(
         .update({ status: "vacant", updated_at: new Date().toISOString() })
         .eq("id", lease.unit_id);
 
-      // 5. Resolve outstanding rent invoices.
+      // 5. Resolve outstanding rent / violation invoices.
       let resolvedCount = 0;
       let resolvedAmount = 0;
       if (outstandingAction !== "leave_open") {
@@ -3239,7 +3239,7 @@ export async function executeTool(
           .from("invoices")
           .select("id, amount, paid_amount")
           .eq("lease_id", leaseId)
-          .eq("invoice_type", "rent")
+          .neq("invoice_type", "move_out")
           .in("status", ["pending", "overdue", "partial"]);
 
         const ids = (outstandingInvoices || []).map((i) => i.id as string);
@@ -3894,6 +3894,7 @@ export async function executeTool(
         invoice_id: result.invoiceId,
         due_date: result.dueDate,
         agreement_signed: result.agreementSigned,
+        tenant_notified: result.tenantNotified,
       });
     }
 
@@ -4946,7 +4947,7 @@ YOU CAN:
     - Recognise it in any wording or language: "unit 12 left garbage outside", "trash in the corridor from flat 5", "bags next to the chute", "fine unit 7 for the rubbish", "زبالة برا", "رمى القمامة خارج المجرى", "كيس زبالة عند الدرج" → kind garbage. "lost his key", "needs another gate key", "2 extra keys for unit 3", "didn't return the keys", "ضاع المفتاح", "يبي مفتاح زيادة" → kind lost_key (quantity = number of keys). "drilled holes in the wall", "put up shelves / TV mount without asking", "removed a wall / changed the kitchen", "خرّم الجدار", "سوّى ثقوب", "غيّر في الشقة بدون إذن" → kind alteration with amount = the repair cost; if the user didn't give the cost, ask "What is the repair cost to charge?" before recording.
     - It is NOT an expense and NOT a rent payment: do not call add_expense or mark_invoice_paid for it. (If the USER paid a locksmith or cleaner, that IS an expense.)
     - Steps: get_unit_by_number for the unit → record_violation with that unit_id, the kind, quantity (keys) and the date if given. If the user didn't name the unit or tenant, ask which unit — never guess. Several incidents ("unit 4 did it twice this week") = one call per incident.
-    - Reply with the tenant, unit, fee, invoice number and due date from the tool result. If agreement_signed is false, add that the tenant hasn't signed the building rules agreement yet.
+    - The tenant is messaged automatically (WhatsApp + email) when a violation is recorded. Reply with the tenant, unit, fee, invoice number and due date from the tool result, and say whether the tenant was notified (tenant_notified). If agreement_signed is false, add that the tenant hasn't signed the building rules agreement yet.
     - Use list_violations to answer "how many violations / fines" questions, get_agreement_status for "did they sign the agreement?" / "who hasn't signed?", and send_tenant_agreement to resend the signing link.
     - register_tenant sends the agreement automatically when it creates a lease; mention agreement_warning if it comes back.
 
