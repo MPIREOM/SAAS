@@ -32,6 +32,24 @@ function formatSentAt(value: string): string {
   });
 }
 
+type ReminderTenant = {
+  full_name?: string;
+  leases?: Array<{
+    is_active: boolean;
+    units?: { unit_number?: string; properties?: { name?: string } | null } | null;
+  }>;
+} | null;
+
+// reminder_logs has no lease/unit link, so resolve the location through the
+// tenant's leases — active lease first, falling back to the most recent one.
+function tenantLocation(tenant: ReminderTenant): string | null {
+  const leases = tenant?.leases ?? [];
+  const lease = leases.find((l) => l.is_active) ?? leases[0];
+  const unit = lease?.units;
+  if (!unit) return null;
+  return [unit.properties?.name, unit.unit_number].filter(Boolean).join(" · ") || null;
+}
+
 export default async function RemindersPage({
   params,
 }: {
@@ -58,7 +76,10 @@ export default async function RemindersPage({
     .from("reminder_logs")
     .select(`
       *,
-      tenants:tenant_id(full_name)
+      tenants:tenant_id(
+        full_name,
+        leases(is_active, units(unit_number, properties(name)))
+      )
     `)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -186,15 +207,21 @@ export default async function RemindersPage({
                 </TableHeader>
                 <TableBody>
                   {reminders.map((reminder: Record<string, unknown>) => {
-                    const tenant = reminder.tenants as Record<string, unknown> | null;
+                    const tenant = reminder.tenants as ReminderTenant;
+                    const location = tenantLocation(tenant);
 
                     return (
                       <TableRow key={reminder.id as string}>
                         <TableCell className="px-4 whitespace-nowrap font-mono text-text-secondary ltr-nums">
                           {formatSentAt(reminder.created_at as string)}
                         </TableCell>
-                        <TableCell className="px-4 font-medium text-text-primary">
-                          {(tenant?.full_name as string) || "—"}
+                        <TableCell className="px-4">
+                          <span className="block font-medium text-text-primary">
+                            {tenant?.full_name || "—"}
+                          </span>
+                          {location && (
+                            <span className="block text-xs text-text-secondary">{location}</span>
+                          )}
                         </TableCell>
                         <TableCell className="px-4 text-text-secondary">
                           {reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—"}
@@ -241,15 +268,19 @@ export default async function RemindersPage({
             {/* Mobile card list */}
             <ul className="md:hidden divide-y divide-border/40">
               {reminders.map((reminder: Record<string, unknown>) => {
-                const tenant = reminder.tenants as Record<string, unknown> | null;
+                const tenant = reminder.tenants as ReminderTenant;
+                    const location = tenantLocation(tenant);
 
                 return (
                   <li key={`m-${reminder.id as string}`} className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-text-primary">
-                          {(tenant?.full_name as string) || "—"}
+                          {tenant?.full_name || "—"}
                         </p>
+                        {location && (
+                          <p className="truncate text-xs text-text-secondary">{location}</p>
+                        )}
                         <p className="mt-0.5 text-xs text-text-secondary">
                           {reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—"}
                         </p>
