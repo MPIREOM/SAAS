@@ -27,6 +27,7 @@ import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { PageHeader } from "@/components/ui/page-header";
 import { HeroAlertStrip } from "@/components/dashboard/hero-alert-strip";
 import { StatTilePrimary, StatTileSecondary } from "@/components/dashboard/stat-tile";
+import { Alert } from "@/components/ui/alert";
 import { CURRENCY } from "@/lib/currency";
 import { format } from "date-fns";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
@@ -481,6 +482,21 @@ async function getExpiringDocuments(): Promise<ExpiringDocument[]> {
   });
 }
 
+// Buildings whose spare gate keys are at or below the reorder level (054).
+// RLS limits properties to the ones the user can see.
+async function getLowGateKeyStock() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("properties")
+    .select("id, name, gate_key_stock, gate_key_low_threshold")
+    .eq("is_archived", false)
+    .not("gate_key_stock", "is", null)
+    .order("name");
+  return (data || [])
+    .filter((p) => Number(p.gate_key_stock) <= Number(p.gate_key_low_threshold))
+    .map((p) => ({ id: p.id as string, name: p.name as string, stock: Number(p.gate_key_stock) }));
+}
+
 /* ------------------------------------------------------------------ */
 /*  Page component                                                     */
 /* ------------------------------------------------------------------ */
@@ -496,7 +512,7 @@ export default async function DashboardPage({
   const { month, year } = await searchParams;
   const t = await getTranslations("dashboard");
   const tInvoices = await getTranslations("invoices");
-  const [stats, overdueInvoices, recentInvoices, expiringLeases, agedReceivables, upcomingCheques, expiringDocuments] = await Promise.all([
+  const [stats, overdueInvoices, recentInvoices, expiringLeases, agedReceivables, upcomingCheques, expiringDocuments, lowGateKeys] = await Promise.all([
     getDashboardStats(month, year),
     getOverdueInvoices(),
     getRecentInvoices(),
@@ -504,6 +520,7 @@ export default async function DashboardPage({
     getAgedReceivables(),
     getUpcomingCheques(),
     getExpiringDocuments(),
+    getLowGateKeyStock(),
   ]);
 
   const totalAgedReceivables = agedReceivables.reduce((sum, b) => sum + b.total, 0);
@@ -628,6 +645,23 @@ export default async function DashboardPage({
           dismiss: t("dismissAlert"),
         }}
       />
+
+      {lowGateKeys.length > 0 && (
+        <Alert variant="warning" title={t("gateKeysLowTitle")}>
+          <ul className="mt-1 space-y-0.5 text-text-primary">
+            {lowGateKeys.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/${locale}/properties/${p.id}`}
+                  className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                >
+                  {t("gateKeysLowLine", { property: p.name, stock: p.stock })}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Alert>
+      )}
 
       {/* Quick Actions */}
       <div className="flex items-center gap-2 flex-wrap">

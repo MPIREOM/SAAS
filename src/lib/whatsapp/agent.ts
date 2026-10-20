@@ -3895,6 +3895,7 @@ export async function executeTool(
         due_date: result.dueDate,
         agreement_signed: result.agreementSigned,
         tenant_notified: result.tenantNotified,
+        gate_keys_left_in_stock: result.gateKeysLeft,
       });
     }
 

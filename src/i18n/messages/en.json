@@ -175,6 +175,39 @@
       "paintingFee": "Painting / maintenance fee",
       "earlyTerminationRate": "Early-termination rate",
       "earlyTerminationHint": "Applied to (remaining months × monthly rent). Common value: 12% — municipality + office fees."
+    },
+    "gateKeys": {
+      "title": "Gate keys",
+      "description": "Spare keys in stock. Keys sold to tenants come out automatically.",
+      "inStock": "In stock",
+      "low": "Low stock",
+      "ok": "In stock",
+      "reorderLevel": "Reorder at",
+      "lowAlert": "Only {stock} gate keys left (reorder at {threshold}). Please buy more keys.",
+      "notTracked": "Gate key stock isn't being tracked for this building yet. A super admin can enter the first count.",
+      "notTrackedAdmin": "Gate key stock isn't being tracked yet. Count the spare keys and enter the number to start.",
+      "addKeys": "Add keys",
+      "setCount": "Enter key count",
+      "correctCount": "Correct count",
+      "restockDescription": "Add the keys you bought to this building's stock.",
+      "countDescription": "Set the stock to the number of spare keys you physically counted.",
+      "keysBought": "Keys bought",
+      "keysCounted": "Keys counted",
+      "newTotal": "New total",
+      "notes": "Notes",
+      "notesPlaceholder": "Supplier, receipt number, …",
+      "history": "Recent changes",
+      "balance": "Balance",
+      "unit": "Unit {unit}",
+      "kinds": {
+        "restock": "Keys added",
+        "count": "Count corrected",
+        "sale": "Sold to tenant"
+      },
+      "saved": "Saved. {stock} keys in stock.",
+      "failed": "Couldn't update the key stock",
+      "forbidden": "Only super admins can change the key stock",
+      "quantityRequired": "Enter the number of keys"
     }
   },
   "units": {
@@ -1217,7 +1250,9 @@
     "aged31to60": "31–60 days",
     "aged61to90": "61–90 days",
     "aged90plus": "90+ days",
-    "inDays": "{days}d"
+    "inDays": "{days}d",
+    "gateKeysLowTitle": "Buy more gate keys",
+    "gateKeysLowLine": "{property}: {stock} keys left"
   },
   "reports": {
     "title": "Reports",

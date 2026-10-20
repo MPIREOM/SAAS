@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TemplateComponent, TemplateCreateInput } from "./admin";
 import { MAINTENANCE_TEMPLATES } from "@/lib/maintenance/whatsapp";
 import { VISIT_TEMPLATES } from "@/lib/visits/whatsapp";
+import { GATE_KEY_LOW_STOCK_TEMPLATE } from "@/lib/gate-keys/template";
 
 // Every Meta message template SAAS sends, in the exact shape the sending code
 // expects. Templates belong to a WhatsApp Business Account and do not move
@@ -22,6 +23,8 @@ import { VISIT_TEMPLATES } from "@/lib/visits/whatsapp";
 //     job, tenant status update (en + ar)
 //   visit_booking_* (lib/visits/whatsapp.ts): invite, confirmation and
 //     day-before reminder for building-wide visits (en + ar)
+//   gate_keys_low_stock (lib/gate-keys/stock.ts): admin alert when a
+//     building's spare gate keys reach the reorder level
 
 export interface TemplateDefinition extends TemplateCreateInput {
   /** Where the body came from, for the setup page. */
@@ -153,7 +156,7 @@ export function builtInTemplateDefinitions(): TemplateDefinition[] {
     // Maintenance workflow (src/lib/maintenance/whatsapp.ts) and visit
     // bookings (src/lib/visits/whatsapp.ts) own their bodies so the sender
     // and the template can't disagree on parameter order.
-    ...[...MAINTENANCE_TEMPLATES, ...VISIT_TEMPLATES].map(
+    ...[...MAINTENANCE_TEMPLATES, ...VISIT_TEMPLATES, GATE_KEY_LOW_STOCK_TEMPLATE].map(
       (t): TemplateDefinition => ({
         source: "built-in",
         name: t.name,

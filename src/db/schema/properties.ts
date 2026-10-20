@@ -58,6 +58,10 @@ export const properties = pgTable("properties", {
   cleaningFeeDefault: numeric("cleaning_fee_default").notNull().default("0"),
   paintingFeeDefault: numeric("painting_fee_default").notNull().default("0"),
   earlyTerminationRate: numeric("early_termination_rate").notNull().default("0.12"),
+  // Spare gate keys in stock (054); null until the first count.
+  gateKeyStock: integer("gate_key_stock"),
+  gateKeyLowThreshold: integer("gate_key_low_threshold").notNull().default(20),
+  gateKeyLowAlertedAt: timestamp("gate_key_low_alerted_at", { withTimezone: true }),
   createdBy: uuid("created_by").references(() => users.id, {
     onDelete: "set null",
   }),

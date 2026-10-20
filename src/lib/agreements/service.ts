@@ -4,6 +4,7 @@ import type { TenantRecipient } from "@/lib/maintenance/whatsapp";
 import { buildReminderEmailHtml, sendEmail } from "@/lib/email/client";
 import { renderAgreementPdf, type AgreementPdfData } from "./pdf";
 import { DEFAULT_GATE_KEYS, GARBAGE_VIOLATION_FEE, LOST_KEY_FEE } from "./terms";
+import { alertIfGateKeysLow } from "@/lib/gate-keys/stock";
 import {
   agreementLink,
   sendAgreementWhatsApp,
@@ -529,6 +530,8 @@ export type RecordViolationResult =
       agreementSigned: boolean;
       /** Whether the tenant was told by WhatsApp or email. */
       tenantNotified: boolean;
+      /** Spare gate keys left for the building after a key sale (null if not tracked). */
+      gateKeysLeft: number | null;
     }
   | { ok: false; error: string };
 
@@ -679,6 +682,9 @@ export async function recordViolation(db: SupabaseClient, input: RecordViolation
     metadata: { kind: input.kind, quantity, amount, invoice_id: invoice.id, source: input.source },
   });
 
+  // The sale was taken out of the building's key stock by a trigger (054).
+  const gateKeysLeft = input.kind === "lost_key" ? await alertIfGateKeysLow(lease.units.property_id) : null;
+
   const tenantNotified = lease.tenants
     ? await notifyViolation(lease.tenants, {
         kind: input.kind,
@@ -703,6 +709,7 @@ export async function recordViolation(db: SupabaseClient, input: RecordViolation
     propertyName: lease.units.properties?.name ?? "",
     agreementSigned: agreement?.status === "signed",
     tenantNotified,
+    gateKeysLeft,
   };
 }
 

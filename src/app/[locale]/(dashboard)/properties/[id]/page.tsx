@@ -13,11 +13,12 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
-import { getUserAccessiblePropertyIds } from "@/lib/access-control";
+import { getAuthContext, getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { UnitGrid, type UnitGridItem } from "@/components/units/unit-grid";
+import { GateKeyStockCard, type GateKeyMovement } from "@/components/properties/gate-key-stock-card";
 
 export default async function PropertyDetailPage({
   params,
@@ -54,6 +55,32 @@ export default async function PropertyDetailPage({
     .order("unit_number");
 
   const allUnits = units || [];
+
+  const [auth, { data: keyMovementRows }] = await Promise.all([
+    getAuthContext(),
+    supabase
+      .from("gate_key_movements")
+      .select("id, kind, quantity, balance_after, notes, created_at, tenant_violations(units(unit_number), tenants(full_name))")
+      .eq("property_id", id)
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+  const keyMovements: GateKeyMovement[] = (keyMovementRows || []).map((m: Record<string, unknown>) => {
+    const violation = m.tenant_violations as {
+      units: { unit_number: string } | null;
+      tenants: { full_name: string } | null;
+    } | null;
+    return {
+      id: m.id as string,
+      kind: m.kind as GateKeyMovement["kind"],
+      quantity: Number(m.quantity),
+      balanceAfter: Number(m.balance_after),
+      createdAt: m.created_at as string,
+      notes: (m.notes as string | null) ?? null,
+      unitNumber: violation?.units?.unit_number ?? null,
+      tenantName: violation?.tenants?.full_name ?? null,
+    };
+  });
 
   // Identify which active tenants in this property have cheques on file,
   // so we can flag occupied units whose tenant has none.
@@ -250,6 +277,14 @@ export default async function PropertyDetailPage({
           </div>
         </div>
       )}
+
+      <GateKeyStockCard
+        propertyId={id}
+        stock={property.gate_key_stock ?? null}
+        threshold={property.gate_key_low_threshold ?? 20}
+        movements={keyMovements}
+        canManage={auth?.role === "super_admin"}
+      />
 
       {/* Units Grid */}
       <div>
