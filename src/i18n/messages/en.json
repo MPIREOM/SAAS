@@ -2124,6 +2124,25 @@
       "file_too_large": "File too large. Maximum size is 10MB.",
       "no_active_tenant": "This unit has no active tenant",
       "invalid_input": "Check the reference number and dates"
+    },
+    "import": {
+      "button": "Import municipality contracts",
+      "title": "Import municipality contracts",
+      "description": "Reads the lease agreements already uploaded for tenants and records the municipality-registered contracts among them against each tenant's current unit. Documents already imported are skipped. This can take a minute or two.",
+      "start": "Start import",
+      "running": "Reading documents…",
+      "summary": "Checked {checked} documents, recorded {imported} contracts.",
+      "imported": "Recorded",
+      "skipped": "Skipped",
+      "until": "until {date}",
+      "failed": "Import failed",
+      "reasons": {
+        "not_pdf": "Not a PDF",
+        "not_contract": "Not a municipality contract, or the number/dates couldn't be read",
+        "no_active_unit": "Tenant has no active unit",
+        "several_units": "Tenant rents several units. Add it from the unit page.",
+        "failed": "Couldn't read the file"
+      }
     }
   }
 }
