@@ -141,6 +141,7 @@ export default async function DocumentsPage({
     insurance: "insurance",
     custom: "custom",
     tenant_agreement: "tenantAgreement",
+    municipality_contract: "municipalityContract",
   };
 
   const entityTypeLabel = (entityType: string) =>
