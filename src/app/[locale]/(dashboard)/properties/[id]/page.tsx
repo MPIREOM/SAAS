@@ -106,6 +106,29 @@ export default async function PropertyDetailPage({
       if (c.tenant_id) tenantsWithCheques.add(c.tenant_id);
     });
   }
+  // Units whose current tenant has a municipality-registered contract that
+  // hasn't ended yet; the rest get flagged (none on file, or expired).
+  const unitsWithMunicipalityContract = new Set<string>();
+  if (activeTenantIds.length > 0) {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Muscat" });
+    const activeTenantByUnit = new Map<string, string>();
+    allUnits.forEach((u: Record<string, unknown>) => {
+      const lease = ((u.leases as Record<string, unknown>[]) || []).find(
+        (l) => l.is_active === true
+      );
+      if (lease?.tenant_id) activeTenantByUnit.set(u.id as string, lease.tenant_id as string);
+    });
+    const { data: contractRows } = await supabase
+      .from("municipality_contracts")
+      .select("tenant_id, unit_id")
+      .in("tenant_id", activeTenantIds)
+      .gte("end_date", today);
+    (contractRows || []).forEach((c: { tenant_id: string; unit_id: string }) => {
+      if (activeTenantByUnit.get(c.unit_id) === c.tenant_id) {
+        unitsWithMunicipalityContract.add(c.unit_id);
+      }
+    });
+  }
   const occupied = allUnits.filter(
     (u: Record<string, unknown>) => u.status === "occupied"
   );
@@ -305,6 +328,7 @@ export default async function PropertyDetailPage({
             locale={locale}
             units={unitsForGrid}
             tenantIdsWithCheques={Array.from(tenantsWithCheques)}
+            unitIdsWithMunicipalityContract={Array.from(unitsWithMunicipalityContract)}
           />
         ) : (
           <EmptyState

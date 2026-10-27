@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { AlertCircle, ChevronRight } from "lucide-react";
+import { AlertCircle, ChevronRight, FileWarning } from "lucide-react";
 import { CURRENCY } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
 
@@ -41,6 +41,8 @@ interface UnitGridProps {
   units: UnitGridItem[];
   /** IDs of active tenants in this property who have at least one cheque on file */
   tenantIdsWithCheques: string[];
+  /** IDs of units whose current tenant has a municipality contract covering today */
+  unitIdsWithMunicipalityContract: string[];
 }
 
 const STATUS_FILTERS = ["all", "occupied", "vacant", "maintenance"] as const;
@@ -75,14 +77,20 @@ export function UnitGrid({
   locale,
   units,
   tenantIdsWithCheques,
+  unitIdsWithMunicipalityContract,
 }: UnitGridProps) {
   const tu = useTranslations("units");
   const tch = useTranslations("cheques");
+  const tmc = useTranslations("municipalityContract");
   const [filter, setFilter] = React.useState<StatusFilter>("all");
 
   const tenantChequeSet = React.useMemo(
     () => new Set(tenantIdsWithCheques),
     [tenantIdsWithCheques]
+  );
+  const municipalityContractSet = React.useMemo(
+    () => new Set(unitIdsWithMunicipalityContract),
+    [unitIdsWithMunicipalityContract]
   );
 
   // Pre-bucketed counts so each chip can show its tally without re-iterating.
@@ -158,6 +166,10 @@ export function UnitGrid({
               status === "occupied" &&
               !!unit.active_tenant_id &&
               !tenantChequeSet.has(unit.active_tenant_id);
+            const missingMunicipalityContract =
+              status === "occupied" &&
+              !!unit.active_tenant_id &&
+              !municipalityContractSet.has(unit.id);
 
             return (
               <Link
@@ -183,6 +195,18 @@ export function UnitGrid({
                         <AlertCircle
                           aria-hidden="true"
                           className="h-3.5 w-3.5 text-destructive"
+                        />
+                      </span>
+                    )}
+                    {missingMunicipalityContract && (
+                      <span
+                        title={tmc("missing")}
+                        aria-label={tmc("missing")}
+                        className="inline-flex"
+                      >
+                        <FileWarning
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5 text-warning"
                         />
                       </span>
                     )}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCY } from "@/lib/currency";
-import { getDocumentUrls } from "@/lib/utils/document-url";
+import { getDocumentUrl, getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
@@ -33,6 +33,7 @@ import {
   ArrowRightLeft,
   FileSignature,
   AlertTriangle,
+  Landmark,
 } from "lucide-react";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { UnitStatusToggle } from "@/components/units/unit-status-toggle";
@@ -45,6 +46,7 @@ import { EditPaymentMethod } from "@/components/payments/edit-payment-method";
 import { ChequeActions } from "@/components/cheques/cheque-actions";
 import { AgreementActions } from "@/components/agreements/agreement-actions";
 import { RecordViolationDialog } from "@/components/agreements/record-violation-dialog";
+import { MunicipalityContractDialog } from "@/components/units/municipality-contract-dialog";
 import { GARBAGE_VIOLATION_FEE, LOST_KEY_FEE } from "@/lib/agreements/terms";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +121,7 @@ export default async function UnitDetailPage({
   const tl = await getTranslations("leases");
   const tp = await getTranslations("properties");
   const ta = await getTranslations("tenantAgreement");
+  const tmc = await getTranslations("municipalityContract");
   const supabase = await createClient();
 
   const { data: unit } = await supabase
@@ -153,7 +156,7 @@ export default async function UnitDetailPage({
   const tenantId = currentTenant?.id as string | undefined;
 
   // Fetch payment history, cheques, documents, maintenance in parallel
-  const [paymentsRes, chequesRes, documentsRes, maintenanceRes, pastLeasesRes, invoicesRes, agreementRes, violationsRes] =
+  const [paymentsRes, chequesRes, documentsRes, maintenanceRes, pastLeasesRes, invoicesRes, agreementRes, violationsRes, municipalityContractRes] =
     await Promise.all([
       activeLease
         ? supabase
@@ -215,6 +218,16 @@ export default async function UnitDetailPage({
         .order("occurred_on", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(20),
+      tenantId
+        ? supabase
+            .from("municipality_contracts")
+            .select("id, contract_number, start_date, end_date, file_url")
+            .eq("tenant_id", tenantId)
+            .eq("unit_id", unitId)
+            .order("end_date", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
   const payments = paymentsRes.data;
@@ -222,6 +235,20 @@ export default async function UnitDetailPage({
   const documents = documentsRes.data;
   const maintenance = maintenanceRes.data;
   const pastLeases = pastLeasesRes.data;
+  const municipalityContract = municipalityContractRes.data as {
+    id: string;
+    contract_number: string;
+    start_date: string;
+    end_date: string;
+    file_url: string | null;
+  } | null;
+  const municipalityContractExpired =
+    !!municipalityContract &&
+    municipalityContract.end_date <
+      new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Muscat" });
+  const municipalityContractUrl = municipalityContract?.file_url
+    ? await getDocumentUrl(supabase, municipalityContract.file_url)
+    : null;
   const agreement = agreementRes.data as {
     id: string;
     reference: string;
@@ -646,6 +673,54 @@ export default async function UnitDetailPage({
           />
         )}
       </section>
+
+      {/* Municipality-registered rent contract */}
+      {currentTenant && activeLease && (
+        <section>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <SectionHeading icon={Landmark} title={tmc("title")} className="mb-0" />
+            <MunicipalityContractDialog unitId={unitId} />
+          </div>
+          <div className="bg-surface border border-border/60 rounded-xl p-5 flex flex-wrap items-start justify-between gap-4">
+            {municipalityContract ? (
+              <>
+                <div className="min-w-0 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={municipalityContractExpired ? "warning" : "success"}>
+                      {tmc(municipalityContractExpired ? "expiredBadge" : "active")}
+                    </Badge>
+                    <span className="text-sm font-semibold text-text-primary font-mono ltr-nums">
+                      {municipalityContract.contract_number}
+                    </span>
+                  </div>
+                  <p className="text-sm text-text-secondary font-mono ltr-nums">
+                    {tmc("period", {
+                      start: new Date(municipalityContract.start_date).toLocaleDateString(),
+                      end: new Date(municipalityContract.end_date).toLocaleDateString(),
+                    })}
+                  </p>
+                </div>
+                {municipalityContractUrl && (
+                  <a
+                    href={municipalityContractUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-semibold text-accent rounded-lg hover:bg-accent/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  >
+                    <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                    {tmc("view")}
+                  </a>
+                )}
+              </>
+            ) : (
+              <p className="flex items-center gap-1.5 text-sm text-warning">
+                <AlertTriangle aria-hidden="true" className="h-4 w-4" />
+                {tmc("none")}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Building rules agreement + violations */}
       {currentTenant && activeLease && (

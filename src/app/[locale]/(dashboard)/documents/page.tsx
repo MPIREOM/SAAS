@@ -16,6 +16,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils/cn";
 import { PageHeader } from "@/components/ui/page-header";
+import { ImportMunicipalityContractsButton } from "@/components/documents/import-municipality-contracts-button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
@@ -141,6 +142,7 @@ export default async function DocumentsPage({
     insurance: "insurance",
     custom: "custom",
     tenant_agreement: "tenantAgreement",
+    municipality_contract: "municipalityContract",
   };
 
   const entityTypeLabel = (entityType: string) =>
@@ -202,7 +204,10 @@ export default async function DocumentsPage({
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} description={t("subtitle")}>
-        {uploadCta}
+        <div className="flex flex-wrap items-center gap-2">
+          <ImportMunicipalityContractsButton />
+          {uploadCta}
+        </div>
       </PageHeader>
 
       {/* Expiry Summary Cards */}

@@ -857,7 +857,8 @@
       "permit": "Permit",
       "insurance": "Insurance",
       "custom": "Custom",
-      "tenantAgreement": "Building Rules Agreement"
+      "tenantAgreement": "Building Rules Agreement",
+      "municipalityContract": "Municipality Contract"
     },
     "noDocuments": "No documents found",
     "entityType": "Entity Type",
@@ -2095,6 +2096,53 @@
       "confirm": "Send to tenants",
       "result": "Sent: {sent} · Already sent or signed: {already} · Failed: {failed}",
       "failed": "Could not send the agreements"
+    }
+  },
+  "municipalityContract": {
+    "title": "Municipality Contract",
+    "add": "Add municipality contract",
+    "description": "Upload the rent contract registered with the municipality. The reference number and dates are read from the PDF. Check them before saving.",
+    "pdf": "Contract PDF",
+    "reading": "Reading the contract…",
+    "autoFilled": "Filled in from the PDF. Please check.",
+    "number": "Reference number",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "saved": "Municipality contract saved",
+    "failed": "Couldn't save the contract",
+    "pdfRequired": "Choose the contract PDF",
+    "invalidPeriod": "End date must be after the start date",
+    "missing": "No municipality contract registered for this tenant",
+    "expired": "Municipality contract expired",
+    "none": "No municipality contract on file",
+    "active": "Registered",
+    "expiredBadge": "Expired",
+    "period": "{start} – {end}",
+    "view": "View PDF",
+    "errors": {
+      "pdf_required": "Choose the contract PDF",
+      "file_too_large": "File too large. Maximum size is 10MB.",
+      "no_active_tenant": "This unit has no active tenant",
+      "invalid_input": "Check the reference number and dates"
+    },
+    "import": {
+      "button": "Import municipality contracts",
+      "title": "Import municipality contracts",
+      "description": "Reads the lease agreements already uploaded for tenants and records the municipality-registered contracts among them against each tenant's current unit. Documents already imported are skipped. This can take a minute or two.",
+      "start": "Start import",
+      "running": "Reading documents…",
+      "summary": "Checked {checked} documents, recorded {imported} contracts.",
+      "imported": "Recorded",
+      "skipped": "Skipped",
+      "until": "until {date}",
+      "failed": "Import failed",
+      "reasons": {
+        "not_pdf": "Not a PDF",
+        "not_contract": "Not a municipality contract, or the number/dates couldn't be read",
+        "no_active_unit": "Tenant has no active unit",
+        "several_units": "Tenant rents several units. Add it from the unit page.",
+        "failed": "Couldn't read the file"
+      }
     }
   }
 }
