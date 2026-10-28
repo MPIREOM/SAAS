@@ -23,6 +23,7 @@ Light and dark are equal. With no saved choice the app follows the device (`pref
 | `text-primary` / `secondary` / `tertiary` | #18211F / #45514D / #5F6965 | #ECF0EE / #BAC4C0 / #97A29E | Body / supporting / placeholder |
 | `accent` (+ hover, press) | #0F6B66 | #4FC2B6 | Primary actions, links, focus |
 | `accent-tint` / `-foreground` | #E2EFEC / #0A514D | #173A36 / #8FDDD4 | Selected nav, chosen options |
+| `brand-panel` / `-foreground` | #0F6B66 / #FFFFFF | #173A36 / #ECF0EE | Large brand areas (login panel) |
 | `destructive` / `-tint` / `-text` | #B42318 / #FCEBE8 / #9E1F15 | #F2877C / #3A1C19 / #F6A39A | Overdue, bounced, delete, errors |
 | `warning` / `-tint` | #8A5300 / #FBF0DA | #E8B04E / #3A2C12 | Pending, due soon |
 | `success` / `-tint` | #1A6E3E / #E3F2E8 | #64CC8F / #15321F | Paid, active |
@@ -57,6 +58,10 @@ All in `src/components/ui/`:
 - **Dialog**: 14px radius, overlay shadow, scrim without blur, footer on a tinted strip with a top border.
 - **Alert**: tinted panel, body in normal text colour, icon and title in the status colour.
 - **EmptyState**: icon on a sunken tile, short title, one-line explanation, optional action.
+
+## Shell
+
+Sidebar 232px (68px collapsed; content offset follows via `--sidebar-w`), white with a teal "M" mark and letter-spaced MPIRE wordmark; active item on accent tint. Top bar 60px (56px phone), white, search at the start, language, theme and account at the end. Login: teal brand panel beside a plain form; no stats or invented claims.
 
 ## Phone
 

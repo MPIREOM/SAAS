@@ -204,14 +204,14 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
   return (
     <header
       className={cn(
-        "h-16 bg-surface/60 backdrop-blur-xl border-b border-border/50 flex items-center justify-between ps-14 pe-4 md:px-6 sticky top-0 z-30"
+        "h-14 md:h-[60px] bg-surface border-b border-border flex items-center justify-between gap-2 ps-14 pe-2 md:px-6 sticky top-0 z-30"
       )}
     >
       {/* Search */}
-      <div ref={searchRef} className="relative flex-1 max-w-xs md:max-w-md">
+      <div ref={searchRef} className="relative min-w-0 flex-1 md:max-w-[360px]">
         <div className="relative group">
           <Search
-            className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary start-3 transition-colors group-focus-within:text-accent"
+            className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary start-3 transition-colors group-focus-within:text-accent"
             aria-hidden="true"
           />
           <input
@@ -232,7 +232,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
                 : undefined
             }
             autoComplete="off"
-            className="w-full h-9 bg-surface-elevated/50 border border-border/50 rounded-lg ps-9 pe-16 text-sm text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:border-accent/50 focus:bg-surface-elevated transition-all duration-200"
+            className="w-full h-[38px] bg-surface-elevated border border-border rounded-lg ps-9 pe-9 sm:pe-16 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-2 focus:outline-offset-2 focus:outline-focus focus:border-accent focus:bg-surface transition-colors"
           />
           {searchQuery ? (
             <button
@@ -244,18 +244,20 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
                 inputRef.current?.focus();
               }}
               aria-label={t("close")}
-              className="absolute top-1/2 -translate-y-1/2 end-2 p-0.5 rounded text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="absolute top-1/2 -translate-y-1/2 end-1.5 grid h-7 w-7 place-items-center rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           ) : (
             <kbd
               aria-hidden="true"
-              className="hidden sm:inline-flex absolute top-1/2 -translate-y-1/2 end-2 items-center gap-0.5 h-5 px-1.5 rounded border border-border/60 bg-surface text-[10px] font-mono font-semibold text-text-secondary pointer-events-none"
+              className="hidden sm:inline-flex absolute top-1/2 -translate-y-1/2 end-2 items-center gap-0.5 h-5 px-1.5 rounded-[5px] border border-border-strong bg-surface text-xs text-text-secondary pointer-events-none"
               title={isMac ? "⌘K" : "Ctrl+K"}
             >
-              <span>{isMac ? "⌘" : "Ctrl"}</span>
-              <span>K</span>
+              <span dir="ltr" className="inline-flex gap-0.5">
+                <span>{isMac ? "⌘" : "Ctrl"}</span>
+                <span>K</span>
+              </span>
             </kbd>
           )}
         </div>
@@ -265,7 +267,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
           <div
             id="topbar-search-listbox"
             role="listbox"
-            className="absolute top-full mt-1.5 w-full bg-surface border border-border rounded-xl shadow-xl overflow-hidden z-50"
+            className="absolute top-full mt-1.5 w-full min-w-[280px] bg-surface border border-border rounded-xl shadow-overlay overflow-hidden z-50"
           >
             {searching ? (
               <div
@@ -294,11 +296,11 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
                       className={cn(
                         "flex items-center gap-3 px-4 py-2.5 transition-colors",
                         isActive
-                          ? "bg-accent/10"
+                          ? "bg-accent-tint"
                           : "hover:bg-surface-elevated"
                       )}
                     >
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="text-[11px] font-semibold text-accent-tint-foreground bg-accent-tint px-2 py-0.5 rounded-full shrink-0">
                         {typeLabels[result.type]}
                       </span>
                       <div className="min-w-0">
@@ -314,19 +316,19 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
                     </Link>
                   );
                 })}
-                <div className="border-t border-border/40 px-3 py-1.5 flex items-center justify-between text-[10px] text-text-secondary">
+                <div className="hidden sm:flex border-t border-border bg-surface-elevated px-3 py-1.5 items-center justify-between text-[11px] text-text-secondary">
                   <span className="flex items-center gap-1.5">
-                    <kbd className="px-1 rounded border border-border/60 bg-surface font-mono">
+                    <kbd className="px-1 rounded border border-border-strong bg-surface">
                       ↑↓
                     </kbd>
                     <span>{t("toNavigate")}</span>
-                    <kbd className="px-1 rounded border border-border/60 bg-surface font-mono">
+                    <kbd className="px-1 rounded border border-border-strong bg-surface">
                       ↵
                     </kbd>
                     <span>{t("toSelect")}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1 rounded border border-border/60 bg-surface font-mono">
+                    <kbd className="px-1 rounded border border-border-strong bg-surface">
                       esc
                     </kbd>
                     <span>{t("toClose")}</span>
@@ -343,50 +345,50 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         {/* Language toggle */}
         <button
           onClick={toggleLanguage}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-text-secondary hover:text-accent hover:bg-surface-elevated/50 transition-all duration-200"
+          className="flex h-9 items-center gap-1.5 px-2.5 rounded-lg border border-border bg-surface text-[13px] font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           title={locale === "en" ? "العربية" : "English"}
           aria-label={locale === "en" ? "Switch to Arabic" : "Switch to English"}
         >
           <Globe className="h-4 w-4" aria-hidden="true" />
-          <span className="text-xs font-medium">{locale === "en" ? "AR" : "EN"}</span>
+          <span>{locale === "en" ? "AR" : "EN"}</span>
         </button>
 
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          className="p-2 rounded-lg text-text-secondary hover:text-accent hover:bg-surface-elevated/50 transition-all duration-200"
+          className="grid h-10 w-10 place-items-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           {theme === "dark" ? (
-            <Sun className="h-4 w-4" aria-hidden="true" />
+            <Sun className="h-[18px] w-[18px]" aria-hidden="true" />
           ) : (
-            <Moon className="h-4 w-4" aria-hidden="true" />
+            <Moon className="h-[18px] w-[18px]" aria-hidden="true" />
           )}
         </button>
 
         {/* User info + logout */}
-        <div className="flex items-center gap-3 ms-2 ps-3 border-s border-border/50">
+        <div className="flex items-center gap-2 ms-1 ps-2 sm:ms-2 sm:ps-3 border-s border-border">
           <div className="hidden sm:flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
-              <span className="text-xs font-semibold text-accent">
+            <div className="h-8 w-8 rounded-full bg-accent-tint flex items-center justify-center" aria-hidden="true">
+              <span className="text-[13px] font-bold text-accent-tint-foreground">
                 {(userName || userEmail || "U").charAt(0).toUpperCase()}
               </span>
             </div>
-            <p className="text-sm font-medium text-text-primary leading-tight">
+            <p className="max-w-[220px] truncate text-[13.5px] font-medium text-text-primary leading-tight">
               {userName || userEmail}
             </p>
           </div>
           <button
             onClick={handleLogout}
-            className="p-2 rounded-lg text-text-secondary hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+            className="grid h-10 w-10 place-items-center rounded-lg text-text-secondary hover:text-destructive-text hover:bg-destructive-tint transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             title={t("logout")}
             aria-label={t("logout")}
           >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
+            <LogOut className="h-[18px] w-[18px] rtl:rotate-180" aria-hidden="true" />
           </button>
         </div>
       </div>

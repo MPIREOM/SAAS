@@ -3,8 +3,8 @@ export default function DashboardLoading() {
     <div className="space-y-8 animate-fade-in">
       {/* Header skeleton */}
       <div>
-        <div className="h-7 w-40 bg-surface-elevated rounded-lg animate-pulse" />
-        <div className="h-4 w-64 bg-surface-elevated rounded-lg animate-pulse mt-2" />
+        <div className="h-7 w-40 bg-neutral-tint rounded-lg animate-pulse" />
+        <div className="h-4 w-64 bg-neutral-tint rounded-lg animate-pulse mt-2" />
       </div>
 
       {/* Stats Grid skeleton */}
@@ -12,21 +12,21 @@ export default function DashboardLoading() {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="bg-surface border border-border/40 rounded-xl p-5"
+            className="bg-surface border border-border rounded-xl shadow-card p-5"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="h-3 w-20 bg-surface-elevated rounded animate-pulse" />
-              <div className="h-8 w-8 bg-surface-elevated rounded-lg animate-pulse" />
+              <div className="h-3 w-20 bg-neutral-tint rounded animate-pulse" />
+              <div className="h-8 w-8 bg-neutral-tint rounded-lg animate-pulse" />
             </div>
-            <div className="h-8 w-16 bg-surface-elevated rounded-lg animate-pulse" />
+            <div className="h-8 w-16 bg-neutral-tint rounded-lg animate-pulse" />
           </div>
         ))}
       </div>
 
       {/* Chart skeleton */}
-      <div className="bg-surface border border-border/40 rounded-xl p-6">
-        <div className="h-5 w-40 bg-surface-elevated rounded animate-pulse mb-6" />
-        <div className="h-64 bg-surface-elevated rounded-lg animate-pulse" />
+      <div className="bg-surface border border-border rounded-xl shadow-card p-6">
+        <div className="h-5 w-40 bg-neutral-tint rounded animate-pulse mb-6" />
+        <div className="h-64 bg-neutral-tint rounded-lg animate-pulse" />
       </div>
 
       {/* Bottom grid skeleton */}
@@ -34,14 +34,14 @@ export default function DashboardLoading() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="bg-surface border border-border/40 rounded-xl p-6"
+            className="bg-surface border border-border rounded-xl shadow-card p-6"
           >
-            <div className="h-5 w-32 bg-surface-elevated rounded animate-pulse mb-5" />
+            <div className="h-5 w-32 bg-neutral-tint rounded animate-pulse mb-5" />
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, j) => (
                 <div
                   key={j}
-                  className="h-12 bg-surface-elevated rounded-lg animate-pulse"
+                  className="h-12 bg-neutral-tint rounded-lg animate-pulse"
                 />
               ))}
             </div>

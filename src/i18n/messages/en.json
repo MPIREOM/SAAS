@@ -122,12 +122,8 @@
     "resetError": "Failed to send reset link. Please try again.",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "brandBadge": "Property Management",
     "brandHeadline": "Manage your properties with precision",
     "brandDescription": "Professional property management platform built for Oman. Track tenants, invoices, maintenance, and more — all in one place.",
-    "statUnitsManaged": "Units Managed",
-    "statCollectionRate": "Collection Rate",
-    "statSupport": "Support",
     "brandTagline": "Property Management System"
   },
   "properties": {

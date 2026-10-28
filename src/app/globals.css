@@ -18,6 +18,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-tint: var(--accent-tint);
   --color-accent-tint-foreground: var(--accent-tint-foreground);
+  --color-brand-panel: var(--brand-panel);
+  --color-brand-panel-foreground: var(--brand-panel-foreground);
   --color-warning: var(--warning);
   --color-warning-tint: var(--warning-tint);
   --color-destructive: var(--destructive);
@@ -71,6 +73,9 @@
   --accent-foreground: #FFFFFF;
   --accent-tint: #E2EFEC;
   --accent-tint-foreground: #0A514D;
+  /* Large brand surfaces (login panel): full teal in light, deep teal in dark */
+  --brand-panel: #0F6B66;
+  --brand-panel-foreground: #FFFFFF;
 
   --destructive: #B42318;
   --destructive-hover: #931C13;
@@ -128,6 +133,8 @@
   --accent-foreground: #04201D;
   --accent-tint: #173A36;
   --accent-tint-foreground: #8FDDD4;
+  --brand-panel: #173A36;
+  --brand-panel-foreground: #ECF0EE;
 
   --destructive: #F2877C;
   --destructive-hover: #F6A39A;
@@ -180,6 +187,8 @@
     --accent-foreground: #04201D;
     --accent-tint: #173A36;
     --accent-tint-foreground: #8FDDD4;
+    --brand-panel: #173A36;
+    --brand-panel-foreground: #ECF0EE;
 
     --destructive: #F2877C;
     --destructive-hover: #F6A39A;

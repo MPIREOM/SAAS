@@ -26,15 +26,17 @@ export default async function DashboardLayout({
   const isRtl = locale === "ar";
 
   return (
-    <div className="min-h-screen bg-background noise-overlay" dir={isRtl ? "rtl" : "ltr"}>
+    <div className="min-h-screen bg-background" dir={isRtl ? "rtl" : "ltr"}>
       <Sidebar locale={locale} />
-      <div className="transition-all duration-300 ease-out md:ms-64">
+      <div className="min-w-0 transition-[margin] duration-200 ease-out md:ms-[var(--sidebar-w,232px)]">
         <Topbar
           locale={locale}
           userEmail={context.email ?? undefined}
           userName={context.fullName ?? undefined}
         />
-        <main className="p-4 md:p-8"><ToastProvider>{children}</ToastProvider></main>
+        <main className="mx-auto w-full max-w-[1440px] px-3 pt-4 pb-24 sm:px-4 md:p-6">
+          <ToastProvider>{children}</ToastProvider>
+        </main>
       </div>
       {context.role === "super_admin" && <AssistantWidget locale={locale} />}
     </div>

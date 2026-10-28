@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowRight, Building2, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -46,95 +46,62 @@ export default function LoginPage({
   };
 
   return (
-    <div className="min-h-screen bg-background noise-overlay flex">
+    <div className="min-h-screen bg-background flex">
       {/* Branding panel (start side — mirrors automatically in RTL) */}
-      <div className="relative hidden overflow-hidden border-e border-border/40 lg:flex lg:w-1/2">
-        {/* Layered surface gradient (theme tokens, not hex) */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-br from-surface via-surface-elevated to-background"
-        />
-
-        {/* Gold glows */}
-        <div
-          aria-hidden="true"
-          className="absolute top-0 end-0 h-96 w-96 rounded-full bg-accent/8 blur-[120px]"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute bottom-0 start-0 h-72 w-72 rounded-full bg-accent/5 blur-[100px]"
-        />
-
-        {/* Architectural grid */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "linear-gradient(color-mix(in srgb, var(--accent) 30%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
-          }}
-        />
-
-        {/* Content */}
-        <div className="relative z-10 flex w-full flex-col justify-between p-12">
-          <div>
-            <span className="text-3xl font-display font-bold gold-shimmer tracking-tight">
-              MPIRE
+      <div className="hidden bg-brand-panel text-brand-panel-foreground lg:flex lg:w-1/2">
+        <div className="flex w-full flex-col justify-between p-12">
+          <div className="flex items-center gap-2.5">
+            <span
+              aria-hidden="true"
+              className="grid h-9 w-9 place-items-center rounded-lg bg-brand-panel-foreground text-[15px] font-bold text-brand-panel"
+            >
+              M
             </span>
+            <span className="text-lg font-bold tracking-[0.14em]">MPIRE</span>
           </div>
 
-          <div className="space-y-6 animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/10 px-3 py-1.5">
-              <Building2 className="h-4 w-4 text-accent" aria-hidden="true" />
-              <span className="text-xs font-medium tracking-wide text-accent">
-                {t("brandBadge")}
-              </span>
-            </div>
-            <h2 className="text-4xl font-display font-bold leading-tight text-text-primary xl:text-5xl">
+          <div className="max-w-lg space-y-5">
+            <h2 className="text-4xl font-display font-bold leading-tight text-balance xl:text-[44px]">
               {t("brandHeadline")}
             </h2>
-            <p className="max-w-md text-base leading-relaxed text-text-secondary">
+            <p className="max-w-md text-base leading-relaxed opacity-90">
               {t("brandDescription")}
             </p>
           </div>
 
-          <div className="flex items-center gap-10 border-t border-border/40 pt-8">
-            {[
-              { value: "500+", label: t("statUnitsManaged") },
-              { value: "98%", label: t("statCollectionRate") },
-              { value: "24/7", label: t("statSupport") },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className="text-2xl font-display font-bold text-accent ltr-nums">
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-xs text-text-secondary">{stat.label}</p>
-              </div>
-            ))}
-          </div>
+          <p className="text-[13px] opacity-90">
+            MPIRE Property Management &middot; Oman
+          </p>
         </div>
       </div>
 
       {/* Form panel */}
       <div className="flex flex-1 items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-sm animate-fade-in-up [animation-delay:100ms]">
+        <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="mb-10 text-center lg:hidden">
-            <h1 className="text-3xl font-display font-bold gold-shimmer tracking-tight">
-              MPIRE
-            </h1>
-            <p className="mt-2 text-sm text-text-secondary">
-              {t("brandTagline")}
-            </p>
+          <div className="mb-10 flex flex-col items-center gap-3 text-center lg:hidden">
+            <span
+              aria-hidden="true"
+              className="grid h-11 w-11 place-items-center rounded-xl bg-accent text-lg font-bold text-accent-foreground"
+            >
+              M
+            </span>
+            <div>
+              <h1 className="text-xl font-bold tracking-[0.14em] text-text-primary">
+                MPIRE
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                {t("brandTagline")}
+              </p>
+            </div>
           </div>
 
           {/* Form header */}
           <div className="mb-8">
-            <h2 className="text-2xl font-display font-bold tracking-tight text-text-primary">
+            <h2 className="text-2xl font-display font-bold text-text-primary">
               {t("welcomeBack")}
             </h2>
-            <p className="mt-2 text-sm text-text-secondary">
+            <p className="mt-1 text-sm text-text-secondary">
               {t("loginSubtitle")}
             </p>
           </div>
@@ -149,7 +116,7 @@ export default function LoginPage({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-11"
+              className="h-12"
               placeholder="admin@mpire.om"
             />
 
@@ -157,7 +124,7 @@ export default function LoginPage({
               <div className="flex items-center justify-between gap-2">
                 <label
                   htmlFor="login-password"
-                  className="text-sm font-medium tracking-tight text-foreground"
+                  className="text-[13px] font-semibold text-foreground"
                 >
                   {t("password")}
                 </label>
@@ -171,7 +138,7 @@ export default function LoginPage({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-11 pe-11"
+                  className="h-12 pe-12"
                   placeholder="••••••••"
                 />
                 <button
@@ -179,7 +146,7 @@ export default function LoginPage({
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                   aria-pressed={showPassword}
-                  className="absolute end-1 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="absolute end-1 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:text-text-primary hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -195,7 +162,8 @@ export default function LoginPage({
             <Button
               type="submit"
               loading={loading}
-              className="group h-11 w-full"
+              size="lg"
+              className="group w-full"
             >
               {t("loginButton")}
               {!loading && (
@@ -208,7 +176,7 @@ export default function LoginPage({
           </form>
 
           {/* Footer */}
-          <p className="mt-8 text-center text-xs text-text-secondary/70">
+          <p className="mt-8 text-center text-xs text-text-tertiary lg:hidden">
             MPIRE Property Management &middot; Oman
           </p>
         </div>
@@ -229,7 +197,7 @@ function ForgotLink({
   return (
     <Link
       href={`/${locale}/auth/forgot-password`}
-      className="rounded-sm text-xs font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="rounded-sm text-[13px] font-semibold text-accent transition-colors hover:text-accent-hover hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       {t("forgotPassword")}
     </Link>
