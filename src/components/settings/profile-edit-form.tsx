@@ -130,7 +130,7 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
                 type="button"
                 onClick={() => setEditingName(true)}
                 aria-label={tc("edit")}
-                className="cursor-pointer rounded p-1 text-text-secondary transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="cursor-pointer rounded p-1 text-text-secondary transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <Pencil aria-hidden="true" className="h-3 w-3" />
               </button>
@@ -143,7 +143,7 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
           <span className="text-xs uppercase tracking-wider text-text-secondary">
             {t("email")}
           </span>
-          <p className="mt-1.5 font-mono text-sm text-text-primary">
+          <p className="mt-1.5 tabular-nums text-sm text-text-primary">
             {currentEmail || "—"}
           </p>
         </div>
@@ -151,7 +151,7 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
         {/* Password change */}
         <div className="sm:col-span-2">
           {editingPassword ? (
-            <div className="space-y-3 rounded-lg border border-border/50 bg-surface-elevated/50 p-4">
+            <div className="space-y-3 rounded-lg border border-border bg-surface-elevated p-4">
               <div className="flex items-center gap-2">
                 <Lock aria-hidden="true" className="h-4 w-4 text-accent" />
                 <span className="font-display text-sm font-medium text-text-primary">
@@ -195,7 +195,7 @@ export function ProfileEditForm({ userId, currentName, currentEmail }: ProfileEd
               <button
                 type="button"
                 onClick={() => setEditingPassword(true)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded text-xs text-text-secondary transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded text-xs text-text-secondary transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <Lock aria-hidden="true" className="h-3 w-3" />
                 {t("changePassword")}

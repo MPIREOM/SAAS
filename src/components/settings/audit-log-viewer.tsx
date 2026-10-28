@@ -86,7 +86,7 @@ export function AuditLogViewer() {
       {logs.map((log) => (
         <div
           key={log.id}
-          className="rounded-lg border border-border/40 bg-surface-elevated/50 transition-colors hover:border-border"
+          className="rounded-lg border border-border bg-surface-elevated transition-colors hover:border-border"
         >
           <button
             type="button"
@@ -104,7 +104,7 @@ export function AuditLogViewer() {
                   {log.action}
                 </span>
                 <span className="block text-xs text-text-secondary">
-                  <span className="ltr-nums font-mono">
+                  <span className="ltr-nums tabular-nums">
                     {new Date(log.created_at).toLocaleString()}
                   </span>
                   {log.entity_type && (
@@ -120,7 +120,7 @@ export function AuditLogViewer() {
             )}
           </button>
           {expandedId === log.id && log.metadata && (
-            <pre className="mx-3 mb-3 overflow-x-auto rounded-md border border-border/60 bg-surface p-2 font-mono text-xs text-text-secondary">
+            <pre className="mx-3 mb-3 overflow-x-auto rounded-md border border-border bg-surface p-2 tabular-nums text-xs text-text-secondary">
               {JSON.stringify(log.metadata, null, 2)}
             </pre>
           )}
@@ -143,7 +143,7 @@ export function AuditLogViewer() {
         </Button>
         <span className="text-xs text-text-secondary">
           {tc("page")}{" "}
-          <span className="ltr-nums font-mono text-text-primary">{page + 1}</span>
+          <span className="ltr-nums tabular-nums text-text-primary">{page + 1}</span>
         </span>
         <Button
           type="button"

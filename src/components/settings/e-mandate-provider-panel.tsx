@@ -15,7 +15,7 @@ export async function EMandateProviderPanel({ status }: { status: ProviderStatus
         <Badge variant={status.active === "bank_muscat" ? "success" : "warning"}>
           {status.active === "bank_muscat" ? "Bank Muscat" : t("eMandatesMockProvider")}
         </Badge>
-        {status.forced && <span className="text-xs text-text-secondary font-mono">E_MANDATE_PROVIDER</span>}
+        {status.forced && <span className="text-xs text-text-secondary tabular-nums">E_MANDATE_PROVIDER</span>}
       </div>
 
       {status.active === "mock" && (
@@ -24,7 +24,7 @@ export async function EMandateProviderPanel({ status }: { status: ProviderStatus
         </Alert>
       )}
 
-      <div className="rounded-lg border border-border/60 bg-surface-elevated/40 p-4">
+      <div className="rounded-lg border border-border bg-surface-elevated p-4">
         <p className="text-sm font-medium text-text-primary mb-2">{t("eMandatesBankMuscatVars")}</p>
         {status.bankMuscat.configured ? (
           <p className="text-sm text-success">{t("eMandatesBankMuscatReady")}</p>
@@ -33,7 +33,7 @@ export async function EMandateProviderPanel({ status }: { status: ProviderStatus
             <p className="text-xs text-text-secondary mb-2">{t("eMandatesBankMuscatMissing")}</p>
             <ul className="flex flex-wrap gap-2">
               {status.bankMuscat.missing.map((k) => (
-                <li key={k} className="font-mono ltr-nums text-xs px-2 py-1 rounded-md border border-border/60 bg-surface text-text-secondary">
+                <li key={k} className="tabular-nums ltr-nums text-xs px-2 py-1 rounded-md border border-border bg-surface text-text-secondary">
                   {k}
                 </li>
               ))}
@@ -43,13 +43,13 @@ export async function EMandateProviderPanel({ status }: { status: ProviderStatus
       </div>
 
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-        <div className="rounded-lg border border-border/60 p-3">
+        <div className="rounded-lg border border-border p-3">
           <dt className="text-text-secondary">{t("eMandatesWebhookUrl")}</dt>
-          <dd className="font-mono ltr-nums text-text-primary mt-1 break-all">/api/webhooks/bank-muscat</dd>
+          <dd className="tabular-nums ltr-nums text-text-primary mt-1 break-all">/api/webhooks/bank-muscat</dd>
         </div>
-        <div className="rounded-lg border border-border/60 p-3">
+        <div className="rounded-lg border border-border p-3">
           <dt className="text-text-secondary">{t("eMandatesCronSchedule")}</dt>
-          <dd className="font-mono ltr-nums text-text-primary mt-1">/api/cron/e-mandate-collections · 10:00 Muscat</dd>
+          <dd className="tabular-nums ltr-nums text-text-primary mt-1">/api/cron/e-mandate-collections · 10:00 Muscat</dd>
         </div>
       </dl>
       <p className="text-xs text-text-secondary">{t("eMandatesDocsHint")}</p>

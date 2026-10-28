@@ -786,7 +786,8 @@
       "all": "All",
       "open": "Open",
       "in_progress": "In Progress",
-      "resolved": "Resolved"
+      "resolved": "Resolved",
+      "closed": "Closed"
     },
     "table": {
       "id": "ID",

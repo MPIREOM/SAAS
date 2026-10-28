@@ -125,26 +125,26 @@ export function ManageUserPropertiesDialog({
                 <button
                   type="button"
                   onClick={selectAll}
-                  className="cursor-pointer rounded text-xs font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="cursor-pointer rounded text-xs font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {t("selectAll")}
                 </button>
-                <span aria-hidden="true" className="text-xs text-text-secondary/50">
+                <span aria-hidden="true" className="text-xs text-text-tertiary">
                   /
                 </span>
                 <button
                   type="button"
                   onClick={selectNone}
-                  className="cursor-pointer rounded text-xs font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="cursor-pointer rounded text-xs font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {t("selectNone")}
                 </button>
-                <span className="ltr-nums ms-auto font-mono text-xs text-text-secondary">
+                <span className="ltr-nums ms-auto tabular-nums text-xs text-text-secondary">
                   {selected.size} / {allProperties.length}
                 </span>
               </div>
 
-              <div className="max-h-64 divide-y divide-border/40 overflow-y-auto rounded-lg border border-border/60">
+              <div className="max-h-64 divide-y divide-border overflow-y-auto rounded-lg border border-border">
                 {allProperties.map((property) => {
                   const isSelected = selected.has(property.id);
                   return (
@@ -155,7 +155,7 @@ export function ManageUserPropertiesDialog({
                       aria-checked={isSelected}
                       onClick={() => toggle(property.id)}
                       className={`flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40 ${
-                        isSelected ? "bg-accent/5" : "hover:bg-surface-elevated/50"
+                        isSelected ? "bg-accent-tint" : "hover:bg-surface-elevated"
                       }`}
                     >
                       <span
@@ -165,7 +165,7 @@ export function ManageUserPropertiesDialog({
                         }`}
                       >
                         {isSelected && (
-                          <Check className="h-3 w-3 text-background" />
+                          <Check className="h-3 w-3 text-accent-foreground" />
                         )}
                       </span>
                       <Building2

@@ -154,15 +154,15 @@ export function WhatsAppAgentSetup({
   return (
     <div className="space-y-4">
       {currentPhone ? (
-        <div className="flex items-center gap-3 rounded-lg border border-success/25 bg-success/10 p-3">
-          <div className="rounded-md bg-success/10 p-1.5">
+        <div className="flex items-center gap-3 rounded-lg border border-success/30 bg-success-tint p-3">
+          <div className="rounded-md bg-success-tint p-1.5">
             <Check aria-hidden="true" className="h-4 w-4 text-success" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-text-primary">
               {t("whatsappAgentActive")}
             </p>
-            <p className="ltr-nums truncate font-mono text-xs text-text-secondary">
+            <p className="ltr-nums truncate tabular-nums text-xs text-text-secondary">
               +{currentPhone}
             </p>
           </div>
@@ -171,7 +171,7 @@ export function WhatsAppAgentSetup({
             onClick={handleRemove}
             disabled={removing}
             aria-label={t("whatsappCcRemoveLabel")}
-            className="cursor-pointer rounded-md p-1.5 text-xs text-text-secondary transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:opacity-40"
+            className="cursor-pointer rounded-md p-1.5 text-xs text-text-secondary transition-colors hover:bg-destructive-tint hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-40"
           >
             {removing ? (
               <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
@@ -194,7 +194,7 @@ export function WhatsAppAgentSetup({
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="968XXXXXXXX"
                 helperText={t("whatsappNumberHint")}
-                className="ltr-nums font-mono"
+                className="ltr-nums tabular-nums"
               />
             </div>
             <Button
@@ -210,9 +210,9 @@ export function WhatsAppAgentSetup({
       </form>
 
       {/* Additional notification numbers (e.g. owner) */}
-      <div className="space-y-3 border-t border-border/40 pt-4">
+      <div className="space-y-3 border-t border-border pt-4">
         <div>
-          <p className="text-sm font-medium tracking-tight text-text-primary">
+          <p className="text-sm font-medium text-text-primary">
             {t("whatsappCcLabel")}
           </p>
           <p className="mt-0.5 text-xs text-text-secondary">
@@ -225,20 +225,20 @@ export function WhatsAppAgentSetup({
             {extraPhones.map((p, i) => (
               <li
                 key={`${p}-${i}`}
-                className="flex items-center gap-3 rounded-lg border border-border/40 bg-surface-elevated/50 p-2.5 transition-colors hover:border-border"
+                className="flex items-center gap-3 rounded-lg border border-border bg-surface-elevated p-2.5 transition-colors hover:border-border"
               >
                 <Smartphone
                   aria-hidden="true"
-                  className="ms-1 h-4 w-4 text-text-secondary/60"
+                  className="ms-1 h-4 w-4 text-text-tertiary"
                 />
-                <span className="ltr-nums flex-1 truncate font-mono text-sm text-text-primary">
+                <span className="ltr-nums flex-1 truncate tabular-nums text-sm text-text-primary">
                   +{p}
                 </span>
                 <button
                   type="button"
                   onClick={() => handleRemoveExtra(i)}
                   disabled={removingIndex === i}
-                  className="cursor-pointer rounded-md p-1.5 text-xs text-text-secondary transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:opacity-40"
+                  className="cursor-pointer rounded-md p-1.5 text-xs text-text-secondary transition-colors hover:bg-destructive-tint hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-40"
                   aria-label={t("whatsappCcRemoveLabel")}
                 >
                   {removingIndex === i ? (
@@ -256,7 +256,7 @@ export function WhatsAppAgentSetup({
           <div className="relative flex-1">
             <Smartphone
               aria-hidden="true"
-              className="pointer-events-none absolute start-3 top-3 h-4 w-4 text-text-secondary/50"
+              className="pointer-events-none absolute start-3 top-3 h-4 w-4 text-text-tertiary"
             />
             <Input
               type="tel"
@@ -264,7 +264,7 @@ export function WhatsAppAgentSetup({
               onChange={(e) => setNewExtraPhone(e.target.value)}
               placeholder="968XXXXXXXX"
               aria-label={t("whatsappCcLabel")}
-              className="ltr-nums ps-9 font-mono"
+              className="ltr-nums ps-9 tabular-nums"
             />
           </div>
           <Button
@@ -280,8 +280,8 @@ export function WhatsAppAgentSetup({
         </form>
       </div>
 
-      <div className="space-y-2 rounded-lg border border-border/40 bg-surface-elevated/50 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+      <div className="space-y-2 rounded-lg border border-border bg-surface-elevated p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
           {t("whatsappCapabilitiesTitle")}
         </p>
         <ul className="space-y-1.5 text-xs text-text-secondary">

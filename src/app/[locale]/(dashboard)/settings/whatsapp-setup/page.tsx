@@ -15,7 +15,7 @@ export default async function WhatsAppSetupPage({
   const t = await getTranslations("settings");
 
   return (
-    <div className="max-w-4xl space-y-6 stagger-children">
+    <div className="max-w-4xl space-y-6">
       <PageHeader title={t("whatsappSetupTitle")} description={t("whatsappSetupSubtitle")} />
       <WhatsAppSetupPanel />
     </div>

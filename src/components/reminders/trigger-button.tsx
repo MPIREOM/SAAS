@@ -165,38 +165,38 @@ export function ReminderTriggerButton() {
         <Alert
           variant="success"
           title={t("triggerComplete", { count: result.totalSent })}
-          className="animate-fade-in-up text-start"
+          className="text-start"
         >
           {result.totalSent > 0 && (
             <div className="space-y-1 text-xs text-text-secondary">
               {result.results.rentUpcoming > 0 && (
                 <p>
                   {t("types.rent_upcoming")} —{" "}
-                  <span className="font-mono ltr-nums">{result.results.rentUpcoming}</span>
+                  <span className="tabular-nums ltr-nums">{result.results.rentUpcoming}</span>
                 </p>
               )}
               {result.results.rentOverdue > 0 && (
                 <p>
                   {t("types.rent_overdue")} —{" "}
-                  <span className="font-mono ltr-nums">{result.results.rentOverdue}</span>
+                  <span className="tabular-nums ltr-nums">{result.results.rentOverdue}</span>
                 </p>
               )}
               {result.results.chequeDue > 0 && (
                 <p>
                   {t("types.cheque_due")} —{" "}
-                  <span className="font-mono ltr-nums">{result.results.chequeDue}</span>
+                  <span className="tabular-nums ltr-nums">{result.results.chequeDue}</span>
                 </p>
               )}
               {result.results.leaseExpiry > 0 && (
                 <p>
                   {t("types.lease_expiry")} —{" "}
-                  <span className="font-mono ltr-nums">{result.results.leaseExpiry}</span>
+                  <span className="tabular-nums ltr-nums">{result.results.leaseExpiry}</span>
                 </p>
               )}
               {result.results.errors > 0 && (
                 <p className="text-destructive">
                   {t("errors")}:{" "}
-                  <span className="font-mono ltr-nums">{result.results.errors}</span>
+                  <span className="tabular-nums ltr-nums">{result.results.errors}</span>
                 </p>
               )}
             </div>
@@ -224,7 +224,7 @@ export function ReminderTriggerButton() {
             {previews.map((item, i) => (
               <div
                 key={i}
-                className="overflow-hidden rounded-lg border border-border/60"
+                className="overflow-hidden rounded-lg border border-border"
               >
                 {/* Summary row */}
                 <button
@@ -233,7 +233,7 @@ export function ReminderTriggerButton() {
                     setExpandedIndex(expandedIndex === i ? null : i)
                   }
                   aria-expanded={expandedIndex === i}
-                  className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-surface-elevated/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   <User aria-hidden="true" className="h-4 w-4 shrink-0 text-text-secondary" />
                   <div className="min-w-0 flex-1">
@@ -264,13 +264,13 @@ export function ReminderTriggerButton() {
 
                 {/* Expanded message preview */}
                 {expandedIndex === i && (
-                  <div className="space-y-3 border-t border-border/60 bg-surface-elevated/30 px-4 py-3">
+                  <div className="space-y-3 border-t border-border bg-surface-elevated px-4 py-3">
                     {/* Overdue breakdown */}
                     {item.overdueInvoices && item.overdueInvoices.length > 0 && (
-                      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                      <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3">
                         <p className="mb-2 text-xs font-medium text-destructive">
                           {t("outstandingInvoices")} (
-                          <span className="font-mono ltr-nums">
+                          <span className="tabular-nums ltr-nums">
                             {item.overdueInvoices.length}
                           </span>
                           )
@@ -282,15 +282,15 @@ export function ReminderTriggerButton() {
                               className="flex items-center justify-between text-xs text-text-secondary"
                             >
                               <span>{inv.periodLabel}</span>
-                              <span className="font-mono ltr-nums">
+                              <span className="tabular-nums ltr-nums">
                                 {inv.amount} {CURRENCY.code}
                               </span>
                             </div>
                           ))}
                         </div>
-                        <div className="mt-2 flex items-center justify-between border-t border-destructive/20 pt-2 text-xs font-semibold text-destructive">
+                        <div className="mt-2 flex items-center justify-between border-t border-destructive/30 pt-2 text-xs font-semibold text-destructive">
                           <span>{tc("total")}</span>
-                          <span className="font-mono ltr-nums">
+                          <span className="tabular-nums ltr-nums">
                             {item.totalOverdue} {CURRENCY.code}
                           </span>
                         </div>
@@ -302,15 +302,15 @@ export function ReminderTriggerButton() {
                           <MessageSquare aria-hidden="true" className="h-3.5 w-3.5 text-success" />
                           <span className="text-xs font-medium text-text-secondary">
                             {t("channels.whatsapp")} —{" "}
-                            <span className="font-mono ltr-nums">{item.phone}</span>
+                            <span className="tabular-nums ltr-nums">{item.phone}</span>
                           </span>
                         </div>
-                        <div className="whitespace-pre-wrap rounded-lg border border-border/60 bg-surface p-3 text-sm text-text-primary">
+                        <div className="whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-sm text-text-primary">
                           {item.whatsappMessage}
                         </div>
                         <p className="mt-1 text-xs text-text-secondary">
                           {t("whatsappTemplateName")}:{" "}
-                          <code className="font-mono text-accent">
+                          <code className="tabular-nums text-accent">
                             {item.whatsappTemplateName}
                           </code>
                         </p>
@@ -324,7 +324,7 @@ export function ReminderTriggerButton() {
                             {t("channels.email")} — {item.email}
                           </span>
                         </div>
-                        <div className="whitespace-pre-wrap rounded-lg border border-border/60 bg-surface p-3 text-sm text-text-primary">
+                        <div className="whitespace-pre-wrap rounded-lg border border-border bg-surface p-3 text-sm text-text-primary">
                           {item.emailMessage}
                         </div>
                       </div>

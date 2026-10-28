@@ -160,8 +160,8 @@ export default async function DocumentsPage({
       count: expiredCount,
       label: t("expired"),
       icon: AlertTriangle,
-      border: "border-destructive/20",
-      iconBg: "bg-destructive/10",
+      border: "border-destructive/30",
+      iconBg: "bg-destructive-tint",
       text: "text-destructive",
     },
     {
@@ -169,8 +169,8 @@ export default async function DocumentsPage({
       count: expiringSoonCount,
       label: t("expiringSoon"),
       icon: Clock,
-      border: "border-warning/20",
-      iconBg: "bg-warning/10",
+      border: "border-warning/30",
+      iconBg: "bg-warning-tint",
       text: "text-warning",
     },
     {
@@ -178,17 +178,17 @@ export default async function DocumentsPage({
       count: validCount,
       label: t("valid"),
       icon: CheckCircle,
-      border: "border-success/20",
-      iconBg: "bg-success/10",
+      border: "border-success/30",
+      iconBg: "bg-success-tint",
       text: "text-success",
     },
   ];
 
   const filters = [
     { key: null, label: tShared("all") },
-    { key: "expired", label: t("expired"), count: expiredCount, color: "text-destructive bg-destructive/10" },
-    { key: "expiringSoon", label: t("expiringSoon"), count: expiringSoonCount, color: "text-warning bg-warning/10" },
-    { key: "valid", label: t("valid"), count: validCount, color: "text-success bg-success/10" },
+    { key: "expired", label: t("expired"), count: expiredCount, color: "text-destructive bg-destructive-tint" },
+    { key: "expiringSoon", label: t("expiringSoon"), count: expiringSoonCount, color: "text-warning bg-warning-tint" },
+    { key: "valid", label: t("valid"), count: validCount, color: "text-success bg-success-tint" },
   ];
 
   const uploadCta = (
@@ -211,7 +211,7 @@ export default async function DocumentsPage({
       </PageHeader>
 
       {/* Expiry Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-children">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {summaryCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -223,7 +223,7 @@ export default async function DocumentsPage({
                 <Icon aria-hidden="true" className={`h-5 w-5 ${card.text}`} />
               </div>
               <div>
-                <p className={`text-2xl font-bold font-mono ltr-nums ${card.text}`}>
+                <p className={`text-2xl font-bold tabular-nums ltr-nums ${card.text}`}>
                   {card.count}
                 </p>
                 <p className="text-xs text-text-secondary">{card.label}</p>
@@ -242,15 +242,15 @@ export default async function DocumentsPage({
               key={f.key || "all"}
               href={f.key ? `/${locale}/documents?filter=${f.key}` : `/${locale}/documents`}
               aria-current={isActive ? "page" : undefined}
-              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-colors border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                 isActive
-                  ? "bg-accent/10 text-accent border-accent/30"
-                  : "bg-surface border-border/50 text-text-secondary hover:text-text-primary hover:border-border"
+                  ? "bg-accent-tint text-accent border-accent/30"
+                  : "bg-surface border-border text-text-secondary hover:text-text-primary hover:border-border"
               }`}
             >
               {f.label}
               {f.count !== undefined && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ltr-nums ${f.color || ""}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full tabular-nums ltr-nums ${f.color || ""}`}>
                   {f.count}
                 </span>
               )}
@@ -268,7 +268,7 @@ export default async function DocumentsPage({
           action={uploadCta}
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-surface animate-fade-in-up">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface">
           {/* Desktop table — hidden on mobile in favor of card list below */}
           <div className="hidden md:block">
             <Table className="min-w-[760px]">
@@ -297,7 +297,7 @@ export default async function DocumentsPage({
                   return (
                     <TableRow
                       key={doc.id}
-                      className={expiryStatus === "expired" ? "bg-destructive/5" : ""}
+                      className={expiryStatus === "expired" ? "bg-destructive-tint" : ""}
                     >
                       <TableCell className="px-4">
                         <Badge variant="default">
@@ -318,14 +318,14 @@ export default async function DocumentsPage({
                       </TableCell>
                       <TableCell className="px-4">
                         {doc.expiry_date ? (
-                          <Badge variant={expiryVariant} className="font-mono ltr-nums">
+                          <Badge variant={expiryVariant} className="tabular-nums ltr-nums">
                             {format(new Date(doc.expiry_date), "dd MMM yyyy")}
                           </Badge>
                         ) : (
                           <span className="text-xs text-text-secondary">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="px-4 whitespace-nowrap font-mono text-xs text-text-secondary ltr-nums">
+                      <TableCell className="px-4 whitespace-nowrap tabular-nums text-xs text-text-secondary ltr-nums">
                         {format(new Date(doc.uploaded_at), "dd MMM yyyy")}
                       </TableCell>
                       <TableCell className="px-4 text-end">
@@ -335,7 +335,7 @@ export default async function DocumentsPage({
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label={t("preview")}
-                            className="inline-flex h-8 min-w-8 items-center justify-center rounded-md text-accent hover:text-accent-hover hover:bg-accent/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                            className="inline-flex h-8 min-w-8 items-center justify-center rounded-md text-accent hover:text-accent-hover hover:bg-accent-tint transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                           >
                             <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
                           </a>
@@ -349,7 +349,7 @@ export default async function DocumentsPage({
           </div>
 
           {/* Mobile card list */}
-          <ul className="md:hidden divide-y divide-border/30">
+          <ul className="md:hidden divide-y divide-border">
             {filteredDocs.map((doc) => {
               const expiryStatus = getExpiryStatus(doc.expiry_date);
               const expiryVariant: "success" | "warning" | "destructive" =
@@ -362,11 +362,11 @@ export default async function DocumentsPage({
               return (
                 <li
                   key={`m-${doc.id}`}
-                  className={`p-4 ${expiryStatus === "expired" ? "bg-destructive/5" : ""}`}
+                  className={`p-4 ${expiryStatus === "expired" ? "bg-destructive-tint" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
-                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
                         <FileIcon aria-hidden="true" className="h-4 w-4 text-accent" />
                       </div>
                       <div className="min-w-0">
@@ -384,7 +384,7 @@ export default async function DocumentsPage({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={t("preview")}
-                        className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md border border-border/50 text-text-secondary hover:text-accent hover:border-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                        className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md border border-border text-text-secondary hover:text-accent hover:border-border-strong transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                       >
                         <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
                       </a>
@@ -395,7 +395,7 @@ export default async function DocumentsPage({
                       {t(`types.${documentTypeMap[doc.document_type] || "custom"}`)}
                     </Badge>
                     {doc.expiry_date && (
-                      <Badge variant={expiryVariant} className="font-mono ltr-nums">
+                      <Badge variant={expiryVariant} className="tabular-nums ltr-nums">
                         {format(new Date(doc.expiry_date), "dd MMM yyyy")}
                       </Badge>
                     )}
@@ -412,7 +412,7 @@ export default async function DocumentsPage({
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="border-t border-border/40">
+            <div className="border-t border-border">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

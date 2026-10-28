@@ -119,7 +119,7 @@ export function PropertyMaintenanceLinks({ properties, locale }: Props) {
         return (
           <div
             key={p.id}
-            className="space-y-3 rounded-lg border border-border/50 bg-surface-elevated/50 p-4 transition-colors hover:border-border"
+            className="space-y-3 rounded-lg border border-border bg-surface-elevated p-4 transition-colors hover:border-border"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
@@ -164,7 +164,7 @@ export function PropertyMaintenanceLinks({ properties, locale }: Props) {
                     value={linkFor(tk.token)}
                     onFocus={(e) => e.currentTarget.select()}
                     aria-label={t("shareLink")}
-                    className="h-8 truncate font-mono text-xs text-text-secondary"
+                    className="h-8 truncate tabular-nums text-xs text-text-secondary"
                   />
                 </div>
                 <Button

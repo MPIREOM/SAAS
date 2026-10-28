@@ -61,8 +61,8 @@ export default function NewTemplatePage({
     <div className="max-w-2xl space-y-6">
       <PageHeader title={t("newTemplate")} description={t("noTemplatesDescription")} />
 
-      <form onSubmit={handleSubmit} className="space-y-5 animate-fade-in-up">
-        <div className="rounded-xl border border-border/60 bg-surface p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-xl border border-border bg-surface p-6 space-y-5">
           <Input
             name="name"
             required
@@ -103,7 +103,7 @@ export default function NewTemplatePage({
             label={`${t("whatsappTemplateName")} (${t("whatsappOnly")})`}
             helperText={t("whatsappTemplateNameHint")}
             placeholder="e.g. mpire_rent_upcoming_en"
-            className="font-mono"
+            className="tabular-nums"
           />
 
           <Textarea
