@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 // Staff: record a building-rules violation for the unit's current tenant.
 // The fee is billed on its own invoice, due with the next rent, and the
@@ -89,7 +90,7 @@ export function RecordViolationDialog({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 h-8 px-3 bg-destructive/10 border border-destructive/25 text-destructive text-xs font-semibold rounded-lg hover:bg-destructive/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+        className={buttonVariants({ variant: "destructive", size: "sm" })}
       >
         <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5" />
         {t("record")}
@@ -120,7 +121,7 @@ export function RecordViolationDialog({
                     value={repairCost}
                     onChange={(e) => setRepairCost(e.target.value)}
                     placeholder="0.000"
-                    className="font-mono ltr-nums tabular-nums"
+                    className="tabular-nums ltr-nums tabular-nums"
                   />
                 )}
                 {kind === "lost_key" && (
@@ -132,7 +133,7 @@ export function RecordViolationDialog({
                     label={t("quantity")}
                     value={quantity}
                     onChange={(e) => setQuantity(parseInt(e.target.value, 10) || 1)}
-                    className="font-mono ltr-nums tabular-nums"
+                    className="tabular-nums ltr-nums tabular-nums"
                   />
                 )}
                 <Input
@@ -141,13 +142,13 @@ export function RecordViolationDialog({
                   defaultValue={today}
                   max={today}
                   label={t("date")}
-                  className="font-mono ltr-nums"
+                  className="tabular-nums ltr-nums"
                 />
               </div>
               <Textarea name="notes" rows={2} maxLength={500} label={t("notes")} placeholder={t("notesPlaceholder")} />
-              <div className="flex items-center justify-between rounded-lg bg-surface-elevated border border-border/60 px-4 py-3">
+              <div className="flex items-center justify-between rounded-lg bg-surface-elevated border border-border px-4 py-3">
                 <span className="text-sm text-text-secondary">{t("total")}</span>
-                <span className="text-base font-semibold font-mono ltr-nums tabular-nums text-destructive">
+                <span className="text-base font-semibold tabular-nums ltr-nums tabular-nums text-destructive">
                   {total} OMR
                 </span>
               </div>

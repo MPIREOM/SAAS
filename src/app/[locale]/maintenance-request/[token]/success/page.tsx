@@ -8,14 +8,14 @@ export default function MaintenanceRequestSuccessPage() {
   const t = useTranslations("maintenanceRequest");
 
   return (
-    <div className="min-h-screen bg-background noise-overlay flex items-center justify-center p-4">
-      <main className="w-full max-w-md text-center space-y-7 animate-fade-in-up">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <main className="w-full max-w-md text-center space-y-7">
         <div className="relative mx-auto h-20 w-20">
           <div
             aria-hidden="true"
-            className="absolute inset-0 rounded-2xl bg-success/20 blur-xl"
+            className="absolute inset-0 rounded-xl bg-success/20 blur-xl"
           />
-          <div className="relative h-20 w-20 rounded-2xl bg-success/10 border border-success/25 flex items-center justify-center">
+          <div className="relative h-20 w-20 rounded-xl bg-success-tint border border-success/30 flex items-center justify-center">
             <CheckCircle2 aria-hidden="true" className="h-10 w-10 text-success" />
           </div>
         </div>
@@ -41,7 +41,7 @@ export default function MaintenanceRequestSuccessPage() {
         </div>
 
         <footer>
-          <p className="text-xs text-text-secondary/50">
+          <p className="text-xs text-text-tertiary">
             MPIRE Property Management
           </p>
         </footer>

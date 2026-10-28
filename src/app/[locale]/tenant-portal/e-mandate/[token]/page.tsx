@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Landmark, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
+import { Landmark, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { CURRENCY, formatCurrency } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 
 interface MandateView {
   id: string;
@@ -95,7 +95,7 @@ export default function EMandateOtpPage({ params }: { params: Promise<{ locale: 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background noise-overlay flex flex-col items-center justify-center gap-3 p-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 p-4">
         <Spinner label={tc("loading")} sizeClassName="h-8 w-8" />
       </div>
     );
@@ -103,9 +103,9 @@ export default function EMandateOtpPage({ params }: { params: Promise<{ locale: 
 
   if (invalid || !view) {
     return (
-      <div className="min-h-screen bg-background noise-overlay flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6 text-center animate-fade-in-up">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/25">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-destructive-tint border border-destructive/30">
             <AlertTriangle aria-hidden="true" className="h-8 w-8 text-destructive" />
           </div>
           <h1 className="text-2xl font-bold text-text-primary font-display">{t("invalidTitle")}</h1>
@@ -115,27 +115,30 @@ export default function EMandateOtpPage({ params }: { params: Promise<{ locale: 
     );
   }
 
-  const money = `${formatCurrency(view.amount)} ${CURRENCY.code}`;
+  const money = `${formatAmount(view.amount)} ${CURRENCY.code}`;
   const locked = view.attemptsLeft <= 0 && !done;
 
   return (
-    <div className="min-h-screen bg-background noise-overlay">
-      <header className="border-b border-border/60 bg-surface/60 backdrop-blur-md sticky top-0 z-10">
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-surface sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
-            <Shield aria-hidden="true" className="h-5 w-5 text-accent" />
-          </div>
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-[15px] font-bold text-accent-foreground"
+          >
+            M
+          </span>
           <div className="min-w-0">
-            <h1 className="text-base font-semibold text-text-primary font-display truncate">{t("title")}</h1>
+            <h1 className="text-[15px] font-bold text-text-primary font-display truncate">{t("title")}</h1>
             <p className="text-xs text-text-secondary truncate">{t("subtitle")}</p>
           </div>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-5 animate-fade-in-up">
-        <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+      <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
+        <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
+            <div className="h-12 w-12 rounded-xl bg-accent-tint border border-accent/30 flex items-center justify-center shrink-0">
               <Landmark aria-hidden="true" className="h-6 w-6 text-accent" />
             </div>
             <div className="min-w-0">
@@ -145,18 +148,18 @@ export default function EMandateOtpPage({ params }: { params: Promise<{ locale: 
               </p>
             </div>
           </div>
-          <dl className="grid grid-cols-2 gap-4 border-t border-border/40 pt-4 text-sm">
+          <dl className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-sm">
             <div>
-              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("amount")}</dt>
-              <dd className="text-text-primary font-mono ltr-nums mt-1">{money}</dd>
+              <dt className="text-[12.5px] font-medium text-text-secondary">{t("amount")}</dt>
+              <dd className="text-text-primary tabular-nums ltr-nums mt-1">{money}</dd>
             </div>
             <div>
-              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("collectionDay")}</dt>
-              <dd className="text-text-primary font-mono ltr-nums mt-1">{t("dayOfMonth", { day: view.collectionDay })}</dd>
+              <dt className="text-[12.5px] font-medium text-text-secondary">{t("collectionDay")}</dt>
+              <dd className="text-text-primary tabular-nums ltr-nums mt-1">{t("dayOfMonth", { day: view.collectionDay })}</dd>
             </div>
             <div className="col-span-2">
-              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("account")}</dt>
-              <dd className="text-text-primary font-mono ltr-nums mt-1">{view.debtorAccountMasked ?? "—"}</dd>
+              <dt className="text-[12.5px] font-medium text-text-secondary">{t("account")}</dt>
+              <dd className="text-text-primary tabular-nums ltr-nums mt-1">{view.debtorAccountMasked ?? "—"}</dd>
             </div>
           </dl>
         </section>
@@ -171,7 +174,7 @@ export default function EMandateOtpPage({ params }: { params: Promise<{ locale: 
         ) : locked ? (
           <Alert variant="destructive" title={t("lockedTitle")}>{t("lockedMessage")}</Alert>
         ) : (
-          <form onSubmit={submit} className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+          <form onSubmit={submit} className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
             <p className="text-sm text-text-secondary">{t("otpInstructions")}</p>
             {error && <Alert variant="destructive">{error}</Alert>}
             <Input
@@ -180,20 +183,20 @@ export default function EMandateOtpPage({ params }: { params: Promise<{ locale: 
               autoComplete="one-time-code"
               pattern="[0-9]*"
               maxLength={8}
-              className="font-mono ltr-nums text-lg tracking-[0.3em] text-center"
+              className="tabular-nums ltr-nums text-lg tracking-[0.3em] text-center"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               helperText={t("attemptsLeft", { count: view.attemptsLeft })}
               required
             />
-            <Button type="submit" className="w-full" loading={submitting} disabled={otp.length < 4}>
+            <Button type="submit" size="lg" className="w-full" loading={submitting} disabled={otp.length < 4}>
               {t("confirm")}
             </Button>
             <p className="text-xs text-text-secondary">{t("consent", { amount: money, day: view.collectionDay })}</p>
           </form>
         )}
 
-        <p className="text-xs text-text-secondary/50 text-center pt-2">MPIRE Property Management</p>
+        <p className="text-xs text-text-tertiary text-center pt-2">MPIRE Property Management</p>
       </main>
     </div>
   );

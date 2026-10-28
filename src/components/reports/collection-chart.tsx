@@ -1,6 +1,6 @@
 "use client";
 
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import {
   BarChart,
@@ -66,7 +66,7 @@ export function CollectionChart({ data }: CollectionChartProps) {
               boxShadow: "var(--shadow-overlay)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
-            formatter={(value) => [`${Number(value).toFixed(2)} ${CURRENCY.code}`]}
+            formatter={(value) => [`${formatAmount(Number(value))} ${CURRENCY.code}`]}
             cursor={{ fill: "var(--color-sunken)", opacity: 0.6 }}
           />
           <Legend

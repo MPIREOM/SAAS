@@ -135,7 +135,7 @@ export const SignaturePad = forwardRef<
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className={`block w-full h-44 rounded-xl border border-border/60 bg-white touch-none cursor-crosshair focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className ?? ""}`}
+      className={`block w-full h-44 rounded-xl border border-border bg-white touch-none cursor-crosshair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${className ?? ""}`}
     />
   );
 });

@@ -1,4 +1,4 @@
-import { CalendarClock, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -15,22 +15,25 @@ export function PublicVisitShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background noise-overlay">
-      <header className="border-b border-border/60 bg-surface/60 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
-            <CalendarClock aria-hidden="true" className="h-5 w-5 text-accent" />
-          </div>
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-surface sticky top-0 z-10">
+        <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-[15px] font-bold text-accent-foreground"
+          >
+            M
+          </span>
           <div className="min-w-0">
-            <h1 className="text-base font-semibold text-text-primary font-display truncate">{title}</h1>
-            {subtitle && <p className="text-xs text-text-secondary truncate">{subtitle}</p>}
+            <h1 className="text-[15px] font-bold text-text-primary font-display truncate">{title}</h1>
+            {subtitle && <p className="text-[13px] text-text-secondary truncate">{subtitle}</p>}
           </div>
         </div>
       </header>
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-5 stagger-children">
+      <main className="max-w-xl mx-auto px-4 pt-5 pb-10 space-y-4">
         {children}
         <footer className="text-center py-2">
-          <p className="text-xs text-text-secondary/50">MPIRE Property Management</p>
+          <p className="text-xs text-text-tertiary">MPIRE Property Management</p>
         </footer>
       </main>
     </div>
@@ -39,7 +42,7 @@ export function PublicVisitShell({
 
 export function PublicVisitLoading({ label }: { label: string }) {
   return (
-    <div className="min-h-screen bg-background noise-overlay flex flex-col items-center justify-center gap-3 p-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 p-4">
       <Spinner label={label} sizeClassName="h-8 w-8" />
       <p aria-hidden="true" className="text-sm text-text-secondary">
         {label}
@@ -50,16 +53,16 @@ export function PublicVisitLoading({ label }: { label: string }) {
 
 export function PublicVisitMessage({ title, message }: { title: string; message: string }) {
   return (
-    <div className="min-h-screen bg-background noise-overlay flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6 text-center animate-fade-in-up">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/25">
-          <AlertTriangle aria-hidden="true" className="h-8 w-8 text-destructive" />
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-destructive-tint">
+          <AlertTriangle aria-hidden="true" className="h-7 w-7 text-destructive-text" />
         </div>
-        <h1 className="text-2xl font-bold text-text-primary font-display">{title}</h1>
+        <h1 className="text-[22px] font-bold text-text-primary font-display">{title}</h1>
         <Alert variant="destructive" className="text-start">
           {message}
         </Alert>
-        <p className="text-xs text-text-secondary/50 pt-2">MPIRE Property Management</p>
+        <p className="text-xs text-text-tertiary pt-2">MPIRE Property Management</p>
       </div>
     </div>
   );
