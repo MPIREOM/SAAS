@@ -6,88 +6,210 @@
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
   --color-surface-hover: var(--surface-hover);
+  --color-sunken: var(--sunken);
   --color-border: var(--border-color);
+  --color-border-strong: var(--border-strong);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-press: var(--accent-press);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-tint-foreground: var(--accent-tint-foreground);
   --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
   --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-tint: var(--destructive-tint);
+  --color-destructive-text: var(--destructive-text);
   --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
   --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
+  --color-neutral-tint: var(--neutral-tint);
+  --color-focus: var(--focus);
+  --color-scrim: var(--scrim);
   --color-muted-foreground: var(--text-secondary);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --shadow-card: var(--shadow-card);
+  --shadow-overlay: var(--shadow-overlay);
   --font-sans: var(--font-sans);
-  --font-display: var(--font-display);
+  --font-display: var(--font-sans);
   --font-mono: var(--font-mono);
-  --font-arabic: var(--font-ibm-plex-arabic);
+  --font-arabic: var(--font-sans);
 }
+
+/* ─── Teal & Sand ───────────────────────────────────────
+   Light is the base. Dark applies when the device prefers it and the
+   user hasn't picked light, or when the user picked dark. Every text
+   pair meets WCAG AA (4.5:1). */
 
 :root {
-  /* Dark mode (default) — Architectural Gold */
-  --background: #0B0A0F;
-  --surface: #13121A;
-  --surface-elevated: #1B1A23;
-  --surface-hover: #22212C;
-  --border-color: #2A293A;
-  --text-primary: #F0EDE6;
-  --text-secondary: #8A8697;
-  --accent: #C9A84C;
-  --accent-hover: #B8952F;
-  --accent-foreground: #0B0A0F;
-  --warning: #E8944A;
-  --destructive: #E84855;
-  --success: #4AD66D;
-  --info: #5B9DF9;
-  --foreground: #F0EDE6;
+  --background: #F5F2EC;
+  --surface: #FFFFFF;
+  --surface-elevated: #FAF8F4;
+  --surface-hover: #F2EEE7;
+  --sunken: #EFEBE3;
+  --border-color: #E2DCD1;
+  --border-strong: #C9C1B3;
+  --text-primary: #18211F;
+  --text-secondary: #45514D;
+  --text-tertiary: #5F6965;
+  --foreground: #18211F;
 
-  /* Categorical chart series — CVD-validated against the dark surface.
-     Identity colors for data series only; status colors stay reserved
-     for status. Assign in fixed slot order, never cycled. */
-  --chart-1: #AD8A28;
-  --chart-2: #4A8BE8;
-  --chart-3: #25A07F;
-  --chart-4: #8677E0;
-  --chart-5: #D2648C;
+  --accent: #0F6B66;
+  --accent-hover: #0B5652;
+  --accent-press: #08433F;
+  --accent-foreground: #FFFFFF;
+  --accent-tint: #E2EFEC;
+  --accent-tint-foreground: #0A514D;
 
-  /* Gradient tokens */
-  --gradient-gold: linear-gradient(135deg, #C9A84C 0%, #E8D48B 50%, #C9A84C 100%);
-  --gradient-surface: linear-gradient(180deg, #13121A 0%, #0B0A0F 100%);
-  --gradient-glow: radial-gradient(ellipse at 50% 0%, rgba(201, 168, 76, 0.08) 0%, transparent 70%);
+  --destructive: #B42318;
+  --destructive-hover: #931C13;
+  --destructive-foreground: #FFFFFF;
+  --destructive-tint: #FCEBE8;
+  --destructive-text: #9E1F15;
+  --warning: #8A5300;
+  --warning-tint: #FBF0DA;
+  --success: #1A6E3E;
+  --success-tint: #E3F2E8;
+  --info: #1D5A9E;
+  --info-tint: #E6EEF8;
+  --neutral-tint: #EDE9E1;
+
+  --focus: #0F6B66;
+  --scrim: rgba(18, 24, 22, 0.45);
+  --shadow-card: 0 1px 2px rgba(24, 33, 31, 0.06), 0 1px 1px rgba(24, 33, 31, 0.03);
+  --shadow-overlay: 0 16px 40px rgba(24, 33, 31, 0.18), 0 2px 8px rgba(24, 33, 31, 0.08);
+
+  /* Categorical chart series: identity colors for data only; status
+     colors stay reserved for status. Assign in fixed slot order. */
+  --chart-1: #0F6B66;
+  --chart-2: #C27A12;
+  --chart-3: #2F6FB2;
+  --chart-4: #8C5BB0;
+  --chart-5: #B4466A;
+  --chart-6: #7E8784;
+
+  /* Legacy effect tokens, kept flat until every caller is restyled */
+  --gradient-gold: var(--accent);
+  --gradient-surface: var(--surface);
+  --gradient-glow: none;
+
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2345514D%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
+
+  color-scheme: light;
 }
 
-[data-theme="light"] {
-  --background: #F6F4EE;
-  --surface: #FFFFFF;
-  --surface-elevated: #F0EDE6;
-  --surface-hover: #E8E4DB;
-  --border-color: #DDD9CE;
-  --text-primary: #1A1820;
-  --text-secondary: #6B6678;
-  --accent: #A68A2A;
-  --accent-hover: #8F7520;
-  --accent-foreground: #FFFFFF;
-  --warning: #C47A2E;
-  --destructive: #C73B47;
-  --success: #2D9E4A;
-  --info: #3B7DD8;
-  --foreground: #1A1820;
+[data-theme="dark"] {
+  --background: #0E1413;
+  --surface: #151D1B;
+  --surface-elevated: #19221F;
+  --surface-hover: #1F2926;
+  --sunken: #111816;
+  --border-color: #283330;
+  --border-strong: #3A4743;
+  --text-primary: #ECF0EE;
+  --text-secondary: #BAC4C0;
+  --text-tertiary: #97A29E;
+  --foreground: #ECF0EE;
 
-  /* Same five hues re-stepped for the white card surface */
-  --chart-1: #A68A2A;
-  --chart-2: #2A66C4;
-  --chart-3: #0C7D62;
-  --chart-4: #6553C4;
-  --chart-5: #B04A72;
+  --accent: #4FC2B6;
+  --accent-hover: #6ED1C6;
+  --accent-press: #3AA89C;
+  --accent-foreground: #04201D;
+  --accent-tint: #173A36;
+  --accent-tint-foreground: #8FDDD4;
 
-  --gradient-gold: linear-gradient(135deg, #A68A2A 0%, #D4B95E 50%, #A68A2A 100%);
-  --gradient-surface: linear-gradient(180deg, #FFFFFF 0%, #F6F4EE 100%);
-  --gradient-glow: radial-gradient(ellipse at 50% 0%, rgba(166, 138, 42, 0.06) 0%, transparent 70%);
+  --destructive: #F2877C;
+  --destructive-hover: #F6A39A;
+  --destructive-foreground: #2A0C09;
+  --destructive-tint: #3A1C19;
+  --destructive-text: #F6A39A;
+  --warning: #E8B04E;
+  --warning-tint: #3A2C12;
+  --success: #64CC8F;
+  --success-tint: #15321F;
+  --info: #7FB2EC;
+  --info-tint: #16263A;
+  --neutral-tint: #222C29;
+
+  --focus: #6ED1C6;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  --chart-1: #4FC2B6;
+  --chart-2: #E3A24A;
+  --chart-3: #6FA3E0;
+  --chart-4: #B48AD6;
+  --chart-5: #E07C9E;
+  --chart-6: #8E9995;
+
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23BAC4C0%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
+
+  color-scheme: dark;
+}
+
+/* Same values when the device prefers dark and no choice is saved */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #0E1413;
+    --surface: #151D1B;
+    --surface-elevated: #19221F;
+    --surface-hover: #1F2926;
+    --sunken: #111816;
+    --border-color: #283330;
+    --border-strong: #3A4743;
+    --text-primary: #ECF0EE;
+    --text-secondary: #BAC4C0;
+    --text-tertiary: #97A29E;
+    --foreground: #ECF0EE;
+
+    --accent: #4FC2B6;
+    --accent-hover: #6ED1C6;
+    --accent-press: #3AA89C;
+    --accent-foreground: #04201D;
+    --accent-tint: #173A36;
+    --accent-tint-foreground: #8FDDD4;
+
+    --destructive: #F2877C;
+    --destructive-hover: #F6A39A;
+    --destructive-foreground: #2A0C09;
+    --destructive-tint: #3A1C19;
+    --destructive-text: #F6A39A;
+    --warning: #E8B04E;
+    --warning-tint: #3A2C12;
+    --success: #64CC8F;
+    --success-tint: #15321F;
+    --info: #7FB2EC;
+    --info-tint: #16263A;
+    --neutral-tint: #222C29;
+
+    --focus: #6ED1C6;
+    --scrim: rgba(0, 0, 0, 0.6);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    --chart-1: #4FC2B6;
+    --chart-2: #E3A24A;
+    --chart-3: #6FA3E0;
+    --chart-4: #B48AD6;
+    --chart-5: #E07C9E;
+    --chart-6: #8E9995;
+
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23BAC4C0%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
+
+    color-scheme: dark;
+  }
 }
 
 /* ─── Base ─────────────────────────────────────────────── */
@@ -95,62 +217,39 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-variant-numeric: lining-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ─── Typography ───────────────────────────────────────── */
 
+/* One family (Thmanyah Sans) for English and Arabic; display text is
+   the same face at heavier weight. */
 .font-display {
-  font-family: var(--font-display), ui-serif, serif;
-  letter-spacing: -0.02em;
-}
-
-/* Arabic text uses IBM Plex Arabic instead of the Latin display/body
-   faces, which have no Arabic glyphs and would otherwise silently fall
-   back to the browser's generic serif/sans-serif. */
-[dir="rtl"] body {
-  font-family: var(--font-arabic), var(--font-sans), sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 [dir="rtl"] .font-display {
-  font-family: var(--font-arabic), ui-serif, serif;
   letter-spacing: normal;
 }
 
-/* ─── Noise Texture Overlay ────────────────────────────── */
-
-.noise-overlay::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
+.tabular-nums,
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* ─── Gold Shimmer Effect ──────────────────────────────── */
-
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
+/* ─── Retired gold effects ────────────────────────────────
+   Teal & Sand uses flat surfaces. These classes stay as no-ops until
+   each caller is restyled in a later phase. */
 
 .gold-shimmer {
-  background: var(--gradient-gold);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 4s linear infinite;
+  color: var(--accent);
 }
 
 .gold-shimmer-bg {
-  background: var(--gradient-gold);
-  background-size: 200% auto;
-  animation: shimmer 3s ease-in-out infinite;
+  background: var(--accent);
 }
 
 /* ─── Entrance Animations ──────────────────────────────── */
@@ -255,12 +354,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: var(--border-strong);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+  background: var(--text-tertiary);
 }
 
 /* ─── RTL Numbers ──────────────────────────────────────── */
@@ -276,38 +375,14 @@ body {
   outline: none;
 }
 .focus-ring:focus-visible {
-  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--accent);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
-/* ─── Glass Effect ─────────────────────────────────────── */
+/* ─── Glass (retired: solid surface) ───────────────────── */
 
 .glass {
-  background: rgba(19, 18, 26, 0.7);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-}
-
-[data-theme="light"] .glass {
-  background: rgba(255, 255, 255, 0.7);
-}
-
-/* ─── Gold Border Glow ─────────────────────────────────── */
-
-.border-glow {
-  position: relative;
-}
-
-.border-glow::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(201, 168, 76, 0.3), transparent 60%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  background: var(--surface);
 }
 
 /* ─── Mobile Table Improvements ──────────────────────────── */

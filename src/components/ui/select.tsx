@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export interface SelectProps
@@ -23,7 +24,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="text-sm font-medium text-foreground tracking-tight"
+            className="text-[13px] font-semibold text-foreground"
           >
             {label}
           </label>
@@ -40,15 +41,16 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                 : undefined
           }
           className={cn(
-            "flex h-10 w-full appearance-none rounded-lg border bg-surface-elevated/50 px-3 py-2 pe-8",
-            "text-sm text-foreground",
-            "transition-all duration-200",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/50 focus-visible:bg-surface-elevated",
-            "disabled:cursor-not-allowed disabled:opacity-40",
-            "bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238A8697%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[position:right_0.5rem_center] rtl:bg-[position:left_0.5rem_center] bg-no-repeat",
+            "flex h-[42px] w-full appearance-none rounded-lg border bg-surface ps-3 pe-9 py-2",
+            "text-sm text-foreground cursor-pointer",
+            // Chevron colour follows the theme via --select-chevron (globals.css)
+            "bg-(image:--select-chevron) bg-no-repeat bg-[position:right_0.75rem_center] rtl:bg-[position:left_0.75rem_center]",
+            "transition-colors duration-150",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent",
+            "disabled:cursor-not-allowed disabled:bg-sunken disabled:text-text-tertiary disabled:border-border",
             error
-              ? "border-destructive/60 focus-visible:ring-destructive/30 focus-visible:border-destructive"
-              : "border-border/60",
+              ? "border-destructive ring-1 ring-destructive"
+              : "border-border-strong",
             className
           )}
           {...props}
@@ -61,12 +63,13 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           {children}
         </select>
         {error && (
-          <p id={`${selectId}-error`} className="text-xs text-destructive" role="alert">
+          <p id={`${selectId}-error`} className="flex items-center gap-1.5 text-[12.5px] font-medium text-destructive-text" role="alert">
+            <AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
             {error}
           </p>
         )}
         {!error && helperText && (
-          <p id={`${selectId}-helper`} className="text-xs text-text-secondary">
+          <p id={`${selectId}-helper`} className="text-[12.5px] text-text-secondary">
             {helperText}
           </p>
         )}

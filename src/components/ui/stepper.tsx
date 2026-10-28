@@ -62,10 +62,10 @@ export function Stepper({ steps, activeIndex, onChange, className }: StepperProp
               isCompleted &&
                 "bg-accent text-accent-foreground",
               isCurrent &&
-                "border-2 border-accent text-accent bg-accent/5",
+                "border-2 border-accent text-accent-tint-foreground bg-accent-tint",
               !isCompleted &&
                 !isCurrent &&
-                "border border-border/60 text-text-secondary bg-surface-elevated/50"
+                "border border-border-strong text-text-secondary bg-surface"
             )}
             aria-hidden="true"
           >
@@ -94,7 +94,7 @@ export function Stepper({ steps, activeIndex, onChange, className }: StepperProp
               <button
                 type="button"
                 onClick={() => onChange?.(idx)}
-                className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="flex items-center gap-2 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 {indicator}
                 <span className={cn(labelClasses, "hover:text-accent transition-colors")}>

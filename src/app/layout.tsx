@@ -1,19 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Syne, Manrope, JetBrains_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
+import localFont from "next/font/local";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const syne = Syne({
-  subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const manrope = Manrope({
-  subsets: ["latin"],
+// Thmanyah Sans covers Latin and Arabic, so one family serves both locales.
+const thmanyahSans = localFont({
+  src: [
+    { path: "./fonts/thmanyahsans-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/thmanyahsans-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/thmanyahsans-Bold.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-sans",
   display: "swap",
-  weight: ["300", "400", "500", "600", "700", "800"],
+  fallback: ["system-ui", "-apple-system", "Segoe UI", "sans-serif"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -23,12 +22,9 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
-const ibmPlexArabic = IBM_Plex_Sans_Arabic({
-  subsets: ["arabic"],
-  variable: "--font-ibm-plex-arabic",
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
+// Applies a saved light/dark choice before first paint. Without one the
+// CSS follows the device setting (prefers-color-scheme).
+const themeScript = `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}`;
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -50,8 +46,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
-        className={`${syne.variable} ${manrope.variable} ${jetbrainsMono.variable} ${ibmPlexArabic.variable} antialiased font-sans`}
+        className={`${thmanyahSans.variable} ${jetbrainsMono.variable} antialiased font-sans`}
       >
         {children}
       </body>

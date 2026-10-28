@@ -2,17 +2,25 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/cn";
 
+// Pill with a leading dot: status always pairs colour with a word, and
+// the dot keeps it scannable when colour alone can't be told apart.
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold tracking-tight transition-colors",
+  [
+    "inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-semibold",
+    "before:size-1.5 before:shrink-0 before:rounded-full before:bg-current before:content-['']",
+    // A badge that brings its own icon drops the dot.
+    "has-[svg]:before:hidden",
+  ],
   {
     variants: {
       variant: {
-        default: "bg-accent/12 text-accent border border-accent/20",
-        secondary: "bg-surface-elevated text-text-secondary border border-border/60",
-        warning: "bg-warning/12 text-warning border border-warning/20",
-        destructive: "bg-destructive/12 text-destructive border border-destructive/20",
-        success: "bg-success/12 text-success border border-success/20",
-        outline: "bg-transparent text-foreground border border-border/60",
+        default: "bg-accent-tint text-accent-tint-foreground",
+        secondary: "bg-neutral-tint text-text-secondary",
+        warning: "bg-warning-tint text-warning",
+        destructive: "bg-destructive-tint text-destructive-text",
+        success: "bg-success-tint text-success",
+        info: "bg-info-tint text-info",
+        outline: "border border-border-strong bg-transparent text-foreground",
       },
     },
     defaultVariants: {

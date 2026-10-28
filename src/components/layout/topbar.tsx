@@ -30,7 +30,7 @@ interface SearchResult extends SearchResultRaw {
 }
 
 export function Topbar({ locale, userEmail, userName }: TopbarProps) {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -47,12 +47,15 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
   const t = useTranslations("common");
   const tn = useTranslations("nav");
 
-  // Persist theme from localStorage + detect platform for keyboard hint.
+  // Saved theme wins; otherwise mirror the device setting the CSS is
+  // already following. Also detect platform for the keyboard hint.
   useEffect(() => {
     const saved = localStorage.getItem("theme") as "dark" | "light" | null;
-    if (saved) {
+    if (saved === "dark" || saved === "light") {
       setTheme(saved);
       document.documentElement.setAttribute("data-theme", saved);
+    } else {
+      setTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     }
     setIsMac(/Mac|iPhone|iPad/.test(navigator.platform));
   }, []);
