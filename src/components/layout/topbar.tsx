@@ -300,7 +300,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
                           : "hover:bg-surface-elevated"
                       )}
                     >
-                      <span className="text-[11px] font-semibold text-accent-tint-foreground bg-accent-tint px-2 py-0.5 rounded-full shrink-0">
+                      <span className="text-xs font-semibold text-accent-tint-foreground bg-accent-tint px-2 py-0.5 rounded-full shrink-0">
                         {typeLabels[result.type]}
                       </span>
                       <div className="min-w-0">
@@ -316,7 +316,7 @@ export function Topbar({ locale, userEmail, userName }: TopbarProps) {
                     </Link>
                   );
                 })}
-                <div className="hidden sm:flex border-t border-border bg-surface-elevated px-3 py-1.5 items-center justify-between text-[11px] text-text-secondary">
+                <div className="hidden sm:flex border-t border-border bg-surface-elevated px-3 py-1.5 items-center justify-between text-xs text-text-secondary">
                   <span className="flex items-center gap-1.5">
                     <kbd className="px-1 rounded border border-border-strong bg-surface">
                       ↑↓

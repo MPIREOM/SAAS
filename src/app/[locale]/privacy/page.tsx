@@ -39,18 +39,23 @@ export default async function PrivacyPolicyPage({
 
   return (
     <div className="min-h-screen bg-background px-4 py-12">
-      <main className="mx-auto w-full max-w-3xl space-y-10">
+      <main className="mx-auto w-full max-w-2xl space-y-10">
         <header className="space-y-3 border-b border-border pb-8">
-          <p className="text-xs font-medium uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-accent">MPIRE Property Management</p>
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 place-items-center rounded-lg bg-accent text-[15px] font-bold text-accent-foreground"
+          >
+            M
+          </span>
           <h1 className="text-3xl font-bold text-text-primary font-display">{t("title")}</h1>
           <p className="text-sm text-text-secondary ltr-nums">{t("lastUpdated")}</p>
-          <p className="text-base leading-relaxed text-text-secondary">{t("intro")}</p>
+          <p className="max-w-[32rem] text-base leading-relaxed text-text-secondary">{t("intro")}</p>
         </header>
 
         {SECTIONS.map((key) => (
           <section key={key} id={key} className="space-y-2 scroll-mt-8">
             <h2 className="text-lg font-semibold text-text-primary font-display">{t(`sections.${key}.title`)}</h2>
-            <p className="text-sm leading-relaxed text-text-secondary">{t(`sections.${key}.body`)}</p>
+            <p className="max-w-[32rem] text-[15px] leading-relaxed text-text-secondary">{t(`sections.${key}.body`)}</p>
           </section>
         ))}
 

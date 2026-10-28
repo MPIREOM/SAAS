@@ -36,7 +36,7 @@ export default function DashboardError({
           {t("errorDescription")}
         </p>
         {error.digest && (
-          <p className="text-xs text-text-tertiary font-mono">
+          <p className="text-xs text-text-tertiary tabular-nums">
             Error ID: {error.digest}
           </p>
         )}

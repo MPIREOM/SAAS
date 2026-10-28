@@ -59,7 +59,7 @@ function Toggle({
       disabled={disabled}
       className={`relative h-5 w-9 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-offset-surface ${
         enabled ? "bg-accent" : "bg-border"
-      }  ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+      }    ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
     >
       <span
         aria-hidden="true"

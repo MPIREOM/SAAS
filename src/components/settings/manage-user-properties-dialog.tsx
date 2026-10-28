@@ -154,7 +154,7 @@ export function ManageUserPropertiesDialog({
                       role="checkbox"
                       aria-checked={isSelected}
                       onClick={() => toggle(property.id)}
-                      className={`flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40 ${
+                      className={`flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-start transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus ${
                         isSelected ? "bg-accent-tint" : "hover:bg-surface-elevated"
                       }`}
                     >

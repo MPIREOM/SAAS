@@ -42,6 +42,8 @@ Thmanyah Sans (Regular 400, Medium 500, Bold 700; self-hosted in `src/app/fonts/
 - Table headers 12px semibold uppercase (English only)
 - Money: tabular numerals via `formatAmount` (thousands separators, no trailing zeros: `1,400 OMR`, baisa kept when present), unit in a smaller secondary span. PDFs keep `formatCurrency`.
 
+Running text wraps with `text-wrap: pretty` (no one-word last lines) and headings with `balance`; long-form reading (privacy) caps lines near 80 characters.
+
 ## Shape and space
 
 Radii: 8px controls, 12px cards, 14px dialogs, full for badges and pills. Card padding 16px. Page gutter 24px desktop, 12–16px phone. Controls: buttons 40px (34px small, 48px large), inputs 42px, table rows 48px.
@@ -62,6 +64,10 @@ All in `src/components/ui/`:
 ## Shell
 
 Sidebar 232px (68px collapsed; content offset follows via `--sidebar-w`), white with a teal "M" mark and letter-spaced MPIRE wordmark; active item on accent tint. Top bar 60px (56px phone), white, search at the start, language, theme and account at the end. Login: teal brand panel beside a plain form; no stats or invented claims.
+
+## Checks
+
+`impeccable detect` runs clean on the public pages (login, password reset, privacy, request sent). Its `cream-palette` rule is switched off in `.impeccable/config.json` because the sand ground is the approved MPIRE palette.
 
 ## Phone
 

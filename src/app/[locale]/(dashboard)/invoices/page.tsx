@@ -242,7 +242,6 @@ export default async function InvoicesPage({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Total */}
         <div className="group relative bg-surface border border-border rounded-xl shadow-card p-4 overflow-hidden transition-all duration-300 hover:border-border-strong">
-          <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
               <div className="h-8 w-8 rounded-lg bg-accent-tint flex items-center justify-center">
@@ -266,7 +265,6 @@ export default async function InvoicesPage({
 
         {/* Collected */}
         <div className="group relative bg-surface border border-border rounded-xl shadow-card p-4 overflow-hidden transition-all duration-300 hover:border-success/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
               <div className="h-8 w-8 rounded-lg bg-success-tint flex items-center justify-center">
@@ -294,7 +292,6 @@ export default async function InvoicesPage({
 
         {/* Pending */}
         <div className="group relative bg-surface border border-border rounded-xl shadow-card p-4 overflow-hidden transition-all duration-300 hover:border-warning/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-warning/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
               <div className="h-8 w-8 rounded-lg bg-warning-tint flex items-center justify-center">
@@ -318,7 +315,6 @@ export default async function InvoicesPage({
 
         {/* Overdue */}
         <div className="group relative bg-surface border border-border rounded-xl shadow-card p-4 overflow-hidden transition-all duration-300 hover:border-destructive/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-destructive/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
               <div className="h-8 w-8 rounded-lg bg-destructive-tint flex items-center justify-center">

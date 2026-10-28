@@ -126,7 +126,7 @@ export function InvoicePaymentsPicker({
                         : "border-border"
                     }`}
                   >
-                    {isSelected && <Check className="h-2.5 w-2.5 text-white" />}
+                    {isSelected && <Check className="h-2.5 w-2.5 text-destructive-foreground" />}
                   </div>
                 </div>
               </div>

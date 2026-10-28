@@ -465,7 +465,7 @@ export default async function UnitDetailPage({
                 <dd
                   className={`mt-1 text-sm font-medium truncate ${
                     item.highlight ? "text-accent font-semibold" : "text-text-primary"
-                  }    ${item.mono ? "tabular-nums ltr-nums" : ""}    ${item.capitalize ? "capitalize" : ""}`}
+                  }        ${item.mono ? "tabular-nums ltr-nums" : ""}        ${item.capitalize ? "capitalize" : ""}`}
                 >
                   {item.value}
                 </dd>

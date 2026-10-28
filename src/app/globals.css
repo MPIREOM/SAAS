@@ -244,6 +244,15 @@ body {
   letter-spacing: normal;
 }
 
+/* No single-word last lines in running text */
+p {
+  text-wrap: pretty;
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
 .tabular-nums,
 .num {
   font-variant-numeric: tabular-nums lining-nums;

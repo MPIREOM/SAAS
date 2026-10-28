@@ -92,7 +92,7 @@ export function AuditLogViewer() {
             type="button"
             onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
             aria-expanded={expandedId === log.id}
-            className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
+            className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-3 text-start focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
           >
             <div className="flex min-w-0 items-center gap-3">
               <span

@@ -143,7 +143,7 @@ export function WorkMarker({ crewToken, bookingId, status, reason, note }: Props
             size="sm"
             loading={busy}
             onClick={() => save({ status: "done", reason: null, note: null })}
-            className="bg-success text-white hover:bg-success/90 shadow-none"
+            className="bg-success text-surface hover:bg-success/90 shadow-none"
           >
             <Check aria-hidden="true" className="h-3.5 w-3.5" />
             {t("markDone")}

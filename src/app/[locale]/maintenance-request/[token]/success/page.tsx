@@ -10,14 +10,8 @@ export default function MaintenanceRequestSuccessPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <main className="w-full max-w-md text-center space-y-7">
-        <div className="relative mx-auto h-20 w-20">
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 rounded-xl bg-success/20 blur-xl"
-          />
-          <div className="relative h-20 w-20 rounded-xl bg-success-tint border border-success/30 flex items-center justify-center">
-            <CheckCircle2 aria-hidden="true" className="h-10 w-10 text-success" />
-          </div>
+        <div className="mx-auto w-fit">
+          <CheckCircle2 aria-hidden="true" className="h-12 w-12 text-success" strokeWidth={1.75} />
         </div>
 
         <div className="space-y-2.5">
@@ -33,7 +27,8 @@ export default function MaintenanceRequestSuccessPage() {
           <Button
             variant="secondary"
             onClick={() => window.close()}
-            className="rounded-xl px-6"
+            size="lg"
+            className="px-6"
           >
             <ArrowLeft aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />
             {t("close")}

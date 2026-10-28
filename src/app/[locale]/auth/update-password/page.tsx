@@ -106,7 +106,7 @@ export default function UpdatePasswordPage({
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="new-password"
-                  className="text-sm font-medium tracking-tight text-foreground"
+                  className="text-sm font-medium text-foreground"
                 >
                   {t("newPassword")}
                 </label>
