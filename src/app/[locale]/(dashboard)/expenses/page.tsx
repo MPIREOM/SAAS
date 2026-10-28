@@ -112,12 +112,12 @@ export default async function ExpensesPage({
       </PageHeader>
 
       {/* Filter */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-text-secondary" />
+      <div className="-mx-3 sm:-mx-4 md:mx-0 px-3 sm:px-4 md:px-0 overflow-x-auto md:overflow-visible">
+        <div className="flex items-center gap-2 w-max md:w-auto md:flex-wrap">
+          <Building2 className="h-4 w-4 text-text-secondary shrink-0" />
           <Link
             href={`/${locale}/expenses`}
-            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
+            className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
               !property
                 ? "bg-accent-tint text-accent font-medium"
                 : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
@@ -129,7 +129,7 @@ export default async function ExpensesPage({
             <Link
               key={p.id as string}
               href={`/${locale}/expenses?property=${p.id as string}`}
-              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
+              className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 property === (p.id as string)
                   ? "bg-accent-tint text-accent font-medium"
                   : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
@@ -192,7 +192,7 @@ export default async function ExpensesPage({
                         <td className="px-5 py-3.5">
                           <Link
                             href={`/${locale}/expenses/${expense.id}/edit`}
-                            className="text-sm text-text-primary tabular-nums hover:text-accent transition-colors inline-flex items-center gap-1.5"
+                            className="text-sm text-text-primary tabular-nums whitespace-nowrap hover:text-accent transition-colors inline-flex items-center gap-1.5"
                           >
                             {formatDate(expense.expense_date as string)}
                             <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
@@ -206,7 +206,7 @@ export default async function ExpensesPage({
                             {unit?.unit_number ? (
                               <>
                                 <span className="text-border">/</span>
-                                <span className="text-sm tabular-nums text-text-secondary">
+                                <span className="text-sm tabular-nums text-text-secondary whitespace-nowrap">
                                   {unit.unit_number as string}
                                 </span>
                               </>
@@ -224,7 +224,7 @@ export default async function ExpensesPage({
                           </span>
                         </td>
                         <td className="px-5 py-3.5 text-end">
-                          <span className="text-sm font-semibold tabular-nums text-text-primary">
+                          <span className="text-sm font-semibold tabular-nums text-text-primary whitespace-nowrap">
                             {formatAmount(expense.amount as number)}
                             <span className="text-xs font-normal text-text-secondary ms-0.5">
                               {CURRENCY.code}
