@@ -31,7 +31,7 @@ If a needed primitive doesn't exist, extend `src/components/ui/` once and reuse 
 - **Lists**: desktop `Table` primitives + `md:hidden` mobile card list (must be scannable at 375px). Status → `Badge`. Empty → `EmptyState` with a primary action.
 - **Detail pages**: dossier layout — identity card up top (name, status Badge, `dl` fact grid), actions top-end, then sectioned tables/cards.
 - **Forms**: Card-grouped sections with `font-display` headings; field errors via primitive `error` prop; form-level errors via `Alert`; submit = `Button loading={...}` at the end-aligned action row, Cancel as ghost/secondary.
-- **Financial figures**: always `tabular-nums ltr-nums`, three decimals, unit in a smaller `text-text-secondary` span (`220.000 OMR` / `ر.ع.`), amounts `text-end`; credit/debit distinguished by success/destructive tone **plus a textual sign or label — never color alone**.
+- **Financial figures**: always `tabular-nums ltr-nums`, formatted with `formatAmount` from `@/lib/currency` (thousands separators, no trailing zeros: `1,400`, `12,974.464`), unit in a smaller `text-text-secondary` span, amounts `text-end`; credit/debit distinguished by success/destructive tone **plus a textual sign or label — never color alone**.
 - **Async states**: every fetch surface needs loading (`Spinner`/`Skeleton`), empty (`EmptyState`), and error (`Alert`) states.
 
 ## RTL / bilingual (non-negotiable)

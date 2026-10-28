@@ -61,7 +61,7 @@ export function WorkMarker({ crewToken, bookingId, status, reason, note }: Props
 
   if (editing) {
     return (
-      <div className="mt-2 space-y-3 rounded-lg border border-border/60 bg-surface-elevated/50 p-3">
+      <div className="mt-2 space-y-3 rounded-lg border border-border bg-surface-elevated p-3">
         <div className="flex flex-wrap gap-2" role="group" aria-label={t("outcome")}>
           {(["done", "not_entered"] as WorkStatus[]).map((s) => (
             <button
@@ -70,12 +70,12 @@ export function WorkMarker({ crewToken, bookingId, status, reason, note }: Props
               aria-pressed={draftStatus === s}
               onClick={() => setDraftStatus(s)}
               className={cn(
-                "px-3 h-9 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                "px-3 h-9 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                 draftStatus === s
                   ? s === "done"
-                    ? "border-success bg-success/15 text-success"
-                    : "border-destructive bg-destructive/10 text-destructive"
-                  : "border-border/60 text-text-secondary"
+                    ? "border-success bg-success-tint text-success"
+                    : "border-destructive bg-destructive-tint text-destructive"
+                  : "border-border text-text-secondary"
               )}
             >
               {s === "done" ? t("markDone") : t("couldntEnter")}
@@ -91,8 +91,8 @@ export function WorkMarker({ crewToken, bookingId, status, reason, note }: Props
                 aria-pressed={draftReason === r}
                 onClick={() => setDraftReason(r)}
                 className={cn(
-                  "px-3 h-8 rounded-lg border text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
-                  draftReason === r ? "border-accent bg-accent/10 text-text-primary" : "border-border/60 text-text-secondary"
+                  "px-3 h-8 rounded-lg border text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+                  draftReason === r ? "border-accent bg-accent-tint text-text-primary" : "border-border text-text-secondary"
                 )}
               >
                 {t(`reasons.${r}`)}

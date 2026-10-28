@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { format } from "date-fns";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
 
@@ -546,7 +546,7 @@ export default async function DashboardPage({
   const heroTiles = [
     {
       label: t("revenueThisMonth"),
-      value: `${stats.revenueThisMonth.toLocaleString()} ${CURRENCY.code}`,
+      value: `${formatAmount(stats.revenueThisMonth)} ${CURRENCY.code}`,
       hint: t("collectionRate"),
       icon: DollarSign,
       tone: "success" as const,
@@ -554,8 +554,8 @@ export default async function DashboardPage({
     },
     {
       label: t("netIncome"),
-      value: `${stats.netIncome.toLocaleString()} ${CURRENCY.code}`,
-      hint: `${t("expensesThisMonth")}: ${stats.expensesThisMonth.toLocaleString()} ${CURRENCY.code}`,
+      value: `${formatAmount(stats.netIncome)} ${CURRENCY.code}`,
+      hint: `${t("expensesThisMonth")}: ${formatAmount(stats.expensesThisMonth)} ${CURRENCY.code}`,
       icon: TrendingUp,
       tone: stats.netIncome >= 0 ? ("success" as const) : ("destructive" as const),
       href: `/${locale}/reports`,
@@ -572,7 +572,7 @@ export default async function DashboardPage({
       label: t("overdueInvoices"),
       value: overdueInvoices.length,
       hint: overdueInvoices.length > 0
-        ? `${totalOverdueAmount.toLocaleString()} ${CURRENCY.code}`
+        ? `${formatAmount(totalOverdueAmount)} ${CURRENCY.code}`
         : t("noOverdueInvoices"),
       icon: AlertTriangle,
       tone: overdueInvoices.length > 0 ? ("destructive" as const) : ("default" as const),
@@ -612,14 +612,14 @@ export default async function DashboardPage({
     },
     {
       label: t("expensesThisMonth"),
-      value: `${stats.expensesThisMonth.toLocaleString()} ${CURRENCY.code}`,
+      value: `${formatAmount(stats.expensesThisMonth)} ${CURRENCY.code}`,
       icon: Receipt,
       tone: "default" as const,
       href: `/${locale}/expenses`,
     },
     {
       label: t("vacancyCost"),
-      value: `${stats.vacancyCost.toLocaleString()} ${CURRENCY.code}`,
+      value: `${formatAmount(stats.vacancyCost)} ${CURRENCY.code}`,
       icon: PiggyBank,
       tone: stats.vacancyCost > 0 ? ("warning" as const) : ("default" as const),
       href: `/${locale}/properties`,
@@ -748,7 +748,7 @@ export default async function DashboardPage({
         title={t("agedReceivables")}
         count={
           totalAgedReceivables > 0
-            ? `${totalAgedReceivables.toLocaleString()} ${CURRENCY.code}`
+            ? `${formatAmount(totalAgedReceivables)} ${CURRENCY.code}`
             : undefined
         }
         countTone="destructive"
@@ -780,7 +780,7 @@ export default async function DashboardPage({
                     oldest ? "text-destructive-text" : "text-text-primary"
                   )}
                 >
-                  {bucket.total.toLocaleString()}
+                  {formatAmount(bucket.total)}
                   <small className="ms-1 text-xs font-semibold text-text-secondary">{CURRENCY.code}</small>
                 </p>
                 <p className={cn("text-[12.5px]", oldest ? "text-destructive-text" : "text-text-tertiary")}>
@@ -1003,7 +1003,7 @@ const agedSwatch = ["bg-warning", "bg-chart-2", "bg-destructive", "bg-destructiv
 function Amount({ value, className }: { value: string; className?: string }) {
   return (
     <span className={cn("text-sm font-semibold text-text-primary ltr-nums tabular-nums", className)}>
-      {value}
+      {formatAmount(value)}
       <small className="ms-1 text-[0.78em] font-medium text-text-secondary">{CURRENCY.code}</small>
     </span>
   );

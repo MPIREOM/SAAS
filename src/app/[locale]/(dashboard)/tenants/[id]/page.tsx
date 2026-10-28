@@ -2,7 +2,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/server";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -193,8 +193,7 @@ export default async function TenantDetailPage({
       ? tch(`statuses.${status}`)
       : status;
 
-  const formatMoney = (value: unknown) =>
-    Number(value || 0).toLocaleString("en-OM", { minimumFractionDigits: 2 });
+  const formatMoney = (value: unknown) => formatAmount(Number(value || 0));
 
   return (
     <div className="flex flex-col gap-5">

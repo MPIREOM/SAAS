@@ -55,8 +55,8 @@ export function UnitStatusToggle({
       className={cn(
         "gap-1.5",
         isMaintenance
-          ? "border-success/25 bg-success/10 text-success hover:border-success/40 hover:bg-success/20"
-          : "border-warning/25 bg-warning/10 text-warning hover:border-warning/40 hover:bg-warning/20"
+          ? "border-success/30 bg-success-tint text-success hover:border-success/40 hover:bg-success/20"
+          : "border-warning/30 bg-warning-tint text-warning hover:border-warning/40 hover:bg-warning/20"
       )}
     >
       {!loading && <Icon aria-hidden="true" className="h-3.5 w-3.5" />}

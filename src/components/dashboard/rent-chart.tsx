@@ -13,7 +13,7 @@ import {
   Legend,
 } from "recharts";
 import { createClient } from "@/lib/supabase/client";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 
 interface MonthData {
@@ -163,7 +163,7 @@ export function RentChart({ propertyIds }: RentChartProps) {
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
             itemStyle={{ color: "var(--color-text-primary)" }}
-            formatter={(value) => [`${Number(value).toFixed(2)} ${CURRENCY.code}`]}
+            formatter={(value) => [`${formatAmount(Number(value))} ${CURRENCY.code}`]}
             cursor={{ fill: "var(--color-sunken)", opacity: 0.6 }}
           />
           <Legend

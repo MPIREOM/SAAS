@@ -40,7 +40,7 @@ Thmanyah Sans (Regular 400, Medium 500, Bold 700; self-hosted in `src/app/fonts/
 - Card title 15px semibold; dialog title 17px bold
 - Body 14px; labels 13px semibold; help and meta 12.5px
 - Table headers 12px semibold uppercase (English only)
-- Money: tabular numerals, three decimals, unit in a smaller secondary span (`220.000 OMR`)
+- Money: tabular numerals via `formatAmount` (thousands separators, no trailing zeros: `1,400 OMR`, baisa kept when present), unit in a smaller secondary span. PDFs keep `formatCurrency`.
 
 ## Shape and space
 

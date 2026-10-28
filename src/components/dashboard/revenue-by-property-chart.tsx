@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 
 interface PropertySlice {
@@ -188,7 +188,7 @@ export function RevenueByPropertyChart({ propertyIds }: RevenueByPropertyChartPr
               boxShadow: "var(--shadow-overlay)",
             }}
             itemStyle={{ color: "var(--color-text-primary)" }}
-            formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}
+            formatter={(value) => [`${formatAmount(Number(value))} ${CURRENCY.code}`]}
           />
           <Legend
             wrapperStyle={{ fontSize: "11px", fontWeight: 500 }}

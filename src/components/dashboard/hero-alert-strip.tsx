@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, X } from "lucide-react";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -35,10 +35,7 @@ interface HeroAlertStripProps {
 }
 
 function fmt(n: number) {
-  return n.toLocaleString("en-OM", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
+  return formatAmount(n);
 }
 
 function interpolate(

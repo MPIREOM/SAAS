@@ -3,9 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { AlertCircle, ChevronRight, FileWarning } from "lucide-react";
-import { CURRENCY } from "@/lib/currency";
+import { AlertCircle, FileWarning } from "lucide-react";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /**
  * Interactive unit grid for the property detail page.
@@ -48,28 +50,11 @@ interface UnitGridProps {
 const STATUS_FILTERS = ["all", "occupied", "vacant", "maintenance"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
-const statusToneClasses: Record<
-  UnitStatus,
-  { bg: string; text: string; dot: string; border: string }
-> = {
-  vacant: {
-    bg: "bg-success/5",
-    text: "text-success",
-    dot: "bg-success",
-    border: "border-success/20 hover:border-success/40",
-  },
-  occupied: {
-    bg: "bg-info/5",
-    text: "text-info",
-    dot: "bg-info",
-    border: "border-info/20 hover:border-info/40",
-  },
-  maintenance: {
-    bg: "bg-warning/5",
-    text: "text-warning",
-    dot: "bg-warning",
-    border: "border-warning/20 hover:border-warning/40",
-  },
+// Occupied reads as information, vacant as an opportunity, maintenance as attention
+const statusBadge: Record<UnitStatus, "info" | "success" | "warning"> = {
+  occupied: "info",
+  vacant: "success",
+  maintenance: "warning",
 };
 
 export function UnitGrid({
@@ -116,7 +101,7 @@ export function UnitGrid({
       <div
         role="tablist"
         aria-label={tu("title")}
-        className="mb-4 flex items-center gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1"
+        className="mb-4 inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-[9px] border border-border bg-sunken p-[3px]"
       >
         {STATUS_FILTERS.map((f) => {
           const isActive = filter === f;
@@ -129,23 +114,16 @@ export function UnitGrid({
               aria-selected={isActive}
               onClick={() => setFilter(f)}
               className={cn(
-                "shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                "shrink-0 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-3 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
                 isActive
-                  ? "bg-accent font-medium text-accent-foreground shadow-sm shadow-accent/20"
-                  : "text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
+                  ? "bg-surface text-text-primary shadow-card ring-1 ring-border"
+                  : "text-text-secondary hover:text-text-primary"
               )}
             >
               <span>
                 {f === "all" ? tu("filterAll") : tu(f)}
               </span>
-              <span
-                className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[10px] font-mono tabular-nums ltr-nums",
-                  isActive
-                    ? "bg-accent-foreground/15 text-accent-foreground"
-                    : "bg-surface-elevated text-text-secondary"
-                )}
-              >
+              <span className="text-xs font-medium tabular-nums ltr-nums text-text-tertiary">
                 {count}
               </span>
             </button>
@@ -154,14 +132,11 @@ export function UnitGrid({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border/40 px-6 py-10 text-center text-sm text-text-secondary">
-          {tu("noUnitsForFilter")}
-        </p>
+        <EmptyState title={tu("noUnitsForFilter")} />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3">
           {filtered.map((unit) => {
             const status = ((unit.status as UnitStatus) || "vacant") as UnitStatus;
-            const config = statusToneClasses[status] ?? statusToneClasses.vacant;
             const missingCheques =
               status === "occupied" &&
               !!unit.active_tenant_id &&
@@ -175,17 +150,13 @@ export function UnitGrid({
               <Link
                 key={unit.id}
                 href={`/${locale}/properties/${propertyId}/units/${unit.id}`}
-                className={cn(
-                  "group rounded-xl border p-4 transition-all duration-200 hover:shadow-md hover:shadow-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
-                  config.bg,
-                  config.border
-                )}
+                className="flex min-w-0 flex-col gap-1.5 rounded-xl border border-border bg-surface p-3.5 shadow-card transition-colors duration-150 hover:border-border-strong hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-sm font-bold font-mono ltr-nums text-text-primary group-hover:text-accent transition-colors">
+                <div className="flex items-center gap-1.5">
+                  <p className="min-w-0 truncate text-[15px] font-bold tabular-nums ltr-nums text-text-primary">
                     {unit.unit_number}
                   </p>
-                  <div className="flex items-center gap-1.5">
+                  <div className="ms-auto flex shrink-0 items-center gap-1">
                     {missingCheques && (
                       <span
                         title={tch("missingCheques")}
@@ -194,7 +165,7 @@ export function UnitGrid({
                       >
                         <AlertCircle
                           aria-hidden="true"
-                          className="h-3.5 w-3.5 text-destructive"
+                          className="h-4 w-4 text-destructive-text"
                         />
                       </span>
                     )}
@@ -206,29 +177,23 @@ export function UnitGrid({
                       >
                         <FileWarning
                           aria-hidden="true"
-                          className="h-3.5 w-3.5 text-warning"
+                          className="h-4 w-4 text-warning"
                         />
                       </span>
                     )}
-                    <div className={cn("h-2.5 w-2.5 rounded-full", config.dot)} />
                   </div>
                 </div>
 
-                <span
-                  className={cn(
-                    "inline-block text-[10px] font-semibold uppercase tracking-wider",
-                    config.text
-                  )}
-                >
+                <Badge variant={statusBadge[status] ?? "secondary"} className="self-start">
                   {tu(status)}
-                </span>
+                </Badge>
 
                 {unit.active_tenant_name ? (
-                  <p className="mt-1.5 truncate text-[11px] text-text-secondary">
+                  <p className="truncate text-[13px] text-text-secondary">
                     {unit.active_tenant_name}
                   </p>
                 ) : unit.bedrooms != null ? (
-                  <p className="mt-1.5 truncate text-[11px] text-text-secondary/70">
+                  <p className="truncate text-[13px] text-text-tertiary">
                     {unit.bedrooms === 0
                       ? tu("types.studio")
                       : unit.bedrooms >= 1 && unit.bedrooms <= 4
@@ -236,28 +201,19 @@ export function UnitGrid({
                         : `${unit.bedrooms} BR`}
                   </p>
                 ) : unit.unit_type ? (
-                  <p className="mt-1.5 truncate text-[11px] capitalize text-text-secondary/70">
+                  <p className="truncate text-[13px] capitalize text-text-tertiary">
                     {unit.unit_type}
                   </p>
                 ) : null}
 
                 {unit.rent_amount ? (
-                  <p className="mt-2 text-xs font-bold font-mono tabular-nums ltr-nums text-text-primary/70">
-                    {Number(unit.rent_amount).toLocaleString("en-OM", {
-                      minimumFractionDigits: 0,
-                    })}{" "}
-                    <span className="text-[10px] font-normal text-text-secondary">
+                  <p className="mt-auto pt-1 text-sm font-semibold tabular-nums ltr-nums text-text-primary">
+                    {formatAmount(Number(unit.rent_amount))}
+                    <small className="ms-1 text-xs font-medium text-text-secondary">
                       {CURRENCY.code}
-                    </span>
+                    </small>
                   </p>
                 ) : null}
-
-                <div className="mt-2 flex items-center justify-end">
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="h-3 w-3 text-text-secondary/0 transition-all duration-200 group-hover:text-text-secondary/60 rtl:rotate-180"
-                  />
-                </div>
               </Link>
             );
           })}

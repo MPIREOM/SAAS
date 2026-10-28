@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { getTranslations } from "next-intl/server";
 import { Pagination } from "@/components/ui/pagination";
@@ -138,7 +138,7 @@ export default async function TenantsPage({
       isArchived: (tenant.status as string) === "archived",
       propertyName: (property?.name as string) || "",
       unitNumber: (unit?.unit_number as string) || "",
-      rent: displayLease ? String(displayLease.monthly_rent) : null,
+      rent: displayLease ? formatAmount(displayLease.monthly_rent as string | number) : null,
     };
   });
 

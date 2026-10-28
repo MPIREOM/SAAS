@@ -170,7 +170,7 @@ export default function EditPropertyPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Property name + location + units */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">{t("details")}</CardTitle>
           </CardHeader>
@@ -198,14 +198,14 @@ export default function EditPropertyPage() {
                 defaultValue={initialData?.total_units}
                 label={t("totalUnits")}
                 placeholder="0"
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
             </div>
           </CardContent>
         </Card>
 
         {/* Move-out fee defaults */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">
               {t("moveOutDefaults.title")}
@@ -222,7 +222,7 @@ export default function EditPropertyPage() {
               label={t("moveOutDefaults.code")}
               placeholder={t("moveOutDefaults.codePlaceholder")}
               helperText={t("moveOutDefaults.codeHint")}
-              className="font-mono uppercase tracking-wider"
+              className="tabular-nums uppercase tracking-wider"
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
@@ -233,7 +233,7 @@ export default function EditPropertyPage() {
                 defaultValue={initialData?.cleaning_fee_default}
                 label={`${t("moveOutDefaults.cleaningFee")} (${CURRENCY.code})`}
                 placeholder="0.00"
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
               <Input
                 name="painting_fee_default"
@@ -243,7 +243,7 @@ export default function EditPropertyPage() {
                 defaultValue={initialData?.painting_fee_default}
                 label={`${t("moveOutDefaults.paintingFee")} (${CURRENCY.code})`}
                 placeholder="0.00"
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
             </div>
             <Input
@@ -260,13 +260,13 @@ export default function EditPropertyPage() {
               label={`${t("moveOutDefaults.earlyTerminationRate")} (%)`}
               placeholder="12.00"
               helperText={t("moveOutDefaults.earlyTerminationHint")}
-              className="font-mono tabular-nums"
+              className="tabular-nums"
             />
           </CardContent>
         </Card>
 
         {/* Property type selector */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">{t("propertyType")}</CardTitle>
           </CardHeader>
@@ -288,10 +288,10 @@ export default function EditPropertyPage() {
                     onClick={() => setSelectedType(pt.value)}
                     className={cn(
                       "flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-4 text-xs font-medium transition-all duration-200",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                       isActive
-                        ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
-                        : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:bg-surface-elevated hover:text-text-primary"
+                        ? "bg-accent-tint border-accent/40 text-accent shadow-sm"
+                        : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:bg-surface-elevated hover:text-text-primary"
                     )}
                   >
                     <Icon

@@ -31,7 +31,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { CURRENCY, formatCurrency } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import type { CollectionRow, MandateRow } from "@/lib/e-mandates/service";
 
 type BadgeVariant = "default" | "secondary" | "warning" | "destructive" | "success" | "outline";
@@ -182,7 +182,7 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
   };
 
   const collectionsFor = (mandateId: string) => collections.filter((c) => c.mandate_id === mandateId);
-  const money = (v: string | number) => `${formatCurrency(v)} ${CURRENCY.code}`;
+  const money = (v: string | number) => `${formatAmount(v)} ${CURRENCY.code}`;
   const leaseLabel = (id: string) => leases.find((l) => l.id === id)?.label ?? "—";
 
   return (

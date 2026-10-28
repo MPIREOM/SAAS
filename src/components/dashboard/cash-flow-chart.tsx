@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 
 interface MonthData {
@@ -184,7 +184,7 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
             itemStyle={{ color: "var(--color-text-primary)" }}
-            formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}
+            formatter={(value) => [`${formatAmount(Number(value))} ${CURRENCY.code}`]}
             cursor={{ fill: "var(--color-sunken)", opacity: 0.6 }}
           />
           <Legend

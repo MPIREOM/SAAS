@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut, Plus, X, FileText, Download } from "lucide-react";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert } from "@/components/ui/alert";
 import { Select } from "@/components/ui/select";
@@ -101,8 +101,7 @@ const newRowId = () =>
     ? crypto.randomUUID()
     : `row-${Math.random().toString(36).slice(2)}-${Date.now()}`;
 
-const fmt = (n: number) =>
-  n.toLocaleString("en-OM", { minimumFractionDigits: 2 });
+const fmt = (n: number) => formatAmount(n);
 
 function toLeaseOption(row: ActiveLeaseRow): ActiveLeaseOption {
   const unit = row.units;

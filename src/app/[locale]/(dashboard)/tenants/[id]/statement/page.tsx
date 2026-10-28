@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { FileText, Printer, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -77,7 +77,7 @@ export default async function TenantStatementPage({
     const paidAmt = parseFloat((inv.paid_amount as string) || "0");
     const totalAmt = parseFloat(inv.amount as string);
     const statusNote = inv.status === "partial"
-      ? ` [Partial: ${paidAmt.toLocaleString()}/${totalAmt.toLocaleString()} ${CURRENCY.code}]`
+      ? ` [Partial: ${formatAmount(paidAmt)}/${formatAmount(totalAmt)} ${CURRENCY.code}]`
       : inv.status === "overdue"
       ? " [Overdue]"
       : "";
@@ -189,7 +189,7 @@ export default async function TenantStatementPage({
               <p
                 className={`text-2xl font-bold tabular-nums ltr-nums ${card.valueClass}`}
               >
-                {card.value.toLocaleString()}
+                {formatAmount(card.value)}
                 <span className="text-xs font-sans font-normal text-text-secondary ms-1.5">
                   {CURRENCY.code}
                 </span>
@@ -231,7 +231,7 @@ export default async function TenantStatementPage({
                     <TableCell className="px-4 text-end tabular-nums ltr-nums">
                       {entry.charge > 0 ? (
                         <span className="text-text-primary">
-                          {entry.charge.toLocaleString()}{" "}
+                          {formatAmount(entry.charge)}{" "}
                           <span className="text-xs font-medium text-text-secondary">
                             {CURRENCY.code}
                           </span>
@@ -243,7 +243,7 @@ export default async function TenantStatementPage({
                     <TableCell className="px-4 text-end tabular-nums ltr-nums">
                       {entry.payment > 0 ? (
                         <span className="text-success">
-                          {entry.payment.toLocaleString()}{" "}
+                          {formatAmount(entry.payment)}{" "}
                           <span className="text-xs font-medium text-text-secondary">
                             {CURRENCY.code}
                           </span>
@@ -257,7 +257,7 @@ export default async function TenantStatementPage({
                         entry.balance > 0 ? "text-destructive" : "text-success"
                       }`}
                     >
-                      {entry.balance.toLocaleString()}{" "}
+                      {formatAmount(entry.balance)}{" "}
                       <span className="text-xs font-medium text-text-secondary">
                         {CURRENCY.code}
                       </span>
@@ -269,13 +269,13 @@ export default async function TenantStatementPage({
                     {tc("total")}
                   </TableCell>
                   <TableCell className="px-4 text-end tabular-nums ltr-nums font-bold text-text-primary">
-                    {totalCharges.toLocaleString()}{" "}
+                    {formatAmount(totalCharges)}{" "}
                     <span className="text-xs font-medium text-text-secondary">
                       {CURRENCY.code}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 text-end tabular-nums ltr-nums font-bold text-success">
-                    {totalPayments.toLocaleString()}{" "}
+                    {formatAmount(totalPayments)}{" "}
                     <span className="text-xs font-medium text-text-secondary">
                       {CURRENCY.code}
                     </span>
@@ -285,7 +285,7 @@ export default async function TenantStatementPage({
                       outstandingBalance > 0 ? "text-destructive" : "text-success"
                     }`}
                   >
-                    {outstandingBalance.toLocaleString()}{" "}
+                    {formatAmount(outstandingBalance)}{" "}
                     <span className="text-xs font-medium text-text-secondary">
                       {CURRENCY.code}
                     </span>
@@ -314,8 +314,8 @@ export default async function TenantStatementPage({
                     }`}
                   >
                     {entry.type === "payment"
-                      ? entry.payment.toLocaleString()
-                      : entry.charge.toLocaleString()}{" "}
+                      ? formatAmount(entry.payment)
+                      : formatAmount(entry.charge)}{" "}
                     <span className="text-xs font-normal text-text-secondary">
                       {CURRENCY.code}
                     </span>
@@ -328,7 +328,7 @@ export default async function TenantStatementPage({
                       entry.balance > 0 ? "text-destructive" : "text-success"
                     }`}
                   >
-                    {entry.balance.toLocaleString()} {CURRENCY.code}
+                    {formatAmount(entry.balance)} {CURRENCY.code}
                   </span>
                 </p>
               </li>
@@ -342,7 +342,7 @@ export default async function TenantStatementPage({
                   outstandingBalance > 0 ? "text-destructive" : "text-success"
                 }`}
               >
-                {outstandingBalance.toLocaleString()} {CURRENCY.code}
+                {formatAmount(outstandingBalance)} {CURRENCY.code}
               </p>
             </li>
           </ul>

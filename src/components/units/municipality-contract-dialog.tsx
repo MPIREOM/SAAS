@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 // Staff: record the municipality-registered rent contract for the unit's
 // current tenant. Picking the PDF reads the reference number and period
@@ -101,7 +102,7 @@ export function MunicipalityContractDialog({ unitId }: { unitId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent/10 text-accent text-xs font-semibold rounded-lg hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className={buttonVariants({ size: "sm" })}
       >
         <FileUp aria-hidden="true" className="h-3.5 w-3.5" />
         {t("add")}
@@ -132,7 +133,7 @@ export function MunicipalityContractDialog({ unitId }: { unitId: string }) {
                   accept="application/pdf"
                   required
                   onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-                  className="block w-full text-sm text-text-secondary file:me-3 file:rounded-lg file:border-0 file:bg-accent/10 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-accent hover:file:bg-accent/20"
+                  className="block w-full text-sm text-text-secondary file:me-3 file:rounded-lg file:border-0 file:bg-accent-tint file:px-3 file:py-2 file:text-xs file:font-semibold file:text-accent hover:file:bg-accent/20"
                 />
                 {extracting ? (
                   <p className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary">
@@ -153,7 +154,7 @@ export function MunicipalityContractDialog({ unitId }: { unitId: string }) {
                 value={contractNumber}
                 onChange={(e) => setContractNumber(e.target.value)}
                 placeholder="36854/2026"
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
@@ -162,7 +163,7 @@ export function MunicipalityContractDialog({ unitId }: { unitId: string }) {
                   label={t("startDate")}
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="font-mono ltr-nums"
+                  className="tabular-nums ltr-nums"
                 />
                 <Input
                   type="date"
@@ -171,7 +172,7 @@ export function MunicipalityContractDialog({ unitId }: { unitId: string }) {
                   label={t("endDate")}
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="font-mono ltr-nums"
+                  className="tabular-nums ltr-nums"
                 />
               </div>
               <div className="flex items-center justify-end gap-2 pt-2">

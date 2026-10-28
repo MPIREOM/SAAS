@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowRightLeft, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,7 @@ interface UnitRow {
   properties: { name: string; owner_id: string | null };
 }
 
-const fmt = (n: number) => n.toLocaleString("en-OM", { minimumFractionDigits: 2 });
+const fmt = (n: number) => formatAmount(n);
 
 const todayIso = () => new Date().toISOString().split("T")[0];
 
