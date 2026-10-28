@@ -101,7 +101,7 @@ export function EditPaymentMethod({ paymentId, currentMethod }: Props) {
         disabled={pending}
         aria-label={tc("save")}
         title={tc("save")}
-        className="h-7 w-7 p-0 text-success hover:bg-success/10 hover:text-success"
+        className="h-7 w-7 p-0 text-success hover:bg-success-tint hover:text-success"
       >
         <Check aria-hidden="true" className="h-3.5 w-3.5" />
       </Button>
@@ -122,7 +122,7 @@ export function EditPaymentMethod({ paymentId, currentMethod }: Props) {
         <X aria-hidden="true" className="h-3.5 w-3.5" />
       </Button>
       {error && (
-        <span role="alert" className="text-[11px] text-destructive">
+        <span role="alert" className="text-xs text-destructive">
           {error}
         </span>
       )}

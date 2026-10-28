@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowDownCircle, ArrowUpCircle, Receipt, Banknote, FileText } from "lucide-react";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
 import {
   Table,
@@ -56,7 +56,7 @@ export function OwnerActivityPanel({
   const visible = items.filter((i) => i.date >= cutoff);
 
   return (
-    <div className="space-y-4 animate-fade-in-up">
+    <div className="space-y-4">
       {/* Window selector */}
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-text-secondary">{t("activity.window")}:</span>
@@ -68,16 +68,16 @@ export function OwnerActivityPanel({
             aria-pressed={windowDays === d}
             className={cn(
               "cursor-pointer rounded-lg border px-3 py-1.5 font-medium transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
               windowDays === d
-                ? "border-accent/40 bg-accent/10 text-accent"
-                : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border hover:text-text-primary",
+                ? "border-accent/40 bg-accent-tint text-accent"
+                : "border-border bg-surface-elevated text-text-secondary hover:border-border hover:text-text-primary",
             )}
           >
             {d === 365 ? t("activity.windowYear") : t("activity.windowDays", { days: d })}
           </button>
         ))}
-        <span className="ms-auto font-mono ltr-nums text-text-secondary">
+        <span className="ms-auto tabular-nums ltr-nums text-text-secondary">
           {t("activity.entryCount", { count: visible.length })}
         </span>
       </div>
@@ -91,7 +91,7 @@ export function OwnerActivityPanel({
       ) : (
         <>
           {/* Desktop statement table */}
-          <div className="hidden overflow-hidden rounded-xl border border-border/50 md:block">
+          <div className="hidden overflow-hidden rounded-xl border border-border md:block">
             <Table className="min-w-[560px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -134,16 +134,13 @@ function AmountCell({ item }: { item: ActivityItem }) {
   return (
     <span
       className={cn(
-        "font-mono text-sm font-semibold tabular-nums ltr-nums",
+        "tabular-nums text-sm font-semibold tabular-nums ltr-nums",
         toneFor(item.sign),
       )}
     >
       {item.sign === "+" && "+"}
       {item.sign === "-" && "−"}
-      {item.amount.toLocaleString("en-OM", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}
+      {formatAmount(item.amount)}
     </span>
   );
 }
@@ -153,7 +150,7 @@ function ActivityTableRow({ item }: { item: ActivityItem }) {
   const Icon = ICONS[item.kind];
   return (
     <TableRow>
-      <TableCell className="whitespace-nowrap font-mono text-xs ltr-nums text-text-secondary">
+      <TableCell className="whitespace-nowrap tabular-nums text-xs ltr-nums text-text-secondary">
         {formatDate(item.date, locale)}
       </TableCell>
       <TableCell>
@@ -168,7 +165,7 @@ function ActivityTableRow({ item }: { item: ActivityItem }) {
                 {item.primary}
               </span>
               {item.badge && (
-                <Badge variant="secondary" className="uppercase tracking-wider text-[10px]">
+                <Badge variant="secondary" className="uppercase tracking-wider text-xs">
                   {item.badge}
                 </Badge>
               )}
@@ -190,7 +187,7 @@ function ActivityCard({ item }: { item: ActivityItem }) {
   const locale = useLocale();
   const Icon = ICONS[item.kind];
   return (
-    <li className="flex items-start gap-3 rounded-xl border border-border/50 bg-surface-elevated/40 px-4 py-3">
+    <li className="flex items-start gap-3 rounded-xl border border-border bg-surface-elevated px-4 py-3">
       <div className={cn("mt-0.5", toneFor(item.sign))}>
         <Icon aria-hidden="true" className="h-5 w-5" />
       </div>
@@ -200,7 +197,7 @@ function ActivityCard({ item }: { item: ActivityItem }) {
             {item.primary}
           </span>
           {item.badge && (
-            <Badge variant="secondary" className="uppercase tracking-wider text-[10px]">
+            <Badge variant="secondary" className="uppercase tracking-wider text-xs">
               {item.badge}
             </Badge>
           )}
@@ -211,10 +208,10 @@ function ActivityCard({ item }: { item: ActivityItem }) {
       </div>
       <div className="shrink-0 text-end">
         <AmountCell item={item} />
-        <span className="ms-1 text-[10px] text-text-secondary">
+        <span className="ms-1 text-xs text-text-secondary">
           {CURRENCY.code}
         </span>
-        <div className="mt-0.5 font-mono text-[10px] ltr-nums text-text-secondary">
+        <div className="mt-0.5 tabular-nums text-xs ltr-nums text-text-secondary">
           {formatDate(item.date, locale)}
         </div>
       </div>

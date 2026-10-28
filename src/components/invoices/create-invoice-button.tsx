@@ -313,7 +313,7 @@ export function CreateInvoiceButton() {
 
               {/* Unit picker — only shown after a property is chosen */}
               {selectedPropertyId && (
-                <div className="animate-fade-in-up">
+                <div className="">
                   <Select
                     label={`${t("unit")} *`}
                     value={selectedUnitId}
@@ -332,8 +332,8 @@ export function CreateInvoiceButton() {
               {selectedUnit && (
                 <>
                   {/* Resolved tenant summary */}
-                  <div className="rounded-xl border border-border/40 bg-surface-elevated/50 px-4 py-3 animate-fade-in-up">
-                    <p className="text-xs font-medium uppercase tracking-wider text-text-secondary">
+                  <div className="rounded-xl border border-border bg-surface-elevated px-4 py-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
                       {t("tenant")}
                     </p>
                     <p className="mt-0.5 text-sm font-semibold text-text-primary">
@@ -342,7 +342,7 @@ export function CreateInvoiceButton() {
                     <p className="mt-1 text-xs text-text-secondary">
                       {selectedUnit.property_name} / {selectedUnit.unit_number}
                       {" — "}
-                      <span className="font-mono ltr-nums">
+                      <span className="tabular-nums ltr-nums">
                         {selectedUnit.monthly_rent} {CURRENCY.code}/mo
                       </span>
                     </p>
@@ -356,7 +356,7 @@ export function CreateInvoiceButton() {
                     label={`${t("amount")} (${CURRENCY.code}) *`}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="font-mono ltr-nums"
+                    className="tabular-nums ltr-nums"
                   />
 
                   {/* Due Date */}
@@ -366,7 +366,7 @@ export function CreateInvoiceButton() {
                     label={`${t("dueDate")} *`}
                     value={dueDate}
                     onChange={(e) => applyDueDate(e.target.value)}
-                    className="font-mono ltr-nums"
+                    className="tabular-nums ltr-nums"
                   />
 
                   {/* Billing Period */}
@@ -376,14 +376,14 @@ export function CreateInvoiceButton() {
                       label={t("periodStart")}
                       value={periodStart}
                       onChange={(e) => setPeriodStart(e.target.value)}
-                      className="font-mono ltr-nums"
+                      className="tabular-nums ltr-nums"
                     />
                     <Input
                       type="date"
                       label={t("periodEnd")}
                       value={periodEnd}
                       onChange={(e) => setPeriodEnd(e.target.value)}
-                      className="font-mono ltr-nums"
+                      className="tabular-nums ltr-nums"
                     />
                   </div>
 
@@ -400,12 +400,12 @@ export function CreateInvoiceButton() {
               )}
 
               {error && (
-                <Alert variant="destructive" className="animate-fade-in-up">
+                <Alert variant="destructive" className="">
                   {error}
                 </Alert>
               )}
               {success && (
-                <Alert variant="success" className="animate-fade-in-up">
+                <Alert variant="success" className="">
                   {success}
                 </Alert>
               )}
@@ -413,7 +413,7 @@ export function CreateInvoiceButton() {
           </DialogBody>
 
           {selectedUnit && (
-            <DialogFooter className="pt-4 border-t border-border/40">
+            <DialogFooter className="pt-4 border-t border-border">
               <Button
                 type="button"
                 variant="secondary"

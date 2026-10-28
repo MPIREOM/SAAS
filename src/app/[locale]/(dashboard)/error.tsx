@@ -14,6 +14,7 @@ export default function DashboardError({
   reset: () => void;
 }) {
   const t = useTranslations("common");
+  const tn = useTranslations("nav");
   const locale = useLocale();
   const router = useRouter();
 
@@ -47,7 +48,7 @@ export default function DashboardError({
           </Button>
           <Button variant="secondary" onClick={() => router.push(`/${locale}/dashboard`)}>
             <Home className="h-4 w-4" aria-hidden="true" />
-            {t("dashboard")}
+            {tn("dashboard")}
           </Button>
         </div>
       </div>

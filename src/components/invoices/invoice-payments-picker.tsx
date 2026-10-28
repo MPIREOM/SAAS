@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Check, Banknote, CreditCard, FileCheck } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import type { InvoicePaymentCandidate } from "@/lib/invoices/revert-payment";
 
 const METHOD_ICONS: Record<string, typeof Banknote> = {
@@ -53,7 +53,7 @@ export function InvoicePaymentsPicker({
 
   return (
     <div role="group" aria-label={t("revert.paymentsToRemove")} className="space-y-2">
-      <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+      <span className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal">
         {t("revert.paymentsToRemove")}
       </span>
       {hasInferred && (
@@ -82,10 +82,10 @@ export function InvoicePaymentsPicker({
               type="button"
               onClick={() => onToggle(p.id)}
               aria-pressed={isSelected}
-              className={`w-full text-start p-3 rounded-xl border transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 ${
+              className={`w-full text-start p-3 rounded-xl border transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                 isSelected
-                  ? "bg-destructive/5 border-destructive/40"
-                  : "bg-surface-elevated/50 border-border/40 hover:border-border"
+                  ? "bg-destructive-tint border-destructive/40"
+                  : "bg-surface-elevated border-border hover:border-border"
               }`}
             >
               <div className="flex items-center justify-between gap-3">
@@ -98,13 +98,13 @@ export function InvoicePaymentsPicker({
                     <p className="text-sm font-medium text-text-primary">
                       {methodLabel}
                       {p.reference_number && (
-                        <span className="ms-1.5 text-xs font-mono ltr-nums text-text-secondary">
+                        <span className="ms-1.5 text-xs tabular-nums ltr-nums text-text-secondary">
                           #{p.reference_number}
                         </span>
                       )}
                     </p>
                     <p className="text-xs text-text-secondary mt-0.5">
-                      <span className="font-mono ltr-nums">{p.payment_date}</span>
+                      <span className="tabular-nums ltr-nums">{p.payment_date}</span>
                       {!p.linked && (
                         <span className="ms-1.5 text-warning">
                           · {t("revert.inferredMatch")}
@@ -114,8 +114,8 @@ export function InvoicePaymentsPicker({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-bold font-mono text-text-primary tabular-nums ltr-nums">
-                    {p.amount.toLocaleString("en-OM", { minimumFractionDigits: 2 })}{" "}
+                  <span className="text-sm font-bold tabular-nums text-text-primary tabular-nums ltr-nums">
+                    {formatAmount(p.amount)}{" "}
                     {CURRENCY.code}
                   </span>
                   <div

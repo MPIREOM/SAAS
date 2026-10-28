@@ -68,7 +68,7 @@ export function ChequeActions({ chequeId, currentStatus }: ChequeActionsProps) {
         aria-label={tc("actions")}
         aria-haspopup="true"
         aria-expanded={open}
-        className="p-1.5 rounded-md text-text-secondary cursor-pointer transition-colors hover:text-text-primary hover:bg-surface-elevated disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className="p-1.5 rounded-md text-text-secondary cursor-pointer transition-colors hover:text-text-primary hover:bg-surface-elevated disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <MoreVertical className="h-4 w-4" aria-hidden="true" />
       </button>
@@ -81,7 +81,7 @@ export function ChequeActions({ chequeId, currentStatus }: ChequeActionsProps) {
             onClick={() => setOpen(false)}
           />
           <div
-            className="absolute end-0 top-8 z-50 bg-surface border border-border/60 rounded-lg shadow-xl shadow-black/20 py-1 min-w-[180px] animate-scale-in"
+            className="absolute end-0 top-8 z-50 bg-surface border border-border rounded-lg shadow-overlay py-1 min-w-[180px] animate-scale-in"
             role="menu"
           >
             {currentStatus === "pending" && (
@@ -124,7 +124,7 @@ export function ChequeActions({ chequeId, currentStatus }: ChequeActionsProps) {
                 {t("resetPending")}
               </button>
             )}
-            <div className="border-t border-border/60 my-1" role="presentation" />
+            <div className="border-t border-border my-1" role="presentation" />
             <button
               onClick={deleteCheque}
               role="menuitem"

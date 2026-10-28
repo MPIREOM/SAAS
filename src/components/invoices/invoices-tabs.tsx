@@ -82,7 +82,7 @@ export function InvoicesTabs({
         <div
           role="group"
           aria-label={t("status")}
-          className="inline-flex items-center gap-0.5 bg-surface border border-border/60 rounded-xl p-1"
+          className="inline-flex items-center gap-0.5 rounded-[9px] border border-border bg-sunken p-[3px]"
         >
           {tabs.map((tab) => {
             const isActive = currentStatus === tab.key;
@@ -92,19 +92,15 @@ export function InvoicesTabs({
                 type="button"
                 onClick={() => handleTabChange(tab.key)}
                 aria-current={isActive ? "page" : undefined}
-                className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                className={`relative flex h-8 items-center gap-1.5 px-3 text-[13px] font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus ${
                   isActive
-                    ? "bg-accent text-accent-foreground shadow-sm shadow-accent/20"
-                    : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
+                    ? "bg-surface text-text-primary shadow-card ring-1 ring-border"
+                    : "text-text-secondary hover:text-text-primary"
                 }`}
               >
                 {tab.label}
                 <span
-                  className={`text-[10px] font-semibold font-mono tabular-nums ltr-nums px-1.5 py-0.5 rounded-md ${
-                    isActive
-                      ? "bg-accent-foreground/15 text-accent-foreground"
-                      : "bg-surface-elevated text-text-secondary"
-                  }`}
+                  className="text-xs font-medium tabular-nums ltr-nums text-text-tertiary"
                 >
                   {tab.count}
                 </span>

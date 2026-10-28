@@ -1154,7 +1154,7 @@ function MoveOutForm({
                         )}
                       </div>
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           inv.status === "overdue"
                             ? "bg-destructive-tint text-destructive"
                             : inv.status === "partial"
@@ -1171,7 +1171,7 @@ function MoveOutForm({
                         type="button"
                         onClick={() => setAction(inv.id, "leave_open")}
                         aria-pressed={action === "leave_open"}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`text-xs py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           action === "leave_open"
                             ? "bg-info-tint border-info/40 text-info"
                             : "border-border text-text-secondary hover:text-text-primary hover:border-border"
@@ -1183,7 +1183,7 @@ function MoveOutForm({
                         type="button"
                         onClick={() => setAction(inv.id, "settle")}
                         aria-pressed={action === "settle"}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`text-xs py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           action === "settle"
                             ? "bg-success-tint border-success/40 text-success"
                             : "border-border text-text-secondary hover:text-text-primary hover:border-border"
@@ -1195,7 +1195,7 @@ function MoveOutForm({
                         type="button"
                         onClick={() => setAction(inv.id, "write_off")}
                         aria-pressed={action === "write_off"}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`text-xs py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           action === "write_off"
                             ? "bg-warning-tint border-warning/40 text-warning"
                             : "border-border text-text-secondary hover:text-text-primary hover:border-border"
@@ -1207,7 +1207,7 @@ function MoveOutForm({
                         type="button"
                         onClick={() => setAction(inv.id, "cancel")}
                         aria-pressed={action === "cancel"}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`text-xs py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           action === "cancel"
                             ? "bg-surface-elevated border-border text-text-primary"
                             : "border-border text-text-secondary hover:text-text-primary hover:border-border"
@@ -1219,7 +1219,7 @@ function MoveOutForm({
 
                     {action === "settle" && (
                       <div className="mt-2.5 p-3 rounded-lg bg-success-tint border border-success/30 space-y-2">
-                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal">
                           {t("settlementAmount")} ({CURRENCY.code})
                         </label>
                         <input

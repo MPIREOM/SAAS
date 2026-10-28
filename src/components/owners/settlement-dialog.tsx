@@ -153,7 +153,7 @@ function SettlementDialogForm({
         <form id="settlement-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Direction toggle */}
           <fieldset>
-            <legend className="mb-1.5 text-sm font-medium tracking-tight text-foreground">
+            <legend className="mb-1.5 text-sm font-medium text-foreground">
               {t("settlements.direction")}
             </legend>
             <div className="grid grid-cols-2 gap-2">
@@ -163,14 +163,14 @@ function SettlementDialogForm({
                 aria-pressed={direction === "company_to_owner"}
                 className={cn(
                   "cursor-pointer rounded-lg border p-3 text-xs font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                   direction === "company_to_owner"
-                    ? "border-accent/40 bg-accent/10 text-accent"
-                    : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border",
+                    ? "border-accent/40 bg-accent-tint text-accent"
+                    : "border-border bg-surface-elevated text-text-secondary hover:border-border",
                 )}
               >
                 {t("settlements.companyToOwner")}
-                <span className="mt-1 block text-[10px] opacity-70">
+                <span className="mt-1 block text-xs opacity-70">
                   {t("settlements.decreasesBalance")}
                 </span>
               </button>
@@ -180,14 +180,14 @@ function SettlementDialogForm({
                 aria-pressed={direction === "owner_to_company"}
                 className={cn(
                   "cursor-pointer rounded-lg border p-3 text-xs font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                   direction === "owner_to_company"
-                    ? "border-accent/40 bg-accent/10 text-accent"
-                    : "border-border/40 bg-surface-elevated/50 text-text-secondary hover:border-border",
+                    ? "border-accent/40 bg-accent-tint text-accent"
+                    : "border-border bg-surface-elevated text-text-secondary hover:border-border",
                 )}
               >
                 {t("settlements.ownerToCompany")}
-                <span className="mt-1 block text-[10px] opacity-70">
+                <span className="mt-1 block text-xs opacity-70">
                   {t("settlements.increasesBalance")}
                 </span>
               </button>
@@ -203,7 +203,7 @@ function SettlementDialogForm({
             onChange={(e) => setAmount(e.target.value)}
             required
             placeholder={t("settlements.amountPlaceholder")}
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
 
           <Select
@@ -222,7 +222,7 @@ function SettlementDialogForm({
             value={settledAt}
             onChange={(e) => setSettledAt(e.target.value)}
             required
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
 
           <Input
@@ -231,7 +231,7 @@ function SettlementDialogForm({
             value={reference}
             onChange={(e) => setReference(e.target.value)}
             placeholder={t("settlements.referencePlaceholder")}
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
 
           <Textarea

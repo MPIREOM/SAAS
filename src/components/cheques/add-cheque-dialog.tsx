@@ -71,7 +71,7 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-8 px-3 bg-warning/10 text-warning text-xs font-semibold rounded-lg border border-warning/20 cursor-pointer hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
+        className="inline-flex items-center gap-1.5 h-8 px-3 bg-warning-tint text-warning text-xs font-semibold rounded-lg border border-warning/30 cursor-pointer hover:bg-warning/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <Plus aria-hidden="true" className="h-3.5 w-3.5" />
         {t("addCheque")}
@@ -92,7 +92,7 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
                 required
                 label={t("chequeNumber")}
                 placeholder="000000"
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
 
               <Input
@@ -109,7 +109,7 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
                   type="date"
                   required
                   label={t("chequeDate")}
-                  className="font-mono ltr-nums"
+                  className="tabular-nums ltr-nums"
                 />
                 <Input
                   name="amount"
@@ -118,7 +118,7 @@ export function AddChequeDialog({ tenantId }: AddChequeDialogProps) {
                   required
                   label={`${t("amount")} (${CURRENCY.code})`}
                   placeholder="0.00"
-                  className="font-mono ltr-nums tabular-nums"
+                  className="tabular-nums ltr-nums tabular-nums"
                 />
               </div>
 

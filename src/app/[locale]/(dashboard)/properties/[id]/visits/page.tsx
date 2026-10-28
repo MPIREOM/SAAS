@@ -112,7 +112,7 @@ export default async function PropertyVisitsPage({
                       {t("minutesShort", { minutes: c.slot_minutes })}
                     </p>
                     <div className="flex items-center gap-3">
-                      <div className="h-1.5 flex-1 max-w-48 bg-border/50 rounded-full overflow-hidden">
+                      <div className="h-1.5 flex-1 max-w-48 bg-sunken rounded-full overflow-hidden">
                         <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="text-xs text-text-secondary">

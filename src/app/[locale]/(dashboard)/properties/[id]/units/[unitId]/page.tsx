@@ -465,7 +465,7 @@ export default async function UnitDetailPage({
                 <dd
                   className={`mt-1 text-sm font-medium truncate ${
                     item.highlight ? "text-accent font-semibold" : "text-text-primary"
-                  } ${item.mono ? "tabular-nums ltr-nums" : ""} ${item.capitalize ? "capitalize" : ""}`}
+                  }    ${item.mono ? "tabular-nums ltr-nums" : ""}    ${item.capitalize ? "capitalize" : ""}`}
                 >
                   {item.value}
                 </dd>
@@ -1064,7 +1064,7 @@ export default async function UnitDetailPage({
                               {formatAmount(paid)}
                             </TableCell>
                             <TableCell
-                              className={`px-4 text-end font-mono ltr-nums ${
+                              className={`px-4 text-end tabular-nums ltr-nums ${
                                 remaining > 0
                                   ? "text-warning font-semibold"
                                   : "text-text-secondary"
@@ -1492,7 +1492,7 @@ export default async function UnitDetailPage({
                         <TableCell className="px-4">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`text-sm font-mono ltr-nums ${
+                              className={`text-sm tabular-nums ltr-nums ${
                                 isExpired
                                   ? "text-destructive font-medium"
                                   : isExpiringSoon

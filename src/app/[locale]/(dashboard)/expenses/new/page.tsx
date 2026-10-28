@@ -175,7 +175,7 @@ export default function NewExpensePage({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-surface border border-border/40 rounded-xl p-6 space-y-5">
+          <div className="bg-surface border border-border rounded-xl shadow-card p-6 space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
                 name="property_id"
@@ -229,7 +229,7 @@ export default function NewExpensePage({
                 required
                 defaultValue={today}
                 label={`${t("date")} *`}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
             </div>
 
@@ -249,7 +249,7 @@ export default function NewExpensePage({
                 step={0.01}
                 label={`${t("amount")} (OMR) *`}
                 placeholder="0.00"
-                className="font-mono ltr-nums tabular-nums"
+                className="tabular-nums ltr-nums tabular-nums"
               />
               <Input
                 name="vendor"
@@ -260,37 +260,37 @@ export default function NewExpensePage({
           </div>
 
           {/* Receipt Upload */}
-          <div className="bg-surface border border-border/40 rounded-xl p-6">
-            <span className="block text-sm font-medium text-foreground tracking-tight mb-2">
+          <div className="bg-surface border border-border rounded-xl shadow-card p-6">
+            <span className="block text-sm font-medium text-foreground mb-2">
               {t("receiptLabel")} ({tc("optional")})
             </span>
             {receiptFile ? (
-              <div className="flex items-center gap-3 p-3 bg-success/5 border border-success/20 rounded-lg">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10">
+              <div className="flex items-center gap-3 p-3 bg-success-tint border border-success/30 rounded-lg">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success-tint">
                   <FileText aria-hidden="true" className="h-4 w-4 text-success" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-text-primary truncate">{receiptFile.name}</p>
-                  <p className="text-xs text-text-secondary font-mono ltr-nums">
+                  <p className="text-xs text-text-secondary tabular-nums ltr-nums">
                     {(receiptFile.size / 1024).toFixed(0)} KB
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setReceiptFile(null)}
-                  className="inline-flex items-center gap-1 text-xs text-text-secondary cursor-pointer hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 rounded px-1.5 py-1"
+                  className="inline-flex items-center gap-1 text-xs text-text-secondary cursor-pointer hover:text-destructive transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded px-1.5 py-1"
                 >
                   <X aria-hidden="true" className="h-3 w-3" />
                   {t("receiptRemove")}
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center py-7 border-2 border-dashed border-border/60 rounded-xl cursor-pointer transition-all duration-200 hover:border-accent/40 hover:bg-accent/5 focus-within:ring-2 focus-within:ring-accent/40">
+              <label className="flex flex-col items-center justify-center py-7 border-2 border-dashed border-border rounded-xl cursor-pointer transition-all duration-200 hover:border-border-strong hover:bg-accent-tint focus-within:ring-2 focus-within:ring-accent/40">
                 <span className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-surface-elevated">
-                  <Upload aria-hidden="true" className="h-5 w-5 text-text-secondary/60" />
+                  <Upload aria-hidden="true" className="h-5 w-5 text-text-tertiary" />
                 </span>
                 <span className="text-sm text-text-secondary">{t("receiptUploadCta")}</span>
-                <span className="text-xs text-text-secondary/60 mt-0.5">{t("receiptUploadHint")}</span>
+                <span className="text-xs text-text-tertiary mt-0.5">{t("receiptUploadHint")}</span>
                 <input
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.webp"

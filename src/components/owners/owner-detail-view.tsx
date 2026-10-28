@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Pencil, Wallet, Building2, Banknote, Receipt, Activity, FileText } from "lucide-react";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -73,24 +73,21 @@ export function OwnerDetailView(props: OwnerDetailProps) {
       {/* Headline balance card */}
       <section
         aria-label={t("currentBalance")}
-        className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/40 p-6"
+        className="rounded-xl border border-border bg-surface-elevated p-6"
       >
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
           <Wallet aria-hidden="true" className="h-4 w-4 text-accent" />
           {t("currentBalance")}
         </div>
         <div className="flex flex-wrap items-baseline gap-3">
           <span
             className={cn(
-              "font-mono text-4xl font-bold tabular-nums ltr-nums",
+              "tabular-nums text-4xl font-bold tabular-nums ltr-nums",
               sideTone,
             )}
           >
             {balanceNumber > 0 ? "+" : ""}
-            {balanceNumber.toLocaleString("en-OM", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {formatAmount(balanceNumber)}
           </span>
           <span className="text-base font-medium text-text-secondary">
             {CURRENCY.code}
@@ -99,7 +96,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
         <div className={cn("mt-2 text-sm font-medium", sideTone)}>{sideLabel}</div>
         <div className="mt-1 text-xs text-text-secondary">
           {t("asOf")}{" "}
-          <span className="font-mono ltr-nums">
+          <span className="tabular-nums ltr-nums">
             {liveBalance?.asOf ?? new Date().toISOString().split("T")[0]}
           </span>
         </div>
@@ -124,7 +121,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
       )}
 
       {/* Owner profile grid */}
-      <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ProfileTile
           label={t("profile.whatsapp")}
           value={owner.whatsapp_phone ? `+${owner.whatsapp_phone}` : "—"}
@@ -133,10 +130,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
         <ProfileTile label={t("profile.language")} value={owner.language_preference.toUpperCase()} />
         <ProfileTile
           label={t("profile.openingBalance")}
-          value={`${Number(owner.opening_balance).toLocaleString("en-OM", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })} ${CURRENCY.code}`}
+          value={`${formatAmount(Number(owner.opening_balance))} ${CURRENCY.code}`}
           mono
         />
         <ProfileTile
@@ -150,7 +144,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
       <div
         role="tablist"
         aria-label={t("ledgerSections")}
-        className="-mb-px flex flex-wrap gap-2 overflow-x-auto border-b border-border/60"
+        className="-mb-px flex flex-wrap gap-2 overflow-x-auto border-b border-border"
       >
         {TABS.map((tabItem) => {
           const Icon = tabItem.icon;
@@ -166,7 +160,7 @@ export function OwnerDetailView(props: OwnerDetailProps) {
               onClick={() => setTab(tabItem.key)}
               className={cn(
                 "inline-flex cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-inset",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-inset",
                 isActive
                   ? "border-accent text-accent"
                   : "border-transparent text-text-secondary hover:text-text-primary",
@@ -234,9 +228,9 @@ function BalanceBreakdownCard({
   return (
     <section
       aria-label={t("breakdown")}
-      className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/30 p-6"
+      className="rounded-xl border border-border bg-surface-elevated p-6"
     >
-      <h2 className="mb-4 font-display text-xs font-semibold uppercase tracking-wider text-text-secondary">
+      <h2 className="mb-4 font-display text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
         {t("breakdownForMonth", { month: formatMonth(asOf, locale) })}
       </h2>
       <dl className="divide-y divide-border/30">
@@ -251,36 +245,30 @@ function BalanceBreakdownCard({
             <dt className="min-w-0 text-text-secondary">
               {r.label}
               {r.muted && (
-                <span className="ms-2 text-[10px] uppercase tracking-wider text-text-secondary">
+                <span className="ms-2 text-xs uppercase tracking-wider text-text-secondary">
                   {t("breakdownRows.referenceOnly")}
                 </span>
               )}
             </dt>
             <dd
               className={cn(
-                "shrink-0 font-mono tabular-nums ltr-nums text-end",
+                "shrink-0 tabular-nums ltr-nums text-end",
                 r.sign === "+" && "text-success",
                 r.sign === "-" && "text-destructive",
                 r.sign === "" && "text-text-primary",
               )}
             >
               {r.sign && <span className="me-1">{r.sign}</span>}
-              {r.value.toLocaleString("en-OM", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {formatAmount(r.value)}
             </dd>
           </div>
         ))}
         <div className="mt-2 flex items-center justify-between gap-4 pt-4 text-base font-semibold">
-          <dt className="font-display tracking-tight text-text-primary">
+          <dt className="font-display text-text-primary">
             = {t(isCurrentMonth ? "currentBalance" : "closingBalance")}
           </dt>
-          <dd className="shrink-0 font-mono tabular-nums ltr-nums text-end text-accent">
-            {breakdown.balance.toLocaleString("en-OM", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}{" "}
+          <dd className="shrink-0 tabular-nums ltr-nums text-end text-accent">
+            {formatAmount(breakdown.balance)}{" "}
             {CURRENCY.code}
           </dd>
         </div>
@@ -299,14 +287,14 @@ function ProfileTile({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-surface-elevated/30 p-4 transition-colors hover:border-border">
-      <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
+    <div className="rounded-xl border border-border bg-surface-elevated p-4 transition-colors hover:border-border">
+      <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
         {label}
       </div>
       <div
         className={cn(
           "truncate text-sm font-medium text-text-primary",
-          mono && "font-mono ltr-nums",
+          mono && "tabular-nums ltr-nums",
         )}
       >
         {value}

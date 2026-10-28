@@ -7,7 +7,7 @@ import { Plus, Pencil, Trash2, ArrowUpRight, ArrowDownLeft, Banknote } from "luc
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
 import {
   Table,
@@ -44,7 +44,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
     if (
       !confirm(
         t("settlements.confirmDelete", {
-          amount: Number(s.amount).toFixed(2),
+          amount: formatAmount(Number(s.amount)),
           code: CURRENCY.code,
           date: s.settled_at,
         }),
@@ -71,7 +71,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
   }
 
   return (
-    <div className="space-y-4 animate-fade-in-up">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-secondary">
           {t("settlements.intro")}
@@ -97,7 +97,7 @@ export function OwnerSettlementsPanel({ owner, settlements }: OwnerDetailProps) 
       ) : (
         <>
           {/* Desktop statement table */}
-          <div className="hidden overflow-hidden rounded-xl border border-border/50 md:block">
+          <div className="hidden overflow-hidden rounded-xl border border-border md:block">
             <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -172,15 +172,12 @@ function SettlementAmount({ settlement: s }: { settlement: SettlementRow }) {
   return (
     <span
       className={cn(
-        "font-mono text-sm font-semibold tabular-nums ltr-nums",
+        "tabular-nums text-sm font-semibold tabular-nums ltr-nums",
         isOut ? "text-destructive" : "text-success",
       )}
     >
       {isOut ? "−" : "+"}
-      {Number(s.amount).toLocaleString("en-OM", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}
+      {formatAmount(Number(s.amount))}
     </span>
   );
 }
@@ -228,7 +225,7 @@ function RowActions({
         onClick={onDelete}
         aria-label={tCommon("delete")}
         title={tCommon("delete")}
-        className="h-8 w-8 p-0 text-text-secondary hover:bg-destructive/10 hover:text-destructive"
+        className="h-8 w-8 p-0 text-text-secondary hover:bg-destructive-tint hover:text-destructive"
       >
         <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
       </Button>
@@ -249,7 +246,7 @@ function SettlementTableRow({
   const locale = useLocale();
   return (
     <TableRow>
-      <TableCell className="whitespace-nowrap font-mono text-xs ltr-nums text-text-secondary">
+      <TableCell className="whitespace-nowrap tabular-nums text-xs ltr-nums text-text-secondary">
         {formatDate(s.settled_at, locale)}
       </TableCell>
       <TableCell>
@@ -280,7 +277,7 @@ function SettlementCard({
   const t = useTranslations("owners");
   const locale = useLocale();
   return (
-    <li className="rounded-xl border border-border/50 bg-surface-elevated/40 p-4">
+    <li className="rounded-xl border border-border bg-surface-elevated p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <DirectionBadge settlement={s} />
@@ -289,12 +286,12 @@ function SettlementCard({
         <RowActions onEdit={onEdit} onDelete={onDelete} />
       </div>
       <div className="mt-3 flex items-baseline justify-between gap-3">
-        <span className="font-mono text-xs ltr-nums text-text-secondary">
+        <span className="tabular-nums text-xs ltr-nums text-text-secondary">
           {formatDate(s.settled_at, locale)}
         </span>
         <span className="text-end">
           <SettlementAmount settlement={s} />
-          <span className="ms-1 text-[10px] text-text-secondary">
+          <span className="ms-1 text-xs text-text-secondary">
             {CURRENCY.code}
           </span>
         </span>

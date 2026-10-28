@@ -7,7 +7,7 @@ import { Plus, Pencil, Trash2, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import {
   Table,
   TableHeader,
@@ -44,7 +44,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
       !confirm(
         t("fees.confirmDelete", {
           month: f.period_month.slice(0, 7),
-          amount: Number(f.amount).toFixed(2),
+          amount: formatAmount(Number(f.amount)),
           code: CURRENCY.code,
         }),
       )
@@ -70,7 +70,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
   }
 
   return (
-    <div className="space-y-4 animate-fade-in-up">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-secondary">
           {t("fees.intro")}
@@ -96,7 +96,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
       ) : (
         <>
           {/* Desktop statement table */}
-          <div className="hidden overflow-hidden rounded-xl border border-border/50 md:block">
+          <div className="hidden overflow-hidden rounded-xl border border-border md:block">
             <Table className="min-w-[520px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -143,7 +143,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
             {businessFees.map((f) => (
               <li
                 key={`m-${f.id}`}
-                className="rounded-xl border border-border/50 bg-surface-elevated/40 p-4"
+                className="rounded-xl border border-border bg-surface-elevated p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -163,7 +163,7 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
                 </div>
                 <div className="mt-3 text-end">
                   <FeeAmount fee={f} />
-                  <span className="ms-1 text-[10px] text-text-secondary">
+                  <span className="ms-1 text-xs text-text-secondary">
                     {CURRENCY.code}
                   </span>
                 </div>
@@ -185,12 +185,9 @@ export function OwnerBusinessFeesPanel({ owner, businessFees }: OwnerDetailProps
 
 function FeeAmount({ fee }: { fee: BusinessFeeRow }) {
   return (
-    <span className="font-mono text-sm font-semibold tabular-nums ltr-nums text-destructive">
+    <span className="tabular-nums text-sm font-semibold tabular-nums ltr-nums text-destructive">
       −
-      {Number(fee.amount).toLocaleString("en-OM", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}
+      {formatAmount(Number(fee.amount))}
     </span>
   );
 }
@@ -223,7 +220,7 @@ function RowActions({
         onClick={onDelete}
         aria-label={tCommon("delete")}
         title={tCommon("delete")}
-        className="h-8 w-8 p-0 text-text-secondary hover:bg-destructive/10 hover:text-destructive"
+        className="h-8 w-8 p-0 text-text-secondary hover:bg-destructive-tint hover:text-destructive"
       >
         <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
       </Button>

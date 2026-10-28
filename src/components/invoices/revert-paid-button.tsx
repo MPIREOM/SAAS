@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import {
   INVOICE_REVERT_SELECT,
   findInvoicePayments,
@@ -136,7 +136,7 @@ export function RevertPaidButton({
       <button
         type="button"
         onClick={openDialog}
-        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-warning text-xs rounded-md border border-border/50 hover:border-warning/30 hover:bg-warning/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/40"
+        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-warning text-xs rounded-md border border-border hover:border-warning/30 hover:bg-warning-tint transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         title={t("revert.title")}
         aria-label={t("revert.title")}
       >
@@ -156,7 +156,7 @@ export function RevertPaidButton({
             </Alert>
 
             {/* Invoice summary */}
-            <div className="p-4 bg-surface-elevated/50 rounded-xl border border-border/40">
+            <div className="p-4 bg-surface-elevated rounded-xl border border-border">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
@@ -170,10 +170,10 @@ export function RevertPaidButton({
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
                     {t("paidAmount")}
                   </p>
-                  <p className="text-lg font-bold font-mono tabular-nums ltr-nums text-text-primary">
-                    {alreadyPaid.toLocaleString("en-OM", { minimumFractionDigits: 2 })}
+                  <p className="text-lg font-bold tabular-nums ltr-nums text-text-primary">
+                    {formatAmount(alreadyPaid)}
                     <span className="text-xs font-sans font-normal text-text-secondary ms-1">
-                      / {totalAmount.toLocaleString("en-OM", { minimumFractionDigits: 2 })}{" "}
+                      / {formatAmount(totalAmount)}{" "}
                       {CURRENCY.code}
                     </span>
                   </p>
@@ -208,7 +208,7 @@ export function RevertPaidButton({
             />
           </DialogBody>
 
-          <DialogFooter className="pt-4 border-t border-border/40">
+          <DialogFooter className="pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               {tc("cancel")}
             </Button>

@@ -821,7 +821,7 @@ export default async function TenantDetailPage({
           />
           <Link
             href={`/${locale}/documents/upload?entity_type=tenant&entity_id=${id}`}
-            className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent-tint text-accent text-xs font-semibold rounded-lg hover:bg-accent/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className={buttonVariants({ size: "sm" })}
           >
             <Upload aria-hidden="true" className="h-3.5 w-3.5" />
             {td("upload")}
@@ -988,7 +988,7 @@ export default async function TenantDetailPage({
             action={
               <Link
                 href={`/${locale}/documents/upload?entity_type=tenant&entity_id=${id}`}
-                className="inline-flex items-center gap-1.5 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                className={buttonVariants({ size: "sm" })}
               >
                 <Upload aria-hidden="true" className="h-3.5 w-3.5" />
                 {td("upload")}

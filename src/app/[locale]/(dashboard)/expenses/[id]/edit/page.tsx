@@ -210,7 +210,7 @@ export default function EditExpensePage({
         <Alert variant="destructive">{error || t("expenseNotFound")}</Alert>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-surface border border-border/40 rounded-xl p-6 space-y-5">
+          <div className="bg-surface border border-border rounded-xl shadow-card p-6 space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
                 name="property_id"
@@ -264,7 +264,7 @@ export default function EditExpensePage({
                 required
                 defaultValue={expense.expense_date}
                 label={`${t("date")} *`}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
             </div>
 
@@ -286,7 +286,7 @@ export default function EditExpensePage({
                 label={`${t("amount")} (OMR) *`}
                 placeholder="0.00"
                 defaultValue={expense.amount}
-                className="font-mono ltr-nums tabular-nums"
+                className="tabular-nums ltr-nums tabular-nums"
               />
               <Input
                 name="vendor"
@@ -317,7 +317,7 @@ export default function EditExpensePage({
               variant="outline"
               onClick={handleDelete}
               loading={deleting}
-              className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive/40"
+              className="text-destructive border-destructive/30 hover:bg-destructive-tint hover:border-destructive/40"
             >
               <Trash2 aria-hidden="true" className="h-4 w-4" />
               {t("deleteExpense")}

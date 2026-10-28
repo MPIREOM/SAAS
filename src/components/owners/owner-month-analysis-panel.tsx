@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { TrendingUp } from "lucide-react";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
 import type { OwnerMonthAnalysis } from "@/components/owners/types";
 
@@ -35,9 +35,9 @@ export function OwnerMonthAnalysisPanel({
   return (
     <section
       aria-label={t("analysis.title", { month: formatMonthLabel(analysis.month, locale) })}
-      className="animate-fade-in-up rounded-xl border border-border/60 bg-surface-elevated/30 p-6"
+      className="rounded-xl border border-border bg-surface-elevated p-6"
     >
-      <h2 className="mb-4 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-wider text-text-secondary">
+      <h2 className="mb-4 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
         <TrendingUp aria-hidden="true" className="h-4 w-4 text-accent" />
         {t("analysis.title", { month: formatMonthLabel(analysis.month, locale) })}
       </h2>
@@ -79,7 +79,7 @@ export function OwnerMonthAnalysisPanel({
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Expenses by category */}
         <div>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
             {t("analysis.expensesByCategory")}
           </h3>
           {analysis.expensesByCategory.length === 0 ? (
@@ -97,13 +97,13 @@ export function OwnerMonthAnalysisPanel({
                         {t("activity.entryCount", { count: c.count })}
                       </span>
                     </span>
-                    <span className="shrink-0 font-mono tabular-nums ltr-nums text-text-primary">
+                    <span className="shrink-0 tabular-nums ltr-nums text-text-primary">
                       {fmt(c.amount)}
                     </span>
                   </div>
                   <div
                     aria-hidden="true"
-                    className="h-1.5 overflow-hidden rounded-full bg-border/30"
+                    className="h-1.5 overflow-hidden rounded-full bg-sunken"
                   >
                     <div
                       className="h-full rounded-full bg-accent/70"
@@ -120,7 +120,7 @@ export function OwnerMonthAnalysisPanel({
 
         {/* Rent collected by method */}
         <div>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
             {t("analysis.rentByMethod")}
           </h3>
           {analysis.rentByMethod.length === 0 ? (
@@ -143,12 +143,12 @@ export function OwnerMonthAnalysisPanel({
                         {t("activity.entryCount", { count: r.count })}
                       </span>
                       {isCheque && (
-                        <span className="ms-2 text-[10px] uppercase tracking-wider">
+                        <span className="ms-2 text-xs uppercase tracking-wider">
                           {t("breakdownRows.referenceOnly")}
                         </span>
                       )}
                     </dt>
-                    <dd className="shrink-0 font-mono tabular-nums ltr-nums text-end text-text-primary">
+                    <dd className="shrink-0 tabular-nums ltr-nums text-end text-text-primary">
                       {fmt(r.amount)}
                     </dd>
                   </div>
@@ -178,11 +178,11 @@ function StatTile({
   deltaLabel?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-surface-elevated/40 p-4">
-      <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
+    <div className="rounded-xl border border-border bg-surface-elevated p-4">
+      <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
         {label}
       </div>
-      <div className={cn("font-mono text-lg font-semibold tabular-nums ltr-nums", tone)}>
+      <div className={cn("tabular-nums text-lg font-semibold tabular-nums ltr-nums", tone)}>
         {sign && <span className="me-0.5">{sign}</span>}
         {fmt(Math.abs(value) < 0.005 ? 0 : value)}
         <span className="ms-1.5 text-xs font-medium text-text-secondary">
@@ -191,7 +191,7 @@ function StatTile({
       </div>
       {delta !== null && deltaLabel && (
         <div className="mt-1 text-xs text-text-secondary">
-          <span className="font-mono tabular-nums ltr-nums">
+          <span className="tabular-nums ltr-nums">
             {delta > 0.005 ? "+" : ""}
             {fmt(Math.abs(delta) < 0.005 ? 0 : delta)}
           </span>{" "}
@@ -205,10 +205,7 @@ function StatTile({
 // The month's rent figures are magnitudes; the leading sign glyph carries the
 // credit/debit meaning textually so color is never the only signal.
 function fmt(n: number): string {
-  return n.toLocaleString("en-OM", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return formatAmount(n);
 }
 
 function methodKey(method: string): string {
