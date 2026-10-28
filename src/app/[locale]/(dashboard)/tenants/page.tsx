@@ -7,7 +7,11 @@ import { Pagination } from "@/components/ui/pagination";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Users, Plus, Phone } from "lucide-react";
+import { Users, Plus, Phone, Home } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 import { TenantsHeader } from "@/components/tenants/tenants-header";
 import { TenantsFilter } from "@/components/tenants/tenants-filter";
 
@@ -108,183 +112,136 @@ export default async function TenantsPage({
   ]);
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
 
+  // Resolve each tenant's display lease once for both layouts: the active
+  // lease, or for archived tenants the most recent one.
+  const rows = (tenants ?? []).map((tenant: Record<string, unknown>) => {
+    const leases = Array.isArray(tenant.leases)
+      ? (tenant.leases as Record<string, unknown>[])
+      : [];
+    const activeLease = leases.find((l) => l.is_active);
+    const lastLease =
+      leases.length > 0
+        ? leases.sort(
+            (a, b) =>
+              new Date(b.end_date as string).getTime() -
+              new Date(a.end_date as string).getTime()
+          )[0]
+        : null;
+    const displayLease = tenant.status === "archived" ? lastLease : activeLease;
+    const unit = displayLease ? (displayLease.units as Record<string, unknown>) : null;
+    const property = unit ? (unit.properties as Record<string, unknown>) : null;
+    return {
+      id: tenant.id as string,
+      name: tenant.full_name as string,
+      phone: (tenant.phone as string) || "",
+      status: tenant.status as string,
+      isArchived: (tenant.status as string) === "archived",
+      propertyName: (property?.name as string) || "",
+      unitNumber: (unit?.unit_number as string) || "",
+      rent: displayLease ? String(displayLease.monthly_rent) : null,
+    };
+  });
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       <PageHeader title={t("title")} description={t("subtitle")}>
         <TenantsHeader locale={locale} />
       </PageHeader>
 
       <TenantsFilter />
 
-      {tenants && tenants.length > 0 ? (
-        <div className="bg-surface border border-border rounded-xl animate-fade-in overflow-hidden">
-          {/* Desktop table — hidden on mobile in favor of the card list below */}
-          <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[600px]">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("fullName")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("phone")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("property")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("unit")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("monthlyRent")}
-                </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                  {t("status")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {tenants.map((tenant: Record<string, unknown>) => {
-                const leases = Array.isArray(tenant.leases)
-                  ? (tenant.leases as Record<string, unknown>[])
-                  : [];
-
-                // For active tenants, show active lease; for archived, show most recent lease
-                const activeLease = leases.find((l) => l.is_active);
-                const lastLease =
-                  leases.length > 0
-                    ? leases.sort(
-                        (a, b) =>
-                          new Date(b.end_date as string).getTime() -
-                          new Date(a.end_date as string).getTime()
-                      )[0]
-                    : null;
-
-                const displayLease =
-                  tenant.status === "archived" ? lastLease : activeLease;
-
-                const unit = displayLease
-                  ? (displayLease.units as Record<string, unknown>)
-                  : null;
-                const property = unit
-                  ? (unit.properties as Record<string, unknown>)
-                  : null;
-
-                return (
-                  <tr
-                    key={tenant.id as string}
-                    className="hover:bg-surface-elevated/50 transition-colors"
-                  >
-                    <td className="px-4 py-3">
+      {rows.length > 0 ? (
+        <>
+          {/* Desktop table */}
+          <Card className="hidden overflow-hidden md:block">
+            <Table className="min-w-[640px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("fullName")}</TableHead>
+                  <TableHead>{t("phone")}</TableHead>
+                  <TableHead>{t("property")}</TableHead>
+                  <TableHead>{t("unit")}</TableHead>
+                  <TableHead className="text-end">{t("monthlyRent")}</TableHead>
+                  <TableHead>{t("status")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>
                       <Link
-                        href={`/${locale}/tenants/${tenant.id}`}
-                        className="text-sm font-medium text-text-primary hover:text-accent transition-colors"
+                        href={`/${locale}/tenants/${row.id}`}
+                        className="rounded font-semibold text-text-primary hover:text-accent hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                       >
-                        {tenant.full_name as string}
+                        {row.name}
                       </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary font-mono ltr-nums">
-                        {tenant.phone as string}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary">
-                        {(property?.name as string) || "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary font-mono">
-                        {(unit?.unit_number as string) || "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary font-mono ltr-nums">
-                        {displayLease
-                          ? `${displayLease.monthly_rent} ${CURRENCY.code}`
-                          : "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={
-                          (tenant.status as string) === "archived"
-                            ? "secondary"
-                            : "success"
-                        }
-                      >
-                        {t(tenant.status as string)}
-                      </Badge>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          </div>
-
-          {/* Mobile card list */}
-          <ul className="md:hidden divide-y divide-border/30">
-            {tenants.map((tenant: Record<string, unknown>) => {
-              const leases = Array.isArray(tenant.leases)
-                ? (tenant.leases as Record<string, unknown>[])
-                : [];
-              const activeLease = leases.find((l) => l.is_active);
-              const lastLease =
-                leases.length > 0
-                  ? leases.sort(
-                      (a, b) =>
-                        new Date(b.end_date as string).getTime() -
-                        new Date(a.end_date as string).getTime()
-                    )[0]
-                  : null;
-              const displayLease =
-                tenant.status === "archived" ? lastLease : activeLease;
-              const unit = displayLease
-                ? (displayLease.units as Record<string, unknown>)
-                : null;
-              const property = unit
-                ? (unit.properties as Record<string, unknown>)
-                : null;
-              const isArchived = (tenant.status as string) === "archived";
-
-              return (
-                <li key={`m-${tenant.id as string}`} className="p-4">
-                  <Link
-                    href={`/${locale}/tenants/${tenant.id}`}
-                    className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors truncate">
-                          {tenant.full_name as string}
-                        </p>
-                        {tenant.phone ? (
-                          <p className="mt-0.5 flex items-center gap-1 text-xs text-text-secondary font-mono ltr-nums">
-                            <Phone aria-hidden="true" className="h-3 w-3" />
-                            {tenant.phone as string}
-                          </p>
-                        ) : null}
-                      </div>
-                      <Badge variant={isArchived ? "secondary" : "success"}>
-                        {t(tenant.status as string)}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                      <span className="text-text-secondary">
-                        {(property?.name as string) || "—"}
-                        {unit?.unit_number ? ` · ${unit.unit_number as string}` : ""}
-                      </span>
-                      {displayLease && (
-                        <span className="ms-auto font-mono tabular-nums text-text-primary">
-                          {displayLease.monthly_rent as string} {CURRENCY.code}
+                    </TableCell>
+                    <TableCell className="text-text-secondary">
+                      <span dir="ltr" className="tabular-nums">{row.phone}</span>
+                    </TableCell>
+                    <TableCell className="text-text-secondary">{row.propertyName || "—"}</TableCell>
+                    <TableCell className="tabular-nums">{row.unitNumber || "—"}</TableCell>
+                    <TableCell className="text-end">
+                      {row.rent ? (
+                        <span className="font-semibold ltr-nums tabular-nums">
+                          {row.rent}
+                          <small className="ms-1 text-[0.78em] font-medium text-text-secondary">{CURRENCY.code}</small>
                         </span>
+                      ) : (
+                        "—"
                       )}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={row.isArchived ? "secondary" : "success"}>
+                        {t(row.status)}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {/* Phone: one card per tenant */}
+          <ul className="flex flex-col gap-2 md:hidden" aria-label={t("title")}>
+            {rows.map((row) => (
+              <li key={`m-${row.id}`}>
+                <Link
+                  href={`/${locale}/tenants/${row.id}`}
+                  className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 rounded-xl border border-border bg-surface p-3.5 shadow-card transition-colors hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                >
+                  <span className="min-w-0 text-[15px] font-semibold text-text-primary [overflow-wrap:anywhere]">
+                    {row.name}
+                  </span>
+                  <span className="text-end font-bold text-text-primary ltr-nums tabular-nums">
+                    {row.rent ? (
+                      <>
+                        {row.rent}
+                        <small className="ms-1 text-xs font-medium text-text-tertiary">{CURRENCY.code}</small>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </span>
+                  <span className="col-span-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[13px] text-text-secondary">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Home aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                      {row.propertyName || "—"}
+                      {row.unitNumber ? ` · ${row.unitNumber}` : ""}
+                    </span>
+                    {row.phone && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Phone aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                        <span dir="ltr" className="tabular-nums">{row.phone}</span>
+                      </span>
+                    )}
+                    <Badge variant={row.isArchived ? "secondary" : "success"} className="ms-auto">
+                      {t(row.status)}
+                    </Badge>
+                  </span>
+                </Link>
+              </li>
+            ))}
           </ul>
 
           {/* Pagination */}
@@ -297,22 +254,19 @@ export default async function TenantsPage({
               ...(search ? { search } : {}),
             }}
           />
-        </div>
+        </>
       ) : (
         <EmptyState
-          icon={<Users className="h-5 w-5" />}
-          title={t("noTenants")}
-          description={t("noTenantsDescription")}
-          action={
-            <Link
-              href={`/${locale}/tenants/new`}
-              className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            >
-              <Plus aria-hidden="true" className="h-4 w-4" />
-              {t("createTenant")}
-            </Link>
-          }
-        />
+            icon={<Users className="h-5 w-5" />}
+            title={t("noTenants")}
+            description={t("noTenantsDescription")}
+            action={
+              <Link href={`/${locale}/tenants/new`} className={cn(buttonVariants())}>
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                {t("createTenant")}
+              </Link>
+            }
+          />
       )}
     </div>
   );

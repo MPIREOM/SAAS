@@ -430,8 +430,8 @@ export default function NewTenantPage({
 
       {/* Unit Context Banner */}
       {unitId && unitInfo && (
-        <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 flex items-center gap-3 animate-fade-in-up">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+        <div className="bg-accent-tint border border-accent/30 rounded-xl p-4 flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
             <Building2 aria-hidden="true" className="h-5 w-5 text-accent" />
           </span>
           <div className="min-w-0">
@@ -440,7 +440,7 @@ export default function NewTenantPage({
             </p>
             <p className="text-xs text-text-secondary">
               {t("monthlyRent")}:{" "}
-              <span className="font-mono ltr-nums text-text-primary">
+              <span className="tabular-nums ltr-nums text-text-primary">
                 {unitInfo.rent_amount} OMR
               </span>
             </p>
@@ -450,7 +450,7 @@ export default function NewTenantPage({
 
       {/* Wizard step indicator — assign-to-unit mode only */}
       {isAssigningToUnit && (
-        <div className="bg-surface border border-border/40 rounded-xl px-4 py-3">
+        <div className="bg-surface border border-border rounded-xl shadow-card px-4 py-3">
           <Stepper
             steps={wizardSteps}
             activeIndex={currentStep}
@@ -461,8 +461,8 @@ export default function NewTenantPage({
 
       {/* New vs Existing Tenant Toggle - shown when assigning to a unit AND on the tenant step */}
       {isAssigningToUnit && currentStep === 0 && (
-        <div className="bg-surface border border-border/40 rounded-xl p-4 sm:p-5">
-          <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+        <div className="bg-surface border border-border rounded-xl shadow-card p-4 sm:p-5">
+          <span className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal mb-3">
             {t("tenantType")}
           </span>
           <div role="tablist" aria-label={t("tenantType")} className="grid grid-cols-2 gap-2">
@@ -472,10 +472,10 @@ export default function NewTenantPage({
               aria-selected={tenantMode === "new"}
               onClick={() => { setTenantMode("new"); setSelectedTenant(null); }}
               className={cn(
-                "flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                "flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium cursor-pointer transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                 tenantMode === "new"
-                  ? "bg-accent/10 border-accent/40 text-accent"
-                  : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                  ? "bg-accent-tint border-accent/40 text-accent"
+                  : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:text-text-primary"
               )}
             >
               <Users aria-hidden="true" className="h-4 w-4" />
@@ -487,10 +487,10 @@ export default function NewTenantPage({
               aria-selected={tenantMode === "existing"}
               onClick={() => setTenantMode("existing")}
               className={cn(
-                "flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                "flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium cursor-pointer transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                 tenantMode === "existing"
-                  ? "bg-accent/10 border-accent/40 text-accent"
-                  : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                  ? "bg-accent-tint border-accent/40 text-accent"
+                  : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:text-text-primary"
               )}
             >
               <Search aria-hidden="true" className="h-4 w-4" />
@@ -525,16 +525,16 @@ export default function NewTenantPage({
 
               {/* Selected tenant */}
               {selectedTenant && (
-                <div className="p-3 rounded-lg bg-success/5 border border-success/20 flex items-center justify-between gap-3">
+                <div className="p-3 rounded-lg bg-success-tint border border-success/30 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-text-primary truncate">{selectedTenant.full_name}</p>
-                    <p className="text-xs text-text-secondary font-mono ltr-nums">{selectedTenant.phone}</p>
+                    <p className="text-xs text-text-secondary tabular-nums ltr-nums">{selectedTenant.phone}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => { setSelectedTenant(null); setTenantSearch(""); }}
                     aria-label={tc("close")}
-                    className="h-6 w-6 shrink-0 rounded-full border border-border flex items-center justify-center cursor-pointer hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className="h-6 w-6 shrink-0 rounded-full border border-border flex items-center justify-center cursor-pointer hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     <X aria-hidden="true" className="h-3 w-3 text-text-secondary" />
                   </button>
@@ -543,16 +543,16 @@ export default function NewTenantPage({
 
               {/* Search results */}
               {!selectedTenant && searchResults.length > 0 && (
-                <div className="border border-border/60 rounded-lg overflow-hidden divide-y divide-border/50">
+                <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
                   {searchResults.map((tenant) => (
                     <button
                       key={tenant.id}
                       type="button"
                       onClick={() => { setSelectedTenant(tenant); setTenantSearch(tenant.full_name); setSearchResults([]); }}
-                      className="w-full text-start px-4 py-3 cursor-pointer hover:bg-surface-elevated/50 transition-colors focus-visible:outline-none focus-visible:bg-surface-elevated"
+                      className="w-full text-start px-4 py-3 cursor-pointer hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:bg-surface-elevated"
                     >
                       <p className="text-sm font-medium text-text-primary">{tenant.full_name}</p>
-                      <p className="text-xs text-text-secondary font-mono ltr-nums">{tenant.phone}</p>
+                      <p className="text-xs text-text-secondary tabular-nums ltr-nums">{tenant.phone}</p>
                     </button>
                   ))}
                 </div>
@@ -570,13 +570,13 @@ export default function NewTenantPage({
 
       {/* ID Scan Section — visible when creating a new tenant AND on the tenant step (or in standalone mode) */}
       {tenantMode === "new" && showTenantStep && (
-        <div className="bg-surface border border-border/40 rounded-xl p-5 sm:p-6">
+        <div className="bg-surface border border-border rounded-xl shadow-card p-5 sm:p-6">
           <div className="flex items-start gap-3 mb-4">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
               <Scan aria-hidden="true" className="h-4 w-4 text-accent" />
             </span>
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight">
+              <h2 className="text-sm font-semibold text-text-primary font-display">
                 {t("scanId")}
               </h2>
               <p className="text-xs text-text-secondary mt-0.5">{t("scanIdDescription")}</p>
@@ -587,8 +587,8 @@ export default function NewTenantPage({
             <div>
               <div className="relative">
                 {isPdf ? (
-                  <div className="w-full h-48 rounded-lg border border-border/60 bg-surface-elevated flex flex-col items-center justify-center gap-2">
-                    <FileText aria-hidden="true" className="h-12 w-12 text-text-secondary/50" />
+                  <div className="w-full h-48 rounded-lg border border-border bg-surface-elevated flex flex-col items-center justify-center gap-2">
+                    <FileText aria-hidden="true" className="h-12 w-12 text-text-tertiary" />
                     <span className="text-sm text-text-secondary">PDF Document</span>
                   </div>
                 ) : (
@@ -596,20 +596,20 @@ export default function NewTenantPage({
                   <img
                     src={idPreview}
                     alt="ID Preview"
-                    className="w-full max-h-48 object-contain rounded-lg border border-border/60 bg-surface-elevated/50"
+                    className="w-full max-h-48 object-contain rounded-lg border border-border bg-surface-elevated"
                   />
                 )}
                 <button
                   type="button"
                   onClick={clearPreview}
                   aria-label={tc("close")}
-                  className="absolute top-2 end-2 h-7 w-7 bg-surface/80 backdrop-blur-sm border border-border rounded-full flex items-center justify-center cursor-pointer hover:bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="absolute top-2 end-2 h-7 w-7 bg-surface border border-border rounded-full flex items-center justify-center cursor-pointer hover:bg-surface transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   <X aria-hidden="true" className="h-3.5 w-3.5 text-text-secondary" />
                 </button>
                 {scanning && (
                   <div
-                    className="absolute inset-0 bg-surface/70 backdrop-blur-sm rounded-lg flex items-center justify-center"
+                    className="absolute inset-0 bg-surface rounded-lg flex items-center justify-center"
                     aria-busy="true"
                   >
                     <div className="flex items-center gap-2 text-sm text-text-secondary">
@@ -638,13 +638,13 @@ export default function NewTenantPage({
                   fileInputRef.current?.click();
                 }
               }}
-              className="border-2 border-dashed border-border/60 rounded-xl p-8 text-center cursor-pointer transition-all duration-200 hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer transition-all duration-200 hover:border-border-strong hover:bg-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               <span className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-elevated">
-                <Upload aria-hidden="true" className="h-5 w-5 text-text-secondary/60" />
+                <Upload aria-hidden="true" className="h-5 w-5 text-text-tertiary" />
               </span>
               <p className="text-sm text-text-secondary">{tc("dragAndDrop")}</p>
-              <p className="text-xs text-text-secondary/70 mt-1">
+              <p className="text-xs text-text-tertiary mt-1">
                 {tc("or")}{" "}
                 <span className="text-accent underline underline-offset-2">{tc("browseFiles")}</span>
               </p>
@@ -669,15 +669,15 @@ export default function NewTenantPage({
         {tenantMode === "new" && (
           <div
             className={cn(
-              "bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4",
+              "bg-surface border border-border rounded-xl shadow-card p-5 sm:p-6 space-y-4",
               !showTenantStep && "hidden"
             )}
           >
             <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
                 <Users aria-hidden="true" className="h-4 w-4 text-accent" />
               </span>
-              <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight">
+              <h2 className="text-sm font-semibold text-text-primary font-display">
                 {t("personalInfo")}
               </h2>
             </div>
@@ -699,7 +699,7 @@ export default function NewTenantPage({
                 name="national_id"
                 label={t("nationalId")}
                 placeholder={t("nationalIdPlaceholder")}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
             </div>
 
@@ -709,7 +709,7 @@ export default function NewTenantPage({
                 required
                 label={`${t("phone")} *`}
                 placeholder={t("phonePlaceholder")}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
               <Input
                 name="email"
@@ -741,15 +741,15 @@ export default function NewTenantPage({
         {isAssigningToUnit && (
           <div
             className={cn(
-              "bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4",
+              "bg-surface border border-border rounded-xl shadow-card p-5 sm:p-6 space-y-4",
               !showLeaseStep && "hidden"
             )}
           >
             <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
                 <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               </span>
-              <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight">
+              <h2 className="text-sm font-semibold text-text-primary font-display">
                 {t("leaseInfo")}
               </h2>
             </div>
@@ -761,7 +761,7 @@ export default function NewTenantPage({
                 required
                 label={`${tl("startDate")} *`}
                 defaultValue={new Date().toISOString().split("T")[0]}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
               <Input
                 name="lease_end_date"
@@ -775,7 +775,7 @@ export default function NewTenantPage({
                     .toISOString()
                     .split("T")[0]
                 }
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
             </div>
 
@@ -789,7 +789,7 @@ export default function NewTenantPage({
                 label={`${tl("monthlyRent")} (OMR) *`}
                 defaultValue={unitInfo?.rent_amount || defaultRent}
                 placeholder="0.00"
-                className="font-mono ltr-nums tabular-nums"
+                className="tabular-nums ltr-nums tabular-nums"
               />
               <Input
                 name="security_deposit"
@@ -797,7 +797,7 @@ export default function NewTenantPage({
                 step={0.01}
                 label={`${tl("securityDeposit")} (OMR)`}
                 placeholder="0.00"
-                className="font-mono ltr-nums tabular-nums"
+                className="tabular-nums ltr-nums tabular-nums"
               />
             </div>
 
@@ -805,7 +805,7 @@ export default function NewTenantPage({
               name="payment_due_day"
               defaultValue="1"
               label={t("paymentDueDay")}
-              className="font-mono ltr-nums"
+              className="tabular-nums ltr-nums"
             >
               {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
                 <option key={day} value={day}>
@@ -822,16 +822,16 @@ export default function NewTenantPage({
         {isAssigningToUnit && (
           <div
             className={cn(
-              "bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4",
+              "bg-surface border border-border rounded-xl shadow-card p-5 sm:p-6 space-y-4",
               !showChequesStep && "hidden"
             )}
           >
             <div className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
                 <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               </span>
               <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight">
+                <h2 className="text-sm font-semibold text-text-primary font-display">
                   {tc("cheques")}
                 </h2>
                 <p className="text-xs text-text-secondary mt-0.5">

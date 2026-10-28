@@ -159,7 +159,7 @@ export function ImportTenantsDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-scrim animate-fade-in"
         aria-hidden="true"
         onClick={handleClose}
       />
@@ -169,17 +169,17 @@ export function ImportTenantsDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="import-tenants-title"
-        className="relative mx-4 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl border border-border/60 bg-surface shadow-2xl shadow-black/20 animate-scale-in"
+        className="relative mx-4 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-surface shadow-overlay animate-scale-in"
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-border/40 px-6 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-4">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
               <FileSpreadsheet className="h-4 w-4 text-accent" aria-hidden="true" />
             </span>
             <h2
               id="import-tenants-title"
-              className="truncate font-display text-lg font-semibold tracking-tight text-text-primary"
+              className="truncate font-display text-lg font-semibold text-text-primary"
             >
               {t("importTenants")}
             </h2>
@@ -188,7 +188,7 @@ export function ImportTenantsDialog({
             type="button"
             onClick={handleClose}
             aria-label={tc("close")}
-            className="rounded-lg p-1.5 text-text-secondary transition-all duration-200 hover:bg-surface-elevated hover:text-text-primary cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="rounded-lg p-1.5 text-text-secondary transition-all duration-200 hover:bg-surface-elevated hover:text-text-primary cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -208,22 +208,22 @@ export function ImportTenantsDialog({
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-xl border-2 border-dashed border-border/60 p-10 text-center cursor-pointer transition-all duration-200 hover:border-accent/50 hover:bg-surface-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="w-full rounded-xl border-2 border-dashed border-border p-10 text-center cursor-pointer transition-all duration-200 hover:border-border-strong hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <Upload
-                  className="mx-auto mb-3 h-10 w-10 text-text-secondary/40"
+                  className="mx-auto mb-3 h-10 w-10 text-text-tertiary"
                   aria-hidden="true"
                 />
                 <p className="text-sm text-text-secondary">
                   {tc("dragAndDrop")}
                 </p>
-                <p className="mt-1 text-xs text-text-secondary/70">
+                <p className="mt-1 text-xs text-text-tertiary">
                   {tc("or")}{" "}
                   <span className="text-accent underline underline-offset-2">
                     {tc("browseFiles")}
                   </span>
                 </p>
-                <p className="mt-2 text-xs font-mono text-text-secondary/50">
+                <p className="mt-2 text-xs tabular-nums text-text-tertiary">
                   .xlsx, .xls, .csv
                 </p>
               </button>
@@ -239,8 +239,8 @@ export function ImportTenantsDialog({
               />
 
               {/* Expected format */}
-              <div className="rounded-xl border border-border/40 bg-surface-elevated/50 p-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              <div className="rounded-xl border border-border bg-surface-elevated p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
                   {t("expectedColumns")}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -264,7 +264,7 @@ export function ImportTenantsDialog({
               </div>
 
               {error && (
-                <Alert variant="destructive" className="animate-fade-in-up">
+                <Alert variant="destructive" className="">
                   {error}
                 </Alert>
               )}
@@ -285,16 +285,16 @@ export function ImportTenantsDialog({
                 </div>
                 <div className="ms-auto flex items-center gap-1.5">
                   <Badge variant="secondary">
-                    <span className="font-mono tabular-nums ltr-nums">{totalRows}</span>
+                    <span className="tabular-nums ltr-nums">{totalRows}</span>
                     &nbsp;{t("totalRows")}
                   </Badge>
                   <Badge variant="success">
-                    <span className="font-mono tabular-nums ltr-nums">{validRows}</span>
+                    <span className="tabular-nums ltr-nums">{validRows}</span>
                     &nbsp;{t("validRows")}
                   </Badge>
                   {validationErrors.length > 0 && (
                     <Badge variant="destructive">
-                      <span className="font-mono tabular-nums ltr-nums">
+                      <span className="tabular-nums ltr-nums">
                         {validationErrors.length}
                       </span>
                       &nbsp;{t("errorRows")}
@@ -305,8 +305,8 @@ export function ImportTenantsDialog({
 
               {/* Column mapping */}
               {mappedColumns.length > 0 && (
-                <div className="rounded-xl border border-border/40 bg-surface-elevated/50 p-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                <div className="rounded-xl border border-border bg-surface-elevated p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
                     {t("columnMapping")}
                   </p>
                   <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -329,7 +329,7 @@ export function ImportTenantsDialog({
                 <Alert variant="destructive" title={t("importErrors")}>
                   <div className="max-h-24 space-y-1 overflow-y-auto">
                     {validationErrors.map((err, i) => (
-                      <p key={i} className="text-xs text-destructive/80">
+                      <p key={i} className="text-xs text-destructive">
                         {t("importRow", { row: err.row, message: err.message })}
                       </p>
                     ))}
@@ -338,7 +338,7 @@ export function ImportTenantsDialog({
               )}
 
               {/* Preview table */}
-              <div className="overflow-hidden rounded-xl border border-border/40 [&>div]:max-h-64">
+              <div className="overflow-hidden rounded-xl border border-border [&>div]:max-h-64">
                 <Table className="min-w-[500px]">
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
@@ -353,13 +353,13 @@ export function ImportTenantsDialog({
                   <TableBody>
                     {previewData.slice(0, 50).map((tenant, i) => (
                       <TableRow key={i}>
-                        <TableCell className="text-xs font-mono tabular-nums ltr-nums text-text-secondary">
+                        <TableCell className="text-xs tabular-nums ltr-nums text-text-secondary">
                           {i + 1}
                         </TableCell>
                         <TableCell className="font-medium text-text-primary">
                           {tenant.full_name}
                         </TableCell>
-                        <TableCell className="font-mono ltr-nums text-text-secondary">
+                        <TableCell className="tabular-nums ltr-nums text-text-secondary">
                           {tenant.phone}
                         </TableCell>
                         <TableCell className="text-text-secondary">
@@ -368,7 +368,7 @@ export function ImportTenantsDialog({
                         <TableCell className="text-text-secondary">
                           {tenant.nationality || "—"}
                         </TableCell>
-                        <TableCell className="font-mono ltr-nums text-text-secondary">
+                        <TableCell className="tabular-nums ltr-nums text-text-secondary">
                           {tenant.national_id || "—"}
                         </TableCell>
                       </TableRow>
@@ -383,7 +383,7 @@ export function ImportTenantsDialog({
               )}
 
               {error && (
-                <Alert variant="destructive" className="animate-fade-in-up">
+                <Alert variant="destructive" className="">
                   {error}
                 </Alert>
               )}
@@ -409,8 +409,8 @@ export function ImportTenantsDialog({
 
           {/* Done Step */}
           {step === "done" && (
-            <div className="flex flex-col items-center justify-center py-12 animate-fade-in-up">
-              <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success/10 border border-success/25">
+            <div className="flex flex-col items-center justify-center py-12">
+              <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-tint border border-success/30">
                 <CheckCircle2 className="h-7 w-7 text-success" aria-hidden="true" />
               </span>
               <p className="font-display text-base font-semibold text-text-primary">
@@ -424,7 +424,7 @@ export function ImportTenantsDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-border/40 px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
           {step === "upload" && (
             <Button type="button" variant="secondary" onClick={handleClose}>
               {tc("cancel")}

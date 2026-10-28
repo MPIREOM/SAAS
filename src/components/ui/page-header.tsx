@@ -39,11 +39,11 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
+        "flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between",
         className
       )}
     >
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 sm:basis-64">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <Breadcrumbs items={breadcrumbs} />
         )}
@@ -55,7 +55,7 @@ export function PageHeader({
         )}
       </div>
       {children && (
-        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {children}
         </div>
       )}

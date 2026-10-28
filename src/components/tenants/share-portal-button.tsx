@@ -21,6 +21,8 @@ import {
   DialogBody,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 
 interface Token {
   id: string;
@@ -106,7 +108,7 @@ export function SharePortalButton({
     <>
       <button
         onClick={openDialog}
-        className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
         <Eye className="h-4 w-4" />
         {t("sharePortal")}
@@ -126,7 +128,7 @@ export function SharePortalButton({
               <button
                 onClick={generateToken}
                 disabled={generating}
-                className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+                className={cn(buttonVariants({ size: "sm" }), "disabled:opacity-60")}
               >
                 <Plus className="h-3.5 w-3.5" />
                 {generating ? tc("loading") : t("generateLink")}
@@ -141,7 +143,7 @@ export function SharePortalButton({
                 />
               ) : tokens.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                  <p className="text-xs font-medium text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal">
                     {t("activeLinks")}
                   </p>
                   {tokens.map((tk) => (
@@ -158,7 +160,7 @@ export function SharePortalButton({
                         </div>
                         <button
                           onClick={() => revokeToken(tk.id)}
-                          className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                          className="p-1 rounded hover:bg-destructive-tint transition-colors"
                         >
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </button>
@@ -167,11 +169,11 @@ export function SharePortalButton({
                         <input
                           readOnly
                           value={getLink(tk.token)}
-                          className="flex-1 h-8 bg-surface border border-border rounded-md px-2 text-xs text-text-secondary font-mono truncate"
+                          className="flex-1 h-8 bg-surface border border-border rounded-md px-2 text-xs text-text-secondary tabular-nums truncate"
                         />
                         <button
                           onClick={() => copyLink(tk.token)}
-                          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-accent/10 transition-colors"
+                          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-accent-tint transition-colors"
                         >
                           {copied === tk.token ? (
                             <Check className="h-3.5 w-3.5 text-success" />
@@ -181,14 +183,14 @@ export function SharePortalButton({
                         </button>
                         <button
                           onClick={() => window.open(getLink(tk.token), "_blank")}
-                          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-accent/10 transition-colors"
+                          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-accent-tint transition-colors"
                         >
                           <ExternalLink className="h-3.5 w-3.5 text-text-secondary" />
                         </button>
                         {tenantPhone && (
                           <button
                             onClick={() => shareWhatsApp(tk.token)}
-                            className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md border border-border bg-success/10 hover:bg-success/20 transition-colors"
+                            className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md border border-border bg-success-tint hover:bg-success/20 transition-colors"
                           >
                             <MessageSquare className="h-3.5 w-3.5 text-success" />
                           </button>

@@ -22,7 +22,7 @@ Tokens live in `src/app/globals.css` (Tailwind v4 `@theme` block + CSS variables
 
 ## Primitives — always reuse, never hand-roll
 
-All in `src/components/ui/`: `Button` (variants + `loading` prop), `Input`/`Select`/`Textarea` (built-in `label`, `error`, `helperText` — never raw `<input>`/`<select>`), `Table` family, `Badge` (status variants), `Card`, `Dialog` family, `Alert` (`destructive`/`success` — replaces ad-hoc error/success divs), `Spinner` (replaces hand-rolled border-spin divs), `EmptyState`, `Skeleton`, `PageHeader` (with breadcrumbs), `Pagination`, `Stepper`, toast.
+All in `src/components/ui/`: `Button` (variants + `loading` prop), `Input`/`Select`/`Textarea` (built-in `label`, `error`, `helperText` — never raw `<input>`/`<select>`), `Table` family, `Badge` (status variants), `Card`, `Dialog` family, `Alert` (`destructive`/`success` — replaces ad-hoc error/success divs), `Spinner` (replaces hand-rolled border-spin divs), `EmptyState` (framed card by default; `bare` inside an existing card), `Skeleton`, `PageHeader` (with breadcrumbs), `Pagination`, `Stepper`, toast.
 
 If a needed primitive doesn't exist, extend `src/components/ui/` once and reuse — don't create per-screen variants.
 

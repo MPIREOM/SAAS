@@ -10,15 +10,18 @@ export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   description?: string;
   /** Optional action element (e.g. a Button) rendered below the description */
   action?: React.ReactNode;
+  /** Drop the card frame when the empty state already sits inside a card */
+  bare?: boolean;
 }
 
 const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
-  ({ className, icon, title, description, action, ...props }, ref) => {
+  ({ className, icon, title, description, action, bare = false, ...props }, ref) => {
     return (
       <div
         ref={ref}
         className={cn(
           "flex flex-col items-center justify-center gap-3 px-6 py-12 text-center",
+          !bare && "rounded-xl border border-border bg-surface shadow-card",
           className
         )}
         {...props}

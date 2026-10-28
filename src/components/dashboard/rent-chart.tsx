@@ -143,7 +143,7 @@ export function RentChart({ propertyIds }: RentChartProps) {
           <XAxis
             dataKey="month"
             tick={{ fill: "var(--color-text-secondary)", fontSize: 11, fontWeight: 500 }}
-            axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.4 }}
+            axisLine={{ stroke: "var(--color-border-strong)" }}
             tickLine={false}
           />
           <YAxis
@@ -154,17 +154,17 @@ export function RentChart({ propertyIds }: RentChartProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "var(--color-surface-elevated)",
+              backgroundColor: "var(--color-surface)",
               border: "1px solid var(--color-border)",
               borderRadius: "10px",
               fontSize: "12px",
               fontWeight: 500,
-              boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
+              boxShadow: "var(--shadow-overlay)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
             itemStyle={{ color: "var(--color-text-primary)" }}
             formatter={(value) => [`${Number(value).toFixed(2)} ${CURRENCY.code}`]}
-            cursor={{ fill: "var(--color-surface-elevated)", opacity: 0.3 }}
+            cursor={{ fill: "var(--color-sunken)", opacity: 0.6 }}
           />
           <Legend
             wrapperStyle={{ fontSize: "12px", fontWeight: 500 }}
@@ -177,13 +177,13 @@ export function RentChart({ propertyIds }: RentChartProps) {
           <Bar
             dataKey="paid"
             name={tInvoices("paid")}
-            fill="var(--color-success)"
+            fill="var(--color-chart-1)"
             radius={[4, 4, 0, 0]}
           />
           <Bar
             dataKey="pending"
             name={tInvoices("pending")}
-            fill="var(--color-warning)"
+            fill="var(--color-chart-2)"
             radius={[4, 4, 0, 0]}
           />
         </BarChart>

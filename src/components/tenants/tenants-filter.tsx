@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
 import { useCallback, useTransition } from "react";
+import { cn } from "@/lib/utils/cn";
 
 const STATUS_OPTIONS = ["all", "active", "archived"] as const;
 
@@ -35,36 +36,46 @@ export function TenantsFilter() {
   );
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
       {/* Search bar */}
-      <div className="relative flex-1 w-full sm:max-w-sm">
-        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
+      <div className="relative flex-1 w-full sm:max-w-[420px]">
+        <Search aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary pointer-events-none" />
         <input
-          type="text"
+          type="search"
           defaultValue={currentSearch}
           placeholder={t("searchPlaceholder")}
+          aria-label={t("searchPlaceholder")}
           onChange={(e) => updateParams({ search: e.target.value })}
-          className="w-full h-9 ps-9 pe-3 bg-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-colors"
+          className="w-full h-[42px] ps-9 pe-3 bg-surface border border-border-strong rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent transition-colors"
         />
       </div>
 
-      {/* Status filter tabs */}
-      <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1">
-        {STATUS_OPTIONS.map((status) => (
-          <button
-            key={status}
-            onClick={() =>
-              updateParams({ status: status === "active" ? "" : status })
-            }
-            className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-              currentStatus === status
-                ? "bg-accent text-background"
-                : "text-text-secondary hover:text-text-primary"
-            }`}
-          >
-            {t(status)}
-          </button>
-        ))}
+      {/* Status filter (segmented) */}
+      <div
+        role="group"
+        className="inline-flex self-start gap-0.5 rounded-[9px] border border-border bg-sunken p-[3px]"
+      >
+        {STATUS_OPTIONS.map((status) => {
+          const on = currentStatus === status;
+          return (
+            <button
+              key={status}
+              type="button"
+              aria-pressed={on}
+              onClick={() =>
+                updateParams({ status: status === "active" ? "" : status })
+              }
+              className={cn(
+                "h-8 rounded-md px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus",
+                on
+                  ? "bg-surface text-text-primary shadow-card ring-1 ring-border"
+                  : "text-text-secondary hover:text-text-primary"
+              )}
+            >
+              {t(status)}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

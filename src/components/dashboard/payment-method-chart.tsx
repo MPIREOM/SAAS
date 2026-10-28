@@ -115,12 +115,12 @@ export function PaymentMethodChart() {
           </Pie>
           <Tooltip
             contentStyle={{
-              backgroundColor: "var(--color-surface-elevated)",
+              backgroundColor: "var(--color-surface)",
               border: "1px solid var(--color-border)",
               borderRadius: "10px",
               fontSize: "12px",
               fontWeight: 500,
-              boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
+              boxShadow: "var(--shadow-overlay)",
             }}
             itemStyle={{ color: "var(--color-text-primary)" }}
             formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils/cn";
 
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border",
     "text-sm font-semibold leading-none transition-colors duration-150",
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
     "disabled:pointer-events-none aria-busy:cursor-progress",
@@ -14,15 +14,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-accent text-accent-foreground hover:bg-accent-hover active:bg-accent-press",
+          "border-transparent bg-accent text-accent-foreground hover:bg-accent-hover active:bg-accent-press",
         secondary:
           "bg-surface text-foreground border-border-strong hover:bg-surface-elevated hover:border-text-tertiary",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive-hover",
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive-hover",
         outline:
           "bg-surface text-foreground border-border-strong hover:bg-surface-elevated hover:border-text-tertiary",
         ghost:
-          "bg-transparent text-accent hover:bg-accent-tint hover:text-accent-tint-foreground",
+          "border-transparent bg-transparent text-accent hover:bg-accent-tint hover:text-accent-tint-foreground",
       },
       size: {
         sm: "h-[34px] px-3 text-[13px]",

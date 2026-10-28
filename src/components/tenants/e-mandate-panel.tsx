@@ -209,7 +209,7 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
             const cols = collectionsFor(m.id);
             const busy = busyId === m.id;
             return (
-              <div key={m.id} className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+              <div key={m.id} className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
                 <div className="p-4 sm:p-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
@@ -219,15 +219,15 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
                     <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-xs">
                       <div>
                         <dt className="text-text-secondary">{t("fields.amount")}</dt>
-                        <dd className="font-mono ltr-nums text-text-primary">{money(m.amount)}</dd>
+                        <dd className="tabular-nums ltr-nums text-text-primary">{money(m.amount)}</dd>
                       </div>
                       <div>
                         <dt className="text-text-secondary">{t("fields.collectionDay")}</dt>
-                        <dd className="font-mono ltr-nums text-text-primary">{m.collection_day}</dd>
+                        <dd className="tabular-nums ltr-nums text-text-primary">{m.collection_day}</dd>
                       </div>
                       <div>
                         <dt className="text-text-secondary">{t("fields.account")}</dt>
-                        <dd className="font-mono ltr-nums text-text-primary">{m.debtor_account_masked ?? "—"}</dd>
+                        <dd className="tabular-nums ltr-nums text-text-primary">{m.debtor_account_masked ?? "—"}</dd>
                       </div>
                       <div>
                         <dt className="text-text-secondary">{t("fields.provider")}</dt>
@@ -271,7 +271,7 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
                 </div>
 
                 {cols.length > 0 && (
-                  <div className="border-t border-border/40">
+                  <div className="border-t border-border">
                     <div className="hidden md:block">
                       <Table>
                         <TableHeader>
@@ -285,27 +285,27 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
                         <TableBody>
                           {cols.map((c) => (
                             <TableRow key={c.id}>
-                              <TableCell className="px-4 font-mono ltr-nums text-xs">{c.scheduled_date}</TableCell>
-                              <TableCell className="px-4 font-mono ltr-nums text-xs text-end">{money(c.amount)}</TableCell>
+                              <TableCell className="px-4 tabular-nums ltr-nums text-xs">{c.scheduled_date}</TableCell>
+                              <TableCell className="px-4 tabular-nums ltr-nums text-xs text-end">{money(c.amount)}</TableCell>
                               <TableCell className="px-4">
                                 <Badge variant={COLLECTION_VARIANTS[c.status] ?? "secondary"}>{t(`collectionStatus.${c.status}`)}</Badge>
                                 {c.failure_reason && <span className="ms-2 text-xs text-text-secondary">{c.failure_reason}</span>}
                               </TableCell>
-                              <TableCell className="px-4 font-mono ltr-nums text-xs text-text-secondary">{c.provider_collection_id ?? "—"}</TableCell>
+                              <TableCell className="px-4 tabular-nums ltr-nums text-xs text-text-secondary">{c.provider_collection_id ?? "—"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </div>
-                    <ul className="md:hidden divide-y divide-border/40">
+                    <ul className="md:hidden divide-y divide-border">
                       {cols.map((c) => (
                         <li key={c.id} className="p-4 flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="font-mono ltr-nums text-xs text-text-secondary">{c.scheduled_date}</div>
+                            <div className="tabular-nums ltr-nums text-xs text-text-secondary">{c.scheduled_date}</div>
                             <div className="mt-1"><Badge variant={COLLECTION_VARIANTS[c.status] ?? "secondary"}>{t(`collectionStatus.${c.status}`)}</Badge></div>
                             {c.failure_reason && <div className="mt-1 text-xs text-text-secondary">{c.failure_reason}</div>}
                           </div>
-                          <div className="font-mono ltr-nums text-sm text-end">{money(c.amount)}</div>
+                          <div className="tabular-nums ltr-nums text-sm text-end">{money(c.amount)}</div>
                         </li>
                       ))}
                     </ul>
@@ -329,7 +329,7 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
                 <Alert variant="success">{created.status === "active" ? t("createdActive") : t("createdPendingOtp")}</Alert>
                 {created.otp_token && (
                   <>
-                    <div className="rounded-lg border border-border/60 bg-surface-elevated p-3 text-xs font-mono ltr-nums break-all">
+                    <div className="rounded-lg border border-border bg-surface-elevated p-3 text-xs tabular-nums ltr-nums break-all">
                       {otpLink(created.otp_token)}
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -364,7 +364,7 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
                     min="0.001"
                     step="0.001"
                     inputMode="decimal"
-                    className="font-mono ltr-nums"
+                    className="tabular-nums ltr-nums"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
@@ -375,7 +375,7 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
                     min={1}
                     max={28}
                     inputMode="numeric"
-                    className="font-mono ltr-nums"
+                    className="tabular-nums ltr-nums"
                     value={day}
                     onChange={(e) => setDay(e.target.value)}
                     helperText={t("fields.collectionDayHelp")}
@@ -385,7 +385,7 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
                 <Input label={t("fields.debtorName")} value={debtorName} onChange={(e) => setDebtorName(e.target.value)} />
                 <Input
                   label={t("fields.accountNumber")}
-                  className="font-mono ltr-nums"
+                  className="tabular-nums ltr-nums"
                   autoComplete="off"
                   value={account}
                   onChange={(e) => setAccount(e.target.value)}
@@ -394,7 +394,7 @@ export function EMandatePanel({ tenantName, tenantPhone, locale, leases, mandate
                 />
                 <Input
                   label={t("fields.bankCode")}
-                  className="font-mono ltr-nums"
+                  className="tabular-nums ltr-nums"
                   value={bankCode}
                   onChange={(e) => setBankCode(e.target.value)}
                   helperText={t("fields.bankCodeHelp")}

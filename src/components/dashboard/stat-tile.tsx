@@ -25,62 +25,31 @@ type Tone =
   | "destructive"
   | "info";
 
-const toneClasses: Record<
-  Tone,
-  {
-    ring: string;
-    iconBg: string;
-    iconText: string;
-    valueText: string;
-    // Thin gradient line revealed along the top edge on hover — gives each
-    // tile a tone-coloured "premium dashboard" accent without adding chrome
-    // at rest.
-    sheen: string;
-  }
-> = {
-  default: {
-    ring: "hover:border-accent/40",
-    iconBg: "bg-surface-elevated",
-    iconText: "text-text-secondary",
-    valueText: "text-text-primary",
-    sheen: "via-accent/60",
-  },
-  accent: {
-    ring: "hover:border-accent/40",
-    iconBg: "bg-accent/12",
-    iconText: "text-accent",
-    valueText: "text-text-primary",
-    sheen: "via-accent/60",
-  },
-  success: {
-    ring: "hover:border-success/40",
-    iconBg: "bg-success/12",
-    iconText: "text-success",
-    valueText: "text-success",
-    sheen: "via-success/60",
-  },
-  warning: {
-    ring: "hover:border-warning/40",
-    iconBg: "bg-warning/12",
-    iconText: "text-warning",
-    valueText: "text-warning",
-    sheen: "via-warning/60",
-  },
-  destructive: {
-    ring: "hover:border-destructive/40",
-    iconBg: "bg-destructive/12",
-    iconText: "text-destructive",
-    valueText: "text-destructive",
-    sheen: "via-destructive/60",
-  },
-  info: {
-    ring: "hover:border-info/40",
-    iconBg: "bg-info/12",
-    iconText: "text-info",
-    valueText: "text-info",
-    sheen: "via-info/60",
-  },
+// Tone colours the icon tile only; values stay in the text colour except
+// destructive, where the number itself is the alarm.
+const toneClasses: Record<Tone, { iconTile: string; valueText: string; border: string }> = {
+  default: { iconTile: "bg-sunken text-text-secondary", valueText: "text-text-primary", border: "border-border" },
+  accent: { iconTile: "bg-accent-tint text-accent-tint-foreground", valueText: "text-text-primary", border: "border-border" },
+  success: { iconTile: "bg-success-tint text-success", valueText: "text-text-primary", border: "border-border" },
+  warning: { iconTile: "bg-warning-tint text-warning", valueText: "text-text-primary", border: "border-border" },
+  destructive: { iconTile: "bg-destructive-tint text-destructive-text", valueText: "text-destructive-text", border: "border-destructive/35" },
+  info: { iconTile: "bg-info-tint text-info", valueText: "text-text-primary", border: "border-border" },
 };
+
+const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+
+/** Renders "1,234.500 OMR" as a number with a smaller trailing unit. */
+function Value({ value, unitClassName }: { value: string | number; unitClassName: string }) {
+  const text = String(value);
+  const m = /^(.*\d)\s+([^\d\s]+)$/.exec(text);
+  if (!m) return <>{text}</>;
+  return (
+    <>
+      {m[1]}
+      <small className={unitClassName}>{m[2]}</small>
+    </>
+  );
+}
 
 interface PrimaryProps {
   label: string;
@@ -102,46 +71,30 @@ export function StatTilePrimary({
   const cls = toneClasses[tone];
   const inner = (
     <>
-      <span
-        aria-hidden="true"
-        className={cn(
-          "pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100",
-          cls.sheen
-        )}
-      />
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary">
-          {label}
-        </span>
-        <div
-          className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-110",
-            cls.iconBg
-          )}
+      <div className="flex items-center gap-2">
+        <span className="text-[13px] font-semibold text-text-secondary">{label}</span>
+        <span
+          aria-hidden="true"
+          className={cn("ms-auto grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg", cls.iconTile)}
         >
-          <Icon aria-hidden="true" className={cn("h-4 w-4", cls.iconText)} />
-        </div>
+          <Icon className="h-4 w-4" />
+        </span>
       </div>
       <p
         className={cn(
-          "mt-3 text-3xl font-display font-bold ltr-nums tabular-nums",
+          "mt-1.5 text-[22px] sm:text-[28px] leading-tight font-bold ltr-nums tabular-nums",
           cls.valueText
         )}
       >
-        {value}
+        <Value value={value} unitClassName="ms-1 text-xs sm:text-sm font-semibold text-text-secondary" />
       </p>
-      {hint && (
-        <p className="mt-1.5 text-xs text-text-secondary">{hint}</p>
-      )}
+      {hint && <p className="mt-1 text-[13px] text-text-secondary">{hint}</p>}
     </>
   );
   const baseClasses = cn(
-    "group relative block overflow-hidden rounded-xl border border-border/60 bg-surface p-5 transition-all duration-300",
-    // Subtle lift only when the tile is a link (interactive) — static tiles
-    // shouldn't invite a click that does nothing.
-    href && "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 active:translate-y-0",
-    cls.ring,
-    href && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    "block rounded-xl border bg-surface p-3 sm:p-4 shadow-card transition-colors duration-150",
+    cls.border,
+    href && cn("hover:bg-surface-elevated", focusRing)
   );
   return href ? (
     <Link href={href} className={baseClasses}>
@@ -160,6 +113,10 @@ interface SecondaryProps {
   href?: string;
 }
 
+/**
+ * One cell of the portfolio snapshot strip. Place cells in a grid with
+ * `gap-px bg-border` so the 1px gaps draw the dividers.
+ */
 export function StatTileSecondary({
   label,
   value,
@@ -169,30 +126,22 @@ export function StatTileSecondary({
 }: SecondaryProps) {
   const cls = toneClasses[tone];
   const inner = (
-    <div className="flex items-center gap-3">
-      <div
-        className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-          cls.iconBg
-        )}
-      >
-        <Icon aria-hidden="true" className={cn("h-4 w-4", cls.iconText)} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary truncate">
-          {label}
-        </p>
-        <p className="mt-0.5 text-lg font-display font-bold text-text-primary ltr-nums tabular-nums">
-          {value}
-        </p>
-      </div>
-    </div>
+    <>
+      <span className="flex items-center gap-2 text-[12.5px] font-medium text-text-secondary">
+        <Icon
+          aria-hidden="true"
+          className={cn("h-3.5 w-3.5 shrink-0", tone === "default" ? "text-text-tertiary" : cls.iconTile.split(" ")[1])}
+        />
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="text-lg font-bold text-text-primary ltr-nums tabular-nums">
+        <Value value={value} unitClassName="ms-1 text-xs font-semibold text-text-secondary" />
+      </span>
+    </>
   );
   const baseClasses = cn(
-    "group block rounded-xl border border-border/60 bg-surface p-3.5 transition-all duration-200",
-    href && "hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/20 active:translate-y-0",
-    cls.ring,
-    href && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    "flex min-w-0 flex-col gap-1 bg-surface px-4 py-3.5 transition-colors duration-150",
+    href && cn("hover:bg-surface-elevated", focusRing, "focus-visible:outline-offset-[-2px]")
   );
   return href ? (
     <Link href={href} className={baseClasses}>

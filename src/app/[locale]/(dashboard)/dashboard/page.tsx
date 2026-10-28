@@ -28,6 +28,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { HeroAlertStrip } from "@/components/dashboard/hero-alert-strip";
 import { StatTilePrimary, StatTileSecondary } from "@/components/dashboard/stat-tile";
 import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 import { CURRENCY } from "@/lib/currency";
 import { format } from "date-fns";
 import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-control";
@@ -623,7 +627,7 @@ export default async function DashboardPage({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       <PageHeader title={t("title")} description={t("subtitle")}>
         <DateRangeFilter defaultMonth={month} defaultYear={year} />
       </PageHeader>
@@ -638,9 +642,9 @@ export default async function DashboardPage({
         propertiesHref={`/${locale}/properties`}
         labels={{
           overdueTitle: t("actionNeeded"),
-          overdueLine: t("overdueAlertLine"),
+          overdueLine: t.raw("overdueAlertLine"),
           overdueCta: t("reviewOverdue"),
-          vacantLine: t("vacantAlertLine"),
+          vacantLine: t.raw("vacantAlertLine"),
           vacantCta: t("viewVacancies"),
           dismiss: t("dismissAlert"),
         }}
@@ -653,7 +657,7 @@ export default async function DashboardPage({
               <li key={p.id}>
                 <Link
                   href={`/${locale}/properties/${p.id}`}
-                  className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className={cn("rounded hover:underline underline-offset-2", focusRing)}
                 >
                   {t("gateKeysLowLine", { property: p.name, stock: p.stock })}
                 </Link>
@@ -671,9 +675,9 @@ export default async function DashboardPage({
             <Link
               key={action.href}
               href={action.href}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-surface border border-border/50 rounded-lg text-sm text-text-secondary hover:text-accent hover:border-accent/30 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
             >
-              <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+              <Icon aria-hidden="true" className="h-4 w-4" />
               {action.label}
             </Link>
           );
@@ -681,29 +685,23 @@ export default async function DashboardPage({
       </div>
 
       {/* Hero KPIs — primary row */}
-      <section aria-labelledby="primary-metrics-heading">
-        <h2
-          id="primary-metrics-heading"
-          className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-secondary"
-        >
+      <section aria-labelledby="primary-metrics-heading" className="flex flex-col gap-2.5">
+        <h2 id="primary-metrics-heading" className={sectionLabel}>
           {t("primaryMetrics")}
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {heroTiles.map((tile) => (
             <StatTilePrimary key={tile.label} {...tile} />
           ))}
         </div>
       </section>
 
-      {/* Secondary KPIs — supporting counts */}
-      <section aria-labelledby="snapshot-heading">
-        <h2
-          id="snapshot-heading"
-          className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-secondary"
-        >
+      {/* Secondary KPIs — one strip, cells divided by 1px gaps */}
+      <section aria-labelledby="snapshot-heading" className="flex flex-col gap-2.5">
+        <h2 id="snapshot-heading" className={sectionLabel}>
           {t("portfolioSnapshot")}
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 stagger-children">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px overflow-hidden rounded-xl border border-border bg-border shadow-card">
           {secondaryTiles.map((tile) => (
             <StatTileSecondary key={tile.label} {...tile} />
           ))}
@@ -711,368 +709,347 @@ export default async function DashboardPage({
       </section>
 
       {/* Rent Collection Chart */}
-      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
-            {t("rentCollection")}
-          </h3>
-          <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+      <Panel title={t("rentCollection")}>
+        <div className="p-4">
+          <RentChart propertyIds={stats.propertyIds} />
         </div>
-        <RentChart propertyIds={stats.propertyIds} />
-      </div>
+      </Panel>
 
       {/* Cash Flow + Occupancy Trend */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "250ms" }}>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
-              {t("cashFlowTrend")}
-            </h3>
-            <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Panel title={t("cashFlowTrend")}>
+          <div className="p-4">
+            <CashFlowChart propertyIds={stats.propertyIds} />
           </div>
-          <CashFlowChart propertyIds={stats.propertyIds} />
-        </div>
-
-        <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "300ms" }}>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
-              {t("occupancyTrend")}
-            </h3>
-            <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+        </Panel>
+        <Panel title={t("occupancyTrend")}>
+          <div className="p-4">
+            <OccupancyChart propertyIds={stats.propertyIds} />
           </div>
-          <OccupancyChart propertyIds={stats.propertyIds} />
-        </div>
+        </Panel>
       </div>
 
       {/* Revenue by Property + Payment Methods */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "350ms" }}>
-          <h3 className="text-base font-display font-semibold text-text-primary tracking-tight mb-4">
-            {t("revenueByProperty")}
-          </h3>
-          <RevenueByPropertyChart propertyIds={stats.propertyIds} />
-        </div>
-
-        <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "400ms" }}>
-          <h3 className="text-base font-display font-semibold text-text-primary tracking-tight mb-4">
-            {t("paymentMethods")}
-          </h3>
-          <PaymentMethodChart />
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Panel title={t("revenueByProperty")}>
+          <div className="p-4">
+            <RevenueByPropertyChart propertyIds={stats.propertyIds} />
+          </div>
+        </Panel>
+        <Panel title={t("paymentMethods")}>
+          <div className="p-4">
+            <PaymentMethodChart />
+          </div>
+        </Panel>
       </div>
 
       {/* Aged Receivables */}
-      <div className="bg-surface border border-border rounded-xl p-6 animate-fade-in-up" style={{ animationDelay: "450ms" }}>
-        <div className="flex items-center gap-3 mb-5">
-          <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
-            {t("agedReceivables")}
-          </h3>
-          {totalAgedReceivables > 0 && (
-            <span className="text-xs bg-destructive/12 text-destructive px-2.5 py-1 rounded-md font-mono font-semibold border border-destructive/20">
-              {totalAgedReceivables.toLocaleString()} {CURRENCY.code}
-            </span>
-          )}
+      <Panel
+        title={t("agedReceivables")}
+        count={
+          totalAgedReceivables > 0
+            ? `${totalAgedReceivables.toLocaleString()} ${CURRENCY.code}`
+            : undefined
+        }
+        countTone="destructive"
+      >
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 p-4">
+          {agedReceivables.map((bucket, i) => {
+            const oldest = i === agedReceivables.length - 1;
+            const share = totalAgedReceivables > 0 ? (bucket.total / totalAgedReceivables) * 100 : 0;
+            return (
+              <div
+                key={bucket.labelKey}
+                className={cn(
+                  "flex min-w-0 flex-col gap-1 rounded-[10px] border p-3.5",
+                  oldest ? "border-destructive/30 bg-destructive-tint" : "border-border bg-surface-elevated"
+                )}
+              >
+                <p
+                  className={cn(
+                    "flex items-center gap-2 text-[12.5px] font-semibold",
+                    oldest ? "text-destructive-text" : "text-text-secondary"
+                  )}
+                >
+                  <span aria-hidden="true" className={cn("h-2.5 w-2.5 rounded-[3px]", agedSwatch[i])} />
+                  {t(bucket.labelKey)}
+                </p>
+                <p
+                  className={cn(
+                    "text-lg sm:text-xl font-bold ltr-nums tabular-nums",
+                    oldest ? "text-destructive-text" : "text-text-primary"
+                  )}
+                >
+                  {bucket.total.toLocaleString()}
+                  <small className="ms-1 text-xs font-semibold text-text-secondary">{CURRENCY.code}</small>
+                </p>
+                <p className={cn("text-[12.5px]", oldest ? "text-destructive-text" : "text-text-tertiary")}>
+                  {bucket.count} {t("invoicesCount")}
+                </p>
+                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-sunken" aria-hidden="true">
+                  <div className={cn("h-full", agedSwatch[i])} style={{ width: `${share}%` }} />
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {agedReceivables.map((bucket) => (
-            <div
-              key={bucket.labelKey}
-              className={`rounded-lg p-4 border border-border/30 ${bucket.color.split(" ")[0]}`}
-            >
-              <p className={`text-xs font-semibold uppercase tracking-wider ${bucket.color.split(" ")[1]}`}>
-                {t(bucket.labelKey)}
-              </p>
-              <p className="text-2xl font-display font-bold text-text-primary mt-2 ltr-nums">
-                {bucket.total.toLocaleString()} <span className="text-sm font-normal text-text-secondary">{CURRENCY.code}</span>
-              </p>
-              <p className="text-xs text-text-secondary mt-1">
-                {bucket.count} {t("invoicesCount")}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+      </Panel>
 
       {/* Bottom grid: Recent Invoices + Overdue + Cheques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Invoices */}
-        <div className="bg-surface border border-border rounded-xl p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
-              {t("recentInvoices")}
-            </h3>
-            <Link
-              href={`/${locale}/invoices`}
-              className="text-xs text-accent hover:text-accent-hover transition-colors"
-            >
-              {t("viewAll")}
-            </Link>
-          </div>
+        <Panel
+          title={t("recentInvoices")}
+          action={{ href: `/${locale}/invoices`, label: t("viewAll") }}
+        >
           {recentInvoices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-text-secondary">
-              <div className="h-12 w-12 rounded-xl bg-surface-elevated flex items-center justify-center mb-3">
-                <FileText className="h-5 w-5 opacity-40" />
-              </div>
-              <p className="text-sm">{t("noRecentInvoices")}</p>
-            </div>
+            <EmptyState bare icon={<FileText className="h-5 w-5" />} title={t("noRecentInvoices")} />
           ) : (
-            <div className="space-y-2.5">
+            <ul>
               {recentInvoices.map((inv) => (
-                <Link
-                  key={inv.id}
-                  href={`/${locale}/invoices`}
-                  className="flex items-center justify-between p-3.5 rounded-lg bg-surface-elevated/50 border border-border/30 hover:border-accent/30 transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">
-                      {inv.tenantName}
-                    </p>
-                    <p className="text-xs text-text-secondary mt-0.5 font-mono ltr-nums">
-                      {new Date(inv.dueDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-end shrink-0 ms-3 flex items-center gap-2.5">
-                    <span className="text-sm font-bold font-mono text-text-primary ltr-nums">
-                      {inv.amount} {CURRENCY.code}
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${
-                        inv.status === "paid"
-                          ? "bg-success/10 text-success"
-                          : inv.status === "overdue"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-warning/10 text-warning"
-                      }`}
-                    >
-                      {["paid", "pending", "overdue", "partial"].includes(inv.status)
-                        ? tInvoices(inv.status)
-                        : inv.status}
-                    </span>
-                  </div>
-                </Link>
+                <li key={inv.id} className={rowBorder}>
+                  <Link href={`/${locale}/invoices`} className={cn(rowClass, "hover:bg-surface-elevated", focusRing, "focus-visible:outline-offset-[-2px]")}>
+                    <div className="min-w-0">
+                      <p className={rowTitle}>{inv.tenantName}</p>
+                      <p className={cn(rowSub, "ltr-nums tabular-nums")}>
+                        {new Date(inv.dueDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className={rowEnd}>
+                      <Amount value={inv.amount} />
+                      <Badge
+                        variant={
+                          inv.status === "paid"
+                            ? "success"
+                            : inv.status === "overdue"
+                            ? "destructive"
+                            : "warning"
+                        }
+                        className="capitalize"
+                      >
+                        {["paid", "pending", "overdue", "partial"].includes(inv.status)
+                          ? tInvoices(inv.status)
+                          : inv.status}
+                      </Badge>
+                    </div>
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </Panel>
 
         {/* Overdue Payments */}
-        <div className="bg-surface border border-border rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
-              {t("overdueInvoices")}
-            </h3>
-            {overdueInvoices.length > 0 && (
-              <span className="text-xs bg-destructive/12 text-destructive px-2.5 py-1 rounded-md font-mono font-semibold border border-destructive/20">
-                {overdueInvoices.length}
-              </span>
-            )}
-          </div>
+        <Panel
+          title={t("overdueInvoices")}
+          count={overdueInvoices.length > 0 ? overdueInvoices.length : undefined}
+          countTone="destructive"
+          action={
+            overdueInvoices.length > 0
+              ? { href: `/${locale}/invoices?status=pending`, label: t("reviewOverdue") }
+              : undefined
+          }
+        >
           {overdueInvoices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-text-secondary">
-              <div className="h-12 w-12 rounded-xl bg-surface-elevated flex items-center justify-center mb-3">
-                <AlertTriangle className="h-5 w-5 opacity-40" />
-              </div>
-              <p className="text-sm">{t("noOverdueInvoices")}</p>
-            </div>
+            <EmptyState bare icon={<AlertTriangle className="h-5 w-5" />} title={t("noOverdueInvoices")} />
           ) : (
-            <div className="space-y-2.5 max-h-80 overflow-y-auto">
+            <ul className="max-h-80 overflow-y-auto">
               {overdueInvoices.map((item) => (
-                <div
-                  key={item.invoiceId}
-                  className="flex items-center justify-between p-3.5 rounded-lg bg-destructive/5 border border-destructive/10 hover:border-destructive/20 transition-colors"
-                >
+                <li key={item.invoiceId} className={cn(rowBorder, rowClass)}>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">
-                      {item.tenantName}
-                    </p>
-                    <p className="text-xs text-text-secondary truncate mt-0.5">
+                    <p className={rowTitle}>{item.tenantName}</p>
+                    <p className={rowSub}>
                       {item.propertyName} &middot; {t("unit")} {item.unitNumber}
                     </p>
                   </div>
-                  <div className="text-end shrink-0 ms-3">
-                    <p className="text-sm font-bold font-mono text-destructive">
-                      {item.amount} {CURRENCY.code}
-                    </p>
-                    <p className="text-xs text-destructive/60 mt-0.5">
-                      {t("daysOverdue", { days: item.daysOverdue })}
-                    </p>
+                  <div className={rowEnd}>
+                    <Amount value={item.amount} className="text-destructive-text" />
+                    <Badge variant="destructive">{t("daysOverdue", { days: item.daysOverdue })}</Badge>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </Panel>
 
         {/* Upcoming Cheques */}
-        <div className="bg-surface border border-border rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
-              {t("upcomingCheques")}
-            </h3>
-            {upcomingCheques.length > 0 && (
-              <span className="text-xs bg-accent/12 text-accent px-2.5 py-1 rounded-md font-mono font-semibold border border-accent/20">
-                {upcomingCheques.length}
-              </span>
-            )}
-          </div>
+        <Panel
+          title={t("upcomingCheques")}
+          count={upcomingCheques.length > 0 ? upcomingCheques.length : undefined}
+          countTone="warning"
+        >
           {upcomingCheques.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-text-secondary">
-              <div className="h-12 w-12 rounded-xl bg-surface-elevated flex items-center justify-center mb-3">
-                <CreditCard className="h-5 w-5 opacity-40" />
-              </div>
-              <p className="text-sm">{t("noUpcomingCheques")}</p>
-            </div>
+            <EmptyState bare icon={<CreditCard className="h-5 w-5" />} title={t("noUpcomingCheques")} />
           ) : (
-            <div className="space-y-2.5 max-h-80 overflow-y-auto">
+            <ul className="max-h-80 overflow-y-auto">
               {upcomingCheques.map((cheque) => (
-                <div
-                  key={cheque.id}
-                  className={`flex items-center justify-between p-3.5 rounded-lg border transition-colors ${
-                    cheque.daysUntil <= 7
-                      ? "bg-warning/5 border-warning/15 hover:border-warning/30"
-                      : "bg-surface-elevated/50 border-border/30 hover:border-accent/30"
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">
-                      {cheque.tenantName}
-                    </p>
-                    {(cheque.propertyName || cheque.unitNumber) && (
-                      <p className="text-xs text-text-secondary truncate mt-0.5">
-                        {cheque.propertyName || "—"}
-                        {cheque.unitNumber && (
-                          <> &middot; {t("unit")} {cheque.unitNumber}</>
-                        )}
-                      </p>
-                    )}
-                    <p className="text-xs text-text-secondary truncate mt-0.5">
+                <li key={cheque.id} className={cn(rowBorder, rowClass)}>
+                  <span aria-hidden="true" className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg bg-sunken text-text-secondary">
+                    <CreditCard className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={rowTitle}>{cheque.tenantName}</p>
+                    <p className={rowSub}>
+                      {(cheque.propertyName || cheque.unitNumber) && (
+                        <>
+                          {cheque.propertyName || "—"}
+                          {cheque.unitNumber && <> &middot; {t("unit")} {cheque.unitNumber}</>}
+                          {" · "}
+                        </>
+                      )}
                       #{cheque.chequeNumber} &middot; {cheque.bankName}
                     </p>
                   </div>
-                  <div className="text-end shrink-0 ms-3">
-                    <p className="text-sm font-bold font-mono text-text-primary ltr-nums">
-                      {cheque.amount} {CURRENCY.code}
-                    </p>
-                    <p className={`text-xs mt-0.5 ${cheque.daysUntil <= 7 ? "text-warning font-medium" : "text-text-secondary"}`}>
-                      {cheque.daysUntil <= 0
-                        ? t("dueToday")
-                        : t("inDays", { days: cheque.daysUntil })}
-                    </p>
+                  <div className={rowEnd}>
+                    <Amount value={cheque.amount} />
+                    {cheque.daysUntil <= 7 ? (
+                      <Badge variant="warning">
+                        {cheque.daysUntil <= 0 ? t("dueToday") : t("inDays", { days: cheque.daysUntil })}
+                      </Badge>
+                    ) : (
+                      <span className="text-[12.5px] text-text-tertiary">
+                        {t("inDays", { days: cheque.daysUntil })}
+                      </span>
+                    )}
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </Panel>
 
         {/* Expiring Documents */}
-        <div className="bg-surface border border-border rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <h3 className="text-base font-display font-semibold text-text-primary tracking-tight">
-              {t("expiringDocuments")}
-            </h3>
-            {expiringDocuments.length > 0 && (
-              <span className="text-xs bg-warning/12 text-warning px-2.5 py-1 rounded-md font-mono font-semibold border border-warning/20">
-                {expiringDocuments.length}
-              </span>
-            )}
-          </div>
+        <Panel
+          title={t("expiringDocuments")}
+          count={expiringDocuments.length > 0 ? expiringDocuments.length : undefined}
+          countTone="warning"
+        >
           {expiringDocuments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-text-secondary">
-              <div className="h-12 w-12 rounded-xl bg-surface-elevated flex items-center justify-center mb-3">
-                <ShieldAlert className="h-5 w-5 opacity-40" />
-              </div>
-              <p className="text-sm">{t("noExpiringDocuments")}</p>
-            </div>
+            <EmptyState bare icon={<ShieldAlert className="h-5 w-5" />} title={t("noExpiringDocuments")} />
           ) : (
-            <div className="space-y-2.5 max-h-80 overflow-y-auto">
+            <ul className="max-h-80 overflow-y-auto">
               {expiringDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className={`flex items-center justify-between p-3.5 rounded-lg border transition-colors ${
-                    doc.daysUntil <= 0
-                      ? "bg-destructive/5 border-destructive/15"
-                      : doc.daysUntil <= 14
-                      ? "bg-warning/5 border-warning/15"
-                      : "bg-surface-elevated/50 border-border/30"
-                  }`}
-                >
+                <li key={doc.id} className={cn(rowBorder, rowClass)}>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">
-                      {doc.entityName}
-                    </p>
-                    <p className="text-xs text-text-secondary truncate mt-0.5 capitalize">
-                      {doc.documentType}
-                    </p>
+                    <p className={rowTitle}>{doc.entityName}</p>
+                    <p className={cn(rowSub, "capitalize")}>{doc.documentType}</p>
                   </div>
-                  <div className="text-end shrink-0 ms-3">
-                    <p className="text-sm font-mono text-text-primary ltr-nums">
+                  <div className={rowEnd}>
+                    <span className="text-sm font-semibold text-text-primary ltr-nums tabular-nums">
                       {new Date(doc.expiryDate).toLocaleDateString()}
-                    </p>
-                    <p className={`text-xs mt-0.5 ${
-                      doc.daysUntil <= 0 ? "text-destructive font-medium" : doc.daysUntil <= 14 ? "text-warning font-medium" : "text-text-secondary"
-                    }`}>
-                      {doc.daysUntil <= 0
-                        ? t("expired")
-                        : `${doc.daysUntil} ${t("daysLeft")}`}
-                    </p>
+                    </span>
+                    {doc.daysUntil <= 0 ? (
+                      <Badge variant="destructive">{t("expired")}</Badge>
+                    ) : doc.daysUntil <= 14 ? (
+                      <Badge variant="warning">{`${doc.daysUntil} ${t("daysLeft")}`}</Badge>
+                    ) : (
+                      <span className="text-[12.5px] text-text-tertiary">{`${doc.daysUntil} ${t("daysLeft")}`}</span>
+                    )}
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </Panel>
 
         {/* Upcoming Lease Expirations */}
-        <div className="bg-surface border border-border rounded-xl p-6">
-          <h3 className="text-base font-display font-semibold text-text-primary mb-5 tracking-tight">
-            {t("upcomingLeaseExpirations")}
-          </h3>
+        <Panel title={t("upcomingLeaseExpirations")}>
           {expiringLeases.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-text-secondary">
-              <div className="h-12 w-12 rounded-xl bg-surface-elevated flex items-center justify-center mb-3">
-                <Calendar className="h-5 w-5 opacity-40" />
-              </div>
-              <p className="text-sm">{t("noUpcomingExpirations")}</p>
-            </div>
+            <EmptyState bare icon={<Calendar className="h-5 w-5" />} title={t("noUpcomingExpirations")} />
           ) : (
-            <div className="space-y-2.5 max-h-80 overflow-y-auto">
+            <ul className="max-h-80 overflow-y-auto">
               {expiringLeases.map((lease, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center justify-between p-3.5 rounded-lg border transition-colors ${
-                    lease.daysLeft <= 30
-                      ? "bg-warning/5 border-warning/15 hover:border-warning/30"
-                      : "bg-surface-elevated/50 border-border/30 hover:border-accent/30"
-                  }`}
-                >
+                <li key={i} className={cn(rowBorder, rowClass)}>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">
-                      {lease.tenantName}
-                    </p>
-                    <p className="text-xs text-text-secondary truncate mt-0.5">
+                    <p className={rowTitle}>{lease.tenantName}</p>
+                    <p className={rowSub}>
                       {lease.propertyName} &middot; {t("unit")} {lease.unitNumber}
                     </p>
                   </div>
-                  <div className="text-end shrink-0 ms-3">
-                    <p className="text-sm font-mono text-text-primary ltr-nums">
+                  <div className={rowEnd}>
+                    <span className="text-sm font-semibold text-text-primary ltr-nums tabular-nums">
                       {new Date(lease.endDate).toLocaleDateString()}
-                    </p>
-                    <p
-                      className={`text-xs mt-0.5 ${
-                        lease.daysLeft <= 30 ? "text-warning font-medium" : "text-text-secondary"
-                      }`}
-                    >
-                      {lease.daysLeft} {t("daysLeft")}
-                    </p>
+                    </span>
+                    {lease.daysLeft <= 30 ? (
+                      <Badge variant="warning">{`${lease.daysLeft} ${t("daysLeft")}`}</Badge>
+                    ) : (
+                      <span className="text-[12.5px] text-text-tertiary">{`${lease.daysLeft} ${t("daysLeft")}`}</span>
+                    )}
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
-
+        </Panel>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Presentation helpers                                               */
+/* ------------------------------------------------------------------ */
+
+const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const sectionLabel = "text-xs font-semibold uppercase tracking-[0.06em] text-text-secondary rtl:normal-case rtl:tracking-normal";
+const rowBorder = "border-b border-border last:border-b-0";
+const rowClass = "flex min-h-14 items-center gap-3 px-4 py-3";
+const rowTitle = "truncate text-sm font-semibold text-text-primary";
+const rowSub = "mt-px truncate text-[12.5px] text-text-secondary";
+const rowEnd = "ms-auto flex shrink-0 flex-col items-end gap-1 text-end";
+// Aged-receivable buckets, youngest to oldest
+const agedSwatch = ["bg-warning", "bg-chart-2", "bg-destructive", "bg-destructive-text"];
+
+function Amount({ value, className }: { value: string; className?: string }) {
+  return (
+    <span className={cn("text-sm font-semibold text-text-primary ltr-nums tabular-nums", className)}>
+      {value}
+      <small className="ms-1 text-[0.78em] font-medium text-text-secondary">{CURRENCY.code}</small>
+    </span>
+  );
+}
+
+function Panel({
+  title,
+  count,
+  countTone = "neutral",
+  action,
+  children,
+}: {
+  title: string;
+  count?: string | number;
+  countTone?: "neutral" | "destructive" | "warning";
+  action?: { href: string; label: string };
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+      <div className="flex min-h-[52px] items-center gap-2.5 border-b border-border px-4 py-3">
+        <h2 className="text-[15px] font-semibold text-text-primary">{title}</h2>
+        {count !== undefined && (
+          <span
+            className={cn(
+              "rounded-full px-2 py-px text-xs font-semibold ltr-nums tabular-nums",
+              countTone === "destructive"
+                ? "bg-destructive-tint text-destructive-text"
+                : countTone === "warning"
+                ? "bg-warning-tint text-warning"
+                : "bg-neutral-tint text-text-secondary"
+            )}
+          >
+            {count}
+          </span>
+        )}
+        {action && (
+          <Link
+            href={action.href}
+            className={cn("ms-auto rounded text-[13.5px] font-semibold text-accent hover:underline underline-offset-2", focusRing)}
+          >
+            {action.label}
+          </Link>
+        )}
+      </div>
+      {children}
+    </section>
   );
 }

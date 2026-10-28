@@ -163,7 +163,7 @@ export default function RenewLeasePage() {
   if (!currentLease) {
     return (
       <div className="max-w-2xl mx-auto">
-        <div className="bg-surface border border-border rounded-xl p-8 text-center">
+        <div className="bg-surface border border-border rounded-xl shadow-card p-8 text-center">
           <p className="text-text-secondary">{t("noLeases")}</p>
           <button onClick={() => router.back()} className="mt-4 text-sm text-accent hover:text-accent-hover">
             {tc("back")}
@@ -179,7 +179,7 @@ export default function RenewLeasePage() {
         <button
           onClick={() => router.back()}
           aria-label={tc("back")}
-          className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           <ArrowLeft aria-hidden="true" className="h-5 w-5 rtl:rotate-180" />
         </button>
@@ -190,7 +190,7 @@ export default function RenewLeasePage() {
       </div>
 
       {/* Current Lease Summary */}
-      <div className="bg-surface-elevated/50 border border-border/50 rounded-xl p-4">
+      <div className="bg-surface-elevated border border-border rounded-xl p-4">
         <h3 className="text-xs uppercase tracking-widest text-text-secondary font-semibold mb-3">Current Lease</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div>
@@ -201,28 +201,28 @@ export default function RenewLeasePage() {
           </div>
           <div>
             <span className="text-xs text-text-secondary">{t("startDate")}</span>
-            <p className="font-mono text-text-primary">{currentLease.start_date}</p>
+            <p className="tabular-nums text-text-primary">{currentLease.start_date}</p>
           </div>
           <div>
             <span className="text-xs text-text-secondary">{t("endDate")}</span>
-            <p className="font-mono text-text-primary">{currentLease.end_date}</p>
+            <p className="tabular-nums text-text-primary">{currentLease.end_date}</p>
           </div>
           <div>
             <span className="text-xs text-text-secondary">{t("monthlyRent")}</span>
-            <p className="font-mono font-medium text-text-primary">{currentLease.monthly_rent} {CURRENCY.code}</p>
+            <p className="tabular-nums font-medium text-text-primary">{currentLease.monthly_rent} {CURRENCY.code}</p>
           </div>
         </div>
       </div>
 
       {/* Renewal Form */}
-      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-xl p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-xl shadow-card p-6 space-y-5">
         <div className="flex items-center gap-2 mb-2">
           <RefreshCw className="h-4 w-4 text-accent" />
           <h2 className="text-base font-display font-semibold text-text-primary">New Lease Terms</h2>
         </div>
 
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+          <div className="bg-destructive-tint border border-destructive/30 rounded-lg p-3">
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
@@ -236,7 +236,7 @@ export default function RenewLeasePage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
+                className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent"
                 required
               />
             </div>
@@ -249,7 +249,7 @@ export default function RenewLeasePage() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
+                className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent"
                 required
               />
             </div>
@@ -266,7 +266,7 @@ export default function RenewLeasePage() {
                 step="0.01"
                 value={monthlyRent}
                 onChange={(e) => setMonthlyRent(e.target.value)}
-                className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
+                className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent"
                 required
               />
             </div>
@@ -280,7 +280,7 @@ export default function RenewLeasePage() {
                 step="0.01"
                 value={securityDeposit}
                 onChange={(e) => setSecurityDeposit(e.target.value)}
-                className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
+                className="w-full ps-10 pe-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent"
               />
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function RenewLeasePage() {
           <select
             value={paymentDueDay}
             onChange={(e) => setPaymentDueDay(e.target.value)}
-            className="w-full px-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent"
+            className="w-full px-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent"
           >
             {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
               <option key={day} value={day}>{day}</option>
@@ -303,7 +303,7 @@ export default function RenewLeasePage() {
           <button
             type="submit"
             disabled={saving}
-            className="h-10 px-6 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+            className="h-10 px-6 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-medium rounded-lg transition-colors disabled:opacity-60 inline-flex items-center gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${saving ? "animate-spin" : ""}`} />
             {saving ? tc("loading") : t("renewLease")}
