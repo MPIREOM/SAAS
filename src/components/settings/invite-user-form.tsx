@@ -130,10 +130,10 @@ export function InviteUserForm({ properties }: InviteUserFormProps) {
 
               {showPropertySelection && (
                 <div>
-                  <p className="mb-1.5 text-sm font-medium tracking-tight text-foreground">
+                  <p className="mb-1.5 text-sm font-medium text-foreground">
                     {t("assignProperties")}
                   </p>
-                  <div className="max-h-40 divide-y divide-border/40 overflow-y-auto rounded-lg border border-border/60">
+                  <div className="max-h-40 divide-y divide-border overflow-y-auto rounded-lg border border-border">
                     {properties.map((property) => {
                       const isSelected = selectedProperties.has(property.id);
                       return (
@@ -143,8 +143,8 @@ export function InviteUserForm({ properties }: InviteUserFormProps) {
                           role="checkbox"
                           aria-checked={isSelected}
                           onClick={() => toggleProperty(property.id)}
-                          className={`flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40 ${
-                            isSelected ? "bg-accent/5" : "hover:bg-surface-elevated/60"
+                          className={`flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-start transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus ${
+                            isSelected ? "bg-accent-tint" : "hover:bg-surface-elevated"
                           }`}
                         >
                           <span
@@ -156,7 +156,7 @@ export function InviteUserForm({ properties }: InviteUserFormProps) {
                             }`}
                           >
                             {isSelected && (
-                              <Check className="h-2.5 w-2.5 text-background" />
+                              <Check className="h-2.5 w-2.5 text-accent-foreground" />
                             )}
                           </span>
                           <Building2
@@ -172,7 +172,7 @@ export function InviteUserForm({ properties }: InviteUserFormProps) {
                   </div>
                   {selectedProperties.size > 0 && (
                     <p className="mt-1.5 text-xs text-text-secondary">
-                      <span className="ltr-nums font-mono">{selectedProperties.size}</span>{" "}
+                      <span className="ltr-nums tabular-nums">{selectedProperties.size}</span>{" "}
                       {t("propertiesSelected")}
                     </p>
                   )}

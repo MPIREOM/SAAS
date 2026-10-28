@@ -7,7 +7,7 @@ import { ChevronDown, ChevronRight, Pencil, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useToast } from "@/components/ui/toast";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,7 +103,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
   }
 
   return (
-    <div className="space-y-3 animate-fade-in-up">
+    <div className="space-y-3">
       <p className="text-xs text-text-secondary">
         {t("propertiesPanel.intro")}
       </p>
@@ -115,7 +115,7 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
         return (
           <div
             key={p.id}
-            className="overflow-hidden rounded-xl border border-border/60 bg-surface-elevated/30 transition-colors hover:border-border"
+            className="overflow-hidden rounded-xl border border-border bg-surface-elevated transition-colors hover:border-border"
           >
             <PropertyRowEditor
               property={p}
@@ -128,8 +128,8 @@ export function OwnerPropertiesPanel({ properties, units }: OwnerDetailProps) {
             />
 
             {isExpanded && (
-              <div className="border-t border-border/40 bg-surface/40">
-                <div className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
+              <div className="border-t border-border bg-surface">
+                <div className="px-4 py-3 text-xs font-medium uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
                   {t("propertiesPanel.perUnitOverrides")}
                 </div>
                 <div className="divide-y divide-border/40">
@@ -201,10 +201,10 @@ function PropertyRowEditor({
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium text-text-primary">{property.name}</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-          <span className="font-mono ltr-nums">{unitCount}</span>
+          <span className="tabular-nums ltr-nums">{unitCount}</span>
           <span>{t("propertiesPanel.unitWord", { count: unitCount })}</span>
           {hasOverrides && (
-            <Badge variant="warning" className="text-[10px] uppercase tracking-wider">
+            <Badge variant="warning" className="text-xs uppercase tracking-wider">
               {t("propertiesPanel.hasOverrides")}
             </Badge>
           )}
@@ -232,7 +232,7 @@ function PropertyRowEditor({
             value={rate}
             onChange={(e) => setRate(e.target.value)}
             aria-label={t("propertiesPanel.commissionRate")}
-            className="h-9 w-20 font-mono ltr-nums text-xs text-end"
+            className="h-9 w-20 tabular-nums ltr-nums text-xs text-end"
           />
           <span className="text-xs text-text-secondary">%</span>
         </div>
@@ -277,15 +277,12 @@ function UnitRowEditor({
 
   return (
     <div className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-      <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-text-secondary/50" />
+      <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
       <div className="min-w-0 flex-1 text-xs">
-        <span className="font-mono font-medium ltr-nums">{tCommon("unit")} {unit.unit_number}</span>
+        <span className="tabular-nums font-medium ltr-nums">{tCommon("unit")} {unit.unit_number}</span>
         <span className="ms-2 text-text-secondary">
-          <span className="font-mono ltr-nums">
-            {Number(unit.rent_amount).toLocaleString("en-OM", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+          <span className="tabular-nums ltr-nums">
+            {formatAmount(Number(unit.rent_amount))}
           </span>{" "}
           {t("propertiesPanel.perMonth", { code: CURRENCY.code })} · {unit.status}
         </span>
@@ -316,7 +313,7 @@ function UnitRowEditor({
             value={rate}
             onChange={(e) => setRate(e.target.value)}
             aria-label={t("propertiesPanel.unitCommissionRate")}
-            className="h-9 w-20 font-mono ltr-nums text-xs text-end"
+            className="h-9 w-20 tabular-nums ltr-nums text-xs text-end"
           />
           <span className="text-xs text-text-secondary">%</span>
         </div>

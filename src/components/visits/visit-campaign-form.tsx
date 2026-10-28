@@ -78,7 +78,7 @@ export function VisitCampaignForm({ propertyId, locale, occupiedUnits, today }: 
 
   return (
     <form onSubmit={submit} className="space-y-5">
-      <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
         <h2 className="text-base font-semibold text-text-primary font-display">{t("form.whatSection")}</h2>
         <Input
           label={`${t("form.title")} *`}
@@ -101,7 +101,7 @@ export function VisitCampaignForm({ propertyId, locale, occupiedUnits, today }: 
         />
       </section>
 
-      <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
         <h2 className="text-base font-semibold text-text-primary font-display">{t("form.whenSection")}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
@@ -114,7 +114,7 @@ export function VisitCampaignForm({ propertyId, locale, occupiedUnits, today }: 
               setStartDate(e.target.value);
               if (endDate < e.target.value) setEndDate(e.target.value);
             }}
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
           <Input
             type="date"
@@ -123,7 +123,7 @@ export function VisitCampaignForm({ propertyId, locale, occupiedUnits, today }: 
             min={startDate}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
           <Input
             type="time"
@@ -131,7 +131,7 @@ export function VisitCampaignForm({ propertyId, locale, occupiedUnits, today }: 
             required
             value={dayStart}
             onChange={(e) => setDayStart(e.target.value)}
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
           <Input
             type="time"
@@ -139,7 +139,7 @@ export function VisitCampaignForm({ propertyId, locale, occupiedUnits, today }: 
             required
             value={dayEnd}
             onChange={(e) => setDayEnd(e.target.value)}
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
         </div>
         <Select

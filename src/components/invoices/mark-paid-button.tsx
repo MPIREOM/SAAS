@@ -13,7 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import {
   Dialog,
   DialogContent,
@@ -387,7 +387,7 @@ export function MarkPaidButton({
             : isFullyPaid
             ? t("markedAsPaid")
             : t("partialPaymentRecorded", {
-                amount: paymentAmount.toFixed(2),
+                amount: formatAmount(paymentAmount),
                 code: CURRENCY.code,
               }),
         variant: "success",
@@ -414,14 +414,14 @@ export function MarkPaidButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-accent/10 text-accent hover:bg-accent/20 rounded-lg transition-all duration-200 font-semibold group cursor-pointer hover:shadow-sm hover:shadow-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-accent-tint text-accent hover:bg-accent/20 rounded-lg transition-all duration-200 font-semibold group cursor-pointer hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <Check className="h-3 w-3" aria-hidden="true" />
         {alreadyPaid > 0 ? (
           <>
             {t("markAsPaid")}{" "}
-            <span className="font-mono tabular-nums ltr-nums">
-              ({remainingAmount.toFixed(2)})
+            <span className="tabular-nums ltr-nums">
+              ({formatAmount(remainingAmount)})
             </span>
           </>
         ) : (
@@ -442,7 +442,7 @@ export function MarkPaidButton({
 
           <DialogBody className="overflow-y-auto">
             {/* Invoice summary card */}
-            <div className="p-4 bg-surface-elevated/50 rounded-xl border border-border/40 mb-5">
+            <div className="p-4 bg-surface-elevated rounded-xl border border-border mb-5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
@@ -456,19 +456,17 @@ export function MarkPaidButton({
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
                     {alreadyPaid > 0 ? t("remaining") : t("amount")}
                   </p>
-                  <p className="text-lg font-bold font-mono tabular-nums ltr-nums text-accent">
-                    {remainingAmount.toLocaleString("en-OM", {
-                      minimumFractionDigits: 2,
-                    })}
+                  <p className="text-lg font-bold tabular-nums ltr-nums text-accent">
+                    {formatAmount(remainingAmount)}
                     <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                       {CURRENCY.code}
                     </span>
                   </p>
                   {alreadyPaid > 0 && (
-                    <p className="text-[10px] text-text-secondary mt-0.5">
+                    <p className="text-xs text-text-secondary mt-0.5">
                       {t("paidAmount")}:{" "}
-                      <span className="font-mono ltr-nums">
-                        {alreadyPaid.toLocaleString("en-OM", { minimumFractionDigits: 2 })} / {totalAmount.toLocaleString("en-OM", { minimumFractionDigits: 2 })}
+                      <span className="tabular-nums ltr-nums">
+                        {formatAmount(alreadyPaid)} / {formatAmount(totalAmount)}
                       </span>
                     </p>
                   )}
@@ -479,7 +477,7 @@ export function MarkPaidButton({
             <form id="mark-paid-form" onSubmit={handleSubmit} className="space-y-4">
               {/* Payment Type Toggle */}
               <div role="group" aria-label={t("paymentType")}>
-                <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                <span className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal mb-2">
                   {t("paymentType")}
                 </span>
                 <div className="grid grid-cols-3 gap-2">
@@ -493,10 +491,10 @@ export function MarkPaidButton({
                       type="button"
                       onClick={() => setPaymentType(pt.key)}
                       aria-pressed={paymentType === pt.key}
-                      className={`flex items-center justify-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                      className={`flex items-center justify-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                         paymentType === pt.key
-                          ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
-                          : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                          ? "bg-accent-tint border-accent/40 text-accent shadow-sm"
+                          : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:text-text-primary"
                       }`}
                     >
                       {pt.label}
@@ -507,7 +505,7 @@ export function MarkPaidButton({
 
               {/* Partial Amount Input */}
               {paymentType === "partial" && (
-                <div className="animate-fade-in-up">
+                <div className="">
                   <Input
                     type="number"
                     step="0.01"
@@ -518,12 +516,12 @@ export function MarkPaidButton({
                     required
                     label={`${t("paidAmount")} (${CURRENCY.code})`}
                     placeholder={t("maxAmountPlaceholder", {
-                      amount: remainingAmount.toFixed(2),
+                      amount: formatAmount(remainingAmount),
                     })}
-                    className="font-mono ltr-nums"
+                    className="tabular-nums ltr-nums"
                     helperText={
                       partialAmount && Number(partialAmount) > 0
-                        ? `${t("remaining")}: ${Math.max(remainingAmount - Number(partialAmount), 0).toLocaleString("en-OM", { minimumFractionDigits: 2 })} ${CURRENCY.code}`
+                        ? `${t("remaining")}: ${formatAmount(Math.max(remainingAmount - Number(partialAmount), 0))} ${CURRENCY.code}`
                         : undefined
                     }
                   />
@@ -532,8 +530,8 @@ export function MarkPaidButton({
 
               {/* Advance Months Selector */}
               {paymentType === "advance" && (
-                <div className="animate-fade-in-up" role="group" aria-label={t("numberOfMonths")}>
-                  <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                <div className="" role="group" aria-label={t("numberOfMonths")}>
+                  <span className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal mb-2">
                     {t("numberOfMonths")}
                   </span>
                   <div className="grid grid-cols-4 gap-2">
@@ -543,25 +541,25 @@ export function MarkPaidButton({
                         type="button"
                         onClick={() => setAdvanceMonths(m)}
                         aria-pressed={advanceMonths === m}
-                        className={`flex items-center justify-center p-3 rounded-xl border text-sm font-semibold font-mono ltr-nums transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`flex items-center justify-center p-3 rounded-xl border text-sm font-semibold tabular-nums ltr-nums transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           advanceMonths === m
-                            ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
-                            : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                            ? "bg-accent-tint border-accent/40 text-accent shadow-sm"
+                            : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:text-text-primary"
                         }`}
                       >
                         {m}
                       </button>
                     ))}
                   </div>
-                  <div className="mt-3 p-3 rounded-xl bg-accent/5 border border-accent/20">
+                  <div className="mt-3 p-3 rounded-xl bg-accent-tint border border-accent/30">
                     <div className="flex items-center justify-between gap-2 text-xs">
                       <span className="text-text-secondary">{t("totalAdvanceAmount")}</span>
-                      <span className="font-mono font-bold text-accent tabular-nums ltr-nums">
-                        {(remainingAmount + totalAmount * (advanceMonths - 1)).toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                      <span className="tabular-nums font-bold text-accent tabular-nums ltr-nums">
+                        {formatAmount(remainingAmount + totalAmount * (advanceMonths - 1))} {CURRENCY.code}
                       </span>
                     </div>
-                    <p className="text-[10px] text-text-secondary mt-1">
-                      <span className="ltr-nums">{remainingAmount.toLocaleString("en-OM", { minimumFractionDigits: 2 })}</span> ({t("currentMonth")}) + <span className="ltr-nums">{(totalAmount * (advanceMonths - 1)).toLocaleString("en-OM", { minimumFractionDigits: 2 })}</span> ({advanceMonths - 1} {t("futureMonths")})
+                    <p className="text-xs text-text-secondary mt-1">
+                      <span className="ltr-nums">{formatAmount(remainingAmount)}</span> ({t("currentMonth")}) + <span className="ltr-nums">{formatAmount(totalAmount * (advanceMonths - 1))}</span> ({advanceMonths - 1} {t("futureMonths")})
                     </p>
                   </div>
                 </div>
@@ -569,7 +567,7 @@ export function MarkPaidButton({
 
               {/* Payment Method Selector */}
               <div role="group" aria-label={t("method")}>
-                <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                <span className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal mb-2">
                   {t("method")}
                 </span>
                 <div className="grid grid-cols-3 gap-2">
@@ -582,10 +580,10 @@ export function MarkPaidButton({
                         type="button"
                         onClick={() => setMethod(m.key)}
                         aria-pressed={isActive}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           isActive
-                            ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
-                            : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                            ? "bg-accent-tint border-accent/40 text-accent shadow-sm"
+                            : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:text-text-primary"
                         }`}
                       >
                         <Icon
@@ -603,7 +601,7 @@ export function MarkPaidButton({
 
               {/* Cheque selection */}
               {method === "cheque" && (
-                <div className="animate-fade-in-up space-y-3">
+                <div className="space-y-3">
                   {loadingCheques ? (
                     <Spinner
                       className="py-4"
@@ -622,10 +620,10 @@ export function MarkPaidButton({
                             setNoChequeOnFile(false);
                           }}
                           aria-pressed={!addNewCheque && !noChequeOnFile}
-                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                             !addNewCheque && !noChequeOnFile
-                              ? "bg-accent/10 border-accent/40 text-accent"
-                              : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                              ? "bg-accent-tint border-accent/40 text-accent"
+                              : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
                           }`}
                         >
                           {t("selectCheque")}
@@ -638,10 +636,10 @@ export function MarkPaidButton({
                             setSelectedChequeId("");
                           }}
                           aria-pressed={addNewCheque}
-                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                             addNewCheque
-                              ? "bg-accent/10 border-accent/40 text-accent"
-                              : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                              ? "bg-accent-tint border-accent/40 text-accent"
+                              : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:text-text-primary"
                           }`}
                         >
                           {tch("addCheque")}
@@ -654,10 +652,10 @@ export function MarkPaidButton({
                             setSelectedChequeId("");
                           }}
                           aria-pressed={noChequeOnFile}
-                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                          className={`p-2.5 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                             noChequeOnFile
-                              ? "bg-accent/10 border-accent/40 text-accent"
-                              : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:text-text-primary"
+                              ? "bg-accent-tint border-accent/40 text-accent"
+                              : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:text-text-primary"
                           }`}
                           title={t("paidToOwnerTooltip")}
                         >
@@ -667,7 +665,7 @@ export function MarkPaidButton({
 
                       {/* Direct-to-owner mode: explainer card */}
                       {noChequeOnFile && (
-                        <Alert variant="info" className="text-xs animate-fade-in-up">
+                        <Alert variant="info" className="text-xs">
                           {t("paidToOwnerHint")}
                         </Alert>
                       )}
@@ -675,7 +673,7 @@ export function MarkPaidButton({
                       {/* Existing cheques list */}
                       {displayedCheques.length > 0 && !addNewCheque && !noChequeOnFile && (
                         <div role="group" aria-label={t("selectCheque")}>
-                          <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                          <span className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal mb-2">
                             {t("selectCheque")}
                           </span>
                           <div className="space-y-2">
@@ -687,24 +685,24 @@ export function MarkPaidButton({
                                   type="button"
                                   onClick={() => setSelectedChequeId(ch.id)}
                                   aria-pressed={isSelected}
-                                  className={`w-full text-start p-3 rounded-xl border transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                                  className={`w-full text-start p-3 rounded-xl border transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                                     isSelected
-                                      ? "bg-accent/10 border-accent/40 shadow-sm shadow-accent/10"
-                                      : "bg-surface-elevated/50 border-border/40 hover:border-border"
+                                      ? "bg-accent-tint border-accent/40 shadow-sm"
+                                      : "bg-surface-elevated border-border hover:border-border"
                                   }`}
                                 >
                                   <div className="flex items-center justify-between gap-3">
                                     <div className="min-w-0">
-                                      <p className="text-sm font-medium text-text-primary font-mono ltr-nums">
+                                      <p className="text-sm font-medium text-text-primary tabular-nums ltr-nums">
                                         #{ch.cheque_number}
                                       </p>
                                       <p className="text-xs text-text-secondary mt-0.5">
                                         {ch.bank_name} &middot;{" "}
-                                        <span className="font-mono ltr-nums">{ch.cheque_date}</span>
+                                        <span className="tabular-nums ltr-nums">{ch.cheque_date}</span>
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                      <span className="text-sm font-bold font-mono text-text-primary tabular-nums ltr-nums">
+                                      <span className="text-sm font-bold tabular-nums text-text-primary tabular-nums ltr-nums">
                                         {ch.amount} {CURRENCY.code}
                                       </span>
                                       <div
@@ -743,7 +741,7 @@ export function MarkPaidButton({
                             setShowAllCheques(!showAllCheques);
                             setSelectedChequeId("");
                           }}
-                          className="w-full text-xs text-text-secondary hover:text-text-primary font-medium py-2 border border-dashed border-border/60 rounded-xl hover:border-border hover:bg-surface-elevated/50 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          className="w-full text-xs text-text-secondary hover:text-text-primary font-medium py-2 border border-dashed border-border rounded-xl hover:border-border hover:bg-surface-elevated transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                         >
                           {showAllCheques
                             ? t("showOnlyPeriodCheques")
@@ -756,13 +754,13 @@ export function MarkPaidButton({
 
                       {/* New cheque form */}
                       {addNewCheque && (
-                        <div className="space-y-3 animate-fade-in-up">
+                        <div className="space-y-3">
                           {cheques.length === 0 && (
                             <Alert variant="info" className="text-xs">
                               {t("noPendingCheques")}
                             </Alert>
                           )}
-                          <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                          <span className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal">
                             {tch("addCheque")}
                           </span>
                           <Input
@@ -772,7 +770,7 @@ export function MarkPaidButton({
                             required
                             label={tch("chequeNumber")}
                             placeholder={t("chequeNumberPlaceholder")}
-                            className="font-mono ltr-nums"
+                            className="tabular-nums ltr-nums"
                           />
                           <Input
                             type="text"
@@ -788,7 +786,7 @@ export function MarkPaidButton({
                             onChange={(e) => setNewChequeDate(e.target.value)}
                             required
                             label={t("chequeDate")}
-                            className="font-mono ltr-nums"
+                            className="tabular-nums ltr-nums"
                           />
                         </div>
                       )}
@@ -804,7 +802,7 @@ export function MarkPaidButton({
                 onChange={(e) => setPaidDate(e.target.value)}
                 required
                 label={t("paidAt")}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
 
               {/* Notes */}
@@ -819,7 +817,7 @@ export function MarkPaidButton({
             </form>
           </DialogBody>
 
-          <DialogFooter className="pt-4 border-t border-border/40">
+          <DialogFooter className="pt-4 border-t border-border">
             <Button
               type="button"
               variant="secondary"

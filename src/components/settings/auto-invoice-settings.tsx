@@ -26,9 +26,9 @@ function Toggle({
       aria-label={ariaLabel}
       onClick={onToggle}
       disabled={disabled}
-      className={`relative h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${
+      className={`relative h-5 w-9 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:ring-offset-surface ${
         enabled ? "bg-accent" : "bg-border"
-      } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+      }    ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
     >
       <span
         aria-hidden="true"
@@ -108,7 +108,7 @@ export function AutoInvoiceSettings() {
   return (
     <div className="space-y-4">
       {/* Auto-generate toggle */}
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-border/50 bg-surface-elevated/50 px-4 py-3 transition-colors hover:border-border">
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface-elevated px-4 py-3 transition-colors hover:border-border">
         <div className="min-w-0">
           <p className="text-sm font-medium text-text-primary">
             {t("autoInvoiceToggleTitle")}
@@ -135,7 +135,7 @@ export function AutoInvoiceSettings() {
 
       {/* Days before selector */}
       {enabled && (
-        <div className="rounded-lg border border-border/50 bg-surface-elevated/50 px-4 py-4">
+        <div className="rounded-lg border border-border bg-surface-elevated px-4 py-4">
           <Select
             id="auto-invoice-days"
             label={t("autoInvoiceAdvanceLabel")}

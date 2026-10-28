@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 
 interface EditInvoiceButtonProps {
   invoiceId: string;
@@ -206,7 +206,7 @@ export function EditInvoiceButton({ invoiceId, tenantName }: EditInvoiceButtonPr
       <button
         type="button"
         onClick={openDialog}
-        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-accent text-xs rounded-md border border-border/50 hover:border-accent/30 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-accent text-xs rounded-md border border-border hover:border-border-strong transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         title={t("edit.title")}
         aria-label={t("edit.title")}
       >
@@ -258,14 +258,12 @@ export function EditInvoiceButton({ invoiceId, tenantName }: EditInvoiceButtonPr
                       ? t("edit.itemisedHint")
                       : invoice.paid_amount > 0
                         ? t("edit.paidSoFar", {
-                            amount: invoice.paid_amount.toLocaleString("en-OM", {
-                              minimumFractionDigits: 2,
-                            }),
+                            amount: formatAmount(invoice.paid_amount),
                             currency: CURRENCY.code,
                           })
                         : undefined
                   }
-                  className="font-mono ltr-nums"
+                  className="tabular-nums ltr-nums"
                 />
 
                 <Input
@@ -313,7 +311,7 @@ export function EditInvoiceButton({ invoiceId, tenantName }: EditInvoiceButtonPr
             ) : null}
           </DialogBody>
 
-          <DialogFooter className="pt-4 border-t border-border/40">
+          <DialogFooter className="pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               {tc("cancel")}
             </Button>

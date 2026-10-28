@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { LogOut, Plus, X, FileText, Download } from "lucide-react";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert } from "@/components/ui/alert";
 import { Select } from "@/components/ui/select";
@@ -101,8 +101,7 @@ const newRowId = () =>
     ? crypto.randomUUID()
     : `row-${Math.random().toString(36).slice(2)}-${Date.now()}`;
 
-const fmt = (n: number) =>
-  n.toLocaleString("en-OM", { minimumFractionDigits: 2 });
+const fmt = (n: number) => formatAmount(n);
 
 function toLeaseOption(row: ActiveLeaseRow): ActiveLeaseOption {
   const unit = row.units;
@@ -265,7 +264,7 @@ function BackButton({ label, onClick }: { label: string; onClick: () => void }) 
     <button
       type="button"
       onClick={onClick}
-      className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       {label}
     </button>
@@ -336,7 +335,7 @@ function UnitToVacateCard({
             {t("moveOutFees.preview.unitNumber")} {options[0].previewCtx.unitNumber}
           </p>
           <p className="text-xs text-text-secondary mt-0.5">
-            <span className="font-mono tabular-nums ltr-nums">
+            <span className="tabular-nums ltr-nums">
               {fmt(options[0].leaseCtx.monthlyRent)} {CURRENCY.code}
             </span>
             <span className="mx-1">·</span>
@@ -846,7 +845,7 @@ function MoveOutForm({
             href={`/api/invoices/${createdInvoiceId}/pdf`}
             target="_blank"
             rel="noreferrer"
-            className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors inline-flex items-center gap-2"
+            className="h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-medium rounded-md transition-colors inline-flex items-center gap-2"
           >
             <Download aria-hidden="true" className="h-4 w-4" />
             {t("moveOutFees.success.downloadPdf")}
@@ -857,7 +856,7 @@ function MoveOutForm({
               router.push(`/${locale}/tenants`);
               router.refresh();
             }}
-            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
+            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-surface-elevated transition-colors"
           >
             {t("moveOutFees.success.backToTenants")}
           </button>
@@ -891,34 +890,34 @@ function MoveOutForm({
               required
               value={vacateDate}
               onChange={(e) => setVacateDate(e.target.value)}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors font-mono"
+              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent transition-colors tabular-nums"
             />
           </div>
 
           {/* Early-termination commission preview (owner commission, not tenant fee) */}
           {vacateDate && commissionPreview && commissionPreview.applicable && commissionPreview.remainingCommission > 0 && (
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
+            <div className="rounded-lg border border-warning/30 bg-warning-tint p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-warning">
+                <span className="text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-warning">
                   {t("earlyTerminationCommission.title")}
                 </span>
-                <span className="font-mono tabular-nums text-warning text-base font-semibold">
+                <span className="tabular-nums text-warning text-base font-semibold">
                   {fmt(commissionPreview.remainingCommission)} {CURRENCY.code}
                 </span>
               </div>
               <p className="text-xs text-text-secondary">
                 {t("earlyTerminationCommission.description")}
               </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-text-secondary pt-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-text-secondary pt-1">
                 <div className="flex justify-between">
                   <span>{t("earlyTerminationCommission.contractMonths")}</span>
-                  <span className="font-mono tabular-nums text-text-primary">
+                  <span className="tabular-nums text-text-primary">
                     {commissionPreview.contractMonths}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("earlyTerminationCommission.monthsRemaining")}</span>
-                  <span className="font-mono tabular-nums text-text-primary">
+                  <span className="tabular-nums text-text-primary">
                     {commissionPreview.monthsRemainingAtVacate}
                   </span>
                 </div>
@@ -935,7 +934,7 @@ function MoveOutForm({
             </div>
           )}
           {vacateDate && loadingCommission && !commissionPreview && (
-            <div className="rounded-lg border border-border/40 bg-surface-elevated/30 p-3 text-xs text-text-secondary flex items-center gap-2">
+            <div className="rounded-lg border border-border bg-surface-elevated p-3 text-xs text-text-secondary flex items-center gap-2">
               <Spinner sizeClassName="h-3 w-3" />
               {t("earlyTerminationCommission.calculating")}
             </div>
@@ -950,7 +949,7 @@ function MoveOutForm({
               required
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent transition-colors"
             >
               <option value="">{t("selectReason")}</option>
               <option value="end_of_lease">{t("reasons.endOfLease")}</option>
@@ -970,7 +969,7 @@ function MoveOutForm({
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-surface-elevated border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors resize-none"
+              className="w-full bg-surface-elevated border border-border rounded-md px-3 py-2 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent transition-colors resize-none"
               placeholder={t("moveOutNotesPlaceholder")}
             />
           </div>
@@ -982,7 +981,7 @@ function MoveOutForm({
             <h3 className="text-sm font-medium text-text-primary uppercase tracking-wider">
               {t("moveOutFees.title")}
             </h3>
-            <span className="font-mono tabular-nums text-text-primary text-base font-semibold">
+            <span className="tabular-nums text-text-primary text-base font-semibold">
               {fmt(feesTotal)} {CURRENCY.code}
             </span>
           </div>
@@ -999,8 +998,8 @@ function MoveOutForm({
                   key={fee.id}
                   className={`p-3 rounded-lg border ${
                     isEarlyTerm
-                      ? "bg-warning/5 border-warning/20"
-                      : "bg-surface-elevated/40 border-border/40"
+                      ? "bg-warning-tint border-warning/30"
+                      : "bg-surface-elevated border-border"
                   }`}
                 >
                   <div className="flex items-start gap-2">
@@ -1013,13 +1012,13 @@ function MoveOutForm({
                             updateFee(fee.id, { description: e.target.value })
                           }
                           placeholder={t("moveOutFees.customDescriptionPlaceholder")}
-                          className="w-full h-9 bg-surface border border-border/60 rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+                          className="w-full h-9 bg-surface border border-border rounded-md px-3 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent transition-colors"
                         />
                       ) : (
                         <p className="text-sm text-text-primary font-medium">
                           {fee.description}
                           {isEarlyTerm && commissionPreview?.monthsRemainingAtVacate ? (
-                            <span className="block text-[11px] text-text-secondary font-normal mt-0.5">
+                            <span className="block text-xs text-text-secondary font-normal mt-0.5">
                               {t("moveOutFees.earlyTerminationFormula", {
                                 months: commissionPreview.monthsRemainingAtVacate,
                                 rent: fmt(leaseCtx.monthlyRent),
@@ -1039,9 +1038,9 @@ function MoveOutForm({
                             updateFee(fee.id, { amount: e.target.value })
                           }
                           placeholder="0.00"
-                          className="w-full h-9 bg-surface border border-border/60 rounded-md px-3 text-sm text-text-primary font-mono tabular-nums focus:outline-none focus:border-accent transition-colors"
+                          className="w-full h-9 bg-surface border border-border rounded-md px-3 text-sm text-text-primary tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent transition-colors"
                         />
-                        <span className="text-xs text-text-secondary font-mono">
+                        <span className="text-xs text-text-secondary tabular-nums">
                           {CURRENCY.code}
                         </span>
                       </div>
@@ -1051,7 +1050,7 @@ function MoveOutForm({
                         type="button"
                         onClick={() => removeFee(fee.id)}
                         aria-label={tc("delete")}
-                        className="p-1.5 rounded-md text-text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        className="p-1.5 rounded-md text-text-secondary hover:text-destructive hover:bg-destructive-tint transition-colors"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -1065,7 +1064,7 @@ function MoveOutForm({
           <button
             type="button"
             onClick={addCustomFee}
-            className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-dashed border-border/60 text-text-secondary hover:text-text-primary hover:border-border transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-dashed border-border text-text-secondary hover:text-text-primary hover:border-border transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             {t("moveOutFees.addCustom")}
@@ -1079,7 +1078,7 @@ function MoveOutForm({
               <h3 className="text-sm font-medium text-text-primary uppercase tracking-wider">
                 {t("outstandingInvoices")}
               </h3>
-              <span className="text-xs bg-destructive/12 text-destructive px-2 py-0.5 rounded-md font-mono font-semibold border border-destructive/20">
+              <span className="text-xs bg-destructive-tint text-destructive px-2 py-0.5 rounded-md tabular-nums font-semibold border border-destructive/30">
                 {fmt(totalOutstanding)} {CURRENCY.code}
               </span>
             </div>
@@ -1093,21 +1092,21 @@ function MoveOutForm({
               <button
                 type="button"
                 onClick={() => setAllActions("leave_open")}
-                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-info hover:bg-info/10 hover:border-info/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="text-xs px-2.5 py-1 rounded-md border border-border text-info hover:bg-info-tint hover:border-info/30 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 {t("invoiceActionLeaveOpen")}
               </button>
               <button
                 type="button"
                 onClick={() => setAllActions("cancel")}
-                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-text-secondary hover:text-text-primary hover:border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="text-xs px-2.5 py-1 rounded-md border border-border text-text-secondary hover:text-text-primary hover:border-border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 {t("invoiceActionCancel")}
               </button>
               <button
                 type="button"
                 onClick={() => setAllActions("write_off")}
-                className="text-xs px-2.5 py-1 rounded-md border border-border/50 text-warning hover:bg-warning/10 hover:border-warning/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="text-xs px-2.5 py-1 rounded-md border border-border text-warning hover:bg-warning-tint hover:border-warning/30 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 {t("invoiceActionWriteOff")}
               </button>
@@ -1122,17 +1121,17 @@ function MoveOutForm({
                     key={inv.id}
                     className={`p-3.5 rounded-lg border transition-colors ${
                       action === "write_off"
-                        ? "bg-warning/5 border-warning/20"
+                        ? "bg-warning-tint border-warning/30"
                         : action === "cancel"
-                        ? "bg-surface-elevated/30 border-border/30 opacity-60"
+                        ? "bg-surface-elevated border-border opacity-60"
                         : action === "settle"
-                        ? "bg-success/5 border-success/20"
-                        : "bg-info/5 border-info/20"
+                        ? "bg-success-tint border-success/30"
+                        : "bg-info-tint border-info/30"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2.5">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary font-mono tabular-nums">
+                        <p className="text-sm font-medium text-text-primary tabular-nums">
                           {fmt(bal)} {CURRENCY.code}
                         </p>
                         <p className="text-xs text-text-secondary mt-0.5">
@@ -1149,18 +1148,18 @@ function MoveOutForm({
                           )}
                         </p>
                         {Number(inv.paid_amount || 0) > 0 && (
-                          <p className="text-[10px] text-success mt-0.5">
+                          <p className="text-xs text-success mt-0.5">
                             {t("partiallyPaid")}: {fmt(Number(inv.paid_amount))} / {fmt(Number(inv.amount))}
                           </p>
                         )}
                       </div>
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           inv.status === "overdue"
-                            ? "bg-destructive/10 text-destructive"
+                            ? "bg-destructive-tint text-destructive"
                             : inv.status === "partial"
-                            ? "bg-info/10 text-info"
-                            : "bg-warning/10 text-warning"
+                            ? "bg-info-tint text-info"
+                            : "bg-warning-tint text-warning"
                         }`}
                       >
                         {inv.status}
@@ -1172,10 +1171,10 @@ function MoveOutForm({
                         type="button"
                         onClick={() => setAction(inv.id, "leave_open")}
                         aria-pressed={action === "leave_open"}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`text-xs py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           action === "leave_open"
-                            ? "bg-info/10 border-info/40 text-info"
-                            : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
+                            ? "bg-info-tint border-info/40 text-info"
+                            : "border-border text-text-secondary hover:text-text-primary hover:border-border"
                         }`}
                       >
                         {t("invoiceActionLeaveOpen")}
@@ -1184,10 +1183,10 @@ function MoveOutForm({
                         type="button"
                         onClick={() => setAction(inv.id, "settle")}
                         aria-pressed={action === "settle"}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`text-xs py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           action === "settle"
-                            ? "bg-success/10 border-success/40 text-success"
-                            : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
+                            ? "bg-success-tint border-success/40 text-success"
+                            : "border-border text-text-secondary hover:text-text-primary hover:border-border"
                         }`}
                       >
                         {t("invoiceActionSettle")}
@@ -1196,10 +1195,10 @@ function MoveOutForm({
                         type="button"
                         onClick={() => setAction(inv.id, "write_off")}
                         aria-pressed={action === "write_off"}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`text-xs py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           action === "write_off"
-                            ? "bg-warning/10 border-warning/40 text-warning"
-                            : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
+                            ? "bg-warning-tint border-warning/40 text-warning"
+                            : "border-border text-text-secondary hover:text-text-primary hover:border-border"
                         }`}
                       >
                         {t("invoiceActionWriteOff")}
@@ -1208,10 +1207,10 @@ function MoveOutForm({
                         type="button"
                         onClick={() => setAction(inv.id, "cancel")}
                         aria-pressed={action === "cancel"}
-                        className={`text-[11px] py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                        className={`text-xs py-1.5 px-2 rounded-md border font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${
                           action === "cancel"
                             ? "bg-surface-elevated border-border text-text-primary"
-                            : "border-border/40 text-text-secondary hover:text-text-primary hover:border-border"
+                            : "border-border text-text-secondary hover:text-text-primary hover:border-border"
                         }`}
                       >
                         {t("invoiceActionCancel")}
@@ -1219,8 +1218,8 @@ function MoveOutForm({
                     </div>
 
                     {action === "settle" && (
-                      <div className="mt-2.5 p-3 rounded-lg bg-success/5 border border-success/15 space-y-2">
-                        <label className="block text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
+                      <div className="mt-2.5 p-3 rounded-lg bg-success-tint border border-success/30 space-y-2">
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal">
                           {t("settlementAmount")} ({CURRENCY.code})
                         </label>
                         <input
@@ -1236,10 +1235,10 @@ function MoveOutForm({
                             }))
                           }
                           placeholder={`${t("invoiceSettlePlaceholder")} ${fmt(bal)}`}
-                          className="w-full h-9 bg-surface border border-border/60 rounded-md px-3 text-sm text-text-primary font-mono focus:outline-none focus:border-success/50 focus:ring-1 focus:ring-success/20 transition-all"
+                          className="w-full h-9 bg-surface border border-border rounded-md px-3 text-sm text-text-primary tabular-nums focus:outline-none focus:border-success/50 focus:ring-1 focus:ring-success/20 transition-all"
                         />
                         {settlementAmounts[inv.id] && Number(settlementAmounts[inv.id]) > 0 && (
-                          <div className="flex items-center justify-between text-[10px]">
+                          <div className="flex items-center justify-between text-xs">
                             <span className="text-success font-medium">
                               {t("settleCollect")}: {fmt(Number(settlementAmounts[inv.id]))} {CURRENCY.code}
                             </span>
@@ -1255,14 +1254,14 @@ function MoveOutForm({
               })}
             </div>
 
-            <div className="p-3 rounded-lg bg-surface-elevated/50 border border-border/30 space-y-1.5">
-              <p className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2">
+            <div className="p-3 rounded-lg bg-surface-elevated border border-border space-y-1.5">
+              <p className="text-xs font-medium text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal mb-2">
                 {t("resolutionSummary")}
               </p>
               {leaveOpenTotal > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-info">{t("keptPending")}</span>
-                  <span className="font-mono font-medium text-info tabular-nums ltr-nums">
+                  <span className="tabular-nums font-medium text-info tabular-nums ltr-nums">
                     {fmt(leaveOpenTotal)} {CURRENCY.code}
                   </span>
                 </div>
@@ -1270,7 +1269,7 @@ function MoveOutForm({
               {settleCollectTotal > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-success">{t("settleCollect")}</span>
-                  <span className="font-mono font-medium text-success tabular-nums">
+                  <span className="tabular-nums font-medium text-success tabular-nums">
                     {fmt(settleCollectTotal)} {CURRENCY.code}
                   </span>
                 </div>
@@ -1278,7 +1277,7 @@ function MoveOutForm({
               {(writeOffTotal > 0 || settleWriteOffTotal > 0) && (
                 <div className="flex justify-between text-xs">
                   <span className="text-warning">{t("invoiceActionWriteOff")}</span>
-                  <span className="font-mono font-medium text-warning tabular-nums">
+                  <span className="tabular-nums font-medium text-warning tabular-nums">
                     {fmt(writeOffTotal + settleWriteOffTotal)} {CURRENCY.code}
                   </span>
                 </div>
@@ -1286,7 +1285,7 @@ function MoveOutForm({
               {cancelTotal > 0 && (
                 <div className="flex justify-between text-xs">
                   <span className="text-text-secondary">{t("invoiceActionCancel")}</span>
-                  <span className="font-mono font-medium text-text-secondary tabular-nums line-through">
+                  <span className="tabular-nums font-medium text-text-secondary tabular-nums line-through">
                     {fmt(cancelTotal)} {CURRENCY.code}
                   </span>
                 </div>
@@ -1340,7 +1339,7 @@ function MoveOutForm({
             <select
               value={depositStatus}
               onChange={(e) => setDepositStatus(e.target.value)}
-              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+              className="w-full h-10 bg-surface-elevated border border-border rounded-md px-3 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent transition-colors"
             >
               <option value="pending">{t("depositStatuses.pending")}</option>
               <option value="refunded">{t("depositStatuses.refunded")}</option>
@@ -1357,7 +1356,7 @@ function MoveOutForm({
           <button
             type="submit"
             disabled={loading}
-            className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+            className="h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-medium rounded-md transition-colors disabled:opacity-60 inline-flex items-center gap-2"
           >
             <FileText aria-hidden="true" className="h-4 w-4" />
             {t("moveOutFees.reviewAndConfirm")}
@@ -1365,7 +1364,7 @@ function MoveOutForm({
           <button
             type="button"
             onClick={() => router.back()}
-            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors"
+            className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-surface-elevated transition-colors"
           >
             {tc("cancel")}
           </button>
@@ -1373,7 +1372,7 @@ function MoveOutForm({
       </form>
 
       {previewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4 overflow-y-auto">
           <div className="bg-surface border border-border rounded-lg w-full max-w-2xl my-8 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface">
               <h2 className="text-base font-semibold text-text-primary flex items-center gap-2">
@@ -1393,14 +1392,14 @@ function MoveOutForm({
             <div className="p-6 space-y-5">
               <div className="text-xs text-text-secondary">
                 {t("moveOutFees.preview.invoiceNumber")}:{" "}
-                <span className="font-mono text-text-primary">
+                <span className="tabular-nums text-text-primary">
                   {t("moveOutFees.preview.invoiceNumberPending")}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div className="space-y-1">
-                  <p className="uppercase tracking-wider text-text-secondary text-[10px]">
+                  <p className="uppercase tracking-wider text-text-secondary text-xs">
                     {t("moveOutFees.preview.billTo")}
                   </p>
                   <p className="text-sm font-medium text-text-primary">
@@ -1414,7 +1413,7 @@ function MoveOutForm({
                   )}
                 </div>
                 <div className="space-y-1">
-                  <p className="uppercase tracking-wider text-text-secondary text-[10px]">
+                  <p className="uppercase tracking-wider text-text-secondary text-xs">
                     {t("moveOutFees.preview.unit")}
                   </p>
                   <p className="text-sm font-medium text-text-primary">
@@ -1440,14 +1439,14 @@ function MoveOutForm({
                 </div>
               </div>
 
-              <div className="rounded-md border border-border/60 overflow-hidden">
+              <div className="rounded-md border border-border overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-surface-elevated/60">
+                  <thead className="bg-surface-elevated">
                     <tr>
-                      <th className="text-start font-semibold text-[11px] uppercase tracking-wider text-text-secondary px-3 py-2">
+                      <th className="text-start font-semibold text-xs uppercase tracking-wider text-text-secondary px-3 py-2">
                         {t("moveOutFees.preview.description")}
                       </th>
-                      <th className="text-end font-semibold text-[11px] uppercase tracking-wider text-text-secondary px-3 py-2 w-32">
+                      <th className="text-end font-semibold text-xs uppercase tracking-wider text-text-secondary px-3 py-2 w-32">
                         {t("moveOutFees.preview.amount")}
                       </th>
                     </tr>
@@ -1461,20 +1460,20 @@ function MoveOutForm({
                       </tr>
                     )}
                     {feesForInvoice.map((f) => (
-                      <tr key={f.id} className="border-t border-border/40">
+                      <tr key={f.id} className="border-t border-border">
                         <td className="px-3 py-2 text-text-primary">{f.description}</td>
-                        <td className="px-3 py-2 text-end font-mono tabular-nums text-text-primary">
+                        <td className="px-3 py-2 text-end tabular-nums text-text-primary">
                           {fmt(f.amountNum)} {CURRENCY.code}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t-2 border-border bg-surface-elevated/40">
+                    <tr className="border-t-2 border-border bg-surface-elevated">
                       <td className="px-3 py-2.5 font-semibold text-text-primary">
                         {t("moveOutFees.preview.totalDue")}
                       </td>
-                      <td className="px-3 py-2.5 text-end font-mono tabular-nums font-semibold text-text-primary">
+                      <td className="px-3 py-2.5 text-end tabular-nums font-semibold text-text-primary">
                         {fmt(feesTotal)} {CURRENCY.code}
                       </td>
                     </tr>
@@ -1498,7 +1497,7 @@ function MoveOutForm({
                 type="button"
                 onClick={confirmMoveOut}
                 disabled={loading}
-                className="h-9 px-4 bg-accent hover:bg-accent-hover text-background text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+                className="h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-medium rounded-md transition-colors disabled:opacity-60"
               >
                 {loading ? tc("loading") : t("moveOutFees.preview.confirm")}
               </button>
@@ -1506,7 +1505,7 @@ function MoveOutForm({
                 type="button"
                 onClick={() => setPreviewOpen(false)}
                 disabled={loading}
-                className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-border/30 transition-colors disabled:opacity-50"
+                className="h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm rounded-md hover:bg-surface-elevated transition-colors disabled:opacity-60"
               >
                 {t("moveOutFees.preview.back")}
               </button>

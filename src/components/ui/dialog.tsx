@@ -85,7 +85,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         {/* Overlay */}
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 bg-scrim animate-fade-in"
           aria-hidden="true"
           onClick={() => onOpenChange(false)}
         />
@@ -103,7 +103,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
           aria-describedby={descriptionId}
           tabIndex={-1}
           className={cn(
-            "relative z-50 w-full mx-4 sm:mx-auto rounded-xl border border-border/60 bg-surface p-0 shadow-2xl shadow-black/20",
+            "relative z-50 w-full mx-4 sm:mx-auto rounded-[14px] border border-border bg-surface p-0 shadow-overlay",
             "animate-scale-in",
             maxWidth,
             className
@@ -117,9 +117,9 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             type="button"
             onClick={() => onOpenChange(false)}
             className={cn(
-              "absolute end-4 top-4 rounded-lg p-1.5",
-              "text-text-secondary hover:text-foreground hover:bg-surface-elevated transition-all duration-200",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              "absolute end-3 top-3 grid h-9 w-9 place-items-center rounded-lg",
+              "text-text-secondary hover:text-foreground hover:bg-surface-elevated transition-colors duration-150",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             )}
             aria-label={t("close")}
           >
@@ -155,7 +155,7 @@ const DialogHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col gap-1.5 p-6 pb-0", className)}
+    className={cn("flex flex-col gap-1 p-5 pb-0 pe-14", className)}
     {...props}
   />
 ));
@@ -172,7 +172,7 @@ const DialogTitle = React.forwardRef<
     <h2
       ref={ref}
       id={id || ctx?.titleId}
-      className={cn("text-lg font-semibold text-foreground font-display tracking-tight", className)}
+      className={cn("text-[17px] font-bold leading-snug text-foreground font-display", className)}
       {...props}
     />
   );
@@ -203,7 +203,7 @@ const DialogBody = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6", className)} {...props} />
+  <div ref={ref} className={cn("px-5 py-4", className)} {...props} />
 ));
 DialogBody.displayName = "DialogBody";
 
@@ -215,7 +215,10 @@ const DialogFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center justify-end gap-3 p-6 pt-0", className)}
+    className={cn(
+      "flex flex-wrap items-center justify-end gap-2 rounded-b-[14px] border-t border-border bg-surface-elevated px-5 py-3.5",
+      className
+    )}
     {...props}
   />
 ));

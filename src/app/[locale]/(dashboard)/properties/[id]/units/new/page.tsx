@@ -100,7 +100,7 @@ export default function NewUnitPage({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Unit details */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">{t("unitInfo")}</CardTitle>
           </CardHeader>
@@ -111,7 +111,7 @@ export default function NewUnitPage({
               label={`${t("unitNumber")} *`}
               placeholder={t("unitNumberPlaceholder")}
               error={unitNumberError}
-              className="font-mono"
+              className="tabular-nums"
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
@@ -120,7 +120,7 @@ export default function NewUnitPage({
                 inputMode="numeric"
                 label={t("floor")}
                 placeholder={t("floorPlaceholder")}
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
               <Input
                 name="size_sqm"
@@ -129,7 +129,7 @@ export default function NewUnitPage({
                 min={0}
                 label={t("sizeSqm")}
                 placeholder={t("sizePlaceholder")}
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
             </div>
             <Input
@@ -141,13 +141,13 @@ export default function NewUnitPage({
               label={`${t("rentAmount")} (${CURRENCY.code}) *`}
               placeholder={t("rentPlaceholder")}
               error={rentError}
-              className="font-mono tabular-nums"
+              className="tabular-nums"
             />
           </CardContent>
         </Card>
 
         {/* Bedrooms & category */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">{t("type")}</CardTitle>
           </CardHeader>
@@ -162,12 +162,12 @@ export default function NewUnitPage({
               label={t("bedrooms")}
               placeholder={t("bedroomsPlaceholder")}
               helperText={t("bedroomsHint")}
-              className="font-mono tabular-nums"
+              className="tabular-nums"
             />
 
             {/* Unit category chip group (toggle — click again to clear) */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium tracking-tight text-foreground">
+              <span className="text-sm font-medium text-foreground">
                 {t("unitCategory")}
               </span>
               <div
@@ -187,17 +187,17 @@ export default function NewUnitPage({
                       }
                       className={cn(
                         "flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-medium transition-all duration-200",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                         isActive
-                          ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
-                          : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:bg-surface-elevated hover:text-text-primary"
+                          ? "bg-accent-tint border-accent/40 text-accent shadow-sm"
+                          : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:bg-surface-elevated hover:text-text-primary"
                       )}
                     >
                       <Home
                         aria-hidden="true"
                         className={cn(
                           "h-3.5 w-3.5",
-                          isActive ? "text-accent" : "text-text-secondary/60"
+                          isActive ? "text-accent" : "text-text-tertiary"
                         )}
                       />
                       {t(`types.${type}`)}
@@ -213,7 +213,7 @@ export default function NewUnitPage({
         </Card>
 
         {/* Utility accounts (printed on the tenant's building-rules agreement) */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">{t("utilityAccounts")}</CardTitle>
           </CardHeader>
@@ -223,13 +223,13 @@ export default function NewUnitPage({
                 name="electricity_meter_no"
                 type="text"
                 label={t("electricityMeterNo")}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
               <Input
                 name="water_meter_no"
                 type="text"
                 label={t("waterMeterNo")}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
             </div>
           </CardContent>

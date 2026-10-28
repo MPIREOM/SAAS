@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/server";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -9,7 +11,6 @@ import { EditPaymentMethod } from "@/components/payments/edit-payment-method";
 import { EMandatePanel, type LeaseOption } from "@/components/tenants/e-mandate-panel";
 import { listMandatesForTenant } from "@/lib/e-mandates/service";
 import {
-  User,
   FileText,
   CreditCard,
   Folder,
@@ -192,11 +193,10 @@ export default async function TenantDetailPage({
       ? tch(`statuses.${status}`)
       : status;
 
-  const formatMoney = (value: unknown) =>
-    Number(value || 0).toLocaleString("en-OM", { minimumFractionDigits: 2 });
+  const formatMoney = (value: unknown) => formatAmount(Number(value || 0));
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-5">
       <PageHeader
         title={tenant.full_name}
         breadcrumbs={[
@@ -206,7 +206,7 @@ export default async function TenantDetailPage({
       >
         <Link
           href={`/${locale}/tenants/${id}/edit`}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className={cn(buttonVariants({ size: "sm" }))}
         >
           <Pencil aria-hidden="true" className="h-4 w-4" />
           {t("editTenant")}
@@ -219,7 +219,7 @@ export default async function TenantDetailPage({
         />
         <Link
           href={`/${locale}/tenants/${id}/statement`}
-          className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
         >
           <ScrollText aria-hidden="true" className="h-4 w-4" />
           {t("statement")}
@@ -227,7 +227,7 @@ export default async function TenantDetailPage({
         <Link
           href={`/api/tenants/${id}/unpaid-invoices/pdf`}
           target="_blank"
-          className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
           title={ti("downloadUnpaidPDFDescription")}
         >
           <FileDown aria-hidden="true" className="h-4 w-4" />
@@ -237,21 +237,21 @@ export default async function TenantDetailPage({
           <>
             <Link
               href={`/${locale}/tenants/${id}/renew-lease`}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
             >
               <RefreshCw aria-hidden="true" className="h-4 w-4" />
               {tl("renewLease")}
             </Link>
             <Link
               href={`/${locale}/tenants/${id}/relocate`}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
             >
               <ArrowRightLeft aria-hidden="true" className="h-4 w-4" />
               {t("relocate.button")}
             </Link>
             <Link
               href={`/${locale}/tenants/${id}/move-out`}
-              className="inline-flex items-center gap-2 h-9 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:bg-border/30 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
             >
               <LogOut aria-hidden="true" className="h-4 w-4" />
               {t("moveOut")}
@@ -261,82 +261,79 @@ export default async function TenantDetailPage({
       </PageHeader>
 
       {/* Identity card */}
-      <section className="bg-surface border border-border/60 rounded-xl overflow-hidden animate-fade-in-up">
-        <div className="p-5 bg-gradient-to-r from-accent/5 to-transparent border-b border-border/40">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
-              <User aria-hidden="true" className="h-6 w-6 text-accent" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-text-primary font-display truncate">
-                {tenant.full_name}
-              </h2>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <Badge
-                  variant={tenant.status === "archived" ? "secondary" : "success"}
-                >
-                  {t(tenant.status || "active")}
-                </Badge>
-                <span className="text-[11px] text-text-secondary">
-                  {t("tenantId")}:{" "}
-                  <span className="font-mono ltr-nums">{tenant.id}</span>
-                </span>
-              </div>
+      <section className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3.5 border-b border-border p-4">
+          <span
+            aria-hidden="true"
+            className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent-tint text-lg font-bold text-accent-tint-foreground"
+          >
+            {(tenant.full_name || "?").trim().charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            {/* The name is already the page title; this row carries status and ID */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={tenant.status === "archived" ? "secondary" : "success"}>
+                {t(tenant.status || "active")}
+              </Badge>
+              <span className="text-[12.5px] text-text-tertiary">
+                {t("tenantId")}:{" "}
+                <span className="ltr-nums tabular-nums">{tenant.id}</span>
+              </span>
             </div>
           </div>
         </div>
-        <dl className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5">
+        <dl className="p-4 grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
           <div className="min-w-0">
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Phone aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
+              <Phone aria-hidden="true" className="h-3.5 w-3.5 text-text-tertiary" />
               {t("phone")}
             </dt>
-            <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums truncate">
+            <dd className="mt-0.5 text-[15px] font-semibold text-text-primary tabular-nums ltr-nums truncate">
               {tenant.phone || "—"}
             </dd>
           </div>
           <div className="min-w-0">
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Mail aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
+              <Mail aria-hidden="true" className="h-3.5 w-3.5 text-text-tertiary" />
               {t("email")}
             </dt>
-            <dd className="mt-1 text-sm text-text-primary truncate">
+            <dd className="mt-0.5 text-[15px] font-semibold text-text-primary truncate">
               {tenant.email || "—"}
             </dd>
           </div>
           <div className="min-w-0">
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Globe aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
+              <Globe aria-hidden="true" className="h-3.5 w-3.5 text-text-tertiary" />
               {t("nationality")}
             </dt>
-            <dd className="mt-1 text-sm text-text-primary truncate">
+            <dd className="mt-0.5 text-[15px] font-semibold text-text-primary truncate">
               {tenant.nationality || "—"}
             </dd>
           </div>
           <div className="min-w-0">
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Shield aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
+              <Shield aria-hidden="true" className="h-3.5 w-3.5 text-text-tertiary" />
               {t("nationalId")}
             </dt>
-            <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums truncate">
+            <dd className="mt-0.5 text-[15px] font-semibold text-text-primary tabular-nums ltr-nums truncate">
               {tenant.national_id || "—"}
             </dd>
           </div>
           <div className="min-w-0">
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Phone aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
+              <Phone aria-hidden="true" className="h-3.5 w-3.5 text-text-tertiary" />
               {t("emergencyContact")}
             </dt>
-            <dd className="mt-1 text-sm text-text-primary truncate">
+            <dd className="mt-0.5 text-[15px] font-semibold text-text-primary truncate">
               {tenant.emergency_contact || "—"}
             </dd>
           </div>
           <div className="min-w-0">
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Globe aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
+              <Globe aria-hidden="true" className="h-3.5 w-3.5 text-text-tertiary" />
               {t("languagePreference")}
             </dt>
-            <dd className="mt-1 text-sm text-text-primary truncate">
+            <dd className="mt-0.5 text-[15px] font-semibold text-text-primary truncate">
               {tenant.language_preference === "ar"
                 ? t("languages.ar")
                 : t("languages.en")}
@@ -349,7 +346,7 @@ export default async function TenantDetailPage({
       {tenant.status === "archived" && moveOutLease && (
         <section className="bg-surface border border-destructive/30 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-5">
-            <div className="p-1.5 rounded-lg bg-destructive/10 border border-destructive/15">
+            <div className="p-1.5 rounded-lg bg-destructive-tint border border-destructive/30">
               <LogOut aria-hidden="true" className="h-4 w-4 text-destructive" />
             </div>
             <h2 className="text-base font-semibold text-text-primary font-display">
@@ -358,11 +355,11 @@ export default async function TenantDetailPage({
           </div>
           <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5">
             <div>
-              <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-                <Calendar aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+              <dt className="flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
+                <Calendar aria-hidden="true" className="h-3.5 w-3.5 text-text-tertiary" />
                 {t("vacateDate")}
               </dt>
-              <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+              <dd className="mt-0.5 text-[15px] font-semibold text-text-primary tabular-nums ltr-nums">
                 {moveOutLease.vacate_date
                   ? new Date(
                       moveOutLease.vacate_date as string
@@ -371,17 +368,17 @@ export default async function TenantDetailPage({
               </dd>
             </div>
             <div>
-              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <dt className="text-[12.5px] font-medium text-text-secondary">
                 {t("vacateReason")}
               </dt>
-              <dd className="mt-1 text-sm text-text-primary">
+              <dd className="mt-0.5 text-[15px] font-semibold text-text-primary">
                 {moveOutLease.vacate_reason
                   ? t(`reasons.${moveOutLease.vacate_reason}`)
                   : "—"}
               </dd>
             </div>
             <div>
-              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <dt className="text-[12.5px] font-medium text-text-secondary">
                 {t("depositStatus")}
               </dt>
               <dd className="mt-1">
@@ -401,10 +398,10 @@ export default async function TenantDetailPage({
               </dd>
             </div>
             <div>
-              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <dt className="text-[12.5px] font-medium text-text-secondary">
                 {t("finalInspection")}
               </dt>
-              <dd className="mt-1 text-sm text-text-primary flex items-center gap-1.5">
+              <dd className="mt-0.5 text-[15px] font-semibold text-text-primary flex items-center gap-1.5">
                 {moveOutLease.final_inspection ? (
                   <>
                     <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-success" />
@@ -419,10 +416,10 @@ export default async function TenantDetailPage({
               </dd>
             </div>
             <div>
-              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+              <dt className="text-[12.5px] font-medium text-text-secondary">
                 {t("keysReturned")}
               </dt>
-              <dd className="mt-1 text-sm text-text-primary flex items-center gap-1.5">
+              <dd className="mt-0.5 text-[15px] font-semibold text-text-primary flex items-center gap-1.5">
                 {moveOutLease.keys_returned ? (
                   <>
                     <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-success" />
@@ -438,10 +435,10 @@ export default async function TenantDetailPage({
             </div>
             {moveOutLease.vacate_notes && (
               <div className="sm:col-span-2 lg:col-span-3">
-                <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                <dt className="text-[12.5px] font-medium text-text-secondary">
                   {t("vacateNotes")}
                 </dt>
-                <dd className="mt-1 text-sm text-text-primary">
+                <dd className="mt-0.5 text-[15px] font-semibold text-text-primary">
                   {moveOutLease.vacate_notes as string}
                 </dd>
               </div>
@@ -467,7 +464,7 @@ export default async function TenantDetailPage({
               return (
                 <div
                   key={lease.id as string}
-                  className="bg-surface border border-border/60 rounded-xl p-5"
+                  className="bg-surface border border-border rounded-xl shadow-card p-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                     <Badge variant={lease.is_active ? "success" : "secondary"}>
@@ -475,7 +472,7 @@ export default async function TenantDetailPage({
                     </Badge>
                     {Boolean(lease.is_active) && daysRemaining > 0 && (
                       <span className="text-xs text-text-secondary">
-                        <span className="font-mono ltr-nums font-semibold text-text-primary">
+                        <span className="tabular-nums ltr-nums font-semibold text-text-primary">
                           {daysRemaining}
                         </span>{" "}
                         {t("daysRemaining")}
@@ -484,60 +481,79 @@ export default async function TenantDetailPage({
                   </div>
                   <dl className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-x-4 gap-y-5">
                     <div className="min-w-0">
-                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("property")}
                       </dt>
-                      <dd className="mt-1 text-sm text-text-primary truncate">
+                      <dd className="mt-0.5 text-[15px] font-semibold text-text-primary truncate">
                         {(property?.name as string) || "—"}
                       </dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("unit")}
                       </dt>
-                      <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums truncate">
+                      <dd className="mt-0.5 text-[15px] font-semibold text-text-primary tabular-nums ltr-nums truncate">
                         {(unit?.unit_number as string) || "—"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("startDate")}
                       </dt>
-                      <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+                      <dd className="mt-0.5 text-[15px] font-semibold text-text-primary tabular-nums ltr-nums">
                         {startDate.toLocaleDateString()}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("endDate")}
                       </dt>
-                      <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+                      <dd className="mt-0.5 text-[15px] font-semibold text-text-primary tabular-nums ltr-nums">
                         {endDate.toLocaleDateString()}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("monthlyRent")}
                       </dt>
-                      <dd className="mt-1 text-sm font-semibold text-text-primary font-mono ltr-nums">
+                      <dd className="mt-0.5 text-[15px] font-semibold text-text-primary tabular-nums ltr-nums">
                         {formatMoney(lease.monthly_rent)}{" "}
-                        <span className="text-[10px] font-sans font-normal text-text-secondary">
+                        <span className="text-xs font-medium text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("securityDeposit")}
                       </dt>
-                      <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+                      <dd className="mt-0.5 text-[15px] font-semibold text-text-primary tabular-nums ltr-nums">
                         {formatMoney(lease.security_deposit)}{" "}
-                        <span className="text-[10px] font-sans text-text-secondary">
+                        <span className="text-xs font-medium text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </dd>
                     </div>
                   </dl>
+                  {Boolean(lease.is_active) && endDate > startDate && (
+                    <div
+                      className="mt-4 h-1.5 overflow-hidden rounded-full bg-sunken"
+                      role="progressbar"
+                      aria-label={t("daysRemaining")}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={Math.round(
+                        Math.min(1, Math.max(0, (now.getTime() - startDate.getTime()) / (endDate.getTime() - startDate.getTime()))) * 100
+                      )}
+                    >
+                      <div
+                        className="h-full rounded-full bg-accent"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, ((now.getTime() - startDate.getTime()) / (endDate.getTime() - startDate.getTime())) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -554,7 +570,7 @@ export default async function TenantDetailPage({
       <section>
         <SectionHeading icon={CreditCard} title={t("payments")} count={payments?.length} />
         {payments && payments.length > 0 ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[640px]">
@@ -570,12 +586,12 @@ export default async function TenantDetailPage({
                 <TableBody>
                   {payments.map((payment: Record<string, unknown>) => (
                     <TableRow key={payment.id as string}>
-                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                         {new Date(payment.payment_date as string).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="px-4 text-end font-semibold text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-end font-semibold text-text-primary tabular-nums ltr-nums">
                         {formatMoney(payment.amount)}{" "}
-                        <span className="text-[10px] font-sans font-normal text-text-secondary">
+                        <span className="text-xs font-medium text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </TableCell>
@@ -596,12 +612,12 @@ export default async function TenantDetailPage({
                         {payment.method === "cheque" && payment.reference_number ? (
                           <a
                             href="#cheques-section"
-                            className="text-sm text-accent font-mono ltr-nums font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                            className="text-sm text-accent tabular-nums ltr-nums font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                           >
                             {payment.reference_number as string}
                           </a>
                         ) : (
-                          <span className="text-sm text-text-secondary font-mono ltr-nums">
+                          <span className="text-sm text-text-secondary tabular-nums ltr-nums">
                             {(payment.reference_number as string) || "—"}
                           </span>
                         )}
@@ -615,16 +631,16 @@ export default async function TenantDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {payments.map((payment: Record<string, unknown>) => (
                 <li key={`m-${payment.id as string}`} className="p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-xs text-text-secondary font-mono ltr-nums">
+                    <p className="text-xs text-text-secondary tabular-nums ltr-nums">
                       {new Date(payment.payment_date as string).toLocaleDateString()}
                     </p>
-                    <p className="text-sm font-semibold text-text-primary font-mono ltr-nums text-end shrink-0">
+                    <p className="text-sm font-semibold text-text-primary tabular-nums ltr-nums text-end shrink-0">
                       {formatMoney(payment.amount)}{" "}
-                      <span className="text-[10px] font-normal text-text-secondary">
+                      <span className="text-xs font-normal text-text-secondary">
                         {CURRENCY.code}
                       </span>
                     </p>
@@ -645,7 +661,7 @@ export default async function TenantDetailPage({
                   {Boolean(payment.reference_number) && (
                     <p className="mt-1.5 text-xs text-text-secondary truncate">
                       {t("reference")} ·{" "}
-                      <span className="font-mono ltr-nums">
+                      <span className="tabular-nums ltr-nums">
                         {payment.reference_number as string}
                       </span>
                     </p>
@@ -671,7 +687,7 @@ export default async function TenantDetailPage({
       <section id="cheques-section">
         <SectionHeading icon={Banknote} title={tch("title")} count={cheques?.length} />
         {cheques && cheques.length > 0 ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[600px]">
@@ -690,24 +706,24 @@ export default async function TenantDetailPage({
                       key={cheque.id as string}
                       className={
                         (cheque.status as string) === "bounced"
-                          ? "bg-destructive/5"
+                          ? "bg-destructive-tint"
                           : ""
                       }
                     >
-                      <TableCell className="px-4 font-medium text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 font-medium text-text-primary tabular-nums ltr-nums">
                         #{cheque.cheque_number as string}
                       </TableCell>
                       <TableCell className="px-4 text-text-secondary">
                         {cheque.bank_name as string}
                       </TableCell>
-                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                         {new Date(
                           cheque.cheque_date as string
                         ).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="px-4 text-end font-semibold text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-end font-semibold text-text-primary tabular-nums ltr-nums">
                         {formatMoney(cheque.amount)}{" "}
-                        <span className="text-[10px] font-sans font-normal text-text-secondary">
+                        <span className="text-xs font-medium text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </TableCell>
@@ -727,34 +743,34 @@ export default async function TenantDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {cheques.map((cheque: Record<string, unknown>) => (
                 <li
                   key={`m-${cheque.id as string}`}
                   className={`p-4 ${
                     (cheque.status as string) === "bounced"
-                      ? "bg-destructive/5"
+                      ? "bg-destructive-tint"
                       : ""
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-text-primary font-mono ltr-nums truncate">
+                      <p className="text-sm font-medium text-text-primary tabular-nums ltr-nums truncate">
                         #{cheque.cheque_number as string}
                       </p>
                       <p className="text-xs text-text-secondary truncate mt-0.5">
                         {cheque.bank_name as string}
                         {" · "}
-                        <span className="font-mono ltr-nums">
+                        <span className="tabular-nums ltr-nums">
                           {new Date(
                             cheque.cheque_date as string
                           ).toLocaleDateString()}
                         </span>
                       </p>
                     </div>
-                    <p className="text-sm font-semibold text-text-primary font-mono ltr-nums text-end shrink-0">
+                    <p className="text-sm font-semibold text-text-primary tabular-nums ltr-nums text-end shrink-0">
                       {formatMoney(cheque.amount)}{" "}
-                      <span className="text-[10px] font-normal text-text-secondary">
+                      <span className="text-xs font-normal text-text-secondary">
                         {CURRENCY.code}
                       </span>
                     </p>
@@ -805,14 +821,14 @@ export default async function TenantDetailPage({
           />
           <Link
             href={`/${locale}/documents/upload?entity_type=tenant&entity_id=${id}`}
-            className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent/10 text-accent text-xs font-semibold rounded-lg hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className={buttonVariants({ size: "sm" })}
           >
             <Upload aria-hidden="true" className="h-3.5 w-3.5" />
             {td("upload")}
           </Link>
         </div>
         {documents && documents.length > 0 ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[560px]">
@@ -854,7 +870,7 @@ export default async function TenantDetailPage({
                         <TableCell className="px-4">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`text-sm font-mono ltr-nums ${
+                              className={`text-sm tabular-nums ltr-nums ${
                                 isExpired
                                   ? "text-destructive font-medium"
                                   : isExpiringSoon
@@ -867,18 +883,18 @@ export default async function TenantDetailPage({
                                 : "—"}
                             </span>
                             {isExpired && (
-                              <Badge variant="destructive" className="text-[10px] px-1.5">
+                              <Badge variant="destructive" >
                                 {td("expired")}
                               </Badge>
                             )}
                             {isExpiringSoon && !isExpired && (
-                              <Badge variant="warning" className="text-[10px] px-1.5">
+                              <Badge variant="warning" >
                                 {td("expiringSoon")}
                               </Badge>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-4 text-text-secondary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-secondary tabular-nums ltr-nums">
                           {new Date(
                             doc.uploaded_at as string
                           ).toLocaleDateString()}
@@ -890,7 +906,7 @@ export default async function TenantDetailPage({
                               target="_blank"
                               rel="noopener noreferrer"
                               aria-label={td("preview")}
-                              className="p-1.5 rounded-lg text-accent hover:bg-accent/10 transition-colors inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                              className="p-1.5 rounded-lg text-accent hover:bg-accent-tint transition-colors inline-flex focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                             >
                               <ExternalLink aria-hidden="true" className="h-4 w-4" />
                             </a>
@@ -903,7 +919,7 @@ export default async function TenantDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {documents.map((doc: Record<string, unknown>) => {
                 const expiryDate = doc.expiry_date
                   ? new Date(doc.expiry_date as string)
@@ -921,7 +937,7 @@ export default async function TenantDetailPage({
                         <p className="text-sm font-medium text-text-primary truncate">
                           {(doc.file_name as string) || "—"}
                         </p>
-                        <p className="text-xs text-text-secondary font-mono ltr-nums mt-0.5">
+                        <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-0.5">
                           {new Date(
                             doc.uploaded_at as string
                           ).toLocaleDateString()}
@@ -933,28 +949,28 @@ export default async function TenantDetailPage({
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label={td("preview")}
-                          className="p-2 -m-0.5 rounded-lg text-accent hover:bg-accent/10 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          className="p-2 -m-0.5 rounded-lg text-accent hover:bg-accent-tint transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                         >
                           <ExternalLink aria-hidden="true" className="h-4 w-4" />
                         </a>
                       ) : null}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <Badge variant="default" className="capitalize text-[10px] px-1.5">
+                      <Badge variant="default" className="capitalize">
                         {((doc.document_type as string) || "").replace(/_/g, " ")}
                       </Badge>
                       {isExpired && (
-                        <Badge variant="destructive" className="text-[10px] px-1.5">
+                        <Badge variant="destructive" >
                           {td("expired")}
                         </Badge>
                       )}
                       {isExpiringSoon && !isExpired && (
-                        <Badge variant="warning" className="text-[10px] px-1.5">
+                        <Badge variant="warning" >
                           {td("expiringSoon")}
                         </Badge>
                       )}
                       {expiryDate && (
-                        <span className="text-xs text-text-secondary font-mono ltr-nums">
+                        <span className="text-xs text-text-secondary tabular-nums ltr-nums">
                           {expiryDate.toLocaleDateString()}
                         </span>
                       )}
@@ -972,7 +988,7 @@ export default async function TenantDetailPage({
             action={
               <Link
                 href={`/${locale}/documents/upload?entity_type=tenant&entity_id=${id}`}
-                className="inline-flex items-center gap-1.5 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className={buttonVariants({ size: "sm" })}
               >
                 <Upload aria-hidden="true" className="h-3.5 w-3.5" />
                 {td("upload")}
@@ -986,7 +1002,7 @@ export default async function TenantDetailPage({
       <section>
         <SectionHeading icon={Wrench} title={t("maintenance")} count={maintenance?.length} />
         {maintenance && maintenance.length > 0 ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[560px]">
@@ -1001,10 +1017,10 @@ export default async function TenantDetailPage({
                 <TableBody>
                   {maintenance.map((req: Record<string, unknown>) => (
                     <TableRow key={req.id as string}>
-                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                         <Link
                           href={`/${locale}/maintenance/${req.id}`}
-                          className="hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                          className="hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                         >
                           {new Date(req.created_at as string).toLocaleDateString()}
                         </Link>
@@ -1012,7 +1028,7 @@ export default async function TenantDetailPage({
                       <TableCell className="px-4">
                         <Link
                           href={`/${locale}/maintenance/${req.id}`}
-                          className="text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                          className="text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                         >
                           {(req.description as string)?.slice(0, 60) || "—"}
                           {(req.description as string)?.length > 60 ? "…" : ""}
@@ -1047,18 +1063,18 @@ export default async function TenantDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {maintenance.map((req: Record<string, unknown>) => (
                 <li key={`m-${req.id as string}`}>
                   <Link
                     href={`/${locale}/maintenance/${req.id}`}
-                    className="block p-4 hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className="block p-4 hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     <p className="text-sm font-medium text-text-primary leading-snug">
                       {(req.description as string)?.slice(0, 60) || "—"}
                       {(req.description as string)?.length > 60 ? "…" : ""}
                     </p>
-                    <p className="text-xs text-text-secondary font-mono ltr-nums mt-1">
+                    <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-1">
                       {new Date(req.created_at as string).toLocaleDateString()}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -1067,7 +1083,7 @@ export default async function TenantDetailPage({
                           URGENCY_VARIANTS[(req.urgency as string) || "low"] ??
                           "secondary"
                         }
-                        className="capitalize text-[10px] px-1.5"
+                        className="capitalize"
                       >
                         {req.urgency ? tm(`urgencies.${req.urgency}`) : "—"}
                       </Badge>
@@ -1077,7 +1093,7 @@ export default async function TenantDetailPage({
                             (req.status as string) || "open"
                           ] ?? "secondary"
                         }
-                        className="capitalize text-[10px] px-1.5"
+                        className="capitalize"
                       >
                         {req.status ? tm(`statuses.${req.status}`) : ""}
                       </Badge>
@@ -1113,14 +1129,12 @@ function SectionHeading({
 }) {
   return (
     <div className={`flex items-center gap-2 ${className ?? "mb-4"}`}>
-      <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/15">
-        <Icon aria-hidden className="h-4 w-4 text-accent" />
-      </div>
-      <h2 className="text-base font-semibold text-text-primary font-display tracking-tight">
+      <Icon aria-hidden className="h-[18px] w-[18px] text-text-tertiary" />
+      <h2 className="text-[15px] font-semibold text-text-primary font-display">
         {title}
       </h2>
       {count !== undefined && count > 0 && (
-        <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+        <span className="rounded-full bg-neutral-tint px-2 py-px text-xs font-semibold text-text-secondary tabular-nums ltr-nums">
           {count}
         </span>
       )}

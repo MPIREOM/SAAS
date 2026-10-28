@@ -148,7 +148,7 @@ function BusinessFeeDialogForm({
             value={periodMonth.slice(0, 7)}
             onChange={(e) => setPeriodMonth(e.target.value + "-01")}
             required
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
           <Input
             type="number"
@@ -158,7 +158,7 @@ function BusinessFeeDialogForm({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="font-mono ltr-nums"
+            className="tabular-nums ltr-nums"
           />
           <Textarea
             label={tCommon("notes")}

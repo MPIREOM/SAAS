@@ -119,17 +119,17 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
 
   return (
     <PublicVisitShell title={campaign.title} subtitle={t("subtitle")}>
-      <div className="bg-surface border border-border/60 rounded-xl p-4 space-y-3">
+      <div className="bg-surface border border-border rounded-xl shadow-card p-4 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-lg bg-accent-tint border border-accent/30 flex items-center justify-center shrink-0">
             <Building2 aria-hidden="true" className="h-5 w-5 text-accent" />
           </div>
           <p className="text-sm font-semibold text-text-primary truncate min-w-0">{campaign.property_name}</p>
         </div>
-        <div className="flex items-center gap-3 rounded-lg border border-accent/30 bg-accent/10 p-3">
+        <div className="flex items-center gap-3 rounded-lg border border-accent/30 bg-accent-tint p-3">
           <CalendarDays aria-hidden="true" className="h-6 w-6 text-accent shrink-0" />
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+            <p className="text-[12.5px] font-medium text-text-secondary">
               {campaign.start_date === campaign.end_date ? t("visitDate") : t("visitDates")}
             </p>
             <p className="text-lg font-bold text-text-primary">{formatVisitDates(campaign, locale, "long")}</p>
@@ -143,7 +143,7 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
       </div>
 
       <form onSubmit={submit} className="space-y-5">
-        <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+        <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
           <h2 className="text-sm font-semibold text-text-primary font-display">{t("step1")}</h2>
           <Select
             label={`${t("unit")} *`}
@@ -170,11 +170,11 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
             dir="ltr"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="font-mono ltr-nums text-start"
+            className="tabular-nums ltr-nums text-start"
           />
         </section>
 
-        <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+        <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-text-primary font-display">{t("step2")}</h2>
             <p className="text-xs text-text-secondary mt-1">
@@ -185,10 +185,10 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
         </section>
 
         {slot && (
-          <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 p-4" aria-live="polite">
+          <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success-tint p-4" aria-live="polite">
             <CalendarCheck aria-hidden="true" className="h-5 w-5 text-success shrink-0" />
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("yourVisit")}</p>
+              <p className="text-[12.5px] font-medium text-text-secondary">{t("yourVisit")}</p>
               <p className="text-base font-semibold text-text-primary">
                 {formatSlotRange(slot, campaign.slot_minutes, locale, "long")}
               </p>
@@ -198,7 +198,7 @@ export function BookVisit({ token, locale }: { token: string; locale: string }) 
 
         {error && <Alert variant="destructive">{error}</Alert>}
 
-        <Button type="submit" size="lg" loading={submitting} className="w-full rounded-xl">
+        <Button type="submit" size="lg" loading={submitting} className="w-full">
           {submitting ? (
             t("booking")
           ) : (

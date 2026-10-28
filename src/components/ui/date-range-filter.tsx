@@ -44,12 +44,12 @@ export function DateRangeFilter({ defaultMonth, defaultYear }: DateRangeFilterPr
 
   return (
     <div className="flex items-center gap-2">
-      <Calendar className="h-3.5 w-3.5 text-text-secondary" aria-hidden="true" />
+      <Calendar className="h-4 w-4 text-text-secondary" aria-hidden="true" />
       <Select
         value={currentMonth}
         onChange={(e) => updateFilter(e.target.value, currentYear)}
         aria-label={t("selectMonth")}
-        className="h-8 w-auto py-0 text-xs cursor-pointer"
+        className="h-[34px] w-auto py-0 text-[13px]"
       >
         {months.map((m) => (
           <option key={m.value} value={m.value}>{m.label}</option>
@@ -59,7 +59,7 @@ export function DateRangeFilter({ defaultMonth, defaultYear }: DateRangeFilterPr
         value={currentYear}
         onChange={(e) => updateFilter(currentMonth, e.target.value)}
         aria-label={t("selectYear")}
-        className="h-8 w-auto py-0 text-xs font-mono ltr-nums cursor-pointer"
+        className="h-[34px] w-auto py-0 text-[13px] tabular-nums ltr-nums"
       >
         {years.map((y) => (
           <option key={y} value={y}>{y}</option>

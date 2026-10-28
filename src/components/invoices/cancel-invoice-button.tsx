@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import {
   INVOICE_REVERT_SELECT,
   findInvoicePayments,
@@ -153,7 +153,7 @@ export function CancelInvoiceButton({
       <button
         type="button"
         onClick={openDialog}
-        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-destructive text-xs rounded-md border border-border/50 hover:border-destructive/30 hover:bg-destructive/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+        className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-destructive text-xs rounded-md border border-border hover:border-destructive/30 hover:bg-destructive-tint transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         title={t("cancelInvoice")}
         aria-label={t("cancelInvoice")}
       >
@@ -177,7 +177,7 @@ export function CancelInvoiceButton({
             </Alert>
 
             {/* Invoice summary */}
-            <div className="p-4 bg-surface-elevated/50 rounded-xl border border-border/40">
+            <div className="p-4 bg-surface-elevated rounded-xl border border-border">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
@@ -191,19 +191,17 @@ export function CancelInvoiceButton({
                   <p className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-1">
                     {t("amount")}
                   </p>
-                  <p className="text-lg font-bold font-mono tabular-nums ltr-nums text-text-primary">
-                    {totalAmount.toLocaleString("en-OM", {
-                      minimumFractionDigits: 2,
-                    })}
+                  <p className="text-lg font-bold tabular-nums ltr-nums text-text-primary">
+                    {formatAmount(totalAmount)}
                     <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                       {CURRENCY.code}
                     </span>
                   </p>
                   {alreadyPaid > 0 && (
-                    <p className="text-[10px] text-warning mt-0.5">
+                    <p className="text-xs text-warning mt-0.5">
                       {t("paidAmount")}:{" "}
-                      <span className="font-mono ltr-nums">
-                        {alreadyPaid.toLocaleString("en-OM", { minimumFractionDigits: 2 })} {CURRENCY.code}
+                      <span className="tabular-nums ltr-nums">
+                        {formatAmount(alreadyPaid)} {CURRENCY.code}
                       </span>
                     </p>
                   )}
@@ -241,7 +239,7 @@ export function CancelInvoiceButton({
             />
           </DialogBody>
 
-          <DialogFooter className="pt-4 border-t border-border/40">
+          <DialogFooter className="pt-4 border-t border-border">
             <Button
               type="button"
               variant="secondary"

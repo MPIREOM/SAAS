@@ -141,10 +141,10 @@ export function ReminderRules() {
   }
 
   return (
-    <section className="space-y-4 animate-fade-in-up">
+    <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 border border-accent/15">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-tint border border-accent/30">
             <Settings2 aria-hidden="true" className="h-4 w-4 text-accent" />
           </span>
           <h2 className="text-lg font-semibold text-text-primary font-display">
@@ -161,7 +161,7 @@ export function ReminderRules() {
 
       {error && <Alert variant="destructive">{error}</Alert>}
 
-      <div className="space-y-3 stagger-children">
+      <div className="space-y-3">
         {settings.map((setting) => {
           // Look up the localized label and description for this rule
           // type. The DB stores snake_case keys (rent_upcoming, etc.) so
@@ -175,8 +175,8 @@ export function ReminderRules() {
               key={setting.id}
               className={`rounded-xl border bg-surface p-5 transition-all duration-200 ${
                 setting.is_enabled
-                  ? "border-border/60"
-                  : "border-border/40 opacity-60"
+                  ? "border-border"
+                  : "border-border opacity-60"
               }`}
             >
               <div className="mb-3 flex items-start justify-between gap-3">
@@ -211,15 +211,15 @@ export function ReminderRules() {
                       {setting.days_before.map((day, i) => (
                         <span
                           key={i}
-                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-accent/20 bg-accent/10 px-2.5 text-xs font-medium text-accent"
+                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-accent/30 bg-accent-tint px-2.5 text-xs font-medium text-accent"
                         >
-                          <span className="font-mono ltr-nums">{day}</span>{" "}
+                          <span className="tabular-nums ltr-nums">{day}</span>{" "}
                           {day === 1 ? t("rulesDay") : t("rulesDays")}
                           <button
                             type="button"
                             onClick={() => removeDay(setting.reminder_type, i)}
                             aria-label={tc("delete")}
-                            className="ms-0.5 cursor-pointer rounded transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                            className="ms-0.5 cursor-pointer rounded transition-colors hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                           >
                             <X aria-hidden="true" className="h-3 w-3" />
                           </button>
@@ -246,7 +246,7 @@ export function ReminderRules() {
                           aria-label={
                             isOverdue ? t("rulesStartAfterDays") : t("rulesDaysBefore")
                           }
-                          className="h-7 w-16 px-2 py-0 text-xs font-mono ltr-nums"
+                          className="h-7 w-16 px-2 py-0 text-xs tabular-nums ltr-nums"
                         />
                         <Button
                           type="button"
@@ -281,7 +281,7 @@ export function ReminderRules() {
                           }
                           placeholder="—"
                           aria-label={t("rulesRepeatEvery")}
-                          className="h-8 w-20 px-2 py-0 font-mono ltr-nums"
+                          className="h-8 w-20 px-2 py-0 tabular-nums ltr-nums"
                         />
                         <span className="text-xs text-text-secondary">
                           {t("rulesDays")}
@@ -307,7 +307,7 @@ export function ReminderRules() {
                           }
                           placeholder="3"
                           aria-label={t("rulesMaxNotices")}
-                          className="h-8 w-20 px-2 py-0 font-mono ltr-nums"
+                          className="h-8 w-20 px-2 py-0 tabular-nums ltr-nums"
                         />
                         <span className="text-xs text-text-secondary">
                           {t("rulesNotices")}

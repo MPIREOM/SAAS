@@ -104,10 +104,10 @@ export function MediaUpload({
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Camera className="h-4 w-4 text-accent" aria-hidden="true" />
-          <span className="text-sm font-medium text-text-primary tracking-tight">
+          <span className="text-sm font-medium text-text-primary">
             {t("addPhotos")}
           </span>
-          <span className="text-xs text-text-secondary font-mono ltr-nums">
+          <span className="text-xs text-text-secondary tabular-nums ltr-nums">
             ({photos.length}/5)
           </span>
         </div>
@@ -119,7 +119,7 @@ export function MediaUpload({
             {photoPreviews.map((src, i) => (
               <div
                 key={i}
-                className="relative group aspect-square rounded-lg overflow-hidden border border-border/60 bg-surface-elevated transition-all duration-200 hover:border-accent/40"
+                className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-surface-elevated transition-all duration-200 hover:border-border-strong"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- local FileReader data-URL preview; next/image cannot optimize blob/data URLs */}
                 <img
@@ -131,7 +131,7 @@ export function MediaUpload({
                   type="button"
                   onClick={() => removePhoto(i)}
                   aria-label={tr("removePhoto")}
-                  className="absolute top-1 end-1 h-6 w-6 bg-background/70 backdrop-blur-sm border border-border/60 rounded-full flex items-center justify-center cursor-pointer opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-opacity"
+                  className="absolute top-1 end-1 h-6 w-6 bg-background/70 border border-border rounded-full flex items-center justify-center cursor-pointer opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus transition-opacity"
                 >
                   <X aria-hidden="true" className="h-3 w-3 text-text-primary" />
                 </button>
@@ -148,9 +148,9 @@ export function MediaUpload({
             onDragOver={(e) => e.preventDefault()}
             onClick={() => photoInputRef.current?.click()}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); photoInputRef.current?.click(); } }}
-            className="border-2 border-dashed border-border/70 rounded-xl p-6 text-center cursor-pointer bg-surface-elevated/20 hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-all duration-200"
+            className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer bg-surface-elevated hover:border-border-strong hover:bg-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus transition-all duration-200"
           >
-            <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10" aria-hidden="true">
+            <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-accent-tint" aria-hidden="true">
               <ImagePlus className="h-4 w-4 text-accent" />
             </div>
             <p className="text-xs text-text-secondary">{t("dragPhotos")}</p>
@@ -172,14 +172,14 @@ export function MediaUpload({
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Video className="h-4 w-4 text-accent" aria-hidden="true" />
-          <span className="text-sm font-medium text-text-primary tracking-tight">
+          <span className="text-sm font-medium text-text-primary">
             {t("addVideo")}
           </span>
         </div>
         <p className="text-xs text-text-secondary mb-3">{t("videoHelp")}</p>
 
         {videoPreview ? (
-          <div className="relative rounded-xl overflow-hidden border border-border/60">
+          <div className="relative rounded-xl overflow-hidden border border-border">
             <video
               src={videoPreview}
               controls
@@ -189,13 +189,13 @@ export function MediaUpload({
               type="button"
               onClick={removeVideo}
               aria-label={tr("removeVideo")}
-              className="absolute top-2 end-2 h-7 w-7 bg-background/70 backdrop-blur-sm border border-border/60 rounded-full flex items-center justify-center cursor-pointer hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors"
+              className="absolute top-2 end-2 h-7 w-7 bg-background/70 border border-border rounded-full flex items-center justify-center cursor-pointer hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus transition-colors"
             >
               <X aria-hidden="true" className="h-3.5 w-3.5 text-text-primary" />
             </button>
             <div className="px-3 py-2 bg-surface-elevated text-xs text-text-secondary flex items-center justify-between gap-3">
               <span className="min-w-0 truncate">{video?.name}</span>
-              <span className="shrink-0 font-mono ltr-nums">
+              <span className="shrink-0 tabular-nums ltr-nums">
                 {video ? `${(video.size / 1024 / 1024).toFixed(1)} MB` : ""}
               </span>
             </div>
@@ -208,9 +208,9 @@ export function MediaUpload({
             onDragOver={(e) => e.preventDefault()}
             onClick={() => videoInputRef.current?.click()}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); videoInputRef.current?.click(); } }}
-            className="border-2 border-dashed border-border/70 rounded-xl p-6 text-center cursor-pointer bg-surface-elevated/20 hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-all duration-200"
+            className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer bg-surface-elevated hover:border-border-strong hover:bg-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus transition-all duration-200"
           >
-            <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10" aria-hidden="true">
+            <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-accent-tint" aria-hidden="true">
               <Video className="h-4 w-4 text-accent" />
             </div>
             <p className="text-xs text-text-secondary">{t("dragVideo")}</p>

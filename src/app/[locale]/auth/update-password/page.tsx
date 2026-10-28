@@ -75,30 +75,26 @@ export default function UpdatePasswordPage({
   };
 
   return (
-    <div className="relative min-h-screen bg-background noise-overlay flex items-center justify-center overflow-hidden p-6">
-      {/* Gold glows */}
-      <div
-        aria-hidden="true"
-        className="absolute -top-24 end-1/4 h-80 w-80 rounded-full bg-accent/6 blur-[120px]"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute -bottom-24 start-1/4 h-72 w-72 rounded-full bg-accent/4 blur-[100px]"
-      />
-
-      <div className="relative w-full max-w-sm animate-fade-in-up">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-display font-bold gold-shimmer tracking-tight">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex items-center justify-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 place-items-center rounded-lg bg-accent text-[15px] font-bold text-accent-foreground"
+          >
+            M
+          </span>
+          <h1 className="text-lg font-bold tracking-[0.14em] text-text-primary">
             MPIRE
           </h1>
         </div>
 
-        <div className="rounded-2xl border border-border/40 bg-surface/80 p-8 shadow-2xl backdrop-blur-sm">
-          <div className="mb-8">
-            <h2 className="text-2xl font-display font-bold tracking-tight text-text-primary">
+        <div className="rounded-xl border border-border bg-surface p-6 shadow-card sm:p-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-display font-bold text-text-primary">
               {t("updatePassword")}
             </h2>
-            <p className="mt-2 text-sm text-text-secondary">
+            <p className="mt-1 text-sm text-text-secondary">
               {t("updatePasswordSubtitle")}
             </p>
           </div>
@@ -110,7 +106,7 @@ export default function UpdatePasswordPage({
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="new-password"
-                  className="text-sm font-medium tracking-tight text-foreground"
+                  className="text-sm font-medium text-foreground"
                 >
                   {t("newPassword")}
                 </label>
@@ -123,7 +119,7 @@ export default function UpdatePasswordPage({
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={8}
-                    className="h-11 pe-11"
+                    className="h-12 pe-12"
                     placeholder="••••••••"
                   />
                   <button
@@ -131,7 +127,7 @@ export default function UpdatePasswordPage({
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                     aria-pressed={showPassword}
-                    className="absolute end-1 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className="absolute end-1 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -150,13 +146,13 @@ export default function UpdatePasswordPage({
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={8}
-                className="h-11"
+                className="h-12"
                 placeholder="••••••••"
               />
 
               {error && <Alert variant="destructive">{error}</Alert>}
 
-              <Button type="submit" loading={loading} className="h-11 w-full">
+              <Button type="submit" loading={loading} size="lg" className="w-full">
                 {t("updatePassword")}
               </Button>
             </form>

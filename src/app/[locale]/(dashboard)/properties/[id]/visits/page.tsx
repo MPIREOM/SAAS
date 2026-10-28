@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CAMPAIGN_COLUMNS, getPropertyUnits, isVisitOver, type VisitCampaign } from "@/lib/visits/service";
 import { formatVisitDates } from "@/lib/visits/slots";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function PropertyVisitsPage({
   params,
@@ -55,7 +56,7 @@ export default async function PropertyVisitsPage({
   const newLink = (
     <Link
       href={`/${locale}/properties/${id}/visits/new`}
-      className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      className={buttonVariants()}
     >
       <Plus aria-hidden="true" className="h-4 w-4" />
       {t("newVisit")}
@@ -84,7 +85,7 @@ export default async function PropertyVisitsPage({
           action={newLink}
         />
       ) : (
-        <ul className="space-y-3 stagger-children">
+        <ul className="space-y-3">
           {list.map((c) => {
             const over = isVisitOver(c);
             const booked = bookedByCampaign.get(c.id) ?? 0;
@@ -93,7 +94,7 @@ export default async function PropertyVisitsPage({
               <li key={c.id}>
                 <Link
                   href={`/${locale}/properties/${id}/visits/${c.id}`}
-                  className="group flex items-center gap-4 bg-surface border border-border/60 rounded-xl p-4 hover:border-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="group flex items-center gap-4 bg-surface border border-border rounded-xl shadow-card p-4 hover:border-border-strong transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
@@ -111,7 +112,7 @@ export default async function PropertyVisitsPage({
                       {t("minutesShort", { minutes: c.slot_minutes })}
                     </p>
                     <div className="flex items-center gap-3">
-                      <div className="h-1.5 flex-1 max-w-48 bg-border/50 rounded-full overflow-hidden">
+                      <div className="h-1.5 flex-1 max-w-48 bg-sunken rounded-full overflow-hidden">
                         <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="text-xs text-text-secondary">

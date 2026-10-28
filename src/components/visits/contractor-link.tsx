@@ -74,7 +74,7 @@ export function ContractorLink({
   };
 
   return (
-    <div className="space-y-2 border-t border-border/40 pt-4">
+    <div className="space-y-2 border-t border-border pt-4">
       <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
         <HardHat aria-hidden="true" className="h-4 w-4 text-accent" />
         {t("crewLink")}
@@ -86,7 +86,7 @@ export function ContractorLink({
               readOnly
               value={link}
               aria-label={t("crewLink")}
-              className="font-mono text-xs ltr-nums"
+              className="tabular-nums text-xs ltr-nums"
               onFocus={(e) => e.currentTarget.select()}
             />
             <div className="flex gap-2 shrink-0">
@@ -99,7 +99,7 @@ export function ContractorLink({
                 target="_blank"
                 rel="noreferrer"
                 aria-label={t("crewOpen")}
-                className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-border/60 text-text-secondary hover:text-accent hover:border-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-border text-text-secondary hover:text-accent hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <ExternalLink aria-hidden="true" className="h-4 w-4" />
               </a>

@@ -16,6 +16,7 @@ import { getUserAccessiblePropertyIds, filterByProperties } from "@/lib/access-c
 import { CollectionChart, type MonthlyCollectionData } from "@/components/reports/collection-chart";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatTilePrimary } from "@/components/dashboard/stat-tile";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils/cn";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 
 /* ------------------------------------------------------------------ */
 /*  Data-fetching helpers                                              */
@@ -279,7 +280,7 @@ const exportReports = [
     descKey: "monthlyRentCollectionDesc" as const,
     icon: DollarSign,
     color: "text-success",
-    bgColor: "bg-success/10",
+    bgColor: "bg-success-tint",
   },
   {
     id: "tenant-roster",
@@ -287,7 +288,7 @@ const exportReports = [
     descKey: "tenantRosterDesc" as const,
     icon: Users,
     color: "text-accent",
-    bgColor: "bg-accent/10",
+    bgColor: "bg-accent-tint",
   },
   {
     id: "maintenance-summary",
@@ -295,7 +296,7 @@ const exportReports = [
     descKey: "maintenanceSummaryDesc" as const,
     icon: Wrench,
     color: "text-warning",
-    bgColor: "bg-warning/10",
+    bgColor: "bg-warning-tint",
   },
   {
     id: "cheque-tracker",
@@ -303,7 +304,7 @@ const exportReports = [
     descKey: "chequeTrackerDesc" as const,
     icon: CreditCard,
     color: "text-accent",
-    bgColor: "bg-accent/10",
+    bgColor: "bg-accent-tint",
   },
   {
     id: "document-expiry",
@@ -311,7 +312,7 @@ const exportReports = [
     descKey: "documentExpiryDesc" as const,
     icon: AlertTriangle,
     color: "text-destructive",
-    bgColor: "bg-destructive/10",
+    bgColor: "bg-destructive-tint",
   },
 ];
 
@@ -335,41 +336,31 @@ export default async function ReportsPage({
   const metricCards = [
     {
       label: t("revenueThisMonth"),
-      value: `${metrics.revenueThisMonth.toLocaleString()} ${CURRENCY.code}`,
+      value: `${formatAmount(metrics.revenueThisMonth)} ${CURRENCY.code}`,
       icon: DollarSign,
-      gradient: "from-success/20 to-success/5",
-      iconColor: "text-success",
+      tone: "success" as const,
     },
     {
       label: t("collectionRateLabel"),
       value: `${metrics.collectionRate}%`,
       icon: TrendingUp,
-      gradient: metrics.collectionRate >= 80
-        ? "from-success/20 to-success/5"
+      tone: (metrics.collectionRate >= 80
+        ? "success"
         : metrics.collectionRate >= 50
-        ? "from-warning/20 to-warning/5"
-        : "from-destructive/20 to-destructive/5",
-      iconColor: metrics.collectionRate >= 80
-        ? "text-success"
-        : metrics.collectionRate >= 50
-        ? "text-warning"
-        : "text-destructive",
+        ? "warning"
+        : "destructive") as "success" | "warning" | "destructive",
     },
     {
       label: t("outstandingBalance"),
-      value: `${metrics.outstandingBalance.toLocaleString()} ${CURRENCY.code}`,
+      value: `${formatAmount(metrics.outstandingBalance)} ${CURRENCY.code}`,
       icon: AlertTriangle,
-      gradient: metrics.outstandingBalance > 0
-        ? "from-destructive/20 to-destructive/5"
-        : "from-surface-elevated to-surface",
-      iconColor: metrics.outstandingBalance > 0 ? "text-destructive" : "text-text-secondary",
+      tone: (metrics.outstandingBalance > 0 ? "destructive" : "default") as "destructive" | "default",
     },
     {
       label: t("propertiesAndUnits"),
       value: `${metrics.propertyCount} / ${metrics.unitCount}`,
       icon: Building2,
-      gradient: "from-accent/20 to-accent/5",
-      iconColor: "text-accent",
+      tone: "accent" as const,
     },
   ];
 
@@ -377,61 +368,32 @@ export default async function ReportsPage({
     pct >= 80 ? "success" : pct >= 50 ? "warning" : "destructive";
 
   return (
-    <div className="space-y-6 stagger-children">
+    <div className="flex flex-col gap-5">
       <PageHeader title={t("title")} description={t("subtitle")}>
-        <div className="flex items-center gap-2.5 rounded-xl border border-border/50 bg-surface px-3 py-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-            {t("dateRange")}
-          </span>
+        <div className="flex items-center gap-2.5">
+          <span className="sr-only">{t("dateRange")}</span>
           <DateRangeFilter defaultMonth={month} defaultYear={year} />
         </div>
       </PageHeader>
 
       {/* Key Financial Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
-        {metricCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.label}
-              className="group relative bg-surface border border-border/60 rounded-xl p-5 overflow-hidden"
-            >
-              <div
-                aria-hidden="true"
-                className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-60`}
-              />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[11px] text-text-secondary uppercase tracking-widest font-semibold">
-                    {card.label}
-                  </span>
-                  <div className="h-8 w-8 rounded-lg bg-surface-elevated flex items-center justify-center">
-                    <Icon aria-hidden="true" className={`h-4 w-4 ${card.iconColor}`} />
-                  </div>
-                </div>
-                <p className="text-3xl font-display font-bold text-text-primary font-mono ltr-nums">
-                  {card.value}
-                </p>
-              </div>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        {metricCards.map((card) => (
+          <StatTilePrimary key={card.label} {...card} />
+        ))}
       </div>
 
       {/* Monthly Collection Trend */}
-      <section className="bg-surface border border-border/60 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-base font-display font-semibold text-text-primary tracking-tight">
-            {t("collectionTrend")}
-          </h2>
-          <div aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-        </div>
+      <section className="bg-surface border border-border rounded-xl shadow-card p-4">
+        <h2 className="mb-4 text-[15px] font-display font-semibold text-text-primary">
+          {t("collectionTrend")}
+        </h2>
         <CollectionChart data={monthlyTrend} />
       </section>
 
       {/* Property Performance Table */}
-      <section className="bg-surface border border-border/60 rounded-xl overflow-hidden">
-        <h2 className="px-6 pt-6 pb-5 text-base font-display font-semibold text-text-primary tracking-tight">
+      <section className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
+        <h2 className="border-b border-border px-4 py-3.5 text-[15px] font-display font-semibold text-text-primary">
           {t("propertyPerformance")}
         </h2>
         {propertyPerformance.length === 0 ? (
@@ -463,47 +425,47 @@ export default async function ReportsPage({
                       <TableCell className="ps-6 pe-4 py-3.5">
                         <Link
                           href={`/${locale}/properties/${prop.id}`}
-                          className="font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                          className="font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                         >
                           {prop.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="px-4 py-3.5 text-center font-mono ltr-nums text-text-secondary">
+                      <TableCell className="px-4 py-3.5 text-center tabular-nums ltr-nums text-text-secondary">
                         {prop.totalUnits}
                       </TableCell>
                       <TableCell className="px-4 py-3.5 text-center">
                         <Badge
                           variant={occupancyVariant(prop.occupancyPct)}
-                          className="font-mono ltr-nums"
+                          className="tabular-nums ltr-nums"
                         >
                           {prop.occupancyPct}%
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-4 py-3.5 text-end font-mono ltr-nums text-text-primary font-medium whitespace-nowrap">
-                        {prop.monthlyRevenue.toLocaleString()}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                      <TableCell className="px-4 py-3.5 text-end tabular-nums ltr-nums text-text-primary font-medium whitespace-nowrap">
+                        {formatAmount(prop.monthlyRevenue)}{" "}
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </TableCell>
-                      <TableCell className="px-4 py-3.5 text-end font-mono ltr-nums text-accent font-medium whitespace-nowrap">
-                        {prop.collectedThisMonth.toLocaleString()}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                      <TableCell className="px-4 py-3.5 text-end tabular-nums ltr-nums text-accent font-medium whitespace-nowrap">
+                        {formatAmount(prop.collectedThisMonth)}{" "}
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </TableCell>
-                      <TableCell className="px-4 py-3.5 text-end font-mono ltr-nums text-destructive font-medium whitespace-nowrap">
-                        {prop.expensesThisMonth.toLocaleString()}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                      <TableCell className="px-4 py-3.5 text-end tabular-nums ltr-nums text-destructive font-medium whitespace-nowrap">
+                        {formatAmount(prop.expensesThisMonth)}{" "}
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </TableCell>
                       <TableCell
-                        className={`ps-4 pe-6 py-3.5 text-end font-mono ltr-nums font-semibold whitespace-nowrap ${
+                        className={`ps-4 pe-6 py-3.5 text-end tabular-nums ltr-nums font-semibold whitespace-nowrap ${
                           prop.net >= 0 ? "text-success" : "text-destructive"
                         }`}
                       >
-                        {prop.net.toLocaleString()}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                        {formatAmount(prop.net)}{" "}
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </TableCell>
@@ -514,70 +476,70 @@ export default async function ReportsPage({
             </div>
 
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/30 border-t border-border/40">
+            <ul className="md:hidden divide-y divide-border border-t border-border">
               {propertyPerformance.map((prop) => (
                 <li key={`m-${prop.id}`} className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <Link
                       href={`/${locale}/properties/${prop.id}`}
-                      className="min-w-0 truncate text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                      className="min-w-0 truncate text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                     >
                       {prop.name}
                     </Link>
                     <Badge
                       variant={occupancyVariant(prop.occupancyPct)}
-                      className="shrink-0 font-mono ltr-nums"
+                      className="shrink-0 tabular-nums ltr-nums"
                     >
                       {prop.occupancyPct}%
                     </Badge>
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div>
-                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("units")}
                       </dt>
-                      <dd className="mt-0.5 font-mono ltr-nums text-text-primary">
+                      <dd className="mt-0.5 tabular-nums ltr-nums text-text-primary">
                         {prop.totalUnits}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("monthlyRevenueLabel")}
                       </dt>
-                      <dd className="mt-0.5 font-mono ltr-nums text-text-primary">
-                        {prop.monthlyRevenue.toLocaleString()}{" "}
-                        <span className="text-[10px] text-text-secondary">{CURRENCY.code}</span>
+                      <dd className="mt-0.5 tabular-nums ltr-nums text-text-primary">
+                        {formatAmount(prop.monthlyRevenue)}{" "}
+                        <span className="text-xs text-text-secondary">{CURRENCY.code}</span>
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("collectedLabel")}
                       </dt>
-                      <dd className="mt-0.5 font-mono ltr-nums text-accent">
-                        {prop.collectedThisMonth.toLocaleString()}{" "}
-                        <span className="text-[10px] text-text-secondary">{CURRENCY.code}</span>
+                      <dd className="mt-0.5 tabular-nums ltr-nums text-accent">
+                        {formatAmount(prop.collectedThisMonth)}{" "}
+                        <span className="text-xs text-text-secondary">{CURRENCY.code}</span>
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("expenses")}
                       </dt>
-                      <dd className="mt-0.5 font-mono ltr-nums text-destructive">
-                        {prop.expensesThisMonth.toLocaleString()}{" "}
-                        <span className="text-[10px] text-text-secondary">{CURRENCY.code}</span>
+                      <dd className="mt-0.5 tabular-nums ltr-nums text-destructive">
+                        {formatAmount(prop.expensesThisMonth)}{" "}
+                        <span className="text-xs text-text-secondary">{CURRENCY.code}</span>
                       </dd>
                     </div>
-                    <div className="col-span-2 border-t border-border/40 pt-2">
-                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                    <div className="col-span-2 border-t border-border pt-2">
+                      <dt className="text-[12.5px] font-medium text-text-secondary">
                         {t("net")}
                       </dt>
                       <dd
-                        className={`mt-0.5 font-mono ltr-nums font-semibold ${
+                        className={`mt-0.5 tabular-nums ltr-nums font-semibold ${
                           prop.net >= 0 ? "text-success" : "text-destructive"
                         }`}
                       >
-                        {prop.net.toLocaleString()}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                        {formatAmount(prop.net)}{" "}
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </dd>
@@ -591,17 +553,17 @@ export default async function ReportsPage({
       </section>
 
       {/* Export Reports */}
-      <section className="bg-surface border border-border/60 rounded-xl p-6">
-        <h2 className="text-base font-display font-semibold text-text-primary tracking-tight mb-5">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-6">
+        <h2 className="text-base font-display font-semibold text-text-primary mb-5">
           {t("exportReports")}
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 stagger-children">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {exportReports.map((report) => {
             const Icon = report.icon;
             return (
               <div
                 key={report.id}
-                className="flex items-start gap-3 rounded-lg border border-border/40 bg-surface-elevated/40 p-4 transition-colors hover:border-accent/30"
+                className="flex items-start gap-3 rounded-lg border border-border bg-surface-elevated p-4 transition-colors hover:border-border-strong"
               >
                 <div className={`shrink-0 rounded-lg p-2 ${report.bgColor}`}>
                   <Icon aria-hidden="true" className={`h-4 w-4 ${report.color}`} />

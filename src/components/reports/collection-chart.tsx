@@ -1,6 +1,6 @@
 "use client";
 
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import {
   BarChart,
@@ -28,7 +28,7 @@ export function CollectionChart({ data }: CollectionChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed border-border/40 text-sm text-text-secondary">
+      <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed border-border text-sm text-text-secondary">
         {t("noReportData")}
       </div>
     );
@@ -47,7 +47,7 @@ export function CollectionChart({ data }: CollectionChartProps) {
           <XAxis
             dataKey="month"
             tick={{ fill: "var(--color-text-secondary)", fontSize: 11, fontWeight: 500 }}
-            axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.4 }}
+            axisLine={{ stroke: "var(--color-border-strong)" }}
             tickLine={false}
           />
           <YAxis
@@ -58,16 +58,16 @@ export function CollectionChart({ data }: CollectionChartProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "var(--color-surface-elevated)",
+              backgroundColor: "var(--color-surface)",
               border: "1px solid var(--color-border)",
               borderRadius: "10px",
               fontSize: "12px",
               fontWeight: 500,
-              boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
+              boxShadow: "var(--shadow-overlay)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
-            formatter={(value) => [`${Number(value).toFixed(2)} ${CURRENCY.code}`]}
-            cursor={{ fill: "var(--color-surface-elevated)", opacity: 0.3 }}
+            formatter={(value) => [`${formatAmount(Number(value))} ${CURRENCY.code}`]}
+            cursor={{ fill: "var(--color-sunken)", opacity: 0.6 }}
           />
           <Legend
             wrapperStyle={{ fontSize: "12px", fontWeight: 500 }}
@@ -77,14 +77,13 @@ export function CollectionChart({ data }: CollectionChartProps) {
           <Bar
             dataKey="invoiced"
             name={t("invoicedLabel")}
-            fill="var(--color-accent)"
+            fill="var(--color-chart-3)"
             radius={[4, 4, 0, 0]}
-            opacity={0.35}
           />
           <Bar
             dataKey="collected"
             name={t("collectedLabel")}
-            fill="var(--color-success)"
+            fill="var(--color-chart-1)"
             radius={[4, 4, 0, 0]}
           />
         </BarChart>

@@ -145,7 +145,7 @@ export default function NewMaintenanceRequestPage({
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Request details */}
-          <Card className="animate-fade-in-up">
+          <Card className="">
             <CardHeader className="pb-5">
               <CardTitle className="text-base">{t("details")}</CardTitle>
             </CardHeader>
@@ -221,7 +221,7 @@ export default function NewMaintenanceRequestPage({
           </Card>
 
           {/* Vendor (optional) */}
-          <Card className="animate-fade-in-up">
+          <Card className="">
             <CardHeader className="pb-5">
               <CardTitle className="text-base">
                 {t("vendor")} ({tc("optional")})
@@ -238,7 +238,7 @@ export default function NewMaintenanceRequestPage({
                   name="assigned_to_phone"
                   label={t("vendorPhone")}
                   placeholder={t("vendorPhonePlaceholder")}
-                  className="font-mono"
+                  className="tabular-nums"
                 />
               </div>
 
@@ -249,7 +249,7 @@ export default function NewMaintenanceRequestPage({
                 step={0.01}
                 label={`${t("estimatedCost")} (OMR)`}
                 placeholder="0.00"
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
             </CardContent>
           </Card>

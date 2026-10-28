@@ -291,9 +291,9 @@ export function AssistantWidget({ locale }: { locale: string }) {
           aria-label={t("open")}
           className={cn(
             "fixed bottom-5 end-5 z-40 flex h-14 w-14 items-center justify-center rounded-full",
-            "bg-accent text-accent-foreground shadow-lg shadow-accent/30 transition-transform",
+            "bg-accent text-accent-foreground shadow-overlay transition-transform",
             "hover:scale-105 active:scale-95",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           )}
         >
           <Sparkles className="h-6 w-6" aria-hidden="true" />
@@ -307,12 +307,12 @@ export function AssistantWidget({ locale }: { locale: string }) {
           className={cn(
             "fixed inset-0 z-50 flex flex-col bg-surface",
             "md:inset-auto md:bottom-5 md:end-5 md:h-[min(680px,calc(100vh-2.5rem))] md:w-[420px]",
-            "md:rounded-2xl md:border md:border-border/60 md:shadow-2xl md:shadow-black/40",
-            "animate-fade-in-up"
+            "md:rounded-2xl md:border md:border-border md:shadow-2xl md:shadow-black/40",
+            ""
           )}
         >
           {/* Header */}
-          <header className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+          <header className="flex items-center gap-2 border-b border-border px-4 py-3">
             <Sparkles className="h-5 w-5 text-accent" aria-hidden="true" />
             <h2 className="flex-1 font-display text-base font-semibold text-text-primary">
               {view === "history" ? t("history") : t("title")}
@@ -362,14 +362,14 @@ export function AssistantWidget({ locale }: { locale: string }) {
                         onClick={() => void openFromHistory(c.id)}
                         className={cn(
                           "flex-1 rounded-lg px-3 py-2 text-start transition-colors hover:bg-surface-elevated",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                           c.id === conversationId && "bg-surface-elevated"
                         )}
                       >
                         <span dir="auto" className="block truncate text-sm text-text-primary">
                           {c.title || t("untitled")}
                         </span>
-                        <span className="ltr-nums font-mono text-xs text-text-secondary">
+                        <span className="ltr-nums tabular-nums text-xs text-text-secondary">
                           {new Date(c.updated_at).toLocaleString(locale === "ar" ? "ar-OM" : "en-GB", {
                             dateStyle: "medium",
                             timeStyle: "short",
@@ -407,9 +407,9 @@ export function AssistantWidget({ locale }: { locale: string }) {
                         type="button"
                         onClick={() => void send(s)}
                         className={cn(
-                          "rounded-lg border border-border/60 px-3 py-2 text-start text-sm text-text-secondary transition-colors",
-                          "hover:border-accent/40 hover:text-text-primary",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          "rounded-lg border border-border px-3 py-2 text-start text-sm text-text-secondary transition-colors",
+                          "hover:border-border-strong hover:text-text-primary",
+                          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                         )}
                       >
                         {s}
@@ -433,9 +433,9 @@ export function AssistantWidget({ locale }: { locale: string }) {
                       <div
                         dir="auto"
                         className={cn(
-                          "max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
+                          "max-w-[88%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed",
                           m.role === "user"
-                            ? "bg-accent/15 text-text-primary rounded-ee-sm"
+                            ? "bg-accent-tint text-text-primary rounded-ee-sm"
                             : "bg-surface-elevated text-text-primary rounded-es-sm"
                         )}
                       >
@@ -451,18 +451,18 @@ export function AssistantWidget({ locale }: { locale: string }) {
               )}
 
               {pending.length > 0 && !busy && (
-                <div className="rounded-xl border border-warning/40 bg-warning/10 p-3.5">
+                <div className="rounded-xl border border-warning/40 bg-warning-tint p-3.5">
                   <p className="text-sm font-semibold text-warning">{t("confirmTitle")}</p>
                   <p className="mt-0.5 text-xs text-text-secondary">{t("confirmBody")}</p>
                   <div className="mt-3 space-y-3">
                     {pending.map((p, i) => (
-                      <div key={i} className="rounded-lg bg-surface/70 p-2.5">
+                      <div key={i} className="rounded-lg bg-surface p-2.5">
                         <p className="text-sm font-medium text-text-primary">{actionLabel(p.name)}</p>
                         <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                           {Object.entries(p.input).map(([k, v]) => (
                             <React.Fragment key={k}>
                               <dt className="text-text-secondary">{k.replace(/_/g, " ")}</dt>
-                              <dd dir="auto" className="ltr-nums break-all font-mono text-text-primary">
+                              <dd dir="auto" className="ltr-nums break-all tabular-nums text-text-primary">
                                 {formatValue(v)}
                               </dd>
                             </React.Fragment>
@@ -495,7 +495,7 @@ export function AssistantWidget({ locale }: { locale: string }) {
 
           {view === "chat" && (
             <form
-              className="flex items-end gap-2 border-t border-border/60 p-3"
+              className="flex items-end gap-2 border-t border-border p-3"
               onSubmit={(e) => {
                 e.preventDefault();
                 void send(input);

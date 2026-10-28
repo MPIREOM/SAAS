@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowRightLeft, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,7 @@ interface UnitRow {
   properties: { name: string; owner_id: string | null };
 }
 
-const fmt = (n: number) => n.toLocaleString("en-OM", { minimumFractionDigits: 2 });
+const fmt = (n: number) => formatAmount(n);
 
 const todayIso = () => new Date().toISOString().split("T")[0];
 
@@ -316,7 +316,7 @@ export default function RelocateTenantPage() {
         {error && <Alert variant="destructive">{error}</Alert>}
 
         {/* From → To */}
-        <section className="bg-surface border border-border rounded-xl p-6 space-y-5">
+        <section className="bg-surface border border-border rounded-xl shadow-card p-6 space-y-5">
           <h2 className="text-base font-display font-semibold text-text-primary">
             {t("unitsTitle")}
           </h2>
@@ -343,11 +343,11 @@ export default function RelocateTenantPage() {
               ) : (
                 <div>
                   <p className="text-sm font-medium text-text-primary mb-1.5">{t("fromLabel")}</p>
-                  <div className="rounded-lg border border-border/60 bg-surface-elevated px-3 py-2.5">
+                  <div className="rounded-lg border border-border bg-surface-elevated px-3 py-2.5">
                     <p className="text-sm font-medium text-text-primary">
                       {leases[0].propertyName} · {tt("moveOutFees.preview.unitNumber")} {leases[0].unitNumber}
                     </p>
-                    <p className="text-xs text-text-secondary font-mono ltr-nums mt-0.5">
+                    <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-0.5">
                       {fmt(leases[0].monthlyRent)} {CURRENCY.code}
                     </p>
                   </div>
@@ -386,7 +386,7 @@ export default function RelocateTenantPage() {
         </section>
 
         {/* New lease */}
-        <section className="bg-surface border border-border rounded-xl p-6 space-y-5">
+        <section className="bg-surface border border-border rounded-xl shadow-card p-6 space-y-5">
           <div>
             <h2 className="text-base font-display font-semibold text-text-primary">
               {t("leaseTitle")}
@@ -431,7 +431,7 @@ export default function RelocateTenantPage() {
               label={`${t("monthlyRent")} (${CURRENCY.code}) *`}
               value={monthlyRent}
               onChange={(e) => setRentInput(e.target.value)}
-              className="font-mono ltr-nums"
+              className="tabular-nums ltr-nums"
               required
             />
             <Input
@@ -442,7 +442,7 @@ export default function RelocateTenantPage() {
               helperText={t("depositHint")}
               value={securityDeposit}
               onChange={(e) => setDepositInput(e.target.value)}
-              className="font-mono ltr-nums"
+              className="tabular-nums ltr-nums"
             />
             <Select
               label={t("paymentDueDay")}
@@ -467,7 +467,7 @@ export default function RelocateTenantPage() {
         </section>
 
         {/* Invoices that carry over */}
-        <section className="bg-surface border border-border rounded-xl p-6 space-y-4">
+        <section className="bg-surface border border-border rounded-xl shadow-card p-6 space-y-4">
           <div>
             <h2 className="text-base font-display font-semibold text-text-primary">
               {t("invoicesTitle")}
@@ -483,16 +483,16 @@ export default function RelocateTenantPage() {
             <p className="text-sm text-text-secondary">{t("noOpenInvoices")}</p>
           ) : (
             <>
-              <ul className="divide-y divide-border/40 rounded-lg border border-border/60">
+              <ul className="divide-y divide-border rounded-lg border border-border">
                 {invoices.map((inv) => (
                   <li key={inv.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                     <span className="text-text-secondary">
                       {t("dueOn")}{" "}
-                      <span className="font-mono ltr-nums text-text-primary">{inv.dueDate}</span>
+                      <span className="tabular-nums ltr-nums text-text-primary">{inv.dueDate}</span>
                       <span className="mx-1">·</span>
                       {t(`invoiceStatus.${inv.status}`)}
                     </span>
-                    <span className="font-mono ltr-nums text-end text-text-primary">
+                    <span className="tabular-nums ltr-nums text-end text-text-primary">
                       {fmt(inv.amount - inv.paidAmount)} {CURRENCY.code}
                     </span>
                   </li>
@@ -500,7 +500,7 @@ export default function RelocateTenantPage() {
               </ul>
               <div className="flex items-center justify-between text-sm font-medium">
                 <span className="text-text-primary">{t("carriedTotal")}</span>
-                <span className="font-mono ltr-nums text-end text-text-primary">
+                <span className="tabular-nums ltr-nums text-end text-text-primary">
                   {fmt(carriedTotal)} {CURRENCY.code}
                 </span>
               </div>

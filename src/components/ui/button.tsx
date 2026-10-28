@@ -4,36 +4,52 @@ import { cn } from "@/lib/utils/cn";
 
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg",
-    "text-sm font-semibold tracking-tight transition-all duration-200",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    "disabled:pointer-events-none disabled:opacity-40",
-    "cursor-pointer active:scale-[0.98]",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border",
+    "text-sm font-semibold leading-none transition-colors duration-150",
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+    "disabled:pointer-events-none aria-busy:cursor-progress",
+    "cursor-pointer [&_svg]:shrink-0",
   ],
   {
     variants: {
       variant: {
         default:
-          "bg-accent text-accent-foreground shadow-sm shadow-accent/20 hover:bg-accent-hover hover:shadow-md hover:shadow-accent/30",
+          "border-transparent bg-accent text-accent-foreground hover:bg-accent-hover active:bg-accent-press",
         secondary:
-          "bg-surface-elevated text-foreground border border-border/60 hover:border-accent/30 hover:bg-surface-hover",
+          "bg-surface text-foreground border-border-strong hover:bg-surface-elevated hover:border-text-tertiary",
         destructive:
-          "bg-destructive text-white shadow-sm shadow-destructive/20 hover:bg-destructive/90",
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive-hover",
         outline:
-          "border border-border/60 bg-transparent text-foreground hover:bg-surface-elevated hover:border-accent/30",
+          "bg-surface text-foreground border-border-strong hover:bg-surface-elevated hover:border-text-tertiary",
         ghost:
-          "bg-transparent text-foreground hover:bg-surface-elevated",
+          "border-transparent bg-transparent text-accent hover:bg-accent-tint hover:text-accent-tint-foreground",
       },
       size: {
-        sm: "h-8 px-3 text-xs rounded-md",
-        default: "h-10 px-5 py-2",
-        lg: "h-12 px-7 text-base",
+        sm: "h-[34px] px-3 text-[13px]",
+        default: "h-10 px-4",
+        lg: "h-12 px-5 text-[15px]",
         icon: "h-10 w-10 p-0",
       },
+      // Set by the component: disabled-but-not-loading. A loading button
+      // keeps its colour so the spinner reads as progress, not as off.
+      inactive: {
+        true: "bg-neutral-tint text-text-tertiary border-transparent hover:bg-neutral-tint",
+        false: "",
+      },
     },
+    compoundVariants: [
+      // Icon-only ghost buttons are toolbar controls, not teal links.
+      {
+        variant: "ghost",
+        size: "icon",
+        className: "text-text-secondary hover:bg-surface-elevated hover:text-foreground",
+      },
+      { variant: "ghost", inactive: true, className: "bg-transparent hover:bg-transparent" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",
+      inactive: false,
     },
   }
 );
@@ -66,7 +82,7 @@ function Spinner({ className }: { className?: string }) {
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+    Omit<VariantProps<typeof buttonVariants>, "inactive"> {
   /** Show a loading spinner and disable the button */
   loading?: boolean;
 }
@@ -76,7 +92,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={cn(buttonVariants({ variant, size }), className)}
+        className={cn(
+          buttonVariants({ variant, size, inactive: !!disabled && !loading }),
+          className
+        )}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         {...props}

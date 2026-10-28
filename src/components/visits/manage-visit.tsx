@@ -153,16 +153,16 @@ export function ManageVisit({
     <PublicVisitShell title={campaign.title} subtitle={t("manageSubtitle")}>
       {message && <Alert variant="success">{t(message)}</Alert>}
 
-      <div className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+      <div className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-lg bg-accent-tint border border-accent/30 flex items-center justify-center shrink-0">
               <Building2 aria-hidden="true" className="h-5 w-5 text-accent" />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-text-primary truncate">{campaign.property_name}</p>
               <p className="text-xs text-text-secondary">
-                {t("unit")} <span className="font-mono ltr-nums">{booking.unit_number}</span>
+                {t("unit")} <span className="tabular-nums ltr-nums">{booking.unit_number}</span>
               </p>
             </div>
           </div>
@@ -171,8 +171,8 @@ export function ManageVisit({
           </Badge>
         </div>
 
-        <div className="rounded-lg border border-border/40 bg-surface-elevated/50 p-4">
-          <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1">
+        <div className="rounded-lg border border-border bg-surface-elevated p-4">
+          <p className="text-[12.5px] font-medium text-text-secondary mb-1">
             {cancelled ? t("previousTime") : t("yourTime")}
           </p>
           <p
@@ -195,7 +195,7 @@ export function ManageVisit({
 
       {booking.can_change ? (
         picking || cancelled ? (
-          <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+          <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
             <div>
               <h2 className="text-sm font-semibold text-text-primary font-display">
                 {cancelled ? t("pickNewTime") : t("changeTime")}
@@ -216,7 +216,7 @@ export function ManageVisit({
                   {tc("cancel")}
                 </Button>
               )}
-              <Button type="button" onClick={move} loading={busy}>
+              <Button type="button" size="lg" onClick={move} loading={busy}>
                 <CalendarClock aria-hidden="true" className="h-4 w-4" />
                 {cancelled ? t("bookThisTime") : t("saveNewTime")}
               </Button>
@@ -226,14 +226,15 @@ export function ManageVisit({
           <div className="space-y-3">
             {error && <Alert variant="destructive">{error}</Alert>}
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button type="button" variant="secondary" className="flex-1" onClick={() => setPicking(true)}>
+              <Button type="button" size="lg" variant="secondary" className="sm:flex-1" onClick={() => setPicking(true)}>
                 <CalendarClock aria-hidden="true" className="h-4 w-4" />
                 {t("changeTime")}
               </Button>
               <Button
                 type="button"
+                size="lg"
                 variant="outline"
-                className="flex-1 text-destructive hover:border-destructive/40"
+                className="sm:flex-1 text-destructive-text hover:border-destructive/40"
                 onClick={() => setConfirmCancel(true)}
               >
                 <XCircle aria-hidden="true" className="h-4 w-4" />
@@ -256,7 +257,7 @@ export function ManageVisit({
             <Button type="button" variant="ghost" onClick={() => setConfirmCancel(false)} disabled={busy}>
               {t("keepVisit")}
             </Button>
-            <Button type="button" variant="destructive" onClick={cancel} loading={busy}>
+            <Button type="button" size="lg" variant="destructive" onClick={cancel} loading={busy}>
               {t("cancelVisit")}
             </Button>
           </DialogFooter>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { agreementCopy, formatOmr, type AgreementLang } from "@/lib/agreements/terms";
 import { SignaturePad, type SignaturePadHandle } from "./signature-pad";
+import { buttonVariants } from "@/components/ui/button";
 
 // The tenant's private signing page (linked from WhatsApp / email). Shows
 // the agreement in the page language, takes a drawn signature, and offers
@@ -153,25 +154,25 @@ export function SignAgreement({ token, locale }: { token: string; locale: string
       action={
         <Link
           href={`/${otherLocale}/tenant-agreement/${encodeURIComponent(token)}`}
-          className="text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+          className="text-xs font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
           lang={otherLocale}
         >
           {t("switchLanguage")}
         </Link>
       }
     >
-      <section className="bg-surface border border-border/60 rounded-xl p-5">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5">
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
           {facts.map(([label, value, mono]) => (
             <div key={label} className="min-w-0">
-              <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{label}</dt>
-              <dd className={`mt-0.5 text-sm font-medium text-text-primary ${mono ? "font-mono ltr-nums" : ""}`}>{value}</dd>
+              <dt className="text-[12.5px] font-medium text-text-secondary">{label}</dt>
+              <dd className={`mt-0.5 text-sm font-medium text-text-primary ${mono ? "tabular-nums ltr-nums" : ""}`}>{value}</dd>
             </div>
           ))}
         </dl>
       </section>
 
-      <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
         <p className="text-sm text-text-primary leading-relaxed">{copy.intro}</p>
         {copy.sections.map((section) => (
           <div key={section.heading} className="space-y-2">
@@ -179,7 +180,7 @@ export function SignAgreement({ token, locale }: { token: string; locale: string
             <ol className="space-y-2">
               {section.clauses.map((c) => (
                 <li key={c.number} className="flex gap-3 text-sm text-text-primary leading-relaxed">
-                  <span className="font-mono ltr-nums text-text-secondary shrink-0">{c.number}</span>
+                  <span className="tabular-nums ltr-nums text-text-secondary shrink-0">{c.number}</span>
                   <span>{c.text}</span>
                 </li>
               ))}
@@ -204,14 +205,14 @@ export function SignAgreement({ token, locale }: { token: string; locale: string
             href={`${url}/pdf`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className={buttonVariants()}
           >
             <Download aria-hidden="true" className="h-4 w-4" />
             {t("downloadCopy")}
           </a>
         </section>
       ) : (
-        <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+        <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
           <h2 className="text-base font-semibold text-text-primary font-display">{t("signHeading")}</h2>
           <Input label={t("fullName")} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
           <div className="space-y-1.5">
@@ -230,12 +231,12 @@ export function SignAgreement({ token, locale }: { token: string; locale: string
               type="checkbox"
               checked={accepted}
               onChange={(e) => setAccepted(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-accent cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-accent cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             />
             <span>{t("accept")}</span>
           </label>
           {error && <Alert variant="destructive">{error}</Alert>}
-          <Button type="button" onClick={submit} loading={busy} className="w-full sm:w-auto">
+          <Button type="button" size="lg" onClick={submit} loading={busy} className="w-full sm:w-auto">
             <FileSignature aria-hidden="true" className="h-4 w-4" />
             {t("submit")}
           </Button>
@@ -257,14 +258,17 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background noise-overlay">
-      <header className="border-b border-border/60 bg-surface/60 backdrop-blur-md sticky top-0 z-10">
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-surface sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
-            <FileSignature aria-hidden="true" className="h-5 w-5 text-accent" />
-          </div>
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-[15px] font-bold text-accent-foreground"
+          >
+            M
+          </span>
           <div className="min-w-0 flex-1">
-            <h1 className="text-base font-semibold text-text-primary font-display truncate">{title}</h1>
+            <h1 className="text-[15px] font-bold text-text-primary font-display truncate">{title}</h1>
             {subtitle && <p className="text-xs text-text-secondary truncate">{subtitle}</p>}
           </div>
           {action}
@@ -273,7 +277,7 @@ function Shell({
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
         {children}
         <footer className="text-center py-2">
-          <p className="text-xs text-text-secondary/50">MPIRE Property Management</p>
+          <p className="text-xs text-text-tertiary">MPIRE Property Management</p>
         </footer>
       </main>
     </div>

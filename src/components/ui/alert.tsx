@@ -3,15 +3,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
+// Tinted panel, body in the normal text colour; the status colour lives in
+// the icon and title so long messages stay readable.
 const alertVariants = cva(
-  "flex items-start gap-3 rounded-lg border px-4 py-3 text-sm",
+  "flex items-start gap-3 rounded-xl border px-4 py-3.5 text-sm text-foreground",
   {
     variants: {
       variant: {
-        info: "bg-info/10 border-info/25 text-info",
-        success: "bg-success/10 border-success/25 text-success",
-        warning: "bg-warning/10 border-warning/25 text-warning",
-        destructive: "bg-destructive/10 border-destructive/25 text-destructive",
+        info: "bg-info-tint border-info/30",
+        success: "bg-success-tint border-success/30",
+        warning: "bg-warning-tint border-warning/30",
+        destructive: "bg-destructive-tint border-destructive/30",
       },
     },
     defaultVariants: {
@@ -19,6 +21,13 @@ const alertVariants = cva(
     },
   }
 );
+
+const alertAccent = {
+  info: "text-info",
+  success: "text-success",
+  warning: "text-warning",
+  destructive: "text-destructive-text",
+} as const;
 
 const alertIcons = {
   info: Info,
@@ -39,6 +48,7 @@ export interface AlertProps
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
   ({ className, variant = "info", title, hideIcon = false, children, ...props }, ref) => {
     const Icon = alertIcons[variant ?? "info"];
+    const accent = alertAccent[variant ?? "info"];
     return (
       <div
         ref={ref}
@@ -46,9 +56,9 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
         className={cn(alertVariants({ variant }), className)}
         {...props}
       >
-        {!hideIcon && <Icon aria-hidden="true" className="h-4 w-4 mt-0.5 shrink-0" />}
+        {!hideIcon && <Icon aria-hidden="true" className={cn("h-[18px] w-[18px] mt-px shrink-0", accent)} />}
         <div className="min-w-0 flex-1">
-          {title && <p className="font-semibold mb-0.5">{title}</p>}
+          {title && <p className={cn("font-bold mb-0.5", accent)}>{title}</p>}
           <div className="[&_a]:underline [&_a]:underline-offset-2">{children}</div>
         </div>
       </div>

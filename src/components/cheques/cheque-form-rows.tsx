@@ -83,8 +83,8 @@ export function ChequeFormRows({
             className={cn(
               "rounded-xl border p-4 space-y-4 transition-colors",
               isExisting
-                ? "border-border/40 bg-surface-elevated/30"
-                : "border-accent/20 bg-accent/5"
+                ? "border-border bg-surface-elevated"
+                : "border-accent/30 bg-accent-tint"
             )}
           >
             {/* Header row with index + status + delete */}
@@ -94,12 +94,12 @@ export function ChequeFormRows({
                   aria-hidden="true"
                   className={cn(
                     "h-3.5 w-3.5 shrink-0",
-                    isExisting ? "text-text-secondary/50" : "text-accent"
+                    isExisting ? "text-text-tertiary" : "text-accent"
                   )}
                 />
-                <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider truncate">
+                <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal truncate">
                   {t("title")}{" "}
-                  <span className="font-mono ltr-nums">#{index + 1}</span>
+                  <span className="tabular-nums ltr-nums">#{index + 1}</span>
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -113,7 +113,7 @@ export function ChequeFormRows({
                     type="button"
                     onClick={() => removeRow(index)}
                     aria-label={`${t("deleteCheque")} #${index + 1}`}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary cursor-pointer transition-colors hover:text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary cursor-pointer transition-colors hover:text-destructive hover:bg-destructive-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
                   </button>
@@ -130,7 +130,7 @@ export function ChequeFormRows({
                 disabled={isExisting}
                 required={!isExisting}
                 placeholder="000000"
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
 
               <Input
@@ -149,7 +149,7 @@ export function ChequeFormRows({
                 onChange={(e) => updateRow(index, "cheque_date", e.target.value)}
                 disabled={isExisting}
                 required={!isExisting}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
 
               <Input
@@ -162,7 +162,7 @@ export function ChequeFormRows({
                 disabled={isExisting}
                 required={!isExisting}
                 placeholder="0.00"
-                className="font-mono ltr-nums tabular-nums"
+                className="tabular-nums ltr-nums tabular-nums"
               />
             </div>
           </div>
@@ -171,19 +171,19 @@ export function ChequeFormRows({
 
       {/* Count + running total — helps sanity-check a stack of post-dated cheques */}
       {cheques.length > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-surface-elevated/40 px-4 py-2.5">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-elevated px-4 py-2.5">
           <span className="text-xs font-medium text-text-secondary">
             {t("title")}{" "}
-            <span className="font-mono ltr-nums text-text-primary">
+            <span className="tabular-nums ltr-nums text-text-primary">
               {cheques.length}
             </span>
           </span>
           <span className="text-xs text-text-secondary">
             {tc("total")}:{" "}
-            <span className="font-mono ltr-nums tabular-nums text-sm font-semibold text-text-primary">
+            <span className="tabular-nums ltr-nums tabular-nums text-sm font-semibold text-text-primary">
               {formatCurrency(total)}
             </span>{" "}
-            <span className="text-[10px]">{CURRENCY.code}</span>
+            <span className="text-xs">{CURRENCY.code}</span>
           </span>
         </div>
       )}
@@ -191,7 +191,7 @@ export function ChequeFormRows({
       <button
         type="button"
         onClick={addRow}
-        className="w-full flex items-center justify-center gap-2 h-10 border-2 border-dashed border-border/60 rounded-xl text-sm font-medium text-text-secondary cursor-pointer hover:text-accent hover:border-accent/40 hover:bg-accent/5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className="w-full flex items-center justify-center gap-2 h-10 border-2 border-dashed border-border rounded-xl text-sm font-medium text-text-secondary cursor-pointer hover:text-accent hover:border-border-strong hover:bg-accent-tint transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <Plus aria-hidden="true" className="h-4 w-4" />
         {t("addCheque")}

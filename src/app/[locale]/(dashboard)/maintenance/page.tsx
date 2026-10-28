@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Wrench, Plus, AlertTriangle } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 
 type UrgencyTone = "low" | "medium" | "high" | "emergency";
 type StatusTone = "open" | "in_progress" | "resolved" | "closed";
@@ -117,11 +118,11 @@ export default async function MaintenancePage({
   const tabs = ["all", "open", "in_progress", "resolved", "closed"] as const;
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       <PageHeader title={t("title")} description={t("subtitle")}>
         <Link
           href={`/${locale}/maintenance/new`}
-          className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className={buttonVariants()}
         >
           <Plus aria-hidden="true" className="h-4 w-4" />
           {t("newRequest")}
@@ -129,15 +130,16 @@ export default async function MaintenancePage({
       </PageHeader>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1 w-full sm:w-fit overflow-x-auto">
+      <div className="inline-flex max-w-full items-center gap-0.5 self-start overflow-x-auto rounded-[9px] border border-border bg-sunken p-[3px]">
         {tabs.map((tab) => (
           <Link
             key={tab}
             href={`/${locale}/maintenance${tab === "all" ? "" : `?status=${tab}`}`}
-            className={`shrink-0 px-3 py-1.5 text-sm rounded-md transition-colors ${
+            aria-current={statusFilter === tab ? "page" : undefined}
+            className={`shrink-0 inline-flex h-8 items-center px-3 text-[13px] font-semibold rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus ${
               statusFilter === tab
-                ? "bg-accent text-background font-medium"
-                : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
+                ? "bg-surface text-text-primary shadow-card ring-1 ring-border"
+                : "text-text-secondary hover:text-text-primary"
             }`}
           >
             {t(`tabs.${tab}`)}
@@ -146,34 +148,34 @@ export default async function MaintenancePage({
       </div>
 
       {requests && requests.length > 0 ? (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden animate-fade-in">
+        <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden animate-fade-in">
           {/* Desktop table — hidden on mobile in favor of card list */}
           <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-4 py-3">
                   {t("table.id")}
                 </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-4 py-3">
                   {t("table.unit")}
                 </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-4 py-3">
                   {t("table.property")}
                 </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-4 py-3">
                   {t("category")}
                 </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-4 py-3">
                   {t("description")}
                 </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-4 py-3">
                   {t("urgency")}
                 </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-4 py-3">
                   {t("status")}
                 </th>
-                <th className="text-start text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-4 py-3">
                   {t("table.created")}
                 </th>
               </tr>
@@ -193,19 +195,19 @@ export default async function MaintenancePage({
                         ? "bg-destructive/[0.04] hover:bg-destructive/[0.08]"
                         : urgency === "high"
                         ? "bg-warning/[0.04] hover:bg-warning/[0.08]"
-                        : "hover:bg-surface-elevated/50"
+                        : "hover:bg-surface-elevated"
                     }`}
                   >
                     <td className="px-4 py-3">
                       <Link
                         href={`/${locale}/maintenance/${request.id}`}
-                        className="text-sm font-medium text-text-primary hover:text-accent transition-colors font-mono"
+                        className="text-sm font-medium text-text-primary hover:text-accent transition-colors tabular-nums"
                       >
                         {(request.id as string).slice(0, 8)}…
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-text-primary font-mono">
+                      <span className="text-sm text-text-primary tabular-nums">
                         {(unit?.unit_number as string) || "—"}
                       </span>
                     </td>
@@ -247,7 +249,7 @@ export default async function MaintenancePage({
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-text-secondary font-mono ltr-nums">
+                      <span className="text-sm text-text-secondary tabular-nums ltr-nums">
                         {new Date(request.created_at as string).toLocaleDateString()}
                       </span>
                     </td>
@@ -259,7 +261,7 @@ export default async function MaintenancePage({
           </div>
 
           {/* Mobile card list */}
-          <ul className="md:hidden divide-y divide-border/30">
+          <ul className="md:hidden divide-y divide-border">
             {requests.map((request: Record<string, unknown>) => {
               const unit = request.units as Record<string, unknown> | null;
               const property = unit?.properties as Record<string, unknown> | null;
@@ -271,15 +273,15 @@ export default async function MaintenancePage({
                   key={`m-${request.id as string}`}
                   className={`p-4 ${
                     urgency === "emergency"
-                      ? "bg-destructive/5"
+                      ? "bg-destructive-tint"
                       : urgency === "high"
-                      ? "bg-warning/5"
+                      ? "bg-warning-tint"
                       : ""
                   }`}
                 >
                   <Link
                     href={`/${locale}/maintenance/${request.id}`}
-                    className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                    className="block group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -310,7 +312,7 @@ export default async function MaintenancePage({
                       >
                         {t(`statuses.${request.status}`)}
                       </Badge>
-                      <span className="text-text-secondary font-mono ltr-nums">
+                      <span className="text-text-secondary tabular-nums ltr-nums">
                         {new Date(request.created_at as string).toLocaleDateString()}
                       </span>
                     </div>
@@ -338,7 +340,7 @@ export default async function MaintenancePage({
           action={
             <Link
               href={`/${locale}/maintenance/new`}
-              className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className={buttonVariants()}
             >
               <Plus aria-hidden="true" className="h-4 w-4" />
               {t("newRequest")}

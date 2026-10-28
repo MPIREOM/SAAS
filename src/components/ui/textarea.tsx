@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export interface TextareaProps
@@ -21,7 +22,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label
             htmlFor={textareaId}
-            className="text-sm font-medium text-foreground tracking-tight"
+            className="text-[13px] font-semibold text-foreground"
           >
             {label}
           </label>
@@ -38,25 +39,26 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
                 : undefined
           }
           className={cn(
-            "flex min-h-[80px] w-full rounded-lg border bg-surface-elevated/50 px-3 py-2",
-            "text-sm text-foreground placeholder:text-text-secondary/50",
-            "transition-all duration-200 resize-y",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:border-accent/50 focus-visible:bg-surface-elevated",
-            "disabled:cursor-not-allowed disabled:opacity-40",
+            "flex min-h-28 w-full rounded-lg border bg-surface px-3 py-2.5 leading-relaxed",
+            "text-sm text-foreground placeholder:text-text-tertiary",
+            "transition-colors duration-150 resize-y",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus focus-visible:border-accent",
+            "disabled:cursor-not-allowed disabled:bg-sunken disabled:text-text-tertiary disabled:border-border",
             error
-              ? "border-destructive/60 focus-visible:ring-destructive/30 focus-visible:border-destructive"
-              : "border-border/60",
+              ? "border-destructive ring-1 ring-destructive"
+              : "border-border-strong",
             className
           )}
           {...props}
         />
         {error && (
-          <p id={`${textareaId}-error`} className="text-xs text-destructive" role="alert">
+          <p id={`${textareaId}-error`} className="flex items-center gap-1.5 text-[12.5px] font-medium text-destructive-text" role="alert">
+            <AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
             {error}
           </p>
         )}
         {!error && helperText && (
-          <p id={`${textareaId}-helper`} className="text-xs text-text-secondary">
+          <p id={`${textareaId}-helper`} className="text-[12.5px] text-text-secondary">
             {helperText}
           </p>
         )}

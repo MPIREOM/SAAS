@@ -39,23 +39,23 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "animate-fade-in-up flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
+        "flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between",
         className
       )}
     >
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 sm:basis-64">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <Breadcrumbs items={breadcrumbs} />
         )}
-        <h1 className="text-2xl font-bold tracking-tight text-text-primary font-display">
+        <h1 className="text-[22px] font-bold leading-tight text-text-primary font-display sm:text-2xl">
           {title}
         </h1>
         {description && (
-          <p className="mt-1 text-sm text-text-secondary">{description}</p>
+          <p className="mt-0.5 text-sm text-text-secondary">{description}</p>
         )}
       </div>
       {children && (
-        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {children}
         </div>
       )}
@@ -68,7 +68,7 @@ function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   return (
     <nav
       aria-label={t("breadcrumb")}
-      className="mb-2 flex items-center gap-1 text-xs text-text-secondary"
+      className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[13px] text-text-secondary"
     >
       {items.map((item, idx) => {
         const isLast = idx === items.length - 1;
@@ -77,13 +77,13 @@ function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
             {idx > 0 && (
               <ChevronRight
                 aria-hidden="true"
-                className="h-3 w-3 text-text-secondary/60 rtl:rotate-180"
+                className="h-3.5 w-3.5 text-text-tertiary rtl:rotate-180"
               />
             )}
             {item.href && !isLast ? (
               <Link
                 href={item.href}
-                className="rounded transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="rounded transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 {item.label}
               </Link>

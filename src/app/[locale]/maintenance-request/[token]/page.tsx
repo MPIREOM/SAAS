@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Wrench, Send, AlertTriangle, Building2 } from "lucide-react";
+import { Send, AlertTriangle, Building2 } from "lucide-react";
 import { MediaUpload } from "@/components/maintenance/media-upload";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -156,7 +156,7 @@ export default function PublicMaintenanceRequestPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background noise-overlay flex flex-col items-center justify-center gap-3 p-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 p-4">
         <Spinner label={tc("loading")} sizeClassName="h-8 w-8" />
         <p aria-hidden="true" className="text-sm text-text-secondary">
           {tc("loading")}
@@ -167,9 +167,9 @@ export default function PublicMaintenanceRequestPage({
 
   if (invalid) {
     return (
-      <div className="min-h-screen bg-background noise-overlay flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6 text-center animate-fade-in-up">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/25">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-destructive-tint border border-destructive/30">
             <AlertTriangle aria-hidden="true" className="h-8 w-8 text-destructive" />
           </div>
           <h1 className="text-2xl font-bold text-text-primary font-display">
@@ -178,7 +178,7 @@ export default function PublicMaintenanceRequestPage({
           <Alert variant="destructive" className="text-start">
             {t("invalidLinkMessage")}
           </Alert>
-          <p className="text-xs text-text-secondary/50 pt-2">
+          <p className="text-xs text-text-tertiary pt-2">
             MPIRE Property Management
           </p>
         </div>
@@ -200,15 +200,18 @@ export default function PublicMaintenanceRequestPage({
   const urgencies = ["low", "medium", "high", "emergency"];
 
   return (
-    <div className="min-h-screen bg-background noise-overlay">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border/60 bg-surface/60 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-border bg-surface sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
-            <Wrench aria-hidden="true" className="h-5 w-5 text-accent" />
-          </div>
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-[15px] font-bold text-accent-foreground"
+          >
+            M
+          </span>
           <div className="min-w-0">
-            <h1 className="text-base font-semibold text-text-primary font-display truncate">
+            <h1 className="text-[15px] font-bold text-text-primary font-display truncate">
               {t("title")}
             </h1>
             <p className="text-xs text-text-secondary truncate">{t("subtitle")}</p>
@@ -216,10 +219,10 @@ export default function PublicMaintenanceRequestPage({
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-5 stagger-children">
+      <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
         {/* Property banner */}
-        <div className="bg-surface border border-border/60 rounded-xl p-4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+        <div className="bg-surface border border-border rounded-xl shadow-card p-4 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-accent-tint border border-accent/30 flex items-center justify-center shrink-0">
             <Building2 aria-hidden="true" className="h-5 w-5 text-accent" />
           </div>
           <div className="min-w-0">
@@ -233,7 +236,7 @@ export default function PublicMaintenanceRequestPage({
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Unit number + Category + Description + Urgency */}
-          <div className="bg-surface border border-border/60 rounded-xl p-5 space-y-5">
+          <div className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-5">
             {/* Unit Number */}
             <Input
               type="text"
@@ -242,7 +245,7 @@ export default function PublicMaintenanceRequestPage({
               autoComplete="off"
               label={`${t("unitNumber")} *`}
               placeholder={t("unitNumberPlaceholder")}
-              className="font-mono ltr-nums"
+              className="tabular-nums ltr-nums"
             />
 
             {/* Category */}
@@ -267,14 +270,14 @@ export default function PublicMaintenanceRequestPage({
 
             {/* Urgency */}
             <fieldset>
-              <legend className="text-sm font-medium text-foreground tracking-tight mb-2">
+              <legend className="text-sm font-medium text-foreground mb-2">
                 {t("selectUrgency")} *
               </legend>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {urgencies.map((urg) => (
                   <label
                     key={urg}
-                    className="relative flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-border/60 bg-surface-elevated/50 cursor-pointer transition-all duration-200 hover:border-accent/40 hover:bg-surface-elevated has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/40"
+                    className="relative flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-border bg-surface-elevated cursor-pointer transition-all duration-200 hover:border-border-strong hover:bg-surface-elevated has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/40"
                   >
                     <input
                       type="radio"
@@ -305,7 +308,7 @@ export default function PublicMaintenanceRequestPage({
           </div>
 
           {/* Media Upload */}
-          <div className="bg-surface border border-border/60 rounded-xl p-5">
+          <div className="bg-surface border border-border rounded-xl shadow-card p-5">
             <MediaUpload
               photos={photos}
               video={video}
@@ -323,7 +326,7 @@ export default function PublicMaintenanceRequestPage({
             type="submit"
             size="lg"
             loading={submitting}
-            className="w-full rounded-xl"
+            className="w-full"
           >
             {submitting ? (
               t("submitting")
@@ -338,7 +341,7 @@ export default function PublicMaintenanceRequestPage({
 
         {/* Footer */}
         <footer className="text-center py-2">
-          <p className="text-xs text-text-secondary/50">
+          <p className="text-xs text-text-tertiary">
             MPIRE Property Management
           </p>
         </footer>

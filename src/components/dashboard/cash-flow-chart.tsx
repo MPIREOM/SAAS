@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 
 interface MonthData {
@@ -147,11 +147,11 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
         <AreaChart data={data}>
           <defs>
             <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--color-success)" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0} />
+              <stop offset="5%" stopColor="var(--color-chart-1)" stopOpacity={0.12} />
+              <stop offset="95%" stopColor="var(--color-chart-1)" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--color-destructive)" stopOpacity={0.3} />
+              <stop offset="5%" stopColor="var(--color-destructive)" stopOpacity={0.06} />
               <stop offset="95%" stopColor="var(--color-destructive)" stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -164,7 +164,7 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
           <XAxis
             dataKey="month"
             tick={{ fill: "var(--color-text-secondary)", fontSize: 11, fontWeight: 500 }}
-            axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.4 }}
+            axisLine={{ stroke: "var(--color-border-strong)" }}
             tickLine={false}
           />
           <YAxis
@@ -175,17 +175,17 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "var(--color-surface-elevated)",
+              backgroundColor: "var(--color-surface)",
               border: "1px solid var(--color-border)",
               borderRadius: "10px",
               fontSize: "12px",
               fontWeight: 500,
-              boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
+              boxShadow: "var(--shadow-overlay)",
             }}
             labelStyle={{ color: "var(--color-text-primary)", fontWeight: 600 }}
             itemStyle={{ color: "var(--color-text-primary)" }}
-            formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}
-            cursor={{ fill: "var(--color-surface-elevated)", opacity: 0.3 }}
+            formatter={(value) => [`${formatAmount(Number(value))} ${CURRENCY.code}`]}
+            cursor={{ fill: "var(--color-sunken)", opacity: 0.6 }}
           />
           <Legend
             wrapperStyle={{ fontSize: "12px", fontWeight: 500 }}
@@ -199,9 +199,9 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
             type="monotone"
             dataKey="income"
             name={t("chartIncome")}
-            stroke="var(--color-success)"
+            stroke="var(--color-chart-1)"
             fill="url(#incomeGrad)"
-            strokeWidth={2}
+            strokeWidth={2.5}
           />
           <Area
             type="monotone"
@@ -210,6 +210,8 @@ export function CashFlowChart({ propertyIds }: CashFlowChartProps) {
             stroke="var(--color-destructive)"
             fill="url(#expenseGrad)"
             strokeWidth={2}
+            // Dashed so expenses read apart from income without relying on colour
+            strokeDasharray="6 4"
           />
         </AreaChart>
       </ResponsiveContainer>

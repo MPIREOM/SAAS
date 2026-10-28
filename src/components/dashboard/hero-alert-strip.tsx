@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Home } from "lucide-react";
-import { CURRENCY } from "@/lib/currency";
+import { AlertTriangle, ArrowRight, X } from "lucide-react";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -35,10 +35,7 @@ interface HeroAlertStripProps {
 }
 
 function fmt(n: number) {
-  return n.toLocaleString("en-OM", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
+  return formatAmount(n);
 }
 
 function interpolate(
@@ -70,19 +67,17 @@ export function HeroAlertStrip({
     <div
       role="alert"
       className={cn(
-        "animate-fade-in-up rounded-xl border p-4 sm:p-5",
+        "rounded-xl border px-4 py-3.5",
         hasOverdue
-          ? "border-destructive/30 bg-destructive/5"
-          : "border-warning/30 bg-warning/5"
+          ? "border-destructive/30 bg-destructive-tint"
+          : "border-warning/30 bg-warning-tint"
       )}
     >
       <div className="flex items-start gap-3 sm:gap-4">
         <div
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-            hasOverdue
-              ? "bg-destructive/15 text-destructive"
-              : "bg-warning/15 text-warning"
+            "flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg bg-surface",
+            hasOverdue ? "text-destructive-text" : "text-warning"
           )}
         >
           <AlertTriangle aria-hidden="true" className="h-4.5 w-4.5" />
@@ -90,20 +85,16 @@ export function HeroAlertStrip({
         <div className="min-w-0 flex-1">
           <p
             className={cn(
-              "text-sm font-semibold",
-              hasOverdue ? "text-destructive" : "text-warning"
+              "text-sm font-bold",
+              hasOverdue ? "text-destructive-text" : "text-warning"
             )}
           >
             {labels.overdueTitle}
           </p>
-          <ul className="mt-1.5 space-y-1 text-sm text-text-primary">
+          <ul className="mt-1 flex flex-col gap-2 text-sm text-text-primary lg:flex-row lg:flex-wrap lg:gap-x-6">
             {hasOverdue && (
               <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <AlertTriangle
-                  aria-hidden="true"
-                  className="h-3.5 w-3.5 text-destructive"
-                />
-                <span className="font-medium">
+                <span className="tabular-nums">
                   {interpolate(labels.overdueLine, {
                     count: overdueCount,
                     amount: fmt(overdueAmount),
@@ -112,7 +103,7 @@ export function HeroAlertStrip({
                 </span>
                 <Link
                   href={invoicesHref}
-                  className="ms-auto inline-flex items-center gap-1 text-xs font-semibold text-destructive hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 rounded"
+                  className="inline-flex min-h-6 items-center gap-1 rounded text-sm font-semibold text-destructive-text hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {labels.overdueCta}
                   <ArrowRight
@@ -124,11 +115,7 @@ export function HeroAlertStrip({
             )}
             {hasVacancy && (
               <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <Home
-                  aria-hidden="true"
-                  className="h-3.5 w-3.5 text-warning"
-                />
-                <span className="font-medium">
+                <span className="tabular-nums">
                   {interpolate(labels.vacantLine, {
                     count: vacantCount,
                     cost: fmt(vacancyCost),
@@ -137,7 +124,7 @@ export function HeroAlertStrip({
                 </span>
                 <Link
                   href={propertiesHref}
-                  className="ms-auto inline-flex items-center gap-1 text-xs font-semibold text-warning hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/40 rounded"
+                  className="inline-flex min-h-6 items-center gap-1 rounded text-sm font-semibold text-warning hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {labels.vacantCta}
                   <ArrowRight
@@ -152,10 +139,10 @@ export function HeroAlertStrip({
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="text-xs text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded px-1"
+          className="-m-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-text-secondary hover:bg-surface hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           aria-label={labels.dismiss}
         >
-          ×
+          <X aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
     </div>

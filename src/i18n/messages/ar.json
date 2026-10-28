@@ -122,12 +122,8 @@
     "resetError": "فشل إرسال رابط إعادة التعيين. حاول مرة أخرى.",
     "showPassword": "إظهار كلمة المرور",
     "hidePassword": "إخفاء كلمة المرور",
-    "brandBadge": "إدارة العقارات",
     "brandHeadline": "أدر عقاراتك بدقة واحترافية",
     "brandDescription": "منصة احترافية لإدارة العقارات مصممة لعُمان. تابع المستأجرين والفواتير والصيانة والمزيد — في مكان واحد.",
-    "statUnitsManaged": "وحدة مُدارة",
-    "statCollectionRate": "نسبة التحصيل",
-    "statSupport": "الدعم",
     "brandTagline": "نظام إدارة العقارات"
   },
   "properties": {
@@ -790,7 +786,8 @@
       "all": "الكل",
       "open": "مفتوح",
       "in_progress": "قيد التنفيذ",
-      "resolved": "تم الحل"
+      "resolved": "تم الحل",
+      "closed": "مغلق"
     },
     "table": {
       "id": "المعرّف",

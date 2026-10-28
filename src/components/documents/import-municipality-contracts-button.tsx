@@ -69,14 +69,14 @@ export function ImportMunicipalityContractsButton() {
               <>
                 {result.imported.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t("imported")}</h3>
-                    <ul className="divide-y divide-border/40 rounded-lg border border-border/60">
+                    <h3 className="text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal mb-2">{t("imported")}</h3>
+                    <ul className="divide-y divide-border rounded-lg border border-border">
                       {result.imported.map((r) => (
                         <li key={r.file_name + r.contract_number} className="px-3 py-2 text-sm">
                           <p className="text-text-primary">
                             {r.tenant} · {r.unit}
                           </p>
-                          <p className="text-xs text-text-secondary font-mono ltr-nums">
+                          <p className="text-xs text-text-secondary tabular-nums ltr-nums">
                             {r.contract_number} · {t("until", { date: new Date(r.end_date).toLocaleDateString() })}
                           </p>
                         </li>
@@ -86,8 +86,8 @@ export function ImportMunicipalityContractsButton() {
                 )}
                 {result.skipped.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t("skipped")}</h3>
-                    <ul className="divide-y divide-border/40 rounded-lg border border-border/60">
+                    <h3 className="text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal mb-2">{t("skipped")}</h3>
+                    <ul className="divide-y divide-border rounded-lg border border-border">
                       {result.skipped.map((r, i) => (
                         <li key={r.file_name + i} className="px-3 py-2 text-sm">
                           <p className="text-text-primary truncate">

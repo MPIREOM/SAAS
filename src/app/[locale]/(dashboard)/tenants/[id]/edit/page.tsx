@@ -266,12 +266,12 @@ export default function EditTenantPage({
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Tenant fields */}
-        <div className="bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4">
+        <div className="bg-surface border border-border rounded-xl shadow-card p-5 sm:p-6 space-y-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
               <Users aria-hidden="true" className="h-4 w-4 text-accent" />
             </span>
-            <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight">
+            <h2 className="text-sm font-semibold text-text-primary font-display">
               {t("personalInfo")}
             </h2>
           </div>
@@ -289,7 +289,7 @@ export default function EditTenantPage({
               required
               label={`${t("phone")} *`}
               defaultValue={tenant.phone}
-              className="font-mono ltr-nums"
+              className="tabular-nums ltr-nums"
             />
             <Input
               name="email"
@@ -309,7 +309,7 @@ export default function EditTenantPage({
               name="national_id"
               label={t("nationalId")}
               defaultValue={tenant.national_id || ""}
-              className="font-mono ltr-nums"
+              className="tabular-nums ltr-nums"
             />
           </div>
 
@@ -342,19 +342,19 @@ export default function EditTenantPage({
 
         {/* Lease Section */}
         {leases.length > 0 && (
-          <div className="bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4">
+          <div className="bg-surface border border-border rounded-xl shadow-card p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
                 <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               </span>
-              <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight">
+              <h2 className="text-sm font-semibold text-text-primary font-display">
                 {t("leaseInfo")}
               </h2>
             </div>
             {leases.map((lease, idx) => (
               <div
                 key={lease.id}
-                className="border border-border/60 rounded-xl p-4 space-y-4 bg-surface-elevated/20"
+                className="border border-border rounded-xl p-4 space-y-4 bg-surface-elevated"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium text-text-secondary truncate">
@@ -374,7 +374,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], start_date: e.target.value };
                       setLeases(updated);
                     }}
-                    className="font-mono ltr-nums"
+                    className="tabular-nums ltr-nums"
                   />
                   <Input
                     type="date"
@@ -385,7 +385,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], end_date: e.target.value };
                       setLeases(updated);
                     }}
-                    className="font-mono ltr-nums"
+                    className="tabular-nums ltr-nums"
                   />
                   <Input
                     type="number"
@@ -398,7 +398,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], monthly_rent: Number(e.target.value) };
                       setLeases(updated);
                     }}
-                    className="font-mono ltr-nums tabular-nums"
+                    className="tabular-nums ltr-nums tabular-nums"
                   />
                   <Input
                     type="number"
@@ -410,7 +410,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], security_deposit: e.target.value ? Number(e.target.value) : null };
                       setLeases(updated);
                     }}
-                    className="font-mono ltr-nums tabular-nums"
+                    className="tabular-nums ltr-nums tabular-nums"
                   />
                   <Input
                     type="number"
@@ -423,7 +423,7 @@ export default function EditTenantPage({
                       updated[idx] = { ...updated[idx], payment_due_day: Number(e.target.value) };
                       setLeases(updated);
                     }}
-                    className="font-mono ltr-nums"
+                    className="tabular-nums ltr-nums"
                   />
                 </div>
               </div>
@@ -433,13 +433,13 @@ export default function EditTenantPage({
 
         {/* Cheques Section */}
         {chequesLoaded && (
-          <div className="bg-surface border border-border/40 rounded-xl p-5 sm:p-6 space-y-4">
+          <div className="bg-surface border border-border rounded-xl shadow-card p-5 sm:p-6 space-y-4">
             <div className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
                 <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
               </span>
               <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-text-primary font-display tracking-tight flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-text-primary font-display flex items-center gap-2">
                   {tch("title")}
                   {cheques.filter((c) => c.id).length > 0 && (
                     <Badge variant="secondary">

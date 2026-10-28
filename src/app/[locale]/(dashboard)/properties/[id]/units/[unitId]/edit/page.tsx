@@ -140,7 +140,7 @@ export default function EditUnitPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Unit details */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">{t("unitInfo")}</CardTitle>
           </CardHeader>
@@ -152,7 +152,7 @@ export default function EditUnitPage() {
               onChange={(e) => setUnitNumber(e.target.value)}
               label={`${t("unitNumber")} *`}
               placeholder={t("unitNumberPlaceholder")}
-              className="font-mono"
+              className="tabular-nums"
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
@@ -162,7 +162,7 @@ export default function EditUnitPage() {
                 onChange={(e) => setFloor(e.target.value)}
                 label={t("floor")}
                 placeholder={t("floorPlaceholder")}
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
               <Input
                 type="number"
@@ -171,7 +171,7 @@ export default function EditUnitPage() {
                 onChange={(e) => setSizeSqm(e.target.value)}
                 label={t("sizeSqm")}
                 placeholder={t("sizePlaceholder")}
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -184,7 +184,7 @@ export default function EditUnitPage() {
                 onChange={(e) => setRentAmount(e.target.value)}
                 label={`${t("rentAmount")} (${CURRENCY.code}) *`}
                 placeholder={t("rentPlaceholder")}
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
               <Select
                 value={status}
@@ -202,7 +202,7 @@ export default function EditUnitPage() {
         </Card>
 
         {/* Bedrooms & category */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">{t("type")}</CardTitle>
           </CardHeader>
@@ -217,7 +217,7 @@ export default function EditUnitPage() {
               label={t("bedrooms")}
               placeholder={t("bedroomsPlaceholder")}
               helperText={t("bedroomsHint")}
-              className="font-mono tabular-nums"
+              className="tabular-nums"
             />
             <Select
               value={unitType}
@@ -236,7 +236,7 @@ export default function EditUnitPage() {
         </Card>
 
         {/* Utility accounts (printed on the tenant's building-rules agreement) */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">{t("utilityAccounts")}</CardTitle>
           </CardHeader>
@@ -247,14 +247,14 @@ export default function EditUnitPage() {
                 value={electricityMeterNo}
                 onChange={(e) => setElectricityMeterNo(e.target.value)}
                 label={t("electricityMeterNo")}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
               <Input
                 type="text"
                 value={waterMeterNo}
                 onChange={(e) => setWaterMeterNo(e.target.value)}
                 label={t("waterMeterNo")}
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
             </div>
           </CardContent>

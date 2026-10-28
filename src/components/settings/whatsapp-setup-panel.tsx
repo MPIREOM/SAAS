@@ -23,7 +23,7 @@ function statusVariant(status: string | null): BadgeVariant {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3 rounded-xl border border-border/60 bg-surface p-5 animate-fade-in-up">
+    <section className="space-y-3 rounded-xl border border-border bg-surface p-5">
       <h2 className="text-base font-semibold text-text-primary font-display">{title}</h2>
       {children}
     </section>
@@ -32,7 +32,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 py-2 last:border-0">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2 last:border-0">
       <span className="text-sm text-text-secondary">{label}</span>
       <span className="flex flex-wrap items-center gap-2 text-sm text-text-primary">{children}</span>
     </div>
@@ -40,7 +40,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 function Mono({ children }: { children: React.ReactNode }) {
-  return <span className="font-mono text-xs ltr-nums break-all">{children}</span>;
+  return <span className="tabular-nums text-xs ltr-nums break-all">{children}</span>;
 }
 
 export function WhatsAppSetupPanel() {
@@ -244,7 +244,7 @@ export function WhatsAppSetupPanel() {
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
                     placeholder="123456"
                     aria-label={t("setupCode")}
-                    className="h-9 w-32 font-mono ltr-nums"
+                    className="h-9 w-32 tabular-nums ltr-nums"
                   />
                   <Button type="submit" size="sm" loading={busy === "verify-code"} disabled={busy !== null || code.length < 4}>
                     {t("setupVerify")}
@@ -273,7 +273,7 @@ export function WhatsAppSetupPanel() {
                     onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     placeholder="••••••"
                     aria-label={t("setupPin")}
-                    className="h-9 w-32 font-mono ltr-nums"
+                    className="h-9 w-32 tabular-nums ltr-nums"
                   />
                   <Button type="submit" size="sm" loading={busy === "register"} disabled={busy !== null || pin.length !== 6}>
                     {t("setupRegister")}

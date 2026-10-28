@@ -152,7 +152,7 @@ export function MaintenanceStatusActions({
           onChange={(e) => setCostInput(e.target.value)}
           label={`${t("actualCostInput")} (OMR)`}
           placeholder="0.00"
-          className="font-mono ltr-nums max-w-xs"
+          className="tabular-nums ltr-nums max-w-xs"
         />
       )}
       <div className="flex flex-wrap gap-2">
@@ -240,7 +240,7 @@ export function MaintenanceAssignmentForm({
           label={t("vendorPhone")}
           placeholder={t("vendorPhonePlaceholder")}
           defaultValue={assignedToPhone ?? ""}
-          className="font-mono ltr-nums"
+          className="tabular-nums ltr-nums"
           dir="ltr"
         />
         <Input
@@ -251,7 +251,7 @@ export function MaintenanceAssignmentForm({
           label={`${t("estimatedCost")} (OMR)`}
           placeholder="0.00"
           defaultValue={estimatedCost ?? ""}
-          className="font-mono ltr-nums"
+          className="tabular-nums ltr-nums"
         />
       </div>
       <p className="text-xs text-text-secondary">{t("assignmentHint")}</p>

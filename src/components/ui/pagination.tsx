@@ -38,7 +38,7 @@ export function Pagination({
   );
 
   const linkClass =
-    "h-8 w-8 flex items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
+    "h-9 min-w-9 px-2 flex items-center justify-center rounded-lg tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
   return (
     <nav aria-label={t("pagination")} className="flex items-center justify-center gap-1 py-4">
@@ -52,7 +52,7 @@ export function Pagination({
           <ChevronLeft className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
         </Link>
       ) : (
-        <span className={cn(linkClass, "text-text-secondary/30")} aria-hidden="true">
+        <span className={cn(linkClass, "text-text-tertiary opacity-50")} aria-hidden="true">
           <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
         </span>
       )}
@@ -68,7 +68,7 @@ export function Pagination({
             1
           </Link>
           {startPage > 2 && (
-            <span className="text-text-secondary/40 text-sm px-1" aria-hidden="true">...</span>
+            <span className="text-text-tertiary text-sm px-1" aria-hidden="true">...</span>
           )}
         </>
       )}
@@ -83,7 +83,7 @@ export function Pagination({
             linkClass,
             "text-sm font-medium",
             page === currentPage
-              ? "bg-accent text-background"
+              ? "bg-accent text-accent-foreground"
               : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
           )}
         >
@@ -94,7 +94,7 @@ export function Pagination({
       {endPage < totalPages && (
         <>
           {endPage < totalPages - 1 && (
-            <span className="text-text-secondary/40 text-sm px-1" aria-hidden="true">...</span>
+            <span className="text-text-tertiary text-sm px-1" aria-hidden="true">...</span>
           )}
           <Link
             href={buildUrl(totalPages)}
@@ -116,7 +116,7 @@ export function Pagination({
           <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
         </Link>
       ) : (
-        <span className={cn(linkClass, "text-text-secondary/30")} aria-hidden="true">
+        <span className={cn(linkClass, "text-text-tertiary opacity-50")} aria-hidden="true">
           <ChevronRight className="h-4 w-4 rtl:rotate-180" />
         </span>
       )}

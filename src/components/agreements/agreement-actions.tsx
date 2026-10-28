@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ExternalLink, Send } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 // Staff buttons on the unit page's agreement card: send / resend the
 // signing link, and open the signing page here so the tenant can sign in
@@ -57,7 +58,7 @@ export function AgreementActions({
           href={signingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-md hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
           {t("signInPerson")}

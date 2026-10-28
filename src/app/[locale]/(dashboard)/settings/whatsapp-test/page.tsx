@@ -117,14 +117,14 @@ export default function WhatsAppTestPage() {
   };
 
   return (
-    <div className="max-w-2xl space-y-6 stagger-children">
+    <div className="max-w-2xl space-y-6">
       <PageHeader
         title={t("whatsappTestTitle")}
         description={t("whatsappTestSubtitle")}
       />
 
       {/* Info banner */}
-      <Alert variant="info" className="animate-fade-in-up">
+      <Alert variant="info" className="">
         <div className="space-y-1 text-text-secondary">
           <p>
             <strong className="text-text-primary">hello_world</strong> is
@@ -134,7 +134,7 @@ export default function WhatsAppTestPage() {
           <p>
             The recipient must have a WhatsApp account and the phone number
             must include the country code (e.g.{" "}
-            <span className="ltr-nums font-mono">+968XXXXXXXX</span>).
+            <span className="ltr-nums tabular-nums">+968XXXXXXXX</span>).
           </p>
         </div>
       </Alert>
@@ -142,16 +142,16 @@ export default function WhatsAppTestPage() {
       {/* Form */}
       <section
         aria-labelledby="whatsapp-test-heading"
-        className="rounded-xl border border-border/60 bg-surface p-5 sm:p-6"
+        className="rounded-xl border border-border bg-surface p-5 sm:p-6"
       >
         <div className="mb-6 flex items-start gap-3">
-          <div className="shrink-0 rounded-lg bg-accent/10 p-2" aria-hidden="true">
+          <div className="shrink-0 rounded-lg bg-accent-tint p-2" aria-hidden="true">
             <MessageSquare className="h-5 w-5 text-accent" />
           </div>
           <div>
             <h2
               id="whatsapp-test-heading"
-              className="font-display text-base font-semibold tracking-tight text-text-primary"
+              className="font-display text-base font-semibold text-text-primary"
             >
               Send Test Message
             </h2>
@@ -171,7 +171,7 @@ export default function WhatsAppTestPage() {
             onChange={(e) => setPhoneNumber(e.target.value)}
             placeholder="+968XXXXXXXX"
             helperText={t("whatsappTestPhoneHelp")}
-            className="ltr-nums font-mono"
+            className="ltr-nums tabular-nums"
           />
 
           {/* Template Name */}
@@ -204,7 +204,7 @@ export default function WhatsAppTestPage() {
 
           {/* Template Parameters */}
           {paramFields.length > 0 && (
-            <div className="space-y-3 rounded-lg border border-border/50 bg-surface-elevated/50 p-4">
+            <div className="space-y-3 rounded-lg border border-border bg-surface-elevated p-4">
               <div>
                 <p className="text-sm font-medium text-text-primary">
                   Template Parameters
@@ -248,9 +248,9 @@ export default function WhatsAppTestPage() {
         <Alert
           variant={result.success ? "success" : "destructive"}
           title={result.success ? "Message Sent Successfully" : "Failed to Send"}
-          className="animate-fade-in-up"
+          className=""
         >
-          <div className="mt-1 space-y-2 font-mono text-sm text-text-primary">
+          <div className="mt-1 space-y-2 tabular-nums text-sm text-text-primary">
             {result.success && (
               <>
                 <div className="flex flex-wrap gap-2">
@@ -283,10 +283,10 @@ export default function WhatsAppTestPage() {
                 )}
                 {result.details && (
                   <details className="mt-2">
-                    <summary className="cursor-pointer rounded text-xs text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
+                    <summary className="cursor-pointer rounded text-xs text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
                       Full error details
                     </summary>
-                    <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border/60 bg-surface p-3 text-xs">
+                    <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border bg-surface p-3 text-xs">
                       {JSON.stringify(result.details, null, 2)}
                     </pre>
                   </details>

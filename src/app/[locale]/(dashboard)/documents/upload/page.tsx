@@ -202,20 +202,20 @@ export default function UploadDocumentPage() {
     <div className="max-w-2xl space-y-6">
       <PageHeader title={t("upload")} description={t("subtitle")} />
 
-      <form onSubmit={handleSubmit} className="space-y-5 animate-fade-in-up">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* File Upload */}
-        <div className="rounded-xl border border-border/60 bg-surface p-6">
+        <div className="rounded-xl border border-border bg-surface p-6">
           {file ? (
             <div className="relative">
               {filePreview ? (
                 <img
                   src={filePreview}
                   alt={file.name}
-                  className="w-full max-h-48 rounded-lg border border-border/60 object-contain"
+                  className="w-full max-h-48 rounded-lg border border-border object-contain"
                 />
               ) : (
-                <div className="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border border-border/60 bg-surface-elevated">
-                  <FileText aria-hidden="true" className="h-10 w-10 text-text-secondary/50" />
+                <div className="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-elevated">
+                  <FileText aria-hidden="true" className="h-10 w-10 text-text-tertiary" />
                   <span className="max-w-full truncate px-4 text-sm text-text-secondary">
                     {file.name}
                   </span>
@@ -225,7 +225,7 @@ export default function UploadDocumentPage() {
                 type="button"
                 onClick={clearFile}
                 aria-label={tc("close")}
-                className="absolute top-2 end-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-border bg-surface/80 backdrop-blur-sm transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="absolute top-2 end-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-border bg-surface transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <X className="h-3 w-3 text-text-secondary" aria-hidden="true" />
               </button>
@@ -238,15 +238,15 @@ export default function UploadDocumentPage() {
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
-              className="cursor-pointer rounded-lg border-2 border-dashed border-border p-8 text-center transition-colors hover:border-accent/50 hover:bg-surface-elevated/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="cursor-pointer rounded-lg border-2 border-dashed border-border p-8 text-center transition-colors hover:border-border-strong hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 border border-accent/15">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent-tint border border-accent/30">
                 <Upload className="h-5 w-5 text-accent" aria-hidden="true" />
               </div>
               <p className="text-sm text-text-secondary">
                 {tc("dragAndDrop")}
               </p>
-              <p className="mt-1 text-xs text-text-secondary/70">
+              <p className="mt-1 text-xs text-text-tertiary">
                 {tc("or")}{" "}
                 <span className="font-medium text-accent underline underline-offset-2">
                   {tc("browseFiles")}
@@ -264,7 +264,7 @@ export default function UploadDocumentPage() {
         </div>
 
         {/* Document Details */}
-        <div className="rounded-xl border border-border/60 bg-surface p-6 space-y-5">
+        <div className="rounded-xl border border-border bg-surface p-6 space-y-5">
           <Select
             name="document_type"
             required
@@ -281,10 +281,10 @@ export default function UploadDocumentPage() {
 
           {prefilled ? (
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-foreground tracking-tight">
+              <span className="text-sm font-medium text-foreground">
                 {entityType === "tenant" ? tc("tenant") : tc("property")}
               </span>
-              <div className="flex h-10 w-full items-center rounded-lg border border-border/60 bg-surface-elevated/50 px-3 text-sm text-text-primary">
+              <div className="flex h-10 w-full items-center rounded-lg border border-border bg-surface-elevated px-3 text-sm text-text-primary">
                 {prefilledLabel || entityId}
               </div>
             </div>
@@ -326,7 +326,7 @@ export default function UploadDocumentPage() {
               value={expiryDate}
               onChange={(e) => { setExpiryDate(e.target.value); setAutoExtracted(false); }}
               label={t("expiryDate")}
-              className="font-mono ltr-nums"
+              className="tabular-nums ltr-nums"
             />
             {extracting && (
               <p className="flex items-center gap-1.5 text-xs text-accent" role="status">

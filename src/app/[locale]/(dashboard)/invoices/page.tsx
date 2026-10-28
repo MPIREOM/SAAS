@@ -24,7 +24,7 @@ import { CancelInvoiceButton } from "@/components/invoices/cancel-invoice-button
 import { RevertPaidButton } from "@/components/invoices/revert-paid-button";
 import { EditInvoiceButton } from "@/components/invoices/edit-invoice-button";
 import { CreateInvoiceButton } from "@/components/invoices/create-invoice-button";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 
 export default async function InvoicesPage({
   params,
@@ -222,12 +222,6 @@ export default async function InvoicesPage({
   const collectionRate =
     totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
 
-  function formatAmount(amount: number) {
-    return amount.toLocaleString("en-OM", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr);
@@ -245,20 +239,19 @@ export default async function InvoicesPage({
       </PageHeader>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-children">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Total */}
-        <div className="group relative bg-surface border border-border rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-accent/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="group relative bg-surface border border-border rounded-xl shadow-card p-4 overflow-hidden transition-all duration-300 hover:border-border-strong">
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-accent-tint flex items-center justify-center">
                 <Receipt className="h-4 w-4 text-accent" />
               </div>
-              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+              <span className="text-[13px] font-semibold text-text-secondary">
                 {t("total")}
               </span>
             </div>
-            <p className="text-xl font-bold text-text-primary font-mono tabular-nums">
+            <p className="text-xl font-bold text-text-primary tabular-nums">
               {formatAmount(totalAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
@@ -271,18 +264,17 @@ export default async function InvoicesPage({
         </div>
 
         {/* Collected */}
-        <div className="group relative bg-surface border border-border rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-success/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="group relative bg-surface border border-border rounded-xl shadow-card p-4 overflow-hidden transition-all duration-300 hover:border-success/30">
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-success-tint flex items-center justify-center">
                 <CheckCircle2 className="h-4 w-4 text-success" />
               </div>
-              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+              <span className="text-[13px] font-semibold text-text-secondary">
                 {t("collected")}
               </span>
             </div>
-            <p className="text-xl font-bold text-success font-mono tabular-nums">
+            <p className="text-xl font-bold text-success tabular-nums">
               {formatAmount(paidAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
@@ -299,18 +291,17 @@ export default async function InvoicesPage({
         </div>
 
         {/* Pending */}
-        <div className="group relative bg-surface border border-border rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-warning/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-warning/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="group relative bg-surface border border-border rounded-xl shadow-card p-4 overflow-hidden transition-all duration-300 hover:border-warning/30">
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-warning-tint flex items-center justify-center">
                 <Clock className="h-4 w-4 text-warning" />
               </div>
-              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+              <span className="text-[13px] font-semibold text-text-secondary">
                 {t("pending")}
               </span>
             </div>
-            <p className="text-xl font-bold text-warning font-mono tabular-nums">
+            <p className="text-xl font-bold text-warning tabular-nums">
               {formatAmount(pendingAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
@@ -323,18 +314,17 @@ export default async function InvoicesPage({
         </div>
 
         {/* Overdue */}
-        <div className="group relative bg-surface border border-border rounded-xl p-4 overflow-hidden transition-all duration-300 hover:border-destructive/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-destructive/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="group relative bg-surface border border-border rounded-xl shadow-card p-4 overflow-hidden transition-all duration-300 hover:border-destructive/30">
           <div className="relative">
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-destructive-tint flex items-center justify-center">
                 <AlertTriangle className="h-4 w-4 text-destructive" />
               </div>
-              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+              <span className="text-[13px] font-semibold text-text-secondary">
                 {t("overdue")}
               </span>
             </div>
-            <p className="text-xl font-bold text-destructive font-mono tabular-nums">
+            <p className="text-xl font-bold text-destructive tabular-nums">
               {formatAmount(overdueAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
@@ -356,7 +346,7 @@ export default async function InvoicesPage({
               href={`/${locale}/invoices${status ? `?status=${status}` : ""}${month ? `${status ? "&" : "?"}month=${month}` : ""}`}
               className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 !property
-                  ? "bg-accent/10 text-accent font-medium"
+                  ? "bg-accent-tint text-accent font-medium"
                   : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
               }`}
             >
@@ -368,7 +358,7 @@ export default async function InvoicesPage({
                 href={`/${locale}/invoices?property=${p.id as string}${status ? `&status=${status}` : ""}${month ? `&month=${month}` : ""}`}
                 className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                   property === (p.id as string)
-                    ? "bg-accent/10 text-accent font-medium"
+                    ? "bg-accent-tint text-accent font-medium"
                     : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
                 }`}
               >
@@ -391,14 +381,14 @@ export default async function InvoicesPage({
 
       {/* Table */}
       {allInvoices.length > 0 ? (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden animate-fade-in">
+        <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden animate-fade-in">
           {/* Collection progress bar */}
           <div className="px-5 pt-4 pb-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-text-secondary">
                 {t("collectionProgress")}
               </span>
-              <span className="text-xs font-mono font-medium text-accent tabular-nums">
+              <span className="text-xs tabular-nums font-medium text-accent tabular-nums">
                 {collectionRate}%
               </span>
             </div>
@@ -419,25 +409,25 @@ export default async function InvoicesPage({
             <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-t border-b border-border">
-                  <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                  <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-5 py-3">
                     {t("dueDate")}
                   </th>
-                  <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                  <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-5 py-3">
                     {t("tenant")}
                   </th>
-                  <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                  <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-5 py-3">
                     {t("property")} / {t("unit")}
                   </th>
-                  <th className="text-end text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                  <th className="text-end text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-5 py-3">
                     {t("amount")}
                   </th>
-                  <th className="text-center text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                  <th className="text-center text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-5 py-3">
                     {t("status")}
                   </th>
-                  <th className="text-start text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3">
+                  <th className="text-start text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-5 py-3">
                     {t("paidAt")}
                   </th>
-                  <th className="text-end text-[10px] font-semibold text-text-secondary uppercase tracking-widest px-5 py-3" />
+                  <th className="text-end text-xs font-semibold whitespace-nowrap text-text-secondary uppercase tracking-[0.03em] rtl:normal-case rtl:tracking-normal px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -468,10 +458,10 @@ export default async function InvoicesPage({
                     return (
                       <tr
                         key={invoice.id as string}
-                        className={`group border-b border-border/20 last:border-0 transition-colors duration-150 ${
+                        className={`group border-b border-border last:border-0 transition-colors duration-150 ${
                           isOverdue
                             ? "bg-destructive/[0.04] hover:bg-destructive/[0.08]"
-                            : "hover:bg-surface-elevated/40"
+                            : "hover:bg-surface-elevated"
                         }`}
                         style={{
                           animationDelay: `${index * 20}ms`,
@@ -479,7 +469,7 @@ export default async function InvoicesPage({
                       >
                         {/* Due Date */}
                         <td className="px-5 py-3.5">
-                          <span className="text-sm text-text-primary font-mono tabular-nums">
+                          <span className="text-sm text-text-primary tabular-nums">
                             {formatDate(invoice.due_date as string)}
                           </span>
                         </td>
@@ -500,7 +490,7 @@ export default async function InvoicesPage({
                             {unit?.unit_number ? (
                               <>
                                 <span className="text-border">/</span>
-                                <span className="text-sm font-mono text-text-primary">
+                                <span className="text-sm tabular-nums text-text-primary">
                                   {unit?.unit_number as string}
                                 </span>
                               </>
@@ -511,13 +501,13 @@ export default async function InvoicesPage({
                         {/* Amount */}
                         <td className="px-5 py-3.5 text-end">
                           <span
-                            className={`text-sm font-semibold font-mono tabular-nums ${
+                            className={`text-sm font-semibold tabular-nums ${
                               isPaid
                                 ? "text-text-secondary"
                                 : isWrittenOff
                                 ? "text-warning line-through"
                                 : isCancelled
-                                ? "text-text-secondary/50 line-through"
+                                ? "text-text-tertiary line-through"
                                 : isOverdue
                                 ? "text-destructive"
                                 : isPartial
@@ -526,28 +516,28 @@ export default async function InvoicesPage({
                             }`}
                           >
                             {formatAmount(invoice.amount as number)}
-                            <span className="text-[10px] font-normal text-text-secondary ms-0.5">
+                            <span className="text-xs font-normal text-text-secondary ms-0.5">
                               {CURRENCY.code}
                             </span>
                           </span>
                           {isPartial && (
                             <div className="mt-1">
-                              <div className="flex items-center justify-end gap-1.5 text-[10px]">
-                                <span className="text-success font-medium font-mono">
+                              <div className="flex items-center justify-end gap-1.5 text-xs">
+                                <span className="text-success font-medium tabular-nums">
                                   {formatAmount(Number(invoice.paid_amount || 0))}
                                 </span>
                                 <span className="text-text-secondary">/</span>
-                                <span className="text-text-secondary font-mono">
+                                <span className="text-text-secondary tabular-nums">
                                   {formatAmount(Number(invoice.amount))}
                                 </span>
                               </div>
-                              <div className="h-1 w-full bg-border/50 rounded-full mt-1 overflow-hidden">
+                              <div className="h-1 w-full bg-sunken rounded-full mt-1 overflow-hidden">
                                 <div
                                   className="h-full rounded-full bg-info transition-all"
                                   style={{ width: `${Math.round((Number(invoice.paid_amount || 0) / Number(invoice.amount)) * 100)}%` }}
                                 />
                               </div>
-                              <p className="text-[10px] text-destructive font-medium mt-0.5 font-mono">
+                              <p className="text-xs text-destructive font-medium mt-0.5 tabular-nums">
                                 {t("remaining")}: {formatAmount(Number(invoice.amount) - Number(invoice.paid_amount || 0))}
                               </p>
                             </div>
@@ -557,32 +547,32 @@ export default async function InvoicesPage({
                         {/* Status */}
                         <td className="px-5 py-3.5 text-center">
                           {isPaid ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-success/10 text-success border border-success/20">
+                            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md font-semibold bg-success-tint text-success border border-success/30">
                               <CheckCircle2 className="h-3 w-3" />
                               {t("paid")}
                             </span>
                           ) : isWrittenOff ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-warning/10 text-warning border border-warning/20">
+                            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md font-semibold bg-warning-tint text-warning border border-warning/30">
                               <FileX className="h-3 w-3" />
                               {t("writtenOff")}
                             </span>
                           ) : isCancelled ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-surface-elevated text-text-secondary border border-border/30">
+                            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md font-semibold bg-surface-elevated text-text-secondary border border-border">
                               <Ban className="h-3 w-3" />
                               {t("cancelled")}
                             </span>
                           ) : isPartial ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-info/10 text-info border border-info/20">
+                            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md font-semibold bg-info-tint text-info border border-info/30">
                               <CircleDot className="h-3 w-3" />
                               {t("partial")}
                             </span>
                           ) : isOverdue ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-destructive/10 text-destructive border border-destructive/20 animate-pulse">
+                            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md font-semibold bg-destructive-tint text-destructive border border-destructive/30 animate-pulse">
                               <AlertTriangle className="h-3 w-3" />
                               {t("overdue")}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-semibold bg-warning/10 text-warning border border-warning/20">
+                            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md font-semibold bg-warning-tint text-warning border border-warning/30">
                               <Clock className="h-3 w-3" />
                               {t("pending")}
                             </span>
@@ -591,7 +581,7 @@ export default async function InvoicesPage({
 
                         {/* Paid Date */}
                         <td className="px-5 py-3.5">
-                          <span className="text-sm text-text-secondary font-mono tabular-nums">
+                          <span className="text-sm text-text-secondary tabular-nums">
                             {invoice.paid_date
                               ? formatDate(invoice.paid_date as string)
                               : "—"}
@@ -604,7 +594,7 @@ export default async function InvoicesPage({
                             <Link
                               href={`/api/invoices/${invoice.id}/pdf`}
                               target="_blank"
-                              className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-accent text-xs rounded-md border border-border/50 hover:border-accent/30 transition-colors"
+                              className="inline-flex items-center gap-1 h-7 px-2 text-text-secondary hover:text-accent text-xs rounded-md border border-border hover:border-border-strong transition-colors"
                               title={t("viewPdf")}
                             >
                               <Printer className="h-3 w-3" />
@@ -666,7 +656,7 @@ export default async function InvoicesPage({
           </div>
 
           {/* Mobile card list — same data, vertical layout for narrow screens */}
-          <ul className="md:hidden divide-y divide-border/30">
+          <ul className="md:hidden divide-y divide-border">
             {allInvoices.map((invoice: Record<string, unknown>) => {
               const tenant = invoice.tenants as Record<string, unknown> | null;
               const unit = invoice.units as Record<string, unknown> | null;
@@ -697,7 +687,7 @@ export default async function InvoicesPage({
                   {t("cancelled")}
                 </Badge>
               ) : isPartial ? (
-                <Badge variant="default" className="gap-1 bg-info/12 text-info border-info/20">
+                <Badge variant="default" className="gap-1 bg-info-tint text-info border-info/30">
                   <CircleDot aria-hidden="true" className="h-3 w-3" />
                   {t("partial")}
                 </Badge>
@@ -716,7 +706,7 @@ export default async function InvoicesPage({
               return (
                 <li
                   key={`m-${invoice.id as string}`}
-                  className={`p-4 ${isOverdue ? "bg-destructive/5" : ""}`}
+                  className={`p-4 ${isOverdue ? "bg-destructive-tint" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -730,13 +720,13 @@ export default async function InvoicesPage({
                     </div>
                     <div className="text-end shrink-0">
                       <p
-                        className={`text-sm font-semibold font-mono tabular-nums ${
+                        className={`text-sm font-semibold tabular-nums ${
                           isPaid
                             ? "text-text-secondary"
                             : isWrittenOff
                             ? "text-warning line-through"
                             : isCancelled
-                            ? "text-text-secondary/50 line-through"
+                            ? "text-text-tertiary line-through"
                             : isOverdue
                             ? "text-destructive"
                             : isPartial
@@ -745,11 +735,11 @@ export default async function InvoicesPage({
                         }`}
                       >
                         {formatAmount(invoice.amount as number)}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </p>
-                      <p className="text-[11px] text-text-secondary font-mono tabular-nums mt-0.5">
+                      <p className="text-xs text-text-secondary tabular-nums mt-0.5">
                         {formatDate(invoice.due_date as string)}
                       </p>
                     </div>
@@ -760,7 +750,7 @@ export default async function InvoicesPage({
                       <Link
                         href={`/api/invoices/${invoice.id}/pdf`}
                         target="_blank"
-                        className="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-border/50 px-2 text-text-secondary hover:text-accent hover:border-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                        className="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-border px-2 text-text-secondary hover:text-accent hover:border-border-strong transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                         aria-label={t("viewPdf")}
                       >
                         <Printer aria-hidden="true" className="h-3.5 w-3.5" />
@@ -811,7 +801,7 @@ export default async function InvoicesPage({
             <span className="text-xs text-text-secondary">
               {allSummary.length} {t("title").toLowerCase()}
             </span>
-            <span className="text-xs font-mono font-medium text-text-secondary tabular-nums">
+            <span className="text-xs tabular-nums font-medium text-text-secondary tabular-nums">
               {t("total")}: {formatAmount(totalAmount)} {CURRENCY.code}
             </span>
           </div>
@@ -829,9 +819,9 @@ export default async function InvoicesPage({
           />
         </div>
       ) : (
-        <div className="bg-surface border border-border rounded-xl p-16 text-center">
+        <div className="bg-surface border border-border rounded-xl shadow-card p-16 text-center">
           <div className="mx-auto w-14 h-14 rounded-xl bg-surface-elevated flex items-center justify-center mb-4">
-            <FileText className="h-7 w-7 text-text-secondary/40" />
+            <FileText className="h-7 w-7 text-text-tertiary" />
           </div>
           <h3 className="text-base font-semibold text-text-primary font-display mb-1">
             {t("noInvoices")}

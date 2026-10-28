@@ -45,7 +45,7 @@ export function OwnerMonthPicker({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
         <CalendarDays aria-hidden="true" className="h-4 w-4 text-accent" />
         {t("label")}
       </div>
@@ -76,7 +76,7 @@ export function OwnerMonthPicker({
         <span
           aria-live="polite"
           className={cn(
-            "min-w-36 text-center font-mono text-sm font-medium text-text-primary ltr-nums",
+            "min-w-36 text-center tabular-nums text-sm font-medium text-text-primary ltr-nums",
             isPending && "opacity-50",
           )}
         >

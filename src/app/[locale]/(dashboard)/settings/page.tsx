@@ -52,17 +52,17 @@ function SettingsSection({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className="scroll-mt-24 rounded-xl border border-border/60 bg-surface p-5 sm:p-6"
+      className="scroll-mt-24 rounded-xl border border-border bg-surface p-5 sm:p-6"
     >
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="shrink-0 rounded-lg bg-accent/10 p-2" aria-hidden="true">
+          <div className="shrink-0 rounded-lg bg-accent-tint p-2" aria-hidden="true">
             {icon}
           </div>
           <div className="min-w-0">
             <h2
               id={`${id}-heading`}
-              className="font-display text-base font-semibold tracking-tight text-text-primary"
+              className="font-display text-base font-semibold text-text-primary"
             >
               {title}
             </h2>
@@ -190,19 +190,19 @@ export default async function SettingsPage({
   ];
 
   return (
-    <div className="max-w-4xl space-y-6 stagger-children">
+    <div className="max-w-4xl space-y-6">
       <PageHeader title={t("title")} description={t("subtitle")} />
 
       {/* Section shortcuts (presentational hash anchors) */}
       <nav
         aria-label={t("title")}
-        className="animate-fade-in-up -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
       >
         {anchors.map((anchor) => (
           <a
             key={anchor.id}
             href={`#${anchor.id}`}
-            className="shrink-0 whitespace-nowrap rounded-full border border-border/60 bg-surface px-3.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="shrink-0 whitespace-nowrap rounded-full border border-border bg-surface px-3.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             {anchor.label}
           </a>
@@ -221,7 +221,7 @@ export default async function SettingsPage({
           currentName={(profile?.full_name as string) || ""}
           currentEmail={context?.email || ""}
         />
-        <div className="mt-5 grid grid-cols-1 gap-4 border-t border-border/40 pt-5 sm:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-4 border-t border-border pt-5 sm:grid-cols-2">
           <div>
             <span className="text-xs uppercase tracking-wider text-text-secondary">
               {t("role")}
@@ -240,7 +240,7 @@ export default async function SettingsPage({
             <span className="text-xs uppercase tracking-wider text-text-secondary">
               {t("memberSince")}
             </span>
-            <p className="ltr-nums mt-1.5 font-mono text-sm text-text-primary">
+            <p className="ltr-nums mt-1.5 tabular-nums text-sm text-text-primary">
               {profile?.created_at
                 ? new Date(profile.created_at as string).toLocaleDateString()
                 : "—"}
@@ -384,7 +384,7 @@ export default async function SettingsPage({
           action={
             <a
               href={`/${locale}/settings/whatsapp-setup`}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition-all duration-200 hover:border-accent/30 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition-all duration-200 hover:border-border-strong hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               <Link2 aria-hidden="true" className="h-4 w-4 text-accent" />
               {t("openWhatsappSetup")}
@@ -416,7 +416,7 @@ export default async function SettingsPage({
         action={
           <a
             href={`/${locale}/settings/whatsapp-test`}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition-all duration-200 hover:border-accent/30 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-elevated px-4 text-sm font-semibold text-text-primary transition-all duration-200 hover:border-border-strong hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             <MessageSquare aria-hidden="true" className="h-4 w-4 text-accent" />
             {t("testWhatsapp")}

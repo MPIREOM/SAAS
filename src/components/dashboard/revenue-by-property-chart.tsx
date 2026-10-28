@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { Spinner } from "@/components/ui/spinner";
 
 interface PropertySlice {
@@ -180,15 +180,15 @@ export function RevenueByPropertyChart({ propertyIds }: RevenueByPropertyChartPr
           </Pie>
           <Tooltip
             contentStyle={{
-              backgroundColor: "var(--color-surface-elevated)",
+              backgroundColor: "var(--color-surface)",
               border: "1px solid var(--color-border)",
               borderRadius: "10px",
               fontSize: "12px",
               fontWeight: 500,
-              boxShadow: "0 8px 32px color-mix(in srgb, var(--color-background) 60%, transparent)",
+              boxShadow: "var(--shadow-overlay)",
             }}
             itemStyle={{ color: "var(--color-text-primary)" }}
-            formatter={(value) => [`${Number(value).toLocaleString()} ${CURRENCY.code}`]}
+            formatter={(value) => [`${formatAmount(Number(value))} ${CURRENCY.code}`]}
           />
           <Legend
             wrapperStyle={{ fontSize: "11px", fontWeight: 500 }}

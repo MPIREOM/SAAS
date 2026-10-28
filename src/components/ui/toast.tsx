@@ -38,11 +38,11 @@ export function useToast() {
 
 const VARIANT_STYLES: Record<ToastVariant, string> = {
   default:
-    "bg-surface-elevated border-border text-text-primary",
+    "bg-surface border-border text-text-primary",
   success:
-    "bg-success/10 border-success/20 text-text-primary",
+    "bg-success-tint border-success/30 text-text-primary",
   destructive:
-    "bg-destructive/10 border-destructive/20 text-text-primary",
+    "bg-destructive-tint border-destructive/30 text-text-primary",
 };
 
 function ToastItem({
@@ -74,7 +74,7 @@ function ToastItem({
       role="status"
       aria-atomic="true"
       className={cn(
-        "pointer-events-auto border rounded-xl px-4 py-3 shadow-lg transition-all duration-300 ease-out max-w-sm w-full",
+        "pointer-events-auto border rounded-xl px-4 py-3 shadow-overlay transition-all duration-300 ease-out max-w-sm w-full",
         VARIANT_STYLES[toast.variant],
         visible && !exiting
           ? "translate-y-0 opacity-100"
@@ -83,7 +83,7 @@ function ToastItem({
     >
       <p className="text-sm font-semibold">{toast.title}</p>
       {toast.description && (
-        <p className="text-xs text-text-secondary mt-0.5">
+        <p className="text-[13px] text-text-secondary mt-0.5">
           {toast.description}
         </p>
       )}

@@ -17,6 +17,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { buttonVariants } from "@/components/ui/button";
 
 // Rendered on the server (UTC), so pin Oman time explicitly. The time
 // matters: a morning failure and an afternoon retry share the same date.
@@ -126,28 +127,28 @@ export default async function RemindersPage({
 
       {/* Undelivered WhatsApp reminders — the closest signal WhatsApp gives
           that a tenant has blocked the number or is unreachable. */}
-      <section className="space-y-4 animate-fade-in-up">
+      <section className="space-y-4">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10 border border-warning/15">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning-tint border border-warning/30">
             <AlertTriangle aria-hidden="true" className="h-4 w-4 text-warning" />
           </span>
           <h2 className="text-lg font-semibold text-text-primary font-display">
             {t("undelivered")}
           </h2>
           {undelivered.length > 0 && (
-            <span className="rounded-md border border-border/40 bg-surface-elevated px-2 py-0.5 font-mono text-xs font-medium text-text-secondary ltr-nums">
+            <span className="rounded-md border border-border bg-surface-elevated px-2 py-0.5 tabular-nums text-xs font-medium text-text-secondary ltr-nums">
               {undelivered.length}
             </span>
           )}
         </div>
         <p className="text-sm text-text-secondary">{t("undeliveredHint")}</p>
         {undelivered.length > 0 ? (
-          <ul className="divide-y divide-border/40 overflow-hidden rounded-xl border border-border/60 bg-surface">
+          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
             {undelivered.map((u) => (
               <li key={u.tenantId} className="flex flex-wrap items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-text-primary">{u.tenantName}</p>
-                  <p className="mt-0.5 font-mono text-xs text-text-secondary ltr-nums">{u.phone || "—"}</p>
+                  <p className="mt-0.5 tabular-nums text-xs text-text-secondary ltr-nums">{u.phone || "—"}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={deliveryVariant(u.lastStatus)}>
@@ -156,7 +157,7 @@ export default async function RemindersPage({
                   <span className="text-xs text-text-secondary">
                     {t("undeliveredAttempts", { count: u.attempts })}
                   </span>
-                  <span className="font-mono text-xs text-text-secondary ltr-nums">
+                  <span className="tabular-nums text-xs text-text-secondary ltr-nums">
                     {t("lastAttempt")}: {formatSentAt(u.lastSentAt)}
                   </span>
                 </div>
@@ -167,30 +168,30 @@ export default async function RemindersPage({
             ))}
           </ul>
         ) : (
-          <p className="rounded-xl border border-border/60 bg-surface p-4 text-sm text-text-secondary">
+          <p className="rounded-xl border border-border bg-surface p-4 text-sm text-text-secondary">
             {t("undeliveredNone")}
           </p>
         )}
       </section>
 
       {/* Reminder Log Section */}
-      <section className="space-y-4 animate-fade-in-up">
+      <section className="space-y-4">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 border border-accent/15">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-tint border border-accent/30">
             <Bell aria-hidden="true" className="h-4 w-4 text-accent" />
           </span>
           <h2 className="text-lg font-semibold text-text-primary font-display">
             {t("log")}
           </h2>
           {reminders && reminders.length > 0 && (
-            <span className="rounded-md border border-border/40 bg-surface-elevated px-2 py-0.5 font-mono text-xs font-medium text-text-secondary ltr-nums">
+            <span className="rounded-md border border-border bg-surface-elevated px-2 py-0.5 tabular-nums text-xs font-medium text-text-secondary ltr-nums">
               {reminders.length}
             </span>
           )}
         </div>
 
         {reminders && reminders.length > 0 ? (
-          <div className="overflow-hidden rounded-xl border border-border/60 bg-surface">
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[720px]">
@@ -212,7 +213,7 @@ export default async function RemindersPage({
 
                     return (
                       <TableRow key={reminder.id as string}>
-                        <TableCell className="px-4 whitespace-nowrap font-mono text-text-secondary ltr-nums">
+                        <TableCell className="px-4 whitespace-nowrap tabular-nums text-text-secondary ltr-nums">
                           {formatSentAt(reminder.created_at as string)}
                         </TableCell>
                         <TableCell className="px-4">
@@ -266,7 +267,7 @@ export default async function RemindersPage({
             </div>
 
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {reminders.map((reminder: Record<string, unknown>) => {
                 const tenant = reminder.tenants as ReminderTenant;
                     const location = tenantLocation(tenant);
@@ -285,7 +286,7 @@ export default async function RemindersPage({
                           {reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—"}
                         </p>
                       </div>
-                      <span className="shrink-0 font-mono text-xs text-text-secondary ltr-nums">
+                      <span className="shrink-0 tabular-nums text-xs text-text-secondary ltr-nums">
                         {formatSentAt(reminder.created_at as string)}
                       </span>
                     </div>
@@ -329,24 +330,24 @@ export default async function RemindersPage({
       <ReminderRules />
 
       {/* Templates Section */}
-      <section className="space-y-4 animate-fade-in-up">
+      <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 border border-accent/15">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-tint border border-accent/30">
               <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
             </span>
             <h2 className="text-lg font-semibold text-text-primary font-display">
               {t("notificationTemplates")}
             </h2>
             {templates && templates.length > 0 && (
-              <span className="rounded-md border border-border/40 bg-surface-elevated px-2 py-0.5 font-mono text-xs font-medium text-text-secondary ltr-nums">
+              <span className="rounded-md border border-border bg-surface-elevated px-2 py-0.5 tabular-nums text-xs font-medium text-text-secondary ltr-nums">
                 {templates.length}
               </span>
             )}
           </div>
           <Link
             href={`/${locale}/reminders/templates/new`}
-            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className={buttonVariants()}
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
             {t("newTemplate")}
@@ -354,12 +355,12 @@ export default async function RemindersPage({
         </div>
 
         {templates && templates.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {templates.map((template: Record<string, unknown>) => (
               <Link
                 key={template.id as string}
                 href={`/${locale}/reminders/templates/${template.id}`}
-                className="group flex flex-col rounded-xl border border-border/60 bg-surface p-5 transition-all duration-200 hover:border-accent/30 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="group flex flex-col rounded-xl border border-border bg-surface p-5 transition-all duration-200 hover:border-border-strong hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <div className="mb-2 flex items-start justify-between gap-3">
                   <h3 className="text-sm font-medium text-text-primary font-display transition-colors group-hover:text-accent">
@@ -376,7 +377,7 @@ export default async function RemindersPage({
                   {(template.body_template as string)?.slice(0, 120) || "—"}
                   {(template.body_template as string)?.length > 120 ? "..." : ""}
                 </p>
-                <div className="mt-3 flex items-center gap-2 border-t border-border/40 pt-3">
+                <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
                   <span className="text-xs text-text-secondary capitalize">
                     {t("type")}: {template.reminder_type ? t(`types.${template.reminder_type}`) : "—"}
                   </span>
@@ -396,7 +397,7 @@ export default async function RemindersPage({
             action={
               <Link
                 href={`/${locale}/reminders/templates/new`}
-                className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className={buttonVariants()}
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
                 {t("newTemplate")}

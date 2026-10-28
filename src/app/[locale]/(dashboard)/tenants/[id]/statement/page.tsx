@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { FileText, Printer, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -14,6 +14,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { buttonVariants } from "@/components/ui/button";
 
 interface LedgerEntry {
   date: string;
@@ -76,7 +77,7 @@ export default async function TenantStatementPage({
     const paidAmt = parseFloat((inv.paid_amount as string) || "0");
     const totalAmt = parseFloat(inv.amount as string);
     const statusNote = inv.status === "partial"
-      ? ` [Partial: ${paidAmt.toLocaleString()}/${totalAmt.toLocaleString()} ${CURRENCY.code}]`
+      ? ` [Partial: ${formatAmount(paidAmt)}/${formatAmount(totalAmt)} ${CURRENCY.code}]`
       : inv.status === "overdue"
       ? " [Overdue]"
       : "";
@@ -121,7 +122,7 @@ export default async function TenantStatementPage({
       value: totalCharges,
       icon: TrendingUp,
       valueClass: "text-text-primary",
-      cardClass: "border-border/60",
+      cardClass: "border-border",
       iconClass: "text-text-secondary bg-surface-elevated",
     },
     {
@@ -129,8 +130,8 @@ export default async function TenantStatementPage({
       value: totalPayments,
       icon: TrendingDown,
       valueClass: "text-success",
-      cardClass: "border-border/60",
-      iconClass: "text-success bg-success/10",
+      cardClass: "border-border",
+      iconClass: "text-success bg-success-tint",
     },
     {
       label: t("outstandingBalance"),
@@ -141,8 +142,8 @@ export default async function TenantStatementPage({
         outstandingBalance > 0 ? "border-destructive/30" : "border-success/30",
       iconClass:
         outstandingBalance > 0
-          ? "text-destructive bg-destructive/10"
-          : "text-success bg-success/10",
+          ? "text-destructive bg-destructive-tint"
+          : "text-success bg-success-tint",
     },
   ];
 
@@ -160,7 +161,7 @@ export default async function TenantStatementPage({
       >
         <Link
           href="#"
-          className="inline-flex items-center gap-2 h-10 px-4 bg-surface-elevated border border-border text-text-primary text-sm font-medium rounded-xl hover:border-accent/30 hover:text-accent transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 print:hidden"
+          className={buttonVariants({ variant: "secondary" })}
           title={tr("printHint")}
         >
           <Printer aria-hidden="true" className="h-4 w-4" />
@@ -169,7 +170,7 @@ export default async function TenantStatementPage({
       </PageHeader>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-children">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {summaryCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -178,7 +179,7 @@ export default async function TenantStatementPage({
               className={`bg-surface border rounded-xl p-4 ${card.cardClass}`}
             >
               <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                <p className="text-[12.5px] font-medium text-text-secondary">
                   {card.label}
                 </p>
                 <div className={`p-1.5 rounded-lg ${card.iconClass}`}>
@@ -186,9 +187,9 @@ export default async function TenantStatementPage({
                 </div>
               </div>
               <p
-                className={`text-2xl font-bold font-mono tabular-nums ltr-nums ${card.valueClass}`}
+                className={`text-2xl font-bold tabular-nums ltr-nums ${card.valueClass}`}
               >
-                {card.value.toLocaleString()}
+                {formatAmount(card.value)}
                 <span className="text-xs font-sans font-normal text-text-secondary ms-1.5">
                   {CURRENCY.code}
                 </span>
@@ -205,7 +206,7 @@ export default async function TenantStatementPage({
           title={t("noTransactions")}
         />
       ) : (
-        <div className="bg-surface border border-border/60 rounded-xl overflow-hidden animate-fade-in-up">
+        <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
           {/* Desktop table */}
           <div className="hidden md:block">
             <Table className="min-w-[640px]">
@@ -221,71 +222,71 @@ export default async function TenantStatementPage({
               <TableBody>
                 {entries.map((entry, i) => (
                   <TableRow key={i}>
-                    <TableCell className="px-4 whitespace-nowrap font-mono ltr-nums text-xs text-text-secondary">
+                    <TableCell className="px-4 whitespace-nowrap tabular-nums ltr-nums text-xs text-text-secondary">
                       {format(new Date(entry.date), "dd MMM yyyy")}
                     </TableCell>
                     <TableCell className="px-4 text-text-primary">
                       {entry.description}
                     </TableCell>
-                    <TableCell className="px-4 text-end font-mono ltr-nums">
+                    <TableCell className="px-4 text-end tabular-nums ltr-nums">
                       {entry.charge > 0 ? (
                         <span className="text-text-primary">
-                          {entry.charge.toLocaleString()}{" "}
-                          <span className="text-[10px] font-sans text-text-secondary">
+                          {formatAmount(entry.charge)}{" "}
+                          <span className="text-xs font-medium text-text-secondary">
                             {CURRENCY.code}
                           </span>
                         </span>
                       ) : (
-                        <span className="text-text-secondary/50">{"—"}</span>
+                        <span className="text-text-tertiary">{"—"}</span>
                       )}
                     </TableCell>
-                    <TableCell className="px-4 text-end font-mono ltr-nums">
+                    <TableCell className="px-4 text-end tabular-nums ltr-nums">
                       {entry.payment > 0 ? (
                         <span className="text-success">
-                          {entry.payment.toLocaleString()}{" "}
-                          <span className="text-[10px] font-sans text-text-secondary">
+                          {formatAmount(entry.payment)}{" "}
+                          <span className="text-xs font-medium text-text-secondary">
                             {CURRENCY.code}
                           </span>
                         </span>
                       ) : (
-                        <span className="text-text-secondary/50">{"—"}</span>
+                        <span className="text-text-tertiary">{"—"}</span>
                       )}
                     </TableCell>
                     <TableCell
-                      className={`px-4 text-end font-mono ltr-nums font-semibold ${
+                      className={`px-4 text-end tabular-nums ltr-nums font-semibold ${
                         entry.balance > 0 ? "text-destructive" : "text-success"
                       }`}
                     >
-                      {entry.balance.toLocaleString()}{" "}
-                      <span className="text-[10px] font-sans font-normal text-text-secondary">
+                      {formatAmount(entry.balance)}{" "}
+                      <span className="text-xs font-medium text-text-secondary">
                         {CURRENCY.code}
                       </span>
                     </TableCell>
                   </TableRow>
                 ))}
-                <TableRow className="border-t-2 border-border bg-surface-elevated/50 hover:bg-surface-elevated/50">
+                <TableRow className="border-t-2 border-border bg-surface-elevated hover:bg-surface-elevated">
                   <TableCell className="px-4 font-semibold text-text-primary" colSpan={2}>
                     {tc("total")}
                   </TableCell>
-                  <TableCell className="px-4 text-end font-mono ltr-nums font-bold text-text-primary">
-                    {totalCharges.toLocaleString()}{" "}
-                    <span className="text-[10px] font-sans font-normal text-text-secondary">
+                  <TableCell className="px-4 text-end tabular-nums ltr-nums font-bold text-text-primary">
+                    {formatAmount(totalCharges)}{" "}
+                    <span className="text-xs font-medium text-text-secondary">
                       {CURRENCY.code}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 text-end font-mono ltr-nums font-bold text-success">
-                    {totalPayments.toLocaleString()}{" "}
-                    <span className="text-[10px] font-sans font-normal text-text-secondary">
+                  <TableCell className="px-4 text-end tabular-nums ltr-nums font-bold text-success">
+                    {formatAmount(totalPayments)}{" "}
+                    <span className="text-xs font-medium text-text-secondary">
                       {CURRENCY.code}
                     </span>
                   </TableCell>
                   <TableCell
-                    className={`px-4 text-end font-mono ltr-nums font-bold ${
+                    className={`px-4 text-end tabular-nums ltr-nums font-bold ${
                       outstandingBalance > 0 ? "text-destructive" : "text-success"
                     }`}
                   >
-                    {outstandingBalance.toLocaleString()}{" "}
-                    <span className="text-[10px] font-sans font-normal text-text-secondary">
+                    {formatAmount(outstandingBalance)}{" "}
+                    <span className="text-xs font-medium text-text-secondary">
                       {CURRENCY.code}
                     </span>
                   </TableCell>
@@ -295,7 +296,7 @@ export default async function TenantStatementPage({
           </div>
 
           {/* Mobile card list */}
-          <ul className="md:hidden divide-y divide-border/40">
+          <ul className="md:hidden divide-y divide-border">
             {entries.map((entry, i) => (
               <li key={`m-${i}`} className="p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -303,19 +304,19 @@ export default async function TenantStatementPage({
                     <p className="text-sm text-text-primary leading-snug">
                       {entry.description}
                     </p>
-                    <p className="text-xs text-text-secondary font-mono ltr-nums mt-1">
+                    <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-1">
                       {format(new Date(entry.date), "dd MMM yyyy")}
                     </p>
                   </div>
                   <p
-                    className={`text-sm font-semibold font-mono ltr-nums text-end shrink-0 ${
+                    className={`text-sm font-semibold tabular-nums ltr-nums text-end shrink-0 ${
                       entry.type === "payment" ? "text-success" : "text-text-primary"
                     }`}
                   >
                     {entry.type === "payment"
-                      ? entry.payment.toLocaleString()
-                      : entry.charge.toLocaleString()}{" "}
-                    <span className="text-[10px] font-normal text-text-secondary">
+                      ? formatAmount(entry.payment)
+                      : formatAmount(entry.charge)}{" "}
+                    <span className="text-xs font-normal text-text-secondary">
                       {CURRENCY.code}
                     </span>
                   </p>
@@ -323,25 +324,25 @@ export default async function TenantStatementPage({
                 <p className="mt-2 text-xs text-text-secondary">
                   {t("balance")} ·{" "}
                   <span
-                    className={`font-mono ltr-nums font-semibold ${
+                    className={`tabular-nums ltr-nums font-semibold ${
                       entry.balance > 0 ? "text-destructive" : "text-success"
                     }`}
                   >
-                    {entry.balance.toLocaleString()} {CURRENCY.code}
+                    {formatAmount(entry.balance)} {CURRENCY.code}
                   </span>
                 </p>
               </li>
             ))}
-            <li className="p-4 bg-surface-elevated/50 flex items-center justify-between gap-3">
+            <li className="p-4 bg-surface-elevated flex items-center justify-between gap-3">
               <p className="text-sm font-semibold text-text-primary">
                 {tc("total")}
               </p>
               <p
-                className={`text-sm font-bold font-mono ltr-nums text-end ${
+                className={`text-sm font-bold tabular-nums ltr-nums text-end ${
                   outstandingBalance > 0 ? "text-destructive" : "text-success"
                 }`}
               >
-                {outstandingBalance.toLocaleString()} {CURRENCY.code}
+                {formatAmount(outstandingBalance)} {CURRENCY.code}
               </p>
             </li>
           </ul>

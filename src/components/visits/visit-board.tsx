@@ -274,7 +274,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
           </Badge>
         )}
         {u.booking.work_note && (
-          <p className="text-[11px] text-text-secondary max-w-48 line-clamp-2" title={u.booking.work_note}>
+          <p className="text-xs text-text-secondary max-w-48 line-clamp-2" title={u.booking.work_note}>
             {u.booking.work_note}
           </p>
         )}
@@ -321,7 +321,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
   const contactLine = (u: BoardUnit) =>
     u.booking?.contact_phone ? (
       <div className="text-xs text-text-secondary">
-        {t("bookedWith")} <span className="font-mono ltr-nums">{displayPhone(u.booking.contact_phone)}</span>
+        {t("bookedWith")} <span className="tabular-nums ltr-nums">{displayPhone(u.booking.contact_phone)}</span>
       </div>
     ) : null;
 
@@ -335,7 +335,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
           {t(`msgKind.${u.message.kind}`)} · {t(`msgState.${state}`)}
         </Badge>
         {problem && (
-          <p className="text-[11px] leading-snug text-text-secondary line-clamp-2" title={problem}>
+          <p className="text-xs leading-snug text-text-secondary line-clamp-2" title={problem}>
             {isOutsideWindowError(problem)
               ? t("msgOutsideWindow")
               : problem === "tenant has no phone"
@@ -352,7 +352,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
   return (
     <div className="space-y-6">
       {/* Overview + share link */}
-      <section className="bg-surface border border-border/60 rounded-xl p-5 space-y-4">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5 space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={campaign.over ? "secondary" : campaign.status === "open" ? "success" : "warning"}>
             {campaign.over ? t("statusFinished") : campaign.status === "open" ? t("statusOpen") : t("statusClosed")}
@@ -377,7 +377,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                 readOnly
                 value={shareLink}
                 aria-label={t("shareLink")}
-                className="font-mono text-xs ltr-nums"
+                className="tabular-nums text-xs ltr-nums"
                 onFocus={(e) => e.currentTarget.select()}
               />
               <div className="flex gap-2 shrink-0">
@@ -390,7 +390,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                   target="_blank"
                   rel="noreferrer"
                   aria-label={t("openLink")}
-                  className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-border/60 text-text-secondary hover:text-accent hover:border-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-border text-text-secondary hover:text-accent hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   <ExternalLink aria-hidden="true" className="h-4 w-4" />
                 </a>
@@ -404,7 +404,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
 
         <ContractorLink campaignId={campaign.id} locale={locale} initialToken={campaign.crew_token} />
 
-        <div className="flex flex-wrap gap-2 border-t border-border/40 pt-4">
+        <div className="flex flex-wrap gap-2 border-t border-border pt-4">
           {live && (
             <Button type="button" onClick={() => setConfirmSend(true)} disabled={pending.length === 0}>
               <Send aria-hidden="true" className="h-4 w-4" />
@@ -442,23 +442,23 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
           { label: t("statPending"), value: pending.length, tone: "text-warning" },
           { label: t("statVacant"), value: vacant, tone: "text-text-secondary" },
         ].map((s) => (
-          <div key={s.label} className="bg-surface border border-border/60 rounded-xl p-4">
-            <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1">{s.label}</p>
-            <p className={cn("text-xl font-bold font-mono tabular-nums ltr-nums", s.tone)}>{s.value}</p>
+          <div key={s.label} className="bg-surface border border-border rounded-xl shadow-card p-4">
+            <p className="text-[12.5px] font-medium text-text-secondary mb-1">{s.label}</p>
+            <p className={cn("text-xl font-bold tabular-nums ltr-nums", s.tone)}>{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* WhatsApp delivery summary */}
       {messaged > 0 && (
-        <section className="bg-surface border border-border/60 rounded-xl p-4 space-y-3" aria-label={t("msgTitle")}>
+        <section className="bg-surface border border-border rounded-xl shadow-card p-4 space-y-3" aria-label={t("msgTitle")}>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <h2 className="text-sm font-semibold text-text-primary font-display">{t("msgTitle")}</h2>
             {(["read", "delivered", "sent", "failed", "skipped"] as VisitMessageState[]).map((state) =>
               messageCounts[state] > 0 ? (
                 <span key={state} className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
                   <Badge variant={STATE_BADGE[state]}>{t(`msgState.${state}`)}</Badge>
-                  <span className="font-mono ltr-nums text-text-primary">{messageCounts[state]}</span>
+                  <span className="tabular-nums ltr-nums text-text-primary">{messageCounts[state]}</span>
                 </span>
               ) : null
             )}
@@ -484,7 +484,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
 
       {/* View switch */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-border/60 p-1 bg-surface" role="group" aria-label={t("view")}>
+        <div className="inline-flex rounded-xl border border-border p-1 bg-surface" role="group" aria-label={t("view")}>
           {(["units", "schedule"] as View[]).map((v) => (
             <button
               key={v}
@@ -492,7 +492,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
               aria-pressed={view === v}
               onClick={() => setView(v)}
               className={cn(
-                "px-4 h-8 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                "px-4 h-8 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                 view === v ? "bg-accent text-accent-foreground" : "text-text-secondary hover:text-text-primary"
               )}
             >
@@ -516,14 +516,14 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                 aria-pressed={filter === key}
                 onClick={() => setFilter(key)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 h-8 rounded-lg border text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                  "inline-flex items-center gap-1.5 px-3 h-8 rounded-lg border text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                   filter === key
-                    ? "border-accent bg-accent/10 text-text-primary"
-                    : "border-border/60 text-text-secondary hover:border-accent/40"
+                    ? "border-accent bg-accent-tint text-text-primary"
+                    : "border-border text-text-secondary hover:border-border-strong"
                 )}
               >
                 {label}
-                <span className="font-mono ltr-nums">{count}</span>
+                <span className="tabular-nums ltr-nums">{count}</span>
               </button>
             ))}
           </div>
@@ -539,7 +539,7 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
           />
         ) : (
           <>
-            <div className="hidden md:block bg-surface border border-border/60 rounded-xl overflow-hidden">
+            <div className="hidden md:block bg-surface border border-border rounded-xl shadow-card overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -554,16 +554,16 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
                 <TableBody>
                   {shown.map((u) => (
                     <TableRow key={u.unit_id}>
-                      <TableCell className="font-mono ltr-nums font-semibold">{u.unit_number}</TableCell>
+                      <TableCell className="tabular-nums ltr-nums font-semibold">{u.unit_number}</TableCell>
                       <TableCell>
                         <div className="text-text-primary">{u.tenant_name}</div>
-                        {u.tenant_phone && <div className="text-xs text-text-secondary font-mono ltr-nums">{u.tenant_phone}</div>}
+                        {u.tenant_phone && <div className="text-xs text-text-secondary tabular-nums ltr-nums">{u.tenant_phone}</div>}
                       </TableCell>
                       <TableCell>{statusBadge(u)}</TableCell>
                       <TableCell>
                         {slotText(u)}
                         {u.booking?.booked_by === "staff" && (
-                          <span className="ms-2 text-[10px] uppercase tracking-wider text-text-secondary">{t("byStaff")}</span>
+                          <span className="ms-2 text-xs uppercase tracking-wider text-text-secondary">{t("byStaff")}</span>
                         )}
                         {contactLine(u)}
                       </TableCell>
@@ -576,16 +576,16 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
             </div>
             <ul className="md:hidden space-y-2">
               {shown.map((u) => (
-                <li key={u.unit_id} className="bg-surface border border-border/60 rounded-xl p-4 space-y-2">
+                <li key={u.unit_id} className="bg-surface border border-border rounded-xl shadow-card p-4 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono ltr-nums font-semibold text-text-primary">
+                    <span className="tabular-nums ltr-nums font-semibold text-text-primary">
                       {tc("unit")} {u.unit_number}
                     </span>
                     {statusBadge(u)}
                   </div>
                   <p className="text-sm text-text-secondary">
                     {u.tenant_name}
-                    {u.tenant_phone && <span className="font-mono ltr-nums"> · {u.tenant_phone}</span>}
+                    {u.tenant_phone && <span className="tabular-nums ltr-nums"> · {u.tenant_phone}</span>}
                   </p>
                   {u.booking && <p className="text-sm text-text-primary">{slotText(u)}</p>}
                   {contactLine(u)}
@@ -601,8 +601,8 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
       ) : (
         <div className="space-y-4">
           {schedule.map(([day, rows]) => (
-            <section key={day} className="bg-surface border border-border/60 rounded-xl overflow-hidden">
-              <h3 className="px-4 py-2.5 border-b border-border/40 text-sm font-semibold text-text-primary font-display">
+            <section key={day} className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
+              <h3 className="px-4 py-2.5 border-b border-border text-sm font-semibold text-text-primary font-display">
                 {formatVisitDay(day, locale)}
                 <span className="ms-2 text-xs font-sans font-normal text-text-secondary">
                   {t("visitsCount", { count: rows.length })}
@@ -611,10 +611,10 @@ export function VisitBoard({ locale, propertyId, campaign, units, freeSlots }: P
               <ol className="divide-y divide-border/40">
                 {rows.map((u) => (
                   <li key={u.unit_id} className="flex items-center gap-4 px-4 py-2.5">
-                    <span className="font-mono ltr-nums text-sm text-accent w-14 shrink-0">
+                    <span className="tabular-nums ltr-nums text-sm text-accent w-14 shrink-0">
                       {formatSlotTime(u.booking!.slot_start, locale)}
                     </span>
-                    <span className="font-mono ltr-nums text-sm font-semibold text-text-primary w-16 shrink-0">
+                    <span className="tabular-nums ltr-nums text-sm font-semibold text-text-primary w-16 shrink-0">
                       {u.unit_number}
                     </span>
                     <span className="text-sm text-text-secondary truncate">{u.tenant_name}</span>

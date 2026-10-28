@@ -114,7 +114,7 @@ export function UserManagementTable({
     ) : u.invited_at ? (
       <Badge variant="warning" title={new Date(u.invited_at).toLocaleString()}>
         {t("invitePending")} ·{" "}
-        <span className="ltr-nums font-mono">
+        <span className="ltr-nums tabular-nums">
           {new Date(u.invited_at).toLocaleDateString()}
         </span>
       </Badge>
@@ -185,7 +185,7 @@ export function UserManagementTable({
   return (
     <>
       {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-lg border border-border/50 md:block">
+      <div className="hidden overflow-hidden rounded-lg border border-border md:block">
         <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -211,7 +211,7 @@ export function UserManagementTable({
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className="font-mono text-sm text-text-secondary">
+                  <span className="tabular-nums text-sm text-text-secondary">
                     {u.email || "—"}
                   </span>
                 </TableCell>
@@ -240,14 +240,14 @@ export function UserManagementTable({
         {users.map((u) => (
           <li
             key={`m-${u.id}`}
-            className="rounded-lg border border-border/50 bg-surface-elevated/40 p-4"
+            className="rounded-lg border border-border bg-surface-elevated p-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-text-primary">
                   {u.full_name || "—"}
                 </p>
-                <p className="mt-0.5 truncate font-mono text-xs text-text-secondary">
+                <p className="mt-0.5 truncate tabular-nums text-xs text-text-secondary">
                   {u.email || "—"}
                 </p>
               </div>

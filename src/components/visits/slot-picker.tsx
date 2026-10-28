@@ -60,17 +60,17 @@ export function SlotPicker({ slots, value, onChange, locale, currentSlot }: Prop
               disabled={d.free === 0}
               onClick={() => setPickedDay(d.day)}
               className={cn(
-                "flex flex-col items-start rounded-lg border px-3 py-2 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                "flex min-h-12 flex-col items-start justify-center rounded-lg border px-3 py-2 text-start transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                 d.day === activeDay
-                  ? "border-accent bg-accent/10"
-                  : "border-border/60 bg-surface-elevated/50 hover:border-accent/40",
-                "disabled:cursor-not-allowed disabled:opacity-40"
+                  ? "border-accent bg-accent-tint ring-1 ring-inset ring-accent"
+                  : "border-border-strong bg-surface hover:bg-surface-elevated",
+                "disabled:cursor-not-allowed disabled:border-border disabled:bg-sunken disabled:opacity-70"
               )}
             >
-              <span className="text-sm font-medium text-text-primary">
+              <span className="text-sm font-semibold text-text-primary">
                 {formatVisitDay(d.day, locale)}
               </span>
-              <span className="text-[11px] text-text-secondary">
+              <span className="text-xs text-text-secondary">
                 {t("freeSlots", { count: d.free })}
               </span>
             </button>
@@ -102,12 +102,12 @@ export function SlotPicker({ slots, value, onChange, locale, currentSlot }: Prop
                 disabled={!slot.available}
                 onClick={() => onChange(slot.start)}
                 className={cn(
-                  "h-11 rounded-lg border font-mono text-sm ltr-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                  "h-12 rounded-lg border tabular-nums text-sm font-semibold ltr-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                   selected
                     ? "border-accent bg-accent text-accent-foreground"
-                    : "border-border/60 bg-surface-elevated/50 text-text-primary hover:border-accent/40",
-                  isCurrent && !selected && "border-accent/60",
-                  "disabled:cursor-not-allowed disabled:bg-transparent disabled:text-text-secondary/40 disabled:line-through"
+                    : "border-border-strong bg-surface text-text-primary hover:bg-surface-elevated",
+                  isCurrent && !selected && "border-accent ring-1 ring-inset ring-accent",
+                  "disabled:cursor-not-allowed disabled:border-border disabled:bg-sunken disabled:text-text-tertiary disabled:font-normal disabled:line-through"
                 )}
               >
                 {formatSlotTime(slot.start, locale)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Alert } from "@/components/ui/alert";
@@ -30,7 +30,6 @@ import {
   XCircle,
   ExternalLink,
   Building2,
-  Shield,
 } from "lucide-react";
 
 interface TenantData {
@@ -92,7 +91,7 @@ export default function TenantPortalPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background noise-overlay flex flex-col items-center justify-center gap-3 p-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 p-4">
         <Spinner label={tc("loading")} sizeClassName="h-8 w-8" />
         <p aria-hidden="true" className="text-sm text-text-secondary">
           {tc("loading")}
@@ -103,9 +102,9 @@ export default function TenantPortalPage({
 
   if (invalid || !data?.tenant) {
     return (
-      <div className="min-h-screen bg-background noise-overlay flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6 text-center animate-fade-in-up">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/25">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-destructive-tint border border-destructive/30">
             <AlertTriangle aria-hidden="true" className="h-8 w-8 text-destructive" />
           </div>
           <h1 className="text-2xl font-bold text-text-primary font-display">
@@ -114,7 +113,7 @@ export default function TenantPortalPage({
           <Alert variant="destructive" className="text-start">
             {t("invalidLinkMessage")}
           </Alert>
-          <p className="text-xs text-text-secondary/50 pt-2">
+          <p className="text-xs text-text-tertiary pt-2">
             MPIRE Property Management
           </p>
         </div>
@@ -144,15 +143,18 @@ export default function TenantPortalPage({
         : tenantStatus;
 
   return (
-    <div className="min-h-screen bg-background noise-overlay">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border/60 bg-surface/60 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-border bg-surface sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3.5 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
-            <Shield aria-hidden="true" className="h-5 w-5 text-accent" />
-          </div>
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-[15px] font-bold text-accent-foreground"
+          >
+            M
+          </span>
           <div className="min-w-0">
-            <h1 className="text-base font-semibold text-text-primary font-display truncate">
+            <h1 className="text-[15px] font-bold text-text-primary font-display truncate">
               {t("title")}
             </h1>
             <p className="text-xs text-text-secondary truncate">{t("subtitle")}</p>
@@ -160,11 +162,11 @@ export default function TenantPortalPage({
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6 stagger-children">
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Tenant Profile */}
-        <section className="bg-surface border border-border/60 rounded-xl p-5">
+        <section className="bg-surface border border-border rounded-xl shadow-card p-5">
           <div className="flex items-center gap-3 mb-5">
-            <div className="h-12 w-12 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
+            <div className="h-12 w-12 rounded-xl bg-accent-tint border border-accent/30 flex items-center justify-center shrink-0">
               <User aria-hidden="true" className="h-6 w-6 text-accent" />
             </div>
             <div className="min-w-0 flex-1">
@@ -181,7 +183,7 @@ export default function TenantPortalPage({
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 border-t border-border/40 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 border-t border-border pt-4">
             <InfoItem icon={Phone} label={t("phone")} value={tenant.phone as string} mono />
             <InfoItem icon={Mail} label={t("email")} value={(tenant.email as string) || "—"} />
             <InfoItem icon={Globe} label={t("nationality")} value={(tenant.nationality as string) || "—"} />
@@ -199,7 +201,7 @@ export default function TenantPortalPage({
                 return (
                   <div
                     key={lease.id as string}
-                    className="bg-surface border border-border/60 rounded-xl p-5"
+                    className="bg-surface border border-border rounded-xl shadow-card p-5"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                       <div className="flex items-center gap-2 min-w-0">
@@ -209,7 +211,7 @@ export default function TenantPortalPage({
                         </span>
                         <span className="text-xs text-text-secondary whitespace-nowrap">
                           &middot; {t("unit")}{" "}
-                          <span className="font-mono ltr-nums">
+                          <span className="tabular-nums ltr-nums">
                             {(unit?.unit_number as string) || "—"}
                           </span>
                         </span>
@@ -220,39 +222,39 @@ export default function TenantPortalPage({
                     </div>
                     <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                        <dt className="text-[12.5px] font-medium text-text-secondary">
                           {t("startDate")}
                         </dt>
-                        <dd className="text-text-primary font-mono ltr-nums mt-1">
+                        <dd className="text-text-primary tabular-nums ltr-nums mt-1">
                           {new Date(lease.start_date as string).toLocaleDateString()}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                        <dt className="text-[12.5px] font-medium text-text-secondary">
                           {t("endDate")}
                         </dt>
-                        <dd className="text-text-primary font-mono ltr-nums mt-1">
+                        <dd className="text-text-primary tabular-nums ltr-nums mt-1">
                           {new Date(lease.end_date as string).toLocaleDateString()}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                        <dt className="text-[12.5px] font-medium text-text-secondary">
                           {t("monthlyRent")}
                         </dt>
-                        <dd className="text-text-primary font-semibold font-mono ltr-nums mt-1">
+                        <dd className="text-text-primary font-semibold tabular-nums ltr-nums mt-1">
                           {lease.monthly_rent as number}{" "}
-                          <span className="text-[10px] font-normal text-text-secondary">
+                          <span className="text-xs font-normal text-text-secondary">
                             {CURRENCY.code}
                           </span>
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                        <dt className="text-[12.5px] font-medium text-text-secondary">
                           {t("deposit")}
                         </dt>
-                        <dd className="text-text-primary font-mono ltr-nums mt-1">
+                        <dd className="text-text-primary tabular-nums ltr-nums mt-1">
                           {(lease.security_deposit as number) || 0}{" "}
-                          <span className="text-[10px] font-normal text-text-secondary">
+                          <span className="text-xs font-normal text-text-secondary">
                             {CURRENCY.code}
                           </span>
                         </dd>
@@ -269,7 +271,7 @@ export default function TenantPortalPage({
         {invoices.length > 0 && (
           <section>
             <SectionHeader icon={CreditCard} title={t("invoices")} count={invoices.length} />
-            <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+            <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
               {/* Desktop table */}
               <div className="hidden md:block">
                 <Table className="min-w-[500px]">
@@ -286,17 +288,17 @@ export default function TenantPortalPage({
                       <TableRow
                         key={inv.id as string}
                         className={
-                          (inv.status as string) === "overdue" ? "bg-destructive/5" : ""
+                          (inv.status as string) === "overdue" ? "bg-destructive-tint" : ""
                         }
                       >
-                        <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                           {new Date(inv.due_date as string).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="px-4 text-text-secondary">
                           {(inv.period_label as string) || "—"}
                         </TableCell>
                         <TableCell
-                          className={`px-4 text-end font-semibold font-mono ltr-nums ${
+                          className={`px-4 text-end font-semibold tabular-nums ltr-nums ${
                             (inv.status as string) === "overdue"
                               ? "text-destructive"
                               : (inv.status as string) === "paid"
@@ -304,8 +306,8 @@ export default function TenantPortalPage({
                                 : "text-text-primary"
                           }`}
                         >
-                          {Number(inv.amount).toFixed(2)}{" "}
-                          <span className="text-[10px] font-normal text-text-secondary">
+                          {formatAmount(Number(inv.amount))}{" "}
+                          <span className="text-xs font-normal text-text-secondary">
                             {CURRENCY.code}
                           </span>
                         </TableCell>
@@ -321,12 +323,12 @@ export default function TenantPortalPage({
                 </Table>
               </div>
               {/* Mobile card list */}
-              <ul className="md:hidden divide-y divide-border/40">
+              <ul className="md:hidden divide-y divide-border">
                 {invoices.map((inv) => (
                   <li
                     key={`m-${inv.id as string}`}
                     className={`p-4 ${
-                      (inv.status as string) === "overdue" ? "bg-destructive/5" : ""
+                      (inv.status as string) === "overdue" ? "bg-destructive-tint" : ""
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -336,13 +338,13 @@ export default function TenantPortalPage({
                         </p>
                         <p className="text-xs text-text-secondary mt-0.5">
                           {t("dueDate")} ·{" "}
-                          <span className="font-mono ltr-nums">
+                          <span className="tabular-nums ltr-nums">
                             {new Date(inv.due_date as string).toLocaleDateString()}
                           </span>
                         </p>
                       </div>
                       <p
-                        className={`text-sm font-semibold font-mono ltr-nums text-end shrink-0 ${
+                        className={`text-sm font-semibold tabular-nums ltr-nums text-end shrink-0 ${
                           (inv.status as string) === "overdue"
                             ? "text-destructive"
                             : (inv.status as string) === "paid"
@@ -350,8 +352,8 @@ export default function TenantPortalPage({
                               : "text-text-primary"
                         }`}
                       >
-                        {Number(inv.amount).toFixed(2)}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                        {formatAmount(Number(inv.amount))}{" "}
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </p>
@@ -373,7 +375,7 @@ export default function TenantPortalPage({
         {payments.length > 0 && (
           <section>
             <SectionHeader icon={Banknote} title={t("payments")} count={payments.length} />
-            <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+            <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
               {/* Desktop table */}
               <div className="hidden md:block">
                 <Table className="min-w-[450px]">
@@ -388,19 +390,19 @@ export default function TenantPortalPage({
                   <TableBody>
                     {payments.map((p) => (
                       <TableRow key={p.id as string}>
-                        <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                           {new Date(p.payment_date as string).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="px-4 text-end font-semibold text-success font-mono ltr-nums">
-                          {Number(p.amount).toFixed(2)}{" "}
-                          <span className="text-[10px] font-normal text-text-secondary">
+                        <TableCell className="px-4 text-end font-semibold text-success tabular-nums ltr-nums">
+                          {formatAmount(Number(p.amount))}{" "}
+                          <span className="text-xs font-normal text-text-secondary">
                             {CURRENCY.code}
                           </span>
                         </TableCell>
                         <TableCell className="px-4 text-text-secondary">
                           {p.method ? t(`methods.${p.method}`) : "—"}
                         </TableCell>
-                        <TableCell className="px-4 text-text-secondary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-secondary tabular-nums ltr-nums">
                           {(p.reference_number as string) || "—"}
                         </TableCell>
                       </TableRow>
@@ -409,7 +411,7 @@ export default function TenantPortalPage({
                 </Table>
               </div>
               {/* Mobile card list */}
-              <ul className="md:hidden divide-y divide-border/40">
+              <ul className="md:hidden divide-y divide-border">
                 {payments.map((p) => (
                   <li key={`m-${p.id as string}`} className="p-4">
                     <div className="flex items-start justify-between gap-3">
@@ -417,13 +419,13 @@ export default function TenantPortalPage({
                         <p className="text-sm font-medium text-text-primary">
                           {p.method ? t(`methods.${p.method}`) : "—"}
                         </p>
-                        <p className="text-xs text-text-secondary font-mono ltr-nums mt-0.5">
+                        <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-0.5">
                           {new Date(p.payment_date as string).toLocaleDateString()}
                         </p>
                       </div>
-                      <p className="text-sm font-semibold text-success font-mono ltr-nums text-end shrink-0">
-                        {Number(p.amount).toFixed(2)}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                      <p className="text-sm font-semibold text-success tabular-nums ltr-nums text-end shrink-0">
+                        {formatAmount(Number(p.amount))}{" "}
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </p>
@@ -431,7 +433,7 @@ export default function TenantPortalPage({
                     {Boolean(p.reference_number) && (
                       <p className="text-xs text-text-secondary mt-2 truncate">
                         {t("reference")} ·{" "}
-                        <span className="font-mono ltr-nums">
+                        <span className="tabular-nums ltr-nums">
                           {p.reference_number as string}
                         </span>
                       </p>
@@ -447,7 +449,7 @@ export default function TenantPortalPage({
         {cheques.length > 0 && (
           <section>
             <SectionHeader icon={CreditCard} title={t("cheques")} count={cheques.length} />
-            <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+            <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
               {/* Desktop table */}
               <div className="hidden md:block">
                 <Table className="min-w-[500px]">
@@ -465,21 +467,21 @@ export default function TenantPortalPage({
                       <TableRow
                         key={c.id as string}
                         className={
-                          (c.status as string) === "bounced" ? "bg-destructive/5" : ""
+                          (c.status as string) === "bounced" ? "bg-destructive-tint" : ""
                         }
                       >
-                        <TableCell className="px-4 font-medium text-text-primary font-mono ltr-nums">
+                        <TableCell className="px-4 font-medium text-text-primary tabular-nums ltr-nums">
                           #{c.cheque_number as string}
                         </TableCell>
                         <TableCell className="px-4 text-text-secondary">
                           {c.bank_name as string}
                         </TableCell>
-                        <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                           {new Date(c.cheque_date as string).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="px-4 text-end font-semibold text-text-primary font-mono ltr-nums">
-                          {Number(c.amount).toFixed(2)}{" "}
-                          <span className="text-[10px] font-normal text-text-secondary">
+                        <TableCell className="px-4 text-end font-semibold text-text-primary tabular-nums ltr-nums">
+                          {formatAmount(Number(c.amount))}{" "}
+                          <span className="text-xs font-normal text-text-secondary">
                             {CURRENCY.code}
                           </span>
                         </TableCell>
@@ -495,30 +497,30 @@ export default function TenantPortalPage({
                 </Table>
               </div>
               {/* Mobile card list */}
-              <ul className="md:hidden divide-y divide-border/40">
+              <ul className="md:hidden divide-y divide-border">
                 {cheques.map((c) => (
                   <li
                     key={`m-${c.id as string}`}
                     className={`p-4 ${
-                      (c.status as string) === "bounced" ? "bg-destructive/5" : ""
+                      (c.status as string) === "bounced" ? "bg-destructive-tint" : ""
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary font-mono ltr-nums truncate">
+                        <p className="text-sm font-medium text-text-primary tabular-nums ltr-nums truncate">
                           #{c.cheque_number as string}
                         </p>
                         <p className="text-xs text-text-secondary truncate mt-0.5">
                           {c.bank_name as string}
                           {" · "}
-                          <span className="font-mono ltr-nums">
+                          <span className="tabular-nums ltr-nums">
                             {new Date(c.cheque_date as string).toLocaleDateString()}
                           </span>
                         </p>
                       </div>
-                      <p className="text-sm font-semibold text-text-primary font-mono ltr-nums text-end shrink-0">
-                        {Number(c.amount).toFixed(2)}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                      <p className="text-sm font-semibold text-text-primary tabular-nums ltr-nums text-end shrink-0">
+                        {formatAmount(Number(c.amount))}{" "}
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </p>
@@ -550,9 +552,9 @@ export default function TenantPortalPage({
                 return (
                   <div
                     key={doc.id as string}
-                    className="bg-surface border border-border/60 rounded-xl p-4 flex items-start gap-3 transition-colors hover:border-accent/30"
+                    className="bg-surface border border-border rounded-xl shadow-card p-4 flex items-start gap-3 transition-colors hover:border-border-strong"
                   >
-                    <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="h-9 w-9 rounded-lg bg-accent-tint flex items-center justify-center shrink-0 mt-0.5">
                       <FileText aria-hidden="true" className="h-4 w-4 text-accent" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -569,14 +571,14 @@ export default function TenantPortalPage({
                             className="h-3 w-3 text-text-secondary"
                           />
                           <span
-                            className={`text-xs font-mono ltr-nums ${
+                            className={`text-xs tabular-nums ltr-nums ${
                               isExpired ? "text-destructive" : "text-text-secondary"
                             }`}
                           >
                             {expiryDate.toLocaleDateString()}
                           </span>
                           {isExpired && (
-                            <Badge variant="destructive" className="text-[10px] px-1.5">
+                            <Badge variant="destructive" className="text-xs px-1.5">
                               {t("expired")}
                             </Badge>
                           )}
@@ -589,7 +591,7 @@ export default function TenantPortalPage({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={t("openDocument")}
-                        className="p-2 -m-0.5 rounded-lg text-accent hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 transition-colors shrink-0"
+                        className="p-2 -m-0.5 rounded-lg text-accent hover:bg-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus transition-colors shrink-0"
                       >
                         <ExternalLink aria-hidden="true" className="h-4 w-4" />
                       </a>
@@ -603,7 +605,7 @@ export default function TenantPortalPage({
 
         {/* Footer */}
         <footer className="text-center py-4">
-          <p className="text-xs text-text-secondary/50">
+          <p className="text-xs text-text-tertiary">
             MPIRE Property Management
           </p>
         </footer>
@@ -624,14 +626,14 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/15">
+      <div className="p-1.5 rounded-lg bg-accent-tint border border-accent/30">
         <Icon aria-hidden className="h-4 w-4 text-accent" />
       </div>
       <h2 className="text-base font-semibold text-text-primary font-display">
         {title}
       </h2>
       {count !== undefined && (
-        <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+        <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border px-2 py-0.5 rounded-md tabular-nums ltr-nums">
           {count}
         </span>
       )}
@@ -654,12 +656,12 @@ function InfoItem({
     <div className="flex items-center gap-2.5 min-w-0">
       <Icon aria-hidden className="h-4 w-4 text-text-secondary shrink-0" />
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+        <p className="text-[12.5px] font-medium text-text-secondary">
           {label}
         </p>
         <p
           className={`text-sm text-text-primary mt-0.5 truncate ${
-            mono ? "font-mono ltr-nums" : ""
+            mono ? "tabular-nums ltr-nums" : ""
           }`}
         >
           {value}

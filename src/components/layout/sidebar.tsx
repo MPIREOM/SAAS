@@ -58,6 +58,12 @@ export function Sidebar({ locale }: SidebarProps) {
     setMobileOpen(false);
   }
 
+  // The content column offsets itself by --sidebar-w (dashboard layout),
+  // so it tracks the collapsed width instead of leaving a gap.
+  useEffect(() => {
+    document.documentElement.style.setProperty("--sidebar-w", collapsed ? "68px" : "232px");
+  }, [collapsed]);
+
   // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
     if (mobileOpen) {
@@ -73,21 +79,29 @@ export function Sidebar({ locale }: SidebarProps) {
   const sidebarContent = (isMobile: boolean) => (
     <>
       {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-5 border-b border-border/50">
+      <div
+        className={cn(
+          "h-[60px] flex items-center gap-2.5 px-5 shrink-0",
+          collapsed && !isMobile && "justify-center px-0"
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent text-[13px] font-bold text-accent-foreground"
+        >
+          M
+        </span>
         {(!collapsed || isMobile) && (
-          <span className="text-xl font-display font-bold gold-shimmer tracking-tight">
+          <span className="text-[15px] font-bold tracking-[0.14em] text-text-primary">
             MPIRE
           </span>
-        )}
-        {collapsed && !isMobile && (
-          <span className="text-xl font-display font-bold text-accent mx-auto">M</span>
         )}
         {/* Close button for mobile */}
         {isMobile && (
           <button
             onClick={() => setMobileOpen(false)}
             aria-label={tc("closeMenu")}
-            className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all duration-200"
+            className="ms-auto grid h-10 w-10 place-items-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -95,8 +109,8 @@ export function Sidebar({ locale }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 overflow-y-auto">
-        <ul className="space-y-1 px-3">
+      <nav className="flex-1 pb-4 overflow-y-auto">
+        <ul className="space-y-0.5 px-3">
           {navItems.map((item) => {
             // Exact match or a nested route under this item (e.g.
             // /properties/123). A bare substring check (`includes`) is
@@ -110,25 +124,20 @@ export function Sidebar({ locale }: SidebarProps) {
               <li key={item.key}>
                 <Link
                   href={`/${locale}${item.href}`}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                    "flex h-10 items-center gap-3 px-3 rounded-lg text-sm transition-colors duration-150",
+                    "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus",
+                    collapsed && !isMobile && "justify-center px-0",
                     isActive
-                      ? "bg-accent/10 text-accent border-glow"
-                      : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
+                      ? "bg-accent-tint text-accent-tint-foreground font-semibold"
+                      : "font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
                   )}
                   title={collapsed && !isMobile ? t(item.key) : undefined}
                 >
-                  <Icon
-                    className={cn(
-                      "h-[18px] w-[18px] shrink-0 transition-transform duration-200",
-                      !isActive && "group-hover:scale-110"
-                    )}
-                  />
+                  <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
                   {(!collapsed || isMobile) && (
                     <span className="truncate">{t(item.key)}</span>
-                  )}
-                  {isActive && (!collapsed || isMobile) && (
-                    <div className="ms-auto h-1.5 w-1.5 rounded-full bg-accent animate-fade-in" />
                   )}
                 </Link>
               </li>
@@ -139,12 +148,12 @@ export function Sidebar({ locale }: SidebarProps) {
 
       {/* Collapse toggle - desktop only */}
       {!isMobile && (
-        <div className="border-t border-border/50 p-3">
+        <div className="border-t border-border p-3">
           <button
             onClick={() => setCollapsed(!collapsed)}
             aria-label={tc("toggleSidebar")}
             aria-pressed={collapsed}
-            className="flex items-center justify-center w-full py-2.5 rounded-lg text-text-secondary hover:text-accent hover:bg-surface-elevated transition-all duration-200"
+            className="flex h-10 items-center justify-center w-full rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             {collapsed ? (
               isRtl ? (
@@ -169,7 +178,7 @@ export function Sidebar({ locale }: SidebarProps) {
       <button
         onClick={() => setMobileOpen(true)}
         aria-label={tc("openMenu")}
-        className="md:hidden fixed top-3.5 start-3 z-50 p-2 rounded-lg glass border border-border/50 text-text-secondary hover:text-accent transition-all duration-200"
+        className="md:hidden fixed top-2 start-2 z-40 grid h-10 w-10 place-items-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
@@ -178,7 +187,7 @@ export function Sidebar({ locale }: SidebarProps) {
       {mobileOpen && (
         <div
           role="presentation"
-          className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
+          className="md:hidden fixed inset-0 bg-scrim z-40 animate-fade-in"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -186,7 +195,7 @@ export function Sidebar({ locale }: SidebarProps) {
       {/* Mobile sidebar */}
       <aside
         className={cn(
-          "md:hidden fixed top-0 h-screen w-64 bg-surface border-border/50 flex flex-col z-50 transition-transform duration-300 ease-out",
+          "md:hidden fixed top-0 h-dvh w-[280px] max-w-[85vw] bg-surface border-border flex flex-col z-50 shadow-overlay transition-transform duration-300 ease-out",
           "start-0 border-e",
           mobileOpen
             ? "translate-x-0"
@@ -199,9 +208,9 @@ export function Sidebar({ locale }: SidebarProps) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "hidden md:flex fixed top-0 h-screen bg-surface/80 backdrop-blur-xl border-border/50 flex-col transition-all duration-300 ease-out z-40",
+          "hidden md:flex fixed top-0 h-screen bg-surface border-border flex-col transition-[width] duration-200 ease-out z-40",
           "start-0 border-e",
-          collapsed ? "w-[68px]" : "w-64"
+          collapsed ? "w-[68px]" : "w-[232px]"
         )}
       >
         {sidebarContent(false)}

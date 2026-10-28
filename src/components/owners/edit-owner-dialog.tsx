@@ -134,7 +134,7 @@ function EditOwnerForm({
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
               placeholder={t("editOwnerDialog.whatsappPlaceholder")}
-              className="font-mono ltr-nums"
+              className="tabular-nums ltr-nums"
             />
             <Input
               type="email"
@@ -154,7 +154,7 @@ function EditOwnerForm({
               <option value="ar">{t("editOwnerDialog.arabic")}</option>
             </Select>
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium tracking-tight text-foreground">
+              <span className="text-sm font-medium text-foreground">
                 {t("editOwnerDialog.active")}
               </span>
               <label className="inline-flex h-10 cursor-pointer items-center gap-2 px-1">
@@ -171,8 +171,8 @@ function EditOwnerForm({
             </div>
           </div>
 
-          <fieldset className="space-y-4 rounded-xl border border-border/60 bg-surface-elevated/30 p-4">
-            <legend className="px-1 text-[10px] font-medium uppercase tracking-wider text-text-secondary">
+          <fieldset className="space-y-4 rounded-xl border border-border bg-surface-elevated p-4">
+            <legend className="px-1 text-xs font-medium uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal text-text-secondary">
               {t("editOwnerDialog.openingBalanceSnapshot")}
             </legend>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -183,7 +183,7 @@ function EditOwnerForm({
                 value={openingBalance}
                 onChange={(e) => setOpeningBalance(e.target.value)}
                 required
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
                 helperText={t("editOwnerDialog.openingBalanceHelper")}
               />
               <Input
@@ -192,7 +192,7 @@ function EditOwnerForm({
                 value={openingDate}
                 onChange={(e) => setOpeningDate(e.target.value)}
                 required
-                className="font-mono ltr-nums"
+                className="tabular-nums ltr-nums"
               />
             </div>
           </fieldset>

@@ -92,7 +92,7 @@ export default function NewPropertyPage({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Property name + location + units */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-5">
             <CardTitle className="text-base">{t("details")}</CardTitle>
           </CardHeader>
@@ -117,14 +117,14 @@ export default function NewPropertyPage({
                 inputMode="numeric"
                 label={t("totalUnits")}
                 placeholder="0"
-                className="font-mono tabular-nums"
+                className="tabular-nums"
               />
             </div>
           </CardContent>
         </Card>
 
         {/* Property type selector */}
-        <Card className="animate-fade-in-up">
+        <Card className="">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">{t("propertyType")}</CardTitle>
           </CardHeader>
@@ -146,10 +146,10 @@ export default function NewPropertyPage({
                     onClick={() => setSelectedType(pt.value)}
                     className={cn(
                       "flex cursor-pointer flex-col items-center gap-2 rounded-xl border p-4 text-xs font-medium transition-all duration-200",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                       isActive
-                        ? "bg-accent/10 border-accent/40 text-accent shadow-sm shadow-accent/10"
-                        : "bg-surface-elevated/50 border-border/40 text-text-secondary hover:border-border hover:bg-surface-elevated hover:text-text-primary"
+                        ? "bg-accent-tint border-accent/40 text-accent shadow-sm"
+                        : "bg-surface-elevated border-border text-text-secondary hover:border-border hover:bg-surface-elevated hover:text-text-primary"
                     )}
                   >
                     <Icon

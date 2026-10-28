@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
@@ -142,9 +142,9 @@ export default async function MaintenanceDetailPage({
       </PageHeader>
 
       {/* Request overview — identity card */}
-      <section className="bg-surface border border-border/60 rounded-xl overflow-hidden animate-fade-in-up">
-        <div className="p-5 bg-gradient-to-r from-accent/5 to-transparent border-b border-border/40 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
+      <section className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
+        <div className="p-5 border-b border-border flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-accent-tint border border-accent/30 flex items-center justify-center shrink-0">
             <Wrench aria-hidden="true" className="h-5 w-5 text-accent" />
           </div>
           <div className="min-w-0">
@@ -153,7 +153,7 @@ export default async function MaintenanceDetailPage({
             </h2>
             <p className="text-xs text-text-secondary truncate">
               {(property?.name as string) || "—"} &middot; {tc("unit")}{" "}
-              <span className="font-mono ltr-nums">
+              <span className="tabular-nums ltr-nums">
                 {(unit?.unit_number as string) || "—"}
               </span>
             </p>
@@ -161,26 +161,24 @@ export default async function MaintenanceDetailPage({
         </div>
         <dl className="p-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-5">
           <div>
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Calendar aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1 text-[12.5px] font-medium text-text-secondary">
+              <Calendar aria-hidden="true" className="h-3 w-3 text-text-tertiary" />
               {t("requestDate")}
             </dt>
-            <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+            <dd className="mt-1 text-sm text-text-primary tabular-nums ltr-nums">
               {new Date(request.created_at as string).toLocaleDateString()}
             </dd>
           </div>
           <div>
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Banknote aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1 text-[12.5px] font-medium text-text-secondary">
+              <Banknote aria-hidden="true" className="h-3 w-3 text-text-tertiary" />
               {t("estimatedCost")}
             </dt>
-            <dd className="mt-1 text-sm text-text-primary font-mono ltr-nums">
+            <dd className="mt-1 text-sm text-text-primary tabular-nums ltr-nums">
               {request.estimated_cost ? (
                 <>
-                  {Number(request.estimated_cost).toLocaleString("en-OM", {
-                    minimumFractionDigits: 2,
-                  })}{" "}
-                  <span className="text-[10px] font-sans text-text-secondary">
+                  {formatAmount(Number(request.estimated_cost))}{" "}
+                  <span className="text-xs font-medium text-text-secondary">
                     {CURRENCY.code}
                   </span>
                 </>
@@ -190,17 +188,15 @@ export default async function MaintenanceDetailPage({
             </dd>
           </div>
           <div>
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+            <dt className="flex items-center gap-1 text-[12.5px] font-medium text-text-secondary">
               <Banknote aria-hidden="true" className="h-3 w-3 text-accent/70" />
               {t("actualCost")}
             </dt>
-            <dd className="mt-1 text-sm font-semibold text-accent font-mono ltr-nums">
+            <dd className="mt-1 text-sm font-semibold text-accent tabular-nums ltr-nums">
               {request.actual_cost ? (
                 <>
-                  {Number(request.actual_cost).toLocaleString("en-OM", {
-                    minimumFractionDigits: 2,
-                  })}{" "}
-                  <span className="text-[10px] font-sans font-normal text-text-secondary">
+                  {formatAmount(Number(request.actual_cost))}{" "}
+                  <span className="text-xs font-medium text-text-secondary">
                     {CURRENCY.code}
                   </span>
                 </>
@@ -210,29 +206,29 @@ export default async function MaintenanceDetailPage({
             </dd>
           </div>
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <User aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1 text-[12.5px] font-medium text-text-secondary">
+              <User aria-hidden="true" className="h-3 w-3 text-text-tertiary" />
               {t("tenant")}
             </dt>
             <dd className="mt-1 text-sm text-text-primary truncate">
               {tenant ? (tenant.full_name as string) : tu("noTenant")}
             </dd>
             {tenant?.phone ? (
-              <dd className="mt-0.5 text-xs text-text-secondary font-mono ltr-nums truncate">
+              <dd className="mt-0.5 text-xs text-text-secondary tabular-nums ltr-nums truncate">
                 {tenant.phone as string}
               </dd>
             ) : null}
           </div>
           <div className="col-span-2 sm:col-span-3 lg:col-span-2">
-            <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-              <Phone aria-hidden="true" className="h-3 w-3 text-text-secondary/70" />
+            <dt className="flex items-center gap-1 text-[12.5px] font-medium text-text-secondary">
+              <Phone aria-hidden="true" className="h-3 w-3 text-text-tertiary" />
               {t("assignedTo")}
             </dt>
             <dd className="mt-1 text-sm text-text-primary truncate">
               {(request.assigned_to_name as string) || t("notAssigned")}
             </dd>
             {request.assigned_to_phone ? (
-              <dd className="mt-0.5 text-xs text-text-secondary font-mono ltr-nums truncate">
+              <dd className="mt-0.5 text-xs text-text-secondary tabular-nums ltr-nums truncate">
                 {request.assigned_to_phone as string}
               </dd>
             ) : null}
@@ -241,7 +237,7 @@ export default async function MaintenanceDetailPage({
       </section>
 
       {/* Description */}
-      <section className="bg-surface border border-border/60 rounded-xl p-5">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5">
         <h3 className="text-sm font-semibold text-text-primary font-display mb-3">
           {t("description")}
         </h3>
@@ -252,15 +248,15 @@ export default async function MaintenanceDetailPage({
 
       {/* Attachments — always render so it's obvious whether photos were
           received (helps diagnose "I uploaded a photo but it isn't showing"). */}
-      <section className="bg-surface border border-border/60 rounded-xl p-5">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5">
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/15">
+          <div className="p-1.5 rounded-lg bg-accent-tint border border-accent/30">
             <Paperclip aria-hidden="true" className="h-4 w-4 text-accent" />
           </div>
           <h3 className="text-sm font-semibold text-text-primary font-display">
             {t("attachments")}
           </h3>
-          <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+          <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border px-2 py-0.5 rounded-md tabular-nums ltr-nums">
             {attachments?.length || 0}
           </span>
         </div>
@@ -280,7 +276,7 @@ export default async function MaintenanceDetailPage({
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group block bg-surface-elevated border border-border/60 rounded-lg overflow-hidden hover:border-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="group block bg-surface-elevated border border-border rounded-lg overflow-hidden hover:border-border-strong transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   title={name}
                 >
                   {isVideo ? (
@@ -303,7 +299,7 @@ export default async function MaintenanceDetailPage({
                       loading="lazy"
                     />
                   )}
-                  <div className="px-2 py-1.5 text-[10px] text-text-secondary truncate">
+                  <div className="px-2 py-1.5 text-xs text-text-secondary truncate">
                     {name}
                   </div>
                 </a>
@@ -314,7 +310,7 @@ export default async function MaintenanceDetailPage({
       </section>
 
       {/* Status Flow */}
-      <section className="bg-surface border border-border/60 rounded-xl p-5">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5">
         <h3 className="text-sm font-semibold text-text-primary font-display mb-4">
           {t("statusUpdate")}
         </h3>
@@ -335,7 +331,7 @@ export default async function MaintenanceDetailPage({
       </section>
 
       {/* Assignment & cost */}
-      <section className="bg-surface border border-border/60 rounded-xl p-5">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5">
         <h3 className="text-sm font-semibold text-text-primary font-display mb-4">
           {t("assignmentAndCost")}
         </h3>
@@ -348,16 +344,16 @@ export default async function MaintenanceDetailPage({
       </section>
 
       {/* Notes / Activity Log */}
-      <section className="bg-surface border border-border/60 rounded-xl p-5">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5">
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/15">
+          <div className="p-1.5 rounded-lg bg-accent-tint border border-accent/30">
             <MessageSquare aria-hidden="true" className="h-4 w-4 text-accent" />
           </div>
           <h3 className="text-sm font-semibold text-text-primary font-display">
             {t("activityLog")}
           </h3>
           {notes && notes.length > 0 && (
-            <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+            <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border px-2 py-0.5 rounded-md tabular-nums ltr-nums">
               {notes.length}
             </span>
           )}
@@ -374,7 +370,7 @@ export default async function MaintenanceDetailPage({
                   {note.note as string}
                 </p>
                 <p className="text-xs text-text-secondary mt-1">
-                  <span className="font-mono ltr-nums">
+                  <span className="tabular-nums ltr-nums">
                     {new Date(note.created_at as string).toLocaleString()}
                   </span>
                   {note.created_by_name ? (

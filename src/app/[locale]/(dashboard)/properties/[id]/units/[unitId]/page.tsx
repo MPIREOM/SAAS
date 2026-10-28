@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { CURRENCY } from "@/lib/currency";
+import { CURRENCY, formatAmount } from "@/lib/currency";
 import { getDocumentUrl, getDocumentUrls } from "@/lib/utils/document-url";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -59,6 +59,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { buttonVariants } from "@/components/ui/button";
 
 type BadgeVariant =
   | "default"
@@ -103,7 +104,7 @@ const URGENCY_VARIANTS: Record<string, BadgeVariant> = {
 };
 
 const formatMoney = (value: unknown) =>
-  Number(value || 0).toLocaleString("en-OM", { minimumFractionDigits: 2 });
+  formatAmount(Number(value || 0));
 
 export default async function UnitDetailPage({
   params,
@@ -332,7 +333,7 @@ export default async function UnitDetailPage({
     vacant: { variant: "success", icon: CheckCircle2 },
     occupied: {
       variant: "outline",
-      className: "bg-info/10 text-info border-info/25",
+      className: "bg-info-tint text-info border-info/30",
       icon: User,
     },
     maintenance: { variant: "warning", icon: Wrench },
@@ -386,7 +387,7 @@ export default async function UnitDetailPage({
     {
       label: t("rentAmount"),
       value: unit.rent_amount
-        ? `${Number(unit.rent_amount).toLocaleString("en-OM", { minimumFractionDigits: 0 })} ${CURRENCY.code}`
+        ? `${formatAmount(Number(unit.rent_amount))} ${CURRENCY.code}`
         : "—",
       icon: Banknote,
       mono: true,
@@ -423,7 +424,7 @@ export default async function UnitDetailPage({
         {unitStatus === "vacant" && (
           <Link
             href={`/${locale}/tenants/new?unitId=${unitId}&propertyId=${propertyId}&rentAmount=${unit.rent_amount || ""}`}
-            className="inline-flex items-center gap-2 h-10 px-5 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className={buttonVariants()}
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
             {t("assignTenant")}
@@ -439,7 +440,7 @@ export default async function UnitDetailPage({
         </Badge>
         <UnitStatusToggle unitId={unitId} currentStatus={unitStatus} />
         <span className="flex items-center gap-1.5 text-sm text-text-secondary min-w-0">
-          <MapPin aria-hidden="true" className="h-3.5 w-3.5 text-text-secondary/60 shrink-0" />
+          <MapPin aria-hidden="true" className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
           <span className="truncate">
             {(property?.name as string) || ""}
             {property?.location ? ` — ${property.location}` : ""}
@@ -448,23 +449,23 @@ export default async function UnitDetailPage({
       </div>
 
       {/* Unit facts */}
-      <section className="bg-surface border border-border/60 rounded-xl p-5 animate-fade-in-up">
+      <section className="bg-surface border border-border rounded-xl shadow-card p-5">
         <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5">
           {unitFacts.map((item) => {
             const Icon = item.icon;
             return (
               <div key={item.label} className="min-w-0">
-                <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                <dt className="flex items-center gap-1 text-[12.5px] font-medium text-text-secondary">
                   <Icon
                     aria-hidden="true"
-                    className="h-3 w-3 text-text-secondary/70"
+                    className="h-3 w-3 text-text-tertiary"
                   />
                   {item.label}
                 </dt>
                 <dd
                   className={`mt-1 text-sm font-medium truncate ${
                     item.highlight ? "text-accent font-semibold" : "text-text-primary"
-                  } ${item.mono ? "font-mono tabular-nums ltr-nums" : ""} ${item.capitalize ? "capitalize" : ""}`}
+                  }        ${item.mono ? "tabular-nums ltr-nums" : ""}        ${item.capitalize ? "capitalize" : ""}`}
                 >
                   {item.value}
                 </dd>
@@ -479,24 +480,24 @@ export default async function UnitDetailPage({
         <SectionHeading icon={User} title={t("currentTenant")} />
 
         {currentTenant ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Tenant header */}
-            <div className="p-5 bg-gradient-to-r from-accent/5 to-transparent border-b border-border/40">
+            <div className="p-5 border-b border-border">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-xl bg-accent/10 border border-accent/25 flex items-center justify-center shrink-0">
+                  <div className="h-10 w-10 rounded-xl bg-accent-tint border border-accent/30 flex items-center justify-center shrink-0">
                     <User aria-hidden="true" className="h-5 w-5 text-accent" />
                   </div>
                   <div className="min-w-0">
                     <Link
                       href={`/${locale}/tenants/${currentTenant.id}`}
-                      className="text-base font-semibold text-text-primary hover:text-accent transition-colors font-display focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                      className="text-base font-semibold text-text-primary hover:text-accent transition-colors font-display focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                     >
                       {currentTenant.full_name as string}
                     </Link>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                       {currentTenant.phone ? (
-                        <span className="text-xs text-text-secondary flex items-center gap-1 font-mono ltr-nums">
+                        <span className="text-xs text-text-secondary flex items-center gap-1 tabular-nums ltr-nums">
                           <Phone aria-hidden="true" className="h-3 w-3" />
                           {currentTenant.phone as string}
                         </span>
@@ -512,10 +513,10 @@ export default async function UnitDetailPage({
                 </div>
                 {activeLease?.monthly_rent && (
                   <div className="text-end">
-                    <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                    <p className="text-[12.5px] font-medium text-text-secondary">
                       {tt("monthlyRent")}
                     </p>
-                    <p className="text-lg font-bold font-mono tabular-nums ltr-nums text-accent">
+                    <p className="text-lg font-bold tabular-nums ltr-nums text-accent">
                       {formatMoney(activeLease.monthly_rent)}
                       <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                         {CURRENCY.code}
@@ -528,7 +529,7 @@ export default async function UnitDetailPage({
                 <Link
                   href={`/api/tenants/${currentTenant.id}/unpaid-invoices/pdf`}
                   target="_blank"
-                  className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-lg hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className={buttonVariants({ variant: "secondary", size: "sm" })}
                   title={ti("downloadUnpaidPDFDescription")}
                 >
                   <FileDown aria-hidden="true" className="h-3.5 w-3.5" />
@@ -537,7 +538,7 @@ export default async function UnitDetailPage({
                 {currentTenant.status === "active" && (
                   <Link
                     href={`/${locale}/tenants/${currentTenant.id}/relocate${activeLease?.id ? `?lease=${activeLease.id}` : ""}`}
-                    className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-lg hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
                   >
                     <ArrowRightLeft aria-hidden="true" className="h-3.5 w-3.5" />
                     {tt("relocate.button")}
@@ -546,7 +547,7 @@ export default async function UnitDetailPage({
                 {currentTenant.status === "active" && (
                   <Link
                     href={`/${locale}/tenants/${currentTenant.id}/renew-lease`}
-                    className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-lg hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
                   >
                     <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
                     {tl("renewLease")}
@@ -554,7 +555,7 @@ export default async function UnitDetailPage({
                 )}
                 <Link
                   href={`/${locale}/tenants/${currentTenant.id}/move-out${activeLease?.id ? `?lease=${activeLease.id}` : ""}`}
-                  className="inline-flex items-center gap-2 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-lg hover:bg-border/30 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className={buttonVariants({ variant: "secondary", size: "sm" })}
                 >
                   <LogOut aria-hidden="true" className="h-3.5 w-3.5" />
                   {tt("moveOutButton")}
@@ -594,15 +595,15 @@ export default async function UnitDetailPage({
                   const Icon = item.icon;
                   return (
                     <div key={item.label} className="min-w-0">
-                      <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      <dt className="flex items-center gap-1 text-[12.5px] font-medium text-text-secondary">
                         <Icon
                           aria-hidden="true"
-                          className="h-3 w-3 text-text-secondary/70"
+                          className="h-3 w-3 text-text-tertiary"
                         />
                         {item.label}
                       </dt>
                       <dd
-                        className={`mt-1 text-sm text-text-primary truncate ${item.mono ? "font-mono tabular-nums ltr-nums" : ""}`}
+                        className={`mt-1 text-sm text-text-primary truncate ${item.mono ? "tabular-nums ltr-nums" : ""}`}
                       >
                         {item.value || "—"}
                       </dd>
@@ -613,7 +614,7 @@ export default async function UnitDetailPage({
 
               {/* Lease info */}
               {activeLease && (
-                <dl className="mt-4 pt-4 border-t border-border/40 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-5">
+                <dl className="mt-4 pt-4 border-t border-border grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-5">
                   {[
                     {
                       label: tt("startDate"),
@@ -640,14 +641,14 @@ export default async function UnitDetailPage({
                     const Icon = item.icon;
                     return (
                       <div key={item.label} className="min-w-0">
-                        <dt className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                        <dt className="flex items-center gap-1 text-[12.5px] font-medium text-text-secondary">
                           <Icon
                             aria-hidden="true"
-                            className="h-3 w-3 text-text-secondary/70"
+                            className="h-3 w-3 text-text-tertiary"
                           />
                           {item.label}
                         </dt>
-                        <dd className="mt-1 text-sm text-text-primary font-mono tabular-nums ltr-nums truncate">
+                        <dd className="mt-1 text-sm text-text-primary tabular-nums ltr-nums truncate">
                           {item.value}
                         </dd>
                       </div>
@@ -664,7 +665,7 @@ export default async function UnitDetailPage({
             action={
               <Link
                 href={`/${locale}/tenants/new?unitId=${unitId}&propertyId=${propertyId}&rentAmount=${unit.rent_amount || ""}`}
-                className="inline-flex items-center gap-2 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm shadow-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className={buttonVariants({ size: "sm" })}
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
                 {t("assignTenant")}
@@ -681,7 +682,7 @@ export default async function UnitDetailPage({
             <SectionHeading icon={Landmark} title={tmc("title")} className="mb-0" />
             <MunicipalityContractDialog unitId={unitId} />
           </div>
-          <div className="bg-surface border border-border/60 rounded-xl p-5 flex flex-wrap items-start justify-between gap-4">
+          <div className="bg-surface border border-border rounded-xl shadow-card p-5 flex flex-wrap items-start justify-between gap-4">
             {municipalityContract ? (
               <>
                 <div className="min-w-0 space-y-1.5">
@@ -689,11 +690,11 @@ export default async function UnitDetailPage({
                     <Badge variant={municipalityContractExpired ? "warning" : "success"}>
                       {tmc(municipalityContractExpired ? "expiredBadge" : "active")}
                     </Badge>
-                    <span className="text-sm font-semibold text-text-primary font-mono ltr-nums">
+                    <span className="text-sm font-semibold text-text-primary tabular-nums ltr-nums">
                       {municipalityContract.contract_number}
                     </span>
                   </div>
-                  <p className="text-sm text-text-secondary font-mono ltr-nums">
+                  <p className="text-sm text-text-secondary tabular-nums ltr-nums">
                     {tmc("period", {
                       start: new Date(municipalityContract.start_date).toLocaleDateString(),
                       end: new Date(municipalityContract.end_date).toLocaleDateString(),
@@ -705,7 +706,7 @@ export default async function UnitDetailPage({
                     href={municipalityContractUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-semibold text-accent rounded-lg hover:bg-accent/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className={buttonVariants({ size: "sm" })}
                   >
                     <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
                     {tmc("view")}
@@ -733,7 +734,7 @@ export default async function UnitDetailPage({
               keyFee={Number(agreement?.key_fee ?? LOST_KEY_FEE)}
             />
           </div>
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             <div className="p-5 flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
@@ -741,7 +742,7 @@ export default async function UnitDetailPage({
                     {ta(`staff.states.${agreementState}`)}
                   </Badge>
                   {agreement && (
-                    <span className="text-xs text-text-secondary font-mono ltr-nums">{agreement.reference}</span>
+                    <span className="text-xs text-text-secondary tabular-nums ltr-nums">{agreement.reference}</span>
                   )}
                 </div>
                 <p className="text-sm text-text-secondary">
@@ -768,8 +769,8 @@ export default async function UnitDetailPage({
             </div>
 
             {violations.length > 0 && (
-              <div className="border-t border-border/40">
-                <h3 className="px-5 pt-4 pb-2 text-xs font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+              <div className="border-t border-border">
+                <h3 className="px-5 pt-4 pb-2 text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal flex items-center gap-1.5">
                   <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 text-destructive" />
                   {ta("violations.title")}
                 </h3>
@@ -784,23 +785,23 @@ export default async function UnitDetailPage({
                           )}
                         </p>
                         <p className="text-xs text-text-secondary">
-                          <span className="font-mono ltr-nums">{new Date(v.occurred_on).toLocaleDateString()}</span>
+                          <span className="tabular-nums ltr-nums">{new Date(v.occurred_on).toLocaleDateString()}</span>
                           {v.invoices?.invoice_number && (
-                            <span className="font-mono ltr-nums"> · {v.invoices.invoice_number}</span>
+                            <span className="tabular-nums ltr-nums"> · {v.invoices.invoice_number}</span>
                           )}
                           {v.notes ? ` · ${v.notes}` : ""}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         {v.invoices?.status && (
-                          <Badge variant={INVOICE_STATUS_VARIANTS[v.invoices.status] ?? "secondary"} className="text-[10px] px-1.5">
+                          <Badge variant={INVOICE_STATUS_VARIANTS[v.invoices.status] ?? "secondary"} className="text-xs px-1.5">
                             {["pending", "overdue", "partial", "paid", "cancelled", "written_off"].includes(v.invoices.status)
                               ? ti(v.invoices.status)
                               : v.invoices.status}
                           </Badge>
                         )}
-                        <span className="text-sm font-semibold font-mono ltr-nums tabular-nums text-destructive">
-                          {Number(v.amount).toFixed(3)} {CURRENCY.code}
+                        <span className="text-sm font-semibold tabular-nums ltr-nums tabular-nums text-destructive">
+                          {formatAmount(Number(v.amount))} {CURRENCY.code}
                         </span>
                       </div>
                     </li>
@@ -820,7 +821,7 @@ export default async function UnitDetailPage({
             title={t("previousTenants")}
             count={pastLeases.length}
           />
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[720px]">
@@ -846,7 +847,7 @@ export default async function UnitDetailPage({
                           {pastTenant ? (
                             <Link
                               href={`/${locale}/tenants/${pastTenant.id}`}
-                              className="text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                              className="text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                             >
                               {pastTenant.full_name as string}
                             </Link>
@@ -854,16 +855,16 @@ export default async function UnitDetailPage({
                             <span className="text-sm text-text-secondary">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="px-4 text-text-secondary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-secondary tabular-nums ltr-nums">
                           {(pastTenant?.phone as string) || "—"}
                         </TableCell>
-                        <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                           {new Date(lease.start_date as string).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                           {new Date(lease.end_date as string).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                           {lease.vacate_date
                             ? new Date(lease.vacate_date as string).toLocaleDateString()
                             : "—"}
@@ -878,7 +879,7 @@ export default async function UnitDetailPage({
                             <Link
                               href={`/api/tenants/${pastTenant.id}/unpaid-invoices/pdf`}
                               target="_blank"
-                              className="inline-flex items-center gap-1 p-1.5 text-text-secondary hover:text-accent rounded-md border border-border/50 hover:border-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                              className="inline-flex items-center gap-1 p-1.5 text-text-secondary hover:text-accent rounded-md border border-border hover:border-border-strong transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                               title={ti("downloadUnpaidPDFDescription")}
                               aria-label={ti("downloadUnpaidPDF")}
                             >
@@ -893,7 +894,7 @@ export default async function UnitDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {pastLeases.map((lease: Record<string, unknown>) => {
                 const pastTenant = lease.tenants as Record<string, unknown> | null;
                 return (
@@ -911,7 +912,7 @@ export default async function UnitDetailPage({
                           <p className="text-sm text-text-secondary">—</p>
                         )}
                         {pastTenant?.phone ? (
-                          <p className="text-xs text-text-secondary font-mono ltr-nums mt-0.5">
+                          <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-0.5">
                             {pastTenant.phone as string}
                           </p>
                         ) : null}
@@ -920,7 +921,7 @@ export default async function UnitDetailPage({
                         <Link
                           href={`/api/tenants/${pastTenant.id}/unpaid-invoices/pdf`}
                           target="_blank"
-                          className="inline-flex items-center gap-1 p-2 text-text-secondary hover:text-accent rounded-md border border-border/50 hover:border-accent/30 transition-colors shrink-0"
+                          className="inline-flex items-center gap-1 p-2 text-text-secondary hover:text-accent rounded-md border border-border hover:border-border-strong transition-colors shrink-0"
                           title={ti("downloadUnpaidPDFDescription")}
                           aria-label={ti("downloadUnpaidPDF")}
                         >
@@ -929,11 +930,11 @@ export default async function UnitDetailPage({
                       ) : null}
                     </div>
                     <p className="mt-2 text-xs text-text-secondary">
-                      <span className="font-mono ltr-nums">
+                      <span className="tabular-nums ltr-nums">
                         {new Date(lease.start_date as string).toLocaleDateString()}
                       </span>
                       {" — "}
-                      <span className="font-mono ltr-nums">
+                      <span className="tabular-nums ltr-nums">
                         {lease.vacate_date
                           ? new Date(lease.vacate_date as string).toLocaleDateString()
                           : new Date(lease.end_date as string).toLocaleDateString()}
@@ -962,7 +963,7 @@ export default async function UnitDetailPage({
             />
             <Link
               href={`/${locale}/invoices`}
-              className="inline-flex items-center gap-1.5 h-8 px-3 bg-surface-elevated border border-border/60 text-text-secondary text-xs font-medium rounded-lg hover:border-accent/30 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
               <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
               {tc("viewAll")}
@@ -973,41 +974,35 @@ export default async function UnitDetailPage({
             <>
               {/* Paid / Pending summary cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                <div className="bg-surface border border-success/25 rounded-xl p-4">
+                <div className="bg-surface border border-success/30 rounded-xl p-4">
                   <div className="flex items-center gap-1.5 mb-2">
                     <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 text-success" />
-                    <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                    <span className="text-[12.5px] font-medium text-text-secondary">
                       {ti("paid")}
                     </span>
-                    <span className="ms-auto text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+                    <span className="ms-auto text-xs font-medium text-text-secondary bg-surface-elevated border border-border px-2 py-0.5 rounded-md tabular-nums ltr-nums">
                       {invoiceTotals.paidCount}
                     </span>
                   </div>
-                  <p className="text-lg font-bold font-mono tabular-nums ltr-nums text-success">
-                    {invoiceTotals.paidAmount.toLocaleString("en-OM", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                  <p className="text-lg font-bold tabular-nums ltr-nums text-success">
+                    {formatAmount(invoiceTotals.paidAmount)}
                     <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                       {CURRENCY.code}
                     </span>
                   </p>
                 </div>
-                <div className="bg-surface border border-warning/25 rounded-xl p-4">
+                <div className="bg-surface border border-warning/30 rounded-xl p-4">
                   <div className="flex items-center gap-1.5 mb-2">
                     <Clock aria-hidden="true" className="h-3.5 w-3.5 text-warning" />
-                    <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                    <span className="text-[12.5px] font-medium text-text-secondary">
                       {ti("pending")}
                     </span>
-                    <span className="ms-auto text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+                    <span className="ms-auto text-xs font-medium text-text-secondary bg-surface-elevated border border-border px-2 py-0.5 rounded-md tabular-nums ltr-nums">
                       {invoiceTotals.pendingCount}
                     </span>
                   </div>
-                  <p className="text-lg font-bold font-mono tabular-nums ltr-nums text-warning">
-                    {invoiceTotals.pendingAmount.toLocaleString("en-OM", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                  <p className="text-lg font-bold tabular-nums ltr-nums text-warning">
+                    {formatAmount(invoiceTotals.pendingAmount)}
                     <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                       {CURRENCY.code}
                     </span>
@@ -1016,7 +1011,7 @@ export default async function UnitDetailPage({
               </div>
 
               {/* Invoice table */}
-              <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+              <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
                 {/* Desktop table */}
                 <div className="hidden md:block">
                   <Table className="min-w-[820px]">
@@ -1044,13 +1039,13 @@ export default async function UnitDetailPage({
                           <TableRow
                             key={inv.id}
                             className={
-                              inv.status === "overdue" ? "bg-destructive/5" : ""
+                              inv.status === "overdue" ? "bg-destructive-tint" : ""
                             }
                           >
-                            <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                            <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                               {new Date(inv.due_date).toLocaleDateString()}
                             </TableCell>
-                            <TableCell className="px-4 text-text-secondary font-mono ltr-nums">
+                            <TableCell className="px-4 text-text-secondary tabular-nums ltr-nums">
                               {inv.period_start
                                 ? new Date(inv.period_start).toLocaleDateString()
                                 : "—"}
@@ -1059,29 +1054,23 @@ export default async function UnitDetailPage({
                                 ? new Date(inv.period_end).toLocaleDateString()
                                 : "—"}
                             </TableCell>
-                            <TableCell className="px-4 text-end font-semibold text-text-primary font-mono ltr-nums">
-                              {amount.toLocaleString("en-OM", {
-                                minimumFractionDigits: 2,
-                              })}{" "}
-                              <span className="text-[10px] font-sans font-normal text-text-secondary">
+                            <TableCell className="px-4 text-end font-semibold text-text-primary tabular-nums ltr-nums">
+                              {formatAmount(amount)}{" "}
+                              <span className="text-xs font-medium text-text-secondary">
                                 {CURRENCY.code}
                               </span>
                             </TableCell>
-                            <TableCell className="px-4 text-end text-success font-mono ltr-nums">
-                              {paid.toLocaleString("en-OM", {
-                                minimumFractionDigits: 2,
-                              })}
+                            <TableCell className="px-4 text-end text-success tabular-nums ltr-nums">
+                              {formatAmount(paid)}
                             </TableCell>
                             <TableCell
-                              className={`px-4 text-end font-mono ltr-nums ${
+                              className={`px-4 text-end tabular-nums ltr-nums ${
                                 remaining > 0
                                   ? "text-warning font-semibold"
                                   : "text-text-secondary"
                               }`}
                             >
-                              {remaining.toLocaleString("en-OM", {
-                                minimumFractionDigits: 2,
-                              })}
+                              {formatAmount(remaining)}
                             </TableCell>
                             <TableCell className="px-4">
                               <Badge
@@ -1103,7 +1092,7 @@ export default async function UnitDetailPage({
                   </Table>
                 </div>
                 {/* Mobile card list */}
-                <ul className="md:hidden divide-y divide-border/40">
+                <ul className="md:hidden divide-y divide-border">
                   {invoices.map((inv) => {
                     const amount = Number(inv.amount) || 0;
                     const paid = Number(inv.paid_amount) || 0;
@@ -1112,15 +1101,15 @@ export default async function UnitDetailPage({
                       <li
                         key={`m-${inv.id}`}
                         className={`p-4 ${
-                          inv.status === "overdue" ? "bg-destructive/5" : ""
+                          inv.status === "overdue" ? "bg-destructive-tint" : ""
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-text-primary font-mono ltr-nums">
+                            <p className="text-sm font-medium text-text-primary tabular-nums ltr-nums">
                               {new Date(inv.due_date).toLocaleDateString()}
                             </p>
-                            <p className="text-xs text-text-secondary font-mono ltr-nums mt-0.5">
+                            <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-0.5">
                               {inv.period_start
                                 ? new Date(inv.period_start).toLocaleDateString()
                                 : "—"}
@@ -1130,11 +1119,9 @@ export default async function UnitDetailPage({
                                 : "—"}
                             </p>
                           </div>
-                          <p className="text-sm font-semibold text-text-primary font-mono ltr-nums text-end shrink-0">
-                            {amount.toLocaleString("en-OM", {
-                              minimumFractionDigits: 2,
-                            })}{" "}
-                            <span className="text-[10px] font-normal text-text-secondary">
+                          <p className="text-sm font-semibold text-text-primary tabular-nums ltr-nums text-end shrink-0">
+                            {formatAmount(amount)}{" "}
+                            <span className="text-xs font-normal text-text-secondary">
                               {CURRENCY.code}
                             </span>
                           </p>
@@ -1144,17 +1131,15 @@ export default async function UnitDetailPage({
                             variant={
                               INVOICE_STATUS_VARIANTS[inv.status] ?? "secondary"
                             }
-                            className="capitalize text-[10px] px-1.5"
+                            className="capitalize text-xs px-1.5"
                           >
                             {ti(inv.status)}
                           </Badge>
                           {remaining > 0 && (
                             <span className="text-xs text-text-secondary">
                               {ti("remaining")} ·{" "}
-                              <span className="font-mono ltr-nums font-semibold text-warning">
-                                {remaining.toLocaleString("en-OM", {
-                                  minimumFractionDigits: 2,
-                                })}
+                              <span className="tabular-nums ltr-nums font-semibold text-warning">
+                                {formatAmount(remaining)}
                               </span>
                             </span>
                           )}
@@ -1187,7 +1172,7 @@ export default async function UnitDetailPage({
         />
 
         {payments && payments.length > 0 ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[640px]">
@@ -1203,14 +1188,14 @@ export default async function UnitDetailPage({
                 <TableBody>
                   {payments.map((payment: Record<string, unknown>) => (
                     <TableRow key={payment.id as string}>
-                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                         {new Date(
                           payment.payment_date as string
                         ).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="px-4 text-end font-semibold text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-end font-semibold text-text-primary tabular-nums ltr-nums">
                         {formatMoney(payment.amount)}{" "}
-                        <span className="text-[10px] font-sans font-normal text-text-secondary">
+                        <span className="text-xs font-medium text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </TableCell>
@@ -1231,12 +1216,12 @@ export default async function UnitDetailPage({
                         {payment.method === "cheque" && payment.reference_number ? (
                           <a
                             href="#cheques-section"
-                            className="text-sm text-accent font-mono ltr-nums font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                            className="text-sm text-accent tabular-nums ltr-nums font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                           >
                             {payment.reference_number as string}
                           </a>
                         ) : (
-                          <span className="text-sm text-text-secondary font-mono ltr-nums">
+                          <span className="text-sm text-text-secondary tabular-nums ltr-nums">
                             {(payment.reference_number as string) || "—"}
                           </span>
                         )}
@@ -1250,18 +1235,18 @@ export default async function UnitDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {payments.map((payment: Record<string, unknown>) => (
                 <li key={`m-${payment.id as string}`} className="p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-xs text-text-secondary font-mono ltr-nums">
+                    <p className="text-xs text-text-secondary tabular-nums ltr-nums">
                       {new Date(
                         payment.payment_date as string
                       ).toLocaleDateString()}
                     </p>
-                    <p className="text-sm font-semibold text-text-primary font-mono ltr-nums text-end shrink-0">
+                    <p className="text-sm font-semibold text-text-primary tabular-nums ltr-nums text-end shrink-0">
                       {formatMoney(payment.amount)}{" "}
-                      <span className="text-[10px] font-normal text-text-secondary">
+                      <span className="text-xs font-normal text-text-secondary">
                         {CURRENCY.code}
                       </span>
                     </p>
@@ -1282,7 +1267,7 @@ export default async function UnitDetailPage({
                   {Boolean(payment.reference_number) && (
                     <p className="mt-1.5 text-xs text-text-secondary truncate">
                       {tt("reference")} ·{" "}
-                      <span className="font-mono ltr-nums">
+                      <span className="tabular-nums ltr-nums">
                         {payment.reference_number as string}
                       </span>
                     </p>
@@ -1317,7 +1302,7 @@ export default async function UnitDetailPage({
         </div>
 
         {cheques && cheques.length > 0 ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[640px]">
@@ -1339,24 +1324,24 @@ export default async function UnitDetailPage({
                       key={cheque.id as string}
                       className={
                         (cheque.status as string) === "bounced"
-                          ? "bg-destructive/5"
+                          ? "bg-destructive-tint"
                           : ""
                       }
                     >
-                      <TableCell className="px-4 font-medium text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 font-medium text-text-primary tabular-nums ltr-nums">
                         #{cheque.cheque_number as string}
                       </TableCell>
                       <TableCell className="px-4 text-text-secondary">
                         {cheque.bank_name as string}
                       </TableCell>
-                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                         {new Date(
                           cheque.cheque_date as string
                         ).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="px-4 text-end font-semibold text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-end font-semibold text-text-primary tabular-nums ltr-nums">
                         {formatMoney(cheque.amount)}{" "}
-                        <span className="text-[10px] font-sans font-normal text-text-secondary">
+                        <span className="text-xs font-medium text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </TableCell>
@@ -1382,25 +1367,25 @@ export default async function UnitDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {cheques.map((cheque: Record<string, unknown>) => (
                 <li
                   key={`m-${cheque.id as string}`}
                   className={`p-4 ${
                     (cheque.status as string) === "bounced"
-                      ? "bg-destructive/5"
+                      ? "bg-destructive-tint"
                       : ""
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-text-primary font-mono ltr-nums truncate">
+                      <p className="text-sm font-medium text-text-primary tabular-nums ltr-nums truncate">
                         #{cheque.cheque_number as string}
                       </p>
                       <p className="text-xs text-text-secondary truncate mt-0.5">
                         {cheque.bank_name as string}
                         {" · "}
-                        <span className="font-mono ltr-nums">
+                        <span className="tabular-nums ltr-nums">
                           {new Date(
                             cheque.cheque_date as string
                           ).toLocaleDateString()}
@@ -1408,9 +1393,9 @@ export default async function UnitDetailPage({
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <p className="text-sm font-semibold text-text-primary font-mono ltr-nums text-end">
+                      <p className="text-sm font-semibold text-text-primary tabular-nums ltr-nums text-end">
                         {formatMoney(cheque.amount)}{" "}
-                        <span className="text-[10px] font-normal text-text-secondary">
+                        <span className="text-xs font-normal text-text-secondary">
                           {CURRENCY.code}
                         </span>
                       </p>
@@ -1456,7 +1441,7 @@ export default async function UnitDetailPage({
           {tenantId && (
             <Link
               href={`/${locale}/documents/upload?entityType=tenant&entityId=${tenantId}`}
-              className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent/10 text-accent text-xs font-semibold rounded-lg hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className={buttonVariants({ size: "sm" })}
             >
               <Plus aria-hidden="true" className="h-3.5 w-3.5" />
               {td("uploadDocument")}
@@ -1465,7 +1450,7 @@ export default async function UnitDetailPage({
         </div>
 
         {documents && documents.length > 0 ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[560px]">
@@ -1507,7 +1492,7 @@ export default async function UnitDetailPage({
                         <TableCell className="px-4">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`text-sm font-mono ltr-nums ${
+                              className={`text-sm tabular-nums ltr-nums ${
                                 isExpired
                                   ? "text-destructive font-medium"
                                   : isExpiringSoon
@@ -1520,18 +1505,18 @@ export default async function UnitDetailPage({
                                 : "—"}
                             </span>
                             {isExpired && (
-                              <Badge variant="destructive" className="text-[10px] px-1.5">
+                              <Badge variant="destructive" className="text-xs px-1.5">
                                 {td("expired")}
                               </Badge>
                             )}
                             {isExpiringSoon && !isExpired && (
-                              <Badge variant="warning" className="text-[10px] px-1.5">
+                              <Badge variant="warning" className="text-xs px-1.5">
                                 {td("expiringSoon")}
                               </Badge>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-4 text-text-secondary font-mono ltr-nums">
+                        <TableCell className="px-4 text-text-secondary tabular-nums ltr-nums">
                           {new Date(
                             doc.uploaded_at as string
                           ).toLocaleDateString()}
@@ -1543,7 +1528,7 @@ export default async function UnitDetailPage({
                               target="_blank"
                               rel="noopener noreferrer"
                               aria-label={td("preview")}
-                              className="p-1.5 rounded-lg text-accent hover:bg-accent/10 transition-colors inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                              className="p-1.5 rounded-lg text-accent hover:bg-accent-tint transition-colors inline-flex focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                             >
                               <ExternalLink aria-hidden="true" className="h-4 w-4" />
                             </a>
@@ -1556,7 +1541,7 @@ export default async function UnitDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {documents.map((doc: Record<string, unknown>) => {
                 const expiryDate = doc.expiry_date
                   ? new Date(doc.expiry_date as string)
@@ -1574,7 +1559,7 @@ export default async function UnitDetailPage({
                         <p className="text-sm font-medium text-text-primary truncate">
                           {(doc.file_name as string) || "—"}
                         </p>
-                        <p className="text-xs text-text-secondary font-mono ltr-nums mt-0.5">
+                        <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-0.5">
                           {new Date(
                             doc.uploaded_at as string
                           ).toLocaleDateString()}
@@ -1586,28 +1571,28 @@ export default async function UnitDetailPage({
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label={td("preview")}
-                          className="p-2 -m-0.5 rounded-lg text-accent hover:bg-accent/10 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          className="p-2 -m-0.5 rounded-lg text-accent hover:bg-accent-tint transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                         >
                           <ExternalLink aria-hidden="true" className="h-4 w-4" />
                         </a>
                       ) : null}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <Badge variant="default" className="capitalize text-[10px] px-1.5">
+                      <Badge variant="default" className="capitalize text-xs px-1.5">
                         {((doc.document_type as string) || "").replace(/_/g, " ")}
                       </Badge>
                       {isExpired && (
-                        <Badge variant="destructive" className="text-[10px] px-1.5">
+                        <Badge variant="destructive" className="text-xs px-1.5">
                           {td("expired")}
                         </Badge>
                       )}
                       {isExpiringSoon && !isExpired && (
-                        <Badge variant="warning" className="text-[10px] px-1.5">
+                        <Badge variant="warning" className="text-xs px-1.5">
                           {td("expiringSoon")}
                         </Badge>
                       )}
                       {expiryDate && (
-                        <span className="text-xs text-text-secondary font-mono ltr-nums">
+                        <span className="text-xs text-text-secondary tabular-nums ltr-nums">
                           {expiryDate.toLocaleDateString()}
                         </span>
                       )}
@@ -1626,7 +1611,7 @@ export default async function UnitDetailPage({
               tenantId ? (
                 <Link
                   href={`/${locale}/documents/upload?entityType=tenant&entityId=${tenantId}`}
-                  className="inline-flex items-center gap-1.5 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className={buttonVariants({ size: "sm" })}
                 >
                   <Plus aria-hidden="true" className="h-3.5 w-3.5" />
                   {td("uploadDocument")}
@@ -1648,7 +1633,7 @@ export default async function UnitDetailPage({
           />
           <Link
             href={`/${locale}/maintenance/new?unitId=${unitId}&propertyId=${propertyId}`}
-            className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent/10 text-accent text-xs font-semibold rounded-lg hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className={buttonVariants({ size: "sm" })}
           >
             <Plus aria-hidden="true" className="h-3.5 w-3.5" />
             {tm("newRequest")}
@@ -1656,7 +1641,7 @@ export default async function UnitDetailPage({
         </div>
 
         {maintenance && maintenance.length > 0 ? (
-          <div className="bg-surface border border-border/60 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
             {/* Desktop table */}
             <div className="hidden md:block">
               <Table className="min-w-[560px]">
@@ -1671,10 +1656,10 @@ export default async function UnitDetailPage({
                 <TableBody>
                   {maintenance.map((req: Record<string, unknown>) => (
                     <TableRow key={req.id as string}>
-                      <TableCell className="px-4 text-text-primary font-mono ltr-nums">
+                      <TableCell className="px-4 text-text-primary tabular-nums ltr-nums">
                         <Link
                           href={`/${locale}/maintenance/${req.id}`}
-                          className="hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                          className="hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                         >
                           {new Date(
                             req.created_at as string
@@ -1684,7 +1669,7 @@ export default async function UnitDetailPage({
                       <TableCell className="px-4">
                         <Link
                           href={`/${locale}/maintenance/${req.id}`}
-                          className="text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+                          className="text-sm font-medium text-text-primary hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
                         >
                           {(req.description as string)?.slice(0, 60) || "—"}
                           {(req.description as string)?.length > 60 ? "…" : ""}
@@ -1719,18 +1704,18 @@ export default async function UnitDetailPage({
               </Table>
             </div>
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border/40">
+            <ul className="md:hidden divide-y divide-border">
               {maintenance.map((req: Record<string, unknown>) => (
                 <li key={`m-${req.id as string}`}>
                   <Link
                     href={`/${locale}/maintenance/${req.id}`}
-                    className="block p-4 hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className="block p-4 hover:bg-surface-elevated transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     <p className="text-sm font-medium text-text-primary leading-snug">
                       {(req.description as string)?.slice(0, 60) || "—"}
                       {(req.description as string)?.length > 60 ? "…" : ""}
                     </p>
-                    <p className="text-xs text-text-secondary font-mono ltr-nums mt-1">
+                    <p className="text-xs text-text-secondary tabular-nums ltr-nums mt-1">
                       {new Date(req.created_at as string).toLocaleDateString()}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -1739,7 +1724,7 @@ export default async function UnitDetailPage({
                           URGENCY_VARIANTS[(req.urgency as string) || "medium"] ??
                           "secondary"
                         }
-                        className="capitalize text-[10px] px-1.5"
+                        className="capitalize text-xs px-1.5"
                       >
                         {req.urgency ? tm(`urgencies.${req.urgency}`) : "—"}
                       </Badge>
@@ -1749,7 +1734,7 @@ export default async function UnitDetailPage({
                             (req.status as string) || "open"
                           ] ?? "secondary"
                         }
-                        className="capitalize text-[10px] px-1.5"
+                        className="capitalize text-xs px-1.5"
                       >
                         {req.status ? tm(`statuses.${req.status}`) : ""}
                       </Badge>
@@ -1767,7 +1752,7 @@ export default async function UnitDetailPage({
             action={
               <Link
                 href={`/${locale}/maintenance/new?unitId=${unitId}&propertyId=${propertyId}`}
-                className="inline-flex items-center gap-1.5 h-9 px-4 bg-accent hover:bg-accent-hover text-accent-foreground text-xs font-semibold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className={buttonVariants({ size: "sm" })}
               >
                 <Plus aria-hidden="true" className="h-3.5 w-3.5" />
                 {tm("newRequest")}
@@ -1795,14 +1780,14 @@ function SectionHeading({
 }) {
   return (
     <div className={`flex items-center gap-2 ${className ?? "mb-4"}`}>
-      <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/15">
+      <div className="p-1.5 rounded-lg bg-accent-tint border border-accent/30">
         <Icon aria-hidden className="h-4 w-4 text-accent" />
       </div>
-      <h2 className="text-base font-semibold text-text-primary font-display tracking-tight">
+      <h2 className="text-base font-semibold text-text-primary font-display">
         {title}
       </h2>
       {count !== undefined && count > 0 && (
-        <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border/40 px-2 py-0.5 rounded-md font-mono ltr-nums">
+        <span className="text-xs font-medium text-text-secondary bg-surface-elevated border border-border px-2 py-0.5 rounded-md tabular-nums ltr-nums">
           {count}
         </span>
       )}

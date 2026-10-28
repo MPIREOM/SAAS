@@ -94,7 +94,7 @@ export function GateKeyStockCard({
     <Card>
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-3 space-y-0">
         <div className="flex items-start gap-3">
-          <div className={cn("p-2 rounded-lg", low ? "bg-warning/10" : "bg-accent/10")}>
+          <div className={cn("p-2 rounded-lg", low ? "bg-warning-tint" : "bg-accent-tint")}>
             <KeyRound aria-hidden="true" className={cn("h-4 w-4", low ? "text-warning" : "text-accent")} />
           </div>
           <div className="space-y-1">
@@ -121,10 +121,10 @@ export function GateKeyStockCard({
         {tracked ? (
           <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
             <div>
-              <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-0.5">{t("inStock")}</p>
+              <p className="text-[12.5px] font-medium text-text-secondary mb-0.5">{t("inStock")}</p>
               <p
                 className={cn(
-                  "text-3xl font-bold font-mono tabular-nums ltr-nums",
+                  "text-3xl font-bold tabular-nums ltr-nums",
                   stock < 0 ? "text-destructive" : low ? "text-warning" : "text-text-primary"
                 )}
               >
@@ -134,7 +134,7 @@ export function GateKeyStockCard({
             <div className="pb-1.5 flex items-center gap-2">
               <Badge variant={low ? "warning" : "success"}>{low ? t("low") : t("ok")}</Badge>
               <span className="text-xs text-text-secondary">
-                {t("reorderLevel")}: <span className="font-mono ltr-nums">{threshold}</span>
+                {t("reorderLevel")}: <span className="tabular-nums ltr-nums">{threshold}</span>
               </span>
             </div>
           </div>
@@ -146,8 +146,8 @@ export function GateKeyStockCard({
 
         {movements.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t("history")}</h3>
-            <ul className="divide-y divide-border/40 rounded-lg border border-border/60">
+            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-[0.06em] rtl:normal-case rtl:tracking-normal mb-2">{t("history")}</h3>
+            <ul className="divide-y divide-border rounded-lg border border-border">
               {movements.map((m) => {
                 const detail =
                   m.kind === "sale"
@@ -158,7 +158,7 @@ export function GateKeyStockCard({
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-text-primary">{t(`kinds.${m.kind}`)}</p>
                       <p className="text-xs text-text-secondary truncate">
-                        <span className="font-mono ltr-nums">
+                        <span className="tabular-nums ltr-nums">
                           {new Date(m.createdAt).toLocaleDateString("en-GB", {
                             day: "2-digit",
                             month: "short",
@@ -172,14 +172,14 @@ export function GateKeyStockCard({
                     <div className="text-end shrink-0">
                       <p
                         className={cn(
-                          "font-mono tabular-nums ltr-nums font-semibold",
+                          "tabular-nums ltr-nums font-semibold",
                           m.quantity < 0 ? "text-destructive" : m.quantity > 0 ? "text-success" : "text-text-secondary"
                         )}
                       >
                         {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
                       </p>
                       <p className="text-xs text-text-secondary">
-                        {t("balance")}: <span className="font-mono ltr-nums">{m.balanceAfter}</span>
+                        {t("balance")}: <span className="tabular-nums ltr-nums">{m.balanceAfter}</span>
                       </p>
                     </div>
                   </li>
@@ -209,11 +209,11 @@ export function GateKeyStockCard({
                 label={mode === "restock" ? t("keysBought") : t("keysCounted")}
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                className="font-mono ltr-nums tabular-nums"
+                className="tabular-nums ltr-nums tabular-nums"
               />
               {mode === "restock" && tracked && Number(quantity) > 0 && (
                 <p className="text-xs text-text-secondary">
-                  {t("newTotal")}: <span className="font-mono ltr-nums">{(stock ?? 0) + Number(quantity)}</span>
+                  {t("newTotal")}: <span className="tabular-nums ltr-nums">{(stock ?? 0) + Number(quantity)}</span>
                 </p>
               )}
               <Textarea name="notes" rows={2} maxLength={500} label={t("notes")} placeholder={t("notesPlaceholder")} />

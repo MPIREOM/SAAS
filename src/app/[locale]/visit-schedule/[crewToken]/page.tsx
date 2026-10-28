@@ -32,7 +32,7 @@ function PhoneLink({ phone }: { phone: string | null }) {
   return (
     <a
       href={`tel:+${formatWhatsAppPhone(phone)}`}
-      className="inline-flex items-center gap-1.5 text-sm text-accent hover:underline font-mono ltr-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+      className="inline-flex items-center gap-1.5 text-sm text-accent hover:underline tabular-nums ltr-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus rounded"
     >
       <Phone aria-hidden="true" className="h-3.5 w-3.5" />
       {phone}
@@ -96,10 +96,10 @@ export default async function VisitSchedulePage({
     <PublicVisitShell title={campaign.title} subtitle={t("subtitle")}>
       <AutoRefresh seconds={REFRESH_SECONDS} />
 
-      <div className="bg-surface border border-border/60 rounded-xl p-4 space-y-3">
+      <div className="bg-surface border border-border rounded-xl shadow-card p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-lg bg-accent-tint border border-accent/30 flex items-center justify-center shrink-0">
               <Building2 aria-hidden="true" className="h-5 w-5 text-accent" />
             </div>
             <div className="min-w-0">
@@ -117,17 +117,17 @@ export default async function VisitSchedulePage({
           )}
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border border-border/40 bg-surface-elevated/50 p-3">
-            <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("booked")}</p>
-            <p className="text-xl font-bold font-mono ltr-nums text-success">{booked.length}</p>
+          <div className="rounded-lg border border-border bg-surface-elevated p-3">
+            <p className="text-[12.5px] font-medium text-text-secondary">{t("booked")}</p>
+            <p className="text-xl font-bold tabular-nums ltr-nums text-success">{booked.length}</p>
           </div>
-          <div className="rounded-lg border border-border/40 bg-surface-elevated/50 p-3">
-            <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("notBooked")}</p>
-            <p className="text-xl font-bold font-mono ltr-nums text-warning">{notBooked.length}</p>
+          <div className="rounded-lg border border-border bg-surface-elevated p-3">
+            <p className="text-[12.5px] font-medium text-text-secondary">{t("notBooked")}</p>
+            <p className="text-xl font-bold tabular-nums ltr-nums text-warning">{notBooked.length}</p>
           </div>
-          <div className="rounded-lg border border-border/40 bg-surface-elevated/50 p-3">
-            <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t("doneCount")}</p>
-            <p className="text-xl font-bold font-mono ltr-nums text-accent">
+          <div className="rounded-lg border border-border bg-surface-elevated p-3">
+            <p className="text-[12.5px] font-medium text-text-secondary">{t("doneCount")}</p>
+            <p className="text-xl font-bold tabular-nums ltr-nums text-accent">
               {booked.filter((b) => b.work_status === "done").length}
             </p>
           </div>
@@ -142,11 +142,11 @@ export default async function VisitSchedulePage({
       <section className="space-y-3" aria-label={t("schedule")}>
         <h2 className="text-sm font-semibold text-text-primary font-display">{t("schedule")}</h2>
         {booked.length === 0 ? (
-          <p className="bg-surface border border-border/60 rounded-xl p-4 text-sm text-text-secondary">{t("noBookings")}</p>
+          <p className="bg-surface border border-border rounded-xl shadow-card p-4 text-sm text-text-secondary">{t("noBookings")}</p>
         ) : (
           Array.from(days).map(([day, rows]) => (
-            <div key={day} className="bg-surface border border-border/60 rounded-xl overflow-hidden">
-              <h3 className="px-4 py-2.5 border-b border-border/40 text-sm font-semibold text-text-primary">
+            <div key={day} className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
+              <h3 className="px-4 py-2.5 border-b border-border text-sm font-semibold text-text-primary">
                 {formatVisitDay(day, locale, "long")}
                 <span className="ms-2 text-xs font-normal text-text-secondary">
                   {t("visitsCount", { count: rows.length })}
@@ -155,12 +155,12 @@ export default async function VisitSchedulePage({
               <ol className="divide-y divide-border/40">
                 {rows.map((b) => (
                   <li key={b.unit.unit_id} className="flex gap-4 px-4 py-3">
-                    <span className="font-mono ltr-nums text-sm font-semibold text-accent w-12 shrink-0 pt-0.5">
+                    <span className="tabular-nums ltr-nums text-sm font-semibold text-accent w-12 shrink-0 pt-0.5">
                       {formatSlotTime(b.start, locale)}
                     </span>
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <p className="text-sm font-semibold text-text-primary">
-                        {t("unit")} <span className="font-mono ltr-nums">{b.unit.unit_number}</span>
+                        {t("unit")} <span className="tabular-nums ltr-nums">{b.unit.unit_number}</span>
                       </p>
                       {b.unit.tenant && <p className="text-sm text-text-secondary">{b.unit.tenant.full_name}</p>}
                       <PhoneLink phone={b.phone} />
@@ -186,11 +186,11 @@ export default async function VisitSchedulePage({
             <h2 className="text-sm font-semibold text-text-primary font-display">{t("notBookedTitle")}</h2>
             <p className="text-xs text-text-secondary mt-1">{t("notBookedHint")}</p>
           </div>
-          <ul className="bg-surface border border-border/60 rounded-xl divide-y divide-border/40">
+          <ul className="bg-surface border border-border rounded-xl shadow-card divide-y divide-border">
             {notBooked.map((u) => (
               <li key={u.unit_id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
                 <span className="text-sm font-semibold text-text-primary w-24 shrink-0">
-                  {t("unit")} <span className="font-mono ltr-nums">{u.unit_number}</span>
+                  {t("unit")} <span className="tabular-nums ltr-nums">{u.unit_number}</span>
                 </span>
                 <span className="text-sm text-text-secondary min-w-0 flex-1 break-words">{u.tenant?.full_name}</span>
                 <PhoneLink phone={u.tenant?.phone ?? null} />
