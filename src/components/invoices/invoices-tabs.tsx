@@ -78,7 +78,7 @@ export function InvoicesTabs({
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       {/* Status Tabs */}
-      <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible">
+      <div className="-mx-3 sm:mx-0 px-3 sm:px-0 overflow-x-auto sm:overflow-visible">
         <div
           role="group"
           aria-label={t("status")}

@@ -414,7 +414,7 @@ export function MarkPaidButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-accent-tint text-accent hover:bg-accent/20 rounded-lg transition-all duration-200 font-semibold group cursor-pointer hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs px-3 py-1.5 bg-accent-tint text-accent hover:bg-accent/20 rounded-lg transition-all duration-200 font-semibold group cursor-pointer hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <Check className="h-3 w-3" aria-hidden="true" />
         {alreadyPaid > 0 ? (

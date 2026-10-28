@@ -59,7 +59,7 @@ export function DateRangeFilter({ defaultMonth, defaultYear }: DateRangeFilterPr
         value={currentYear}
         onChange={(e) => updateFilter(currentMonth, e.target.value)}
         aria-label={t("selectYear")}
-        className="h-[34px] w-auto py-0 text-[13px] tabular-nums ltr-nums"
+        className="h-[34px] w-auto py-0 text-[13px] tabular-nums"
       >
         {years.map((y) => (
           <option key={y} value={y}>{y}</option>

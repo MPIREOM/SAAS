@@ -251,7 +251,7 @@ export default async function InvoicesPage({
                 {t("total")}
               </span>
             </div>
-            <p className="text-xl font-bold text-text-primary tabular-nums">
+            <p className="flex flex-wrap items-baseline text-xl font-bold text-text-primary tabular-nums">
               {formatAmount(totalAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
@@ -274,7 +274,7 @@ export default async function InvoicesPage({
                 {t("collected")}
               </span>
             </div>
-            <p className="text-xl font-bold text-success tabular-nums">
+            <p className="flex flex-wrap items-baseline text-xl font-bold text-success tabular-nums">
               {formatAmount(paidAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
@@ -301,7 +301,7 @@ export default async function InvoicesPage({
                 {t("pending")}
               </span>
             </div>
-            <p className="text-xl font-bold text-warning tabular-nums">
+            <p className="flex flex-wrap items-baseline text-xl font-bold text-warning tabular-nums">
               {formatAmount(pendingAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
@@ -324,7 +324,7 @@ export default async function InvoicesPage({
                 {t("overdue")}
               </span>
             </div>
-            <p className="text-xl font-bold text-destructive tabular-nums">
+            <p className="flex flex-wrap items-baseline text-xl font-bold text-destructive tabular-nums">
               {formatAmount(overdueAmount)}
               <span className="text-xs font-sans font-normal text-text-secondary ms-1">
                 {CURRENCY.code}
@@ -339,7 +339,7 @@ export default async function InvoicesPage({
 
       {/* Property Filter */}
       {properties && properties.length > 1 && (
-        <div className="-mx-4 md:mx-0 px-4 md:px-0 overflow-x-auto md:overflow-visible">
+        <div className="-mx-3 sm:-mx-4 md:mx-0 px-3 sm:px-4 md:px-0 overflow-x-auto md:overflow-visible">
           <div className="flex items-center gap-2 w-max md:w-auto md:flex-wrap">
             <Building2 className="h-4 w-4 text-text-secondary shrink-0" />
             <Link
@@ -469,7 +469,7 @@ export default async function InvoicesPage({
                       >
                         {/* Due Date */}
                         <td className="px-5 py-3.5">
-                          <span className="text-sm text-text-primary tabular-nums">
+                          <span className="text-sm text-text-primary tabular-nums whitespace-nowrap">
                             {formatDate(invoice.due_date as string)}
                           </span>
                         </td>
@@ -490,7 +490,7 @@ export default async function InvoicesPage({
                             {unit?.unit_number ? (
                               <>
                                 <span className="text-border">/</span>
-                                <span className="text-sm tabular-nums text-text-primary">
+                                <span className="text-sm tabular-nums text-text-primary whitespace-nowrap">
                                   {unit?.unit_number as string}
                                 </span>
                               </>
@@ -501,7 +501,7 @@ export default async function InvoicesPage({
                         {/* Amount */}
                         <td className="px-5 py-3.5 text-end">
                           <span
-                            className={`text-sm font-semibold tabular-nums ${
+                            className={`text-sm font-semibold tabular-nums whitespace-nowrap ${
                               isPaid
                                 ? "text-text-secondary"
                                 : isWrittenOff
@@ -581,7 +581,7 @@ export default async function InvoicesPage({
 
                         {/* Paid Date */}
                         <td className="px-5 py-3.5">
-                          <span className="text-sm text-text-secondary tabular-nums">
+                          <span className="text-sm text-text-secondary tabular-nums whitespace-nowrap">
                             {invoice.paid_date
                               ? formatDate(invoice.paid_date as string)
                               : "—"}
