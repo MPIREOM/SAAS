@@ -476,9 +476,18 @@ export default async function InvoicesPage({
 
                         {/* Tenant */}
                         <td className="px-5 py-3.5">
-                          <span className="text-sm font-medium text-text-primary">
-                            {(tenant?.full_name as string) || "—"}
-                          </span>
+                          {invoice.tenant_id ? (
+                            <Link
+                              href={`/${locale}/tenants/${invoice.tenant_id as string}`}
+                              className="text-sm font-medium text-text-primary rounded-sm underline-offset-2 transition-colors hover:text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                            >
+                              {(tenant?.full_name as string) || "—"}
+                            </Link>
+                          ) : (
+                            <span className="text-sm font-medium text-text-primary">
+                              {(tenant?.full_name as string) || "—"}
+                            </span>
+                          )}
                         </td>
 
                         {/* Property / Unit — merged column */}
@@ -711,7 +720,16 @@ export default async function InvoicesPage({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-text-primary truncate">
-                        {(tenant?.full_name as string) || "—"}
+                        {invoice.tenant_id ? (
+                          <Link
+                            href={`/${locale}/tenants/${invoice.tenant_id as string}`}
+                            className="inline-block py-1 underline decoration-border-strong underline-offset-2 rounded-sm transition-colors hover:text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                          >
+                            {(tenant?.full_name as string) || "—"}
+                          </Link>
+                        ) : (
+                          (tenant?.full_name as string) || "—"
+                        )}
                       </p>
                       <p className="text-xs text-text-secondary truncate mt-0.5">
                         {(property?.name as string) || "—"}

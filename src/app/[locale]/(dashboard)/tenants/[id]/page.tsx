@@ -119,7 +119,7 @@ export default async function TenantDetailPage({
   }
 
   // Fetch leases, payments, maintenance, documents, cheques in parallel
-  const [leasesRes, paymentsRes, maintenanceRes, documentsRes, chequesRes] =
+  const [leasesRes, paymentsRes, maintenanceRes, documentsRes, chequesRes, pendingInvoicesRes] =
     await Promise.all([
       supabase
         .from("leases")
@@ -149,6 +149,12 @@ export default async function TenantDetailPage({
         .select("*")
         .eq("tenant_id", id)
         .order("cheque_date", { ascending: false }),
+      supabase
+        .from("invoices")
+        .select("*, units(unit_number, properties(name))")
+        .eq("tenant_id", id)
+        .in("status", ["pending", "overdue", "partial"])
+        .order("due_date", { ascending: true }),
     ]);
 
   const leases = leasesRes.data;
@@ -156,6 +162,32 @@ export default async function TenantDetailPage({
   const maintenance = maintenanceRes.data;
   const documents = documentsRes.data;
   const cheques = chequesRes.data;
+
+  // Unpaid invoices, oldest due first, with what is still owed on each.
+  const pendingInvoices = (pendingInvoicesRes.data ?? []).map(
+    (invoice: Record<string, unknown>) => {
+      const unit = invoice.units as Record<string, unknown> | null;
+      const property = unit?.properties as Record<string, unknown> | null;
+      const amount = Number(invoice.amount || 0);
+      const status = invoice.status as string;
+      const isPartial = status === "partial";
+      return {
+        id: invoice.id as string,
+        dueDate: invoice.due_date as string,
+        location:
+          [property?.name as string | undefined, unit?.unit_number as string | undefined]
+            .filter(Boolean)
+            .join(" · ") || "—",
+        amount,
+        remaining: isPartial ? amount - Number(invoice.paid_amount || 0) : amount,
+        isPartial,
+        isOverdue:
+          status === "overdue" ||
+          (status === "pending" && new Date(invoice.due_date as string) < new Date()),
+      };
+    }
+  );
+  const pendingInvoicesTotal = pendingInvoices.reduce((sum, inv) => sum + inv.remaining, 0);
 
   const { mandates, collections } = await listMandatesForTenant(supabase, id);
   const leaseOptions: LeaseOption[] = (leases ?? []).map((l: Record<string, unknown>) => {
@@ -562,6 +594,131 @@ export default async function TenantDetailPage({
           <EmptyState
             icon={<FileText className="h-5 w-5" />}
             title={t("noLeases")}
+          />
+        )}
+      </section>
+
+      {/* Pending Invoices Section */}
+      <section id="pending-invoices-section">
+        <SectionHeading
+          icon={ScrollText}
+          title={t("pendingInvoices")}
+          count={pendingInvoices.length}
+        />
+        {pendingInvoices.length > 0 ? (
+          <div className="bg-surface border border-border rounded-xl shadow-card overflow-hidden">
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table className="min-w-[640px]">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-4">{ti("dueDate")}</TableHead>
+                    <TableHead className="px-4">{ti("unit")}</TableHead>
+                    <TableHead className="px-4 text-end">{ti("amount")}</TableHead>
+                    <TableHead className="px-4 text-end">{ti("remaining")}</TableHead>
+                    <TableHead className="px-4">{ti("status")}</TableHead>
+                    <TableHead className="px-4">
+                      <span className="sr-only">{ti("viewPdf")}</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="px-4 whitespace-nowrap text-text-primary tabular-nums ltr-nums">
+                        {new Date(invoice.dueDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="px-4 text-text-secondary">{invoice.location}</TableCell>
+                      <TableCell className="px-4 text-end whitespace-nowrap text-text-secondary tabular-nums ltr-nums">
+                        {formatMoney(invoice.amount)}{" "}
+                        <span className="text-xs font-medium">{CURRENCY.code}</span>
+                      </TableCell>
+                      <TableCell className="px-4 text-end whitespace-nowrap font-semibold text-text-primary tabular-nums ltr-nums">
+                        {formatMoney(invoice.remaining)}{" "}
+                        <span className="text-xs font-medium text-text-secondary">
+                          {CURRENCY.code}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4">
+                        <Badge variant={invoice.isOverdue ? "destructive" : "warning"}>
+                          {invoice.isOverdue
+                            ? ti("overdue")
+                            : invoice.isPartial
+                            ? ti("partial")
+                            : ti("pending")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-4 text-end">
+                        <a
+                          href={`/api/invoices/${invoice.id}/pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                        >
+                          <FileDown aria-hidden className="h-4 w-4" />
+                          {ti("viewPdf")}
+                        </a>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Mobile card list */}
+            <ul className="md:hidden divide-y divide-border">
+              {pendingInvoices.map((invoice) => (
+                <li key={`m-${invoice.id}`} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text-primary tabular-nums ltr-nums">
+                        {new Date(invoice.dueDate).toLocaleDateString()}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-text-secondary">
+                        {invoice.location}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-end text-sm font-semibold text-text-primary tabular-nums ltr-nums">
+                      {formatMoney(invoice.remaining)}{" "}
+                      <span className="text-xs font-normal text-text-secondary">
+                        {CURRENCY.code}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <Badge variant={invoice.isOverdue ? "destructive" : "warning"}>
+                      {invoice.isOverdue
+                        ? ti("overdue")
+                        : invoice.isPartial
+                        ? ti("partial")
+                        : ti("pending")}
+                    </Badge>
+                    <a
+                      href={`/api/invoices/${invoice.id}/pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    >
+                      <FileDown aria-hidden className="h-4 w-4" />
+                      {ti("viewPdf")}
+                    </a>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center justify-between gap-3 border-t border-border bg-surface-elevated px-4 py-3">
+              <span className="text-sm font-semibold text-text-secondary">
+                {t("totalOutstanding")}
+              </span>
+              <span className="text-sm font-semibold text-text-primary tabular-nums ltr-nums">
+                {formatMoney(pendingInvoicesTotal)}{" "}
+                <span className="text-xs font-medium text-text-secondary">{CURRENCY.code}</span>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <EmptyState
+            icon={<ScrollText className="h-5 w-5" />}
+            title={t("noPendingInvoices")}
           />
         )}
       </section>
