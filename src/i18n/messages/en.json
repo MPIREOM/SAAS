@@ -453,6 +453,9 @@
       "loadError": "Could not load the tenant's leases."
     },
     "outstandingInvoices": "Outstanding Invoices",
+    "pendingInvoices": "Pending Invoices",
+    "noPendingInvoices": "No pending invoices",
+    "totalOutstanding": "Total outstanding",
     "invoiceResolutionDescription": "Choose how to handle each outstanding invoice before completing the move-out.",
     "bulkAction": "Set all to",
     "invoiceActionLeaveOpen": "Keep Pending",

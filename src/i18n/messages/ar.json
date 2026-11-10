@@ -453,6 +453,9 @@
       "loadError": "تعذر تحميل عقود المستأجر."
     },
     "outstandingInvoices": "الفواتير المستحقة",
+    "pendingInvoices": "الفواتير المعلقة",
+    "noPendingInvoices": "لا توجد فواتير معلقة",
+    "totalOutstanding": "إجمالي المستحق",
     "invoiceResolutionDescription": "اختر كيفية التعامل مع كل فاتورة مستحقة قبل إتمام الخروج.",
     "bulkAction": "تعيين الكل إلى",
     "invoiceActionLeaveOpen": "إبقاء قيد الانتظار",
