@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 // Thmanyah Sans covers Latin and Arabic, so one family serves both locales.
@@ -15,11 +14,15 @@ const thmanyahSans = localFont({
   fallback: ["system-ui", "-apple-system", "Segoe UI", "sans-serif"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
+// Self-hosted (OFL) rather than next/font/google, so builds never depend on
+// reaching Google Fonts.
+const jetbrainsMono = localFont({
+  src: "./fonts/jetbrainsmono-latin-variable.woff2",
+  weight: "100 800",
+  style: "normal",
   variable: "--font-mono",
   display: "swap",
-  weight: ["400", "500", "600"],
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
 });
 
 // Applies a saved light/dark choice before first paint. Without one the
