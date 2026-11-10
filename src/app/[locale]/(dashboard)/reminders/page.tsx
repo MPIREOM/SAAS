@@ -5,18 +5,11 @@ import { getTranslations } from "next-intl/server";
 import { AlertTriangle, Bell, FileText, Plus, Pencil } from "lucide-react";
 import { findUndeliveredTenants } from "@/lib/whatsapp/delivery-receipts";
 import { ReminderTriggerButton } from "@/components/reminders/trigger-button";
+import { ReminderLog, type ReminderLogRow } from "@/components/reminders/reminder-log";
 import { ReminderRules } from "@/components/reminders/reminder-rules";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
 import { buttonVariants } from "@/components/ui/button";
 
 // Rendered on the server (UTC), so pin Oman time explicitly. The time
@@ -113,11 +106,33 @@ export default async function RemindersPage({
     return "default";
   };
 
-  const messageExcerpt = (content: unknown) => {
-    const text = (content as string) || "";
-    if (!text) return "—";
-    return text.length > 60 ? `${text.slice(0, 60)}...` : text;
-  };
+  // Plain, pre-translated rows for the client log (it expands rows inline
+  // to show the full message).
+  const logRows: ReminderLogRow[] = (reminders ?? []).map(
+    (reminder: Record<string, unknown>) => {
+      const tenant = reminder.tenants as ReminderTenant;
+      const channel = reminder.channel as string | null;
+      const status = reminder.status as string | null;
+      const delivery = reminder.delivery_status as string | null;
+      return {
+        id: reminder.id as string,
+        sentAt: formatSentAt(reminder.created_at as string),
+        tenantName: tenant?.full_name || "—",
+        location: tenantLocation(tenant),
+        typeLabel: reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—",
+        channel: channel
+          ? { label: t(`channels.${channel}`), variant: channelVariant(channel) }
+          : null,
+        status: status
+          ? { label: t(`statuses.${status}`), variant: statusVariant(status) }
+          : null,
+        delivery: delivery
+          ? { label: t(`deliveryStatuses.${delivery}`), variant: deliveryVariant(delivery) }
+          : null,
+        message: (reminder.message_content as string) || "",
+      };
+    }
+  );
 
   return (
     <div className="space-y-8">
@@ -191,132 +206,7 @@ export default async function RemindersPage({
         </div>
 
         {reminders && reminders.length > 0 ? (
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            {/* Desktop table */}
-            <div className="hidden md:block">
-              <Table className="min-w-[720px]">
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="px-4">{t("date")}</TableHead>
-                    <TableHead className="px-4">{t("tenant")}</TableHead>
-                    <TableHead className="px-4">{t("type")}</TableHead>
-                    <TableHead className="px-4">{t("channel")}</TableHead>
-                    <TableHead className="px-4">{t("status")}</TableHead>
-                    <TableHead className="px-4">{t("delivery")}</TableHead>
-                    <TableHead className="px-4">{t("message")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reminders.map((reminder: Record<string, unknown>) => {
-                    const tenant = reminder.tenants as ReminderTenant;
-                    const location = tenantLocation(tenant);
-
-                    return (
-                      <TableRow key={reminder.id as string}>
-                        <TableCell className="px-4 whitespace-nowrap tabular-nums text-text-secondary ltr-nums">
-                          {formatSentAt(reminder.created_at as string)}
-                        </TableCell>
-                        <TableCell className="px-4">
-                          <span className="block font-medium text-text-primary">
-                            {tenant?.full_name || "—"}
-                          </span>
-                          {location && (
-                            <span className="block text-xs text-text-secondary">{location}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-4 text-text-secondary">
-                          {reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—"}
-                        </TableCell>
-                        <TableCell className="px-4">
-                          {reminder.channel ? (
-                            <Badge variant={channelVariant(reminder.channel as string)}>
-                              {t(`channels.${reminder.channel}`)}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-text-secondary">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-4">
-                          {reminder.status ? (
-                            <Badge variant={statusVariant(reminder.status as string)}>
-                              {t(`statuses.${reminder.status}`)}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-text-secondary">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-4">
-                          {reminder.delivery_status ? (
-                            <Badge variant={deliveryVariant(reminder.delivery_status as string)}>
-                              {t(`deliveryStatuses.${reminder.delivery_status}`)}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-text-secondary">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-4">
-                          <span className="block max-w-[250px] truncate text-text-secondary">
-                            {messageExcerpt(reminder.message_content)}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-border">
-              {reminders.map((reminder: Record<string, unknown>) => {
-                const tenant = reminder.tenants as ReminderTenant;
-                    const location = tenantLocation(tenant);
-
-                return (
-                  <li key={`m-${reminder.id as string}`} className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-text-primary">
-                          {tenant?.full_name || "—"}
-                        </p>
-                        {location && (
-                          <p className="truncate text-xs text-text-secondary">{location}</p>
-                        )}
-                        <p className="mt-0.5 text-xs text-text-secondary">
-                          {reminder.reminder_type ? t(`types.${reminder.reminder_type}`) : "—"}
-                        </p>
-                      </div>
-                      <span className="shrink-0 tabular-nums text-xs text-text-secondary ltr-nums">
-                        {formatSentAt(reminder.created_at as string)}
-                      </span>
-                    </div>
-                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                      {Boolean(reminder.channel) && (
-                        <Badge variant={channelVariant(reminder.channel as string)}>
-                          {t(`channels.${reminder.channel}`)}
-                        </Badge>
-                      )}
-                      {Boolean(reminder.status) && (
-                        <Badge variant={statusVariant(reminder.status as string)}>
-                          {t(`statuses.${reminder.status}`)}
-                        </Badge>
-                      )}
-                      {Boolean(reminder.delivery_status) && (
-                        <Badge variant={deliveryVariant(reminder.delivery_status as string)}>
-                          {t(`deliveryStatuses.${reminder.delivery_status}`)}
-                        </Badge>
-                      )}
-                    </div>
-                    {Boolean(reminder.message_content) && (
-                      <p className="mt-2 truncate text-xs text-text-secondary">
-                        {messageExcerpt(reminder.message_content)}
-                      </p>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          <ReminderLog rows={logRows} />
         ) : (
           <EmptyState
             icon={<Bell className="h-5 w-5" />}
