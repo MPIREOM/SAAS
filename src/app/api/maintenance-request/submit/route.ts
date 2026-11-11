@@ -392,7 +392,7 @@ export async function POST(request: NextRequest) {
     const loaded = await loadRequest(supabase, maintenanceRequest.id);
     if (loaded) {
       await notifyTenantOfStatus(loaded, "open");
-      await notifyTechnician(loaded);
+      await notifyTechnician(loaded, request.nextUrl.origin);
     }
   } catch (err) {
     console.error(

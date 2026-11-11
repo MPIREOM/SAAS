@@ -129,7 +129,7 @@ export async function PATCH(
     notifications.tenant = await notifyTenantOfStatus(updated, updated.status);
   }
   if (phoneChanged) {
-    notifications.technician = await notifyTechnician(updated);
+    notifications.technician = await notifyTechnician(updated, request.nextUrl.origin);
   }
 
   return NextResponse.json({ success: true, notifications, ...(warning && { warning }) });

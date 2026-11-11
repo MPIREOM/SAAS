@@ -14,6 +14,8 @@ import { translateToBengali } from "./translate";
 export interface MaintenanceTemplate {
   name: string;
   language: "en" | "ar" | "bn";
+  /** Set when the template has a media header, sent as a public link. */
+  header?: "image";
   body: string;
   example: string[];
 }
@@ -80,41 +82,59 @@ export const TECHNICIAN_JOB_TEMPLATE: MaintenanceTemplate = {
 // The watchman's job card: Bengali first, then the same details in English.
 // {{1}} request ref, {{2}} property, {{3}} unit, {{4}} category (bn),
 // {{5}} urgency (bn), {{6}} description (bn), {{7}} tenant contact,
-// {{8}} category (en), {{9}} urgency (en), {{10}} description as written
-export const TECHNICIAN_JOB_BN_TEMPLATE: MaintenanceTemplate = {
-  name: "maintenance_technician_job_bn",
+// {{8}} category (en), {{9}} urgency (en), {{10}} description as written,
+// {{11}} link to the job's photos and video (or "none")
+const WATCHMAN_JOB_BODY = [
+  "নতুন মেরামতের কাজ #{{1}}",
+  "",
+  "📍 ভবন: {{2}}",
+  "🏠 ইউনিট: {{3}}",
+  "🔧 কাজের ধরন: {{4}}",
+  "⚡ জরুরি মাত্রা: {{5}}",
+  "📝 সমস্যা: {{6}}",
+  "👤 ভাড়াটিয়া: {{7}}",
+  "",
+  "অনুগ্রহ করে ভাড়াটিয়ার সাথে যোগাযোগ করে আসার সময় ঠিক করুন।",
+  "",
+  "English:",
+  "🔧 Category: {{8}}",
+  "⚡ Urgency: {{9}}",
+  "📝 Issue: {{10}}",
+  "",
+  "📷 ছবি ও ভিডিও / Photos and video: {{11}}",
+  "",
+  "Please contact the tenant to arrange a visit.",
+].join("\n");
+
+const WATCHMAN_JOB_EXAMPLE = [
+  "3f9a1c2d",
+  "Bousher Ameen Mosque",
+  "12",
+  "প্লাম্বিং (পানির লাইন)",
+  "বেশি জরুরি",
+  "রান্নাঘরের সিঙ্কের নিচে ক্যাবিনেটের ভেতরে পানি পড়ছে",
+  "Ahmed Al Balushi (+96891234567)",
+  "Plumbing",
+  "HIGH",
+  "Kitchen sink is leaking under the cabinet",
+  "https://example.com/en/maintenance-photos/3f9a1c2d-0000-4000-8000-000000000000",
+];
+
+/** Text-only card: jobs with no photo WhatsApp can show in the message. */
+export const WATCHMAN_JOB_TEMPLATE: MaintenanceTemplate = {
+  name: "maintenance_watchman_job_bn",
   language: "bn",
-  body: [
-    "নতুন মেরামতের কাজ #{{1}}",
-    "",
-    "📍 ভবন: {{2}}",
-    "🏠 ইউনিট: {{3}}",
-    "🔧 কাজের ধরন: {{4}}",
-    "⚡ জরুরি মাত্রা: {{5}}",
-    "📝 সমস্যা: {{6}}",
-    "👤 ভাড়াটিয়া: {{7}}",
-    "",
-    "অনুগ্রহ করে ভাড়াটিয়ার সাথে যোগাযোগ করে আসার সময় ঠিক করুন।",
-    "",
-    "English:",
-    "🔧 Category: {{8}}",
-    "⚡ Urgency: {{9}}",
-    "📝 Issue: {{10}}",
-    "",
-    "Please contact the tenant to arrange a visit.",
-  ].join("\n"),
-  example: [
-    "3f9a1c2d",
-    "Bousher Ameen Mosque",
-    "12",
-    "প্লাম্বিং (পানির লাইন)",
-    "বেশি জরুরি",
-    "রান্নাঘরের সিঙ্কের নিচে ক্যাবিনেটের ভেতরে পানি পড়ছে",
-    "Ahmed Al Balushi (+96891234567)",
-    "Plumbing",
-    "HIGH",
-    "Kitchen sink is leaking under the cabinet",
-  ],
+  body: WATCHMAN_JOB_BODY,
+  example: WATCHMAN_JOB_EXAMPLE,
+};
+
+/** Same card with the job's first photo shown above the text. */
+export const WATCHMAN_JOB_PHOTO_TEMPLATE: MaintenanceTemplate = {
+  name: "maintenance_watchman_job_bn_photo",
+  language: "bn",
+  header: "image",
+  body: WATCHMAN_JOB_BODY,
+  example: WATCHMAN_JOB_EXAMPLE,
 };
 
 // {{1}} tenant name, {{2}} request ref, {{3}} unit, {{4}} property, {{5}} status message
@@ -166,7 +186,8 @@ export const TENANT_UPDATE_TEMPLATES: Record<"en" | "ar", MaintenanceTemplate> =
 export const MAINTENANCE_TEMPLATES: MaintenanceTemplate[] = [
   ADMIN_ALERT_TEMPLATE,
   TECHNICIAN_JOB_TEMPLATE,
-  TECHNICIAN_JOB_BN_TEMPLATE,
+  WATCHMAN_JOB_TEMPLATE,
+  WATCHMAN_JOB_PHOTO_TEMPLATE,
   TENANT_UPDATE_TEMPLATES.en,
   TENANT_UPDATE_TEMPLATES.ar,
 ];
@@ -335,7 +356,34 @@ function clip(text: string, limit: number): string {
   return text.length > limit ? `${text.slice(0, limit)}…` : text;
 }
 
-async function technicianJobBnParams(ctx: MaintenanceMessageContext): Promise<string[]> {
+/** A photo or video attached to the request (maintenance_attachments). */
+export interface JobAttachment {
+  url: string;
+  type: "photo" | "video";
+  size: number | null;
+}
+
+export interface JobMedia {
+  attachments: JobAttachment[];
+  /** Public page listing every attachment; null when there is nothing to show. */
+  galleryUrl: string | null;
+}
+
+// WhatsApp only shows JPEG and PNG up to 5 MB in a template's image header.
+// Anything else (HEIC from an iPhone, WebP, video) is reached through the link.
+const HEADER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+function headerImage(media: JobMedia | undefined): string | null {
+  const photo = media?.attachments.find(
+    (a) =>
+      a.type === "photo" &&
+      /\.(jpe?g|png)$/i.test(a.url.split("?")[0]) &&
+      (a.size == null || a.size <= HEADER_IMAGE_MAX_BYTES)
+  );
+  return photo?.url ?? null;
+}
+
+async function watchmanJobParams(ctx: MaintenanceMessageContext, media: JobMedia | undefined): Promise<string[]> {
   const category = ctx.category ?? "";
   const translated = await translateToBengali(clip(ctx.description, 400));
   const tenant = ctx.tenantName ? tenantContact(ctx) : "ভাড়াটিয়া নেই (খালি ইউনিট)";
@@ -351,37 +399,65 @@ async function technicianJobBnParams(ctx: MaintenanceMessageContext): Promise<st
     categoryLabel(ctx.category),
     ctx.urgency.toUpperCase(),
     clip(ctx.description, BN_DESCRIPTION_LIMIT),
+    media?.galleryUrl ?? "নেই / None",
   ];
 }
 
 /**
  * Job card for the assigned technician. The watchman gets it in Bengali with
- * the English underneath; everyone else gets the English card. If the Bengali
- * template can't be delivered (e.g. not yet approved by Meta) the watchman
- * still gets the English card, so a job is never lost to the translation.
+ * the English underneath, the first photo above the text when there is one
+ * WhatsApp can show, and a link to all the photos and the video. Everyone
+ * else gets the English card.
+ *
+ * Each step falls back to the next, so a job is never lost to a template
+ * Meta hasn't approved yet: photo card, text card, free-form text (delivers
+ * inside the 24h window), then the English card.
  */
 export async function sendTechnicianJob(
   phone: string,
-  ctx: MaintenanceMessageContext
+  ctx: MaintenanceMessageContext,
+  media?: JobMedia
 ): Promise<SendResult> {
   if (isWatchman(phone)) {
     const to = formatWhatsAppPhone(phone);
-    const params = (await technicianJobBnParams(ctx)).map(sanitiseTemplateParam);
-    const bengali = await sendWhatsAppTemplate({
-      to,
-      templateName: TECHNICIAN_JOB_BN_TEMPLATE.name,
-      languageCode: TECHNICIAN_JOB_BN_TEMPLATE.language,
-      components: [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }],
-    });
-    if (bengali.success) return { success: true, via: "template", messageId: bengali.messageId };
+    const params = (await watchmanJobParams(ctx, media)).map(sanitiseTemplateParam);
+    const body = { type: "body" as const, parameters: params.map((text) => ({ type: "text" as const, text })) };
+    const errors: string[] = [];
 
-    // Inside the 24h window free-form text delivers without an approved template.
-    const text = await sendWhatsAppTextMessage(to, render(TECHNICIAN_JOB_BN_TEMPLATE, params));
+    const image = headerImage(media);
+    if (image) {
+      const withPhoto = await sendWhatsAppTemplate({
+        to,
+        templateName: WATCHMAN_JOB_PHOTO_TEMPLATE.name,
+        languageCode: WATCHMAN_JOB_PHOTO_TEMPLATE.language,
+        components: [{ type: "header", parameters: [{ type: "image", image: { link: image } }] }, body],
+      });
+      if (withPhoto.success) return { success: true, via: "template", messageId: withPhoto.messageId };
+      errors.push(`photo card: ${withPhoto.error}`);
+    }
+
+    const textCard = await sendWhatsAppTemplate({
+      to,
+      templateName: WATCHMAN_JOB_TEMPLATE.name,
+      languageCode: WATCHMAN_JOB_TEMPLATE.language,
+      components: [body],
+    });
+    if (textCard.success) {
+      return {
+        success: true,
+        via: "template",
+        messageId: textCard.messageId,
+        ...(errors.length > 0 && { templateError: errors.join("; ") }),
+      };
+    }
+    errors.push(`text card: ${textCard.error}`);
+
+    const text = await sendWhatsAppTextMessage(to, render(WATCHMAN_JOB_TEMPLATE, params));
     if (text.success) {
-      return { success: true, via: "text", messageId: text.messageId, templateError: bengali.error };
+      return { success: true, via: "text", messageId: text.messageId, templateError: errors.join("; ") };
     }
     console.warn("[maintenance-whatsapp] Bengali job card not delivered, sending English", {
-      templateError: bengali.error,
+      errors,
       textError: text.error,
     });
   }
