@@ -2147,5 +2147,16 @@
         "failed": "تعذرت قراءة الملف"
       }
     }
+  },
+  "maintenancePhotos": {
+    "title": "طلب صيانة رقم {ref}",
+    "unit": "الوحدة {number}",
+    "invalidLink": "الرابط غير صالح",
+    "invalidLinkMessage": "رابط الصور هذا غير صالح. يرجى الطلب من إدارة المبنى إعادة إرسال المهمة.",
+    "empty": "لا توجد صور",
+    "emptyDescription": "لم تُرفق صور أو مقاطع فيديو بهذه المهمة.",
+    "video": "فيديو",
+    "photoAlt": "الصورة {number} من {total} للمشكلة",
+    "photoCaption": "الصورة {number} من {total} · اضغط لفتحها بالحجم الكامل"
   }
 }

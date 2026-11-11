@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
   const loaded = await loadRequest(supabase, created.id);
   if (loaded) {
     notifications.tenant = await notifyTenantOfStatus(loaded, "open");
-    notifications.technician = await notifyTechnician(loaded);
+    notifications.technician = await notifyTechnician(loaded, request.nextUrl.origin);
   }
 
   return NextResponse.json({ success: true, id: created.id, notifications });

@@ -2147,5 +2147,16 @@
         "failed": "Couldn't read the file"
       }
     }
+  },
+  "maintenancePhotos": {
+    "title": "Maintenance job #{ref}",
+    "unit": "Unit {number}",
+    "invalidLink": "Link not valid",
+    "invalidLinkMessage": "This photos link is not valid. Please ask the building management to send the job again.",
+    "empty": "No photos",
+    "emptyDescription": "No photos or video were attached to this job.",
+    "video": "Video",
+    "photoAlt": "Photo {number} of {total} of the problem",
+    "photoCaption": "Photo {number} of {total} · tap to open full size"
   }
 }

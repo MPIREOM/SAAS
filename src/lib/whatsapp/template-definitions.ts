@@ -20,7 +20,8 @@ import { GATE_KEY_LOW_STOCK_TEMPLATE } from "@/lib/gate-keys/template";
 //   daily_briefs (admin-summary): 11 parameters, see below
 //   owner_monthly_report (owner-reports): document header + 3 body parameters
 //   maintenance_* (lib/maintenance/whatsapp.ts): admin alert, technician
-//     job, tenant status update (en + ar)
+//     job, the watchman's Bengali job card (text, and image header + the
+//     same body), tenant status update (en + ar)
 //   visit_booking_* (lib/visits/whatsapp.ts): invite, confirmation and
 //     day-before reminder for building-wide visits (en + ar)
 //   gate_keys_low_stock (lib/gate-keys/stock.ts): admin alert when a
@@ -163,6 +164,11 @@ export function builtInTemplateDefinitions(): TemplateDefinition[] {
         language: t.language,
         category: "UTILITY",
         issues: [],
+        ...("header" in t &&
+          t.header === "image" && {
+            manual:
+              "Needs an IMAGE header (the job's first photo). Create it in WhatsApp Manager: header = Image, body = the text below, then upload any sample photo when asked.",
+          }),
         components: [body(t.body, t.example)],
       })
     ),

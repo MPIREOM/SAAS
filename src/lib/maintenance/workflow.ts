@@ -4,6 +4,7 @@ import {
   adminAlertParams,
   sendTechnicianJob,
   sendTenantStatusUpdate,
+  type JobAttachment,
   type MaintenanceMessageContext,
   type SendResult,
   type TenantNotifiableStatus,
@@ -36,6 +37,7 @@ export interface LoadedRequest {
   assignedToName: string | null;
   assignedToPhone: string | null;
   tenant: TenantRecipient | null;
+  attachments: JobAttachment[];
   ctx: MaintenanceMessageContext;
 }
 
@@ -61,6 +63,7 @@ export async function loadRequest(
     properties: { name: string } | null;
   } | null;
   const tenant = (data.tenants as unknown as TenantRecipient | null) ?? null;
+  const attachments = await loadAttachments(supabase, id);
 
   return {
     id: data.id as string,
@@ -71,6 +74,7 @@ export async function loadRequest(
     assignedToName: (data.assigned_to_name as string | null) ?? null,
     assignedToPhone: (data.assigned_to_phone as string | null) ?? null,
     tenant,
+    attachments,
     ctx: {
       requestId: data.id as string,
       propertyName: unit?.properties?.name || "Unknown",
@@ -82,6 +86,25 @@ export async function loadRequest(
       tenantPhone: tenant?.phone ?? null,
     },
   };
+}
+
+/** Photos and videos on a request, oldest first (the order they were uploaded). */
+export async function loadAttachments(supabase: SupabaseClient, requestId: string): Promise<JobAttachment[]> {
+  const { data } = await supabase
+    .from("maintenance_attachments")
+    .select("file_url, file_type, file_size")
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: true });
+  return (data ?? []).map((a) => ({
+    url: a.file_url as string,
+    type: a.file_type === "video" ? "video" : "photo",
+    size: a.file_size != null ? Number(a.file_size) : null,
+  }));
+}
+
+/** Path of the public page that shows a request's photos and video. */
+export function maintenancePhotosPath(requestId: string): string {
+  return `/en/maintenance-photos/${requestId}`;
 }
 
 export interface NotificationSummary {
@@ -99,9 +122,21 @@ export async function notifyTenantOfStatus(
   return sendTenantStatusUpdate(request.tenant, status as TenantNotifiableStatus, request.ctx);
 }
 
-export async function notifyTechnician(request: LoadedRequest): Promise<SendResult | undefined> {
+/**
+ * Job card for the assigned technician. `origin` is this deployment's own
+ * origin (never a client-supplied header) and is what the photos link is
+ * built on.
+ */
+export async function notifyTechnician(
+  request: LoadedRequest,
+  origin: string
+): Promise<SendResult | undefined> {
   if (!request.assignedToPhone) return undefined;
-  return sendTechnicianJob(request.assignedToPhone, request.ctx);
+  return sendTechnicianJob(request.assignedToPhone, request.ctx, {
+    attachments: request.attachments,
+    galleryUrl:
+      request.attachments.length > 0 ? `${origin}${maintenancePhotosPath(request.id)}` : null,
+  });
 }
 
 /**

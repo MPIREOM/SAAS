@@ -12,10 +12,10 @@ interface TemplateComponent {
   parameters: TemplateParameter[];
 }
 
-interface TemplateParameter {
-  type: "text";
-  text: string;
-}
+type TemplateParameter =
+  | { type: "text"; text: string }
+  // Media header of a template created with an IMAGE header.
+  | { type: "image"; image: { link: string } };
 
 interface WhatsAppResponse {
   messaging_product: string;
