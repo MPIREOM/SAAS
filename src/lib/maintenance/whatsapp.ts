@@ -1,5 +1,6 @@
 import { sendWhatsAppTemplate, sendWhatsAppTextMessage } from "@/lib/whatsapp/client";
 import { sanitiseTemplateParam } from "@/lib/notifications/admin-notify";
+import { translateToBengali } from "./translate";
 
 // WhatsApp messages for the maintenance workflow: the admin alert on a new
 // request, the job card for the technician, and status updates for the
@@ -12,7 +13,7 @@ import { sanitiseTemplateParam } from "@/lib/notifications/admin-notify";
 
 export interface MaintenanceTemplate {
   name: string;
-  language: "en" | "ar";
+  language: "en" | "ar" | "bn";
   body: string;
   example: string[];
 }
@@ -76,6 +77,46 @@ export const TECHNICIAN_JOB_TEMPLATE: MaintenanceTemplate = {
   ],
 };
 
+// The watchman's job card: Bengali first, then the same details in English.
+// {{1}} request ref, {{2}} property, {{3}} unit, {{4}} category (bn),
+// {{5}} urgency (bn), {{6}} description (bn), {{7}} tenant contact,
+// {{8}} category (en), {{9}} urgency (en), {{10}} description as written
+export const TECHNICIAN_JOB_BN_TEMPLATE: MaintenanceTemplate = {
+  name: "maintenance_technician_job_bn",
+  language: "bn",
+  body: [
+    "নতুন মেরামতের কাজ #{{1}}",
+    "",
+    "📍 ভবন: {{2}}",
+    "🏠 ইউনিট: {{3}}",
+    "🔧 কাজের ধরন: {{4}}",
+    "⚡ জরুরি মাত্রা: {{5}}",
+    "📝 সমস্যা: {{6}}",
+    "👤 ভাড়াটিয়া: {{7}}",
+    "",
+    "অনুগ্রহ করে ভাড়াটিয়ার সাথে যোগাযোগ করে আসার সময় ঠিক করুন।",
+    "",
+    "English:",
+    "🔧 Category: {{8}}",
+    "⚡ Urgency: {{9}}",
+    "📝 Issue: {{10}}",
+    "",
+    "Please contact the tenant to arrange a visit.",
+  ].join("\n"),
+  example: [
+    "3f9a1c2d",
+    "Bousher Ameen Mosque",
+    "12",
+    "প্লাম্বিং (পানির লাইন)",
+    "বেশি জরুরি",
+    "রান্নাঘরের সিঙ্কের নিচে ক্যাবিনেটের ভেতরে পানি পড়ছে",
+    "Ahmed Al Balushi (+96891234567)",
+    "Plumbing",
+    "HIGH",
+    "Kitchen sink is leaking under the cabinet",
+  ],
+};
+
 // {{1}} tenant name, {{2}} request ref, {{3}} unit, {{4}} property, {{5}} status message
 export const TENANT_UPDATE_TEMPLATES: Record<"en" | "ar", MaintenanceTemplate> = {
   en: {
@@ -125,6 +166,7 @@ export const TENANT_UPDATE_TEMPLATES: Record<"en" | "ar", MaintenanceTemplate> =
 export const MAINTENANCE_TEMPLATES: MaintenanceTemplate[] = [
   ADMIN_ALERT_TEMPLATE,
   TECHNICIAN_JOB_TEMPLATE,
+  TECHNICIAN_JOB_BN_TEMPLATE,
   TENANT_UPDATE_TEMPLATES.en,
   TENANT_UPDATE_TEMPLATES.ar,
 ];
@@ -161,6 +203,24 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function categoryLabel(category: string | null | undefined): string {
   return CATEGORY_LABELS[category ?? ""] ?? (category || "Other");
 }
+
+const CATEGORY_LABELS_BN: Record<string, string> = {
+  plumbing: "প্লাম্বিং (পানির লাইন)",
+  electrical: "বৈদ্যুতিক কাজ",
+  ac: "এসি",
+  structural: "ভবনের কাঠামো",
+  painting: "রং করা",
+  cleaning: "পরিষ্কার করা",
+  pest: "পোকামাকড় দমন",
+  other: "অন্যান্য",
+};
+
+const URGENCY_LABELS_BN: Record<string, string> = {
+  low: "কম জরুরি",
+  medium: "মাঝারি",
+  high: "বেশি জরুরি",
+  emergency: "খুব জরুরি — এখনই",
+};
 
 /** Short human reference for a request: the first 8 chars of its UUID. */
 export function requestRef(id: string): string {
@@ -254,11 +314,8 @@ export function adminAlertParams(ctx: MaintenanceMessageContext, dashboardLink: 
   ];
 }
 
-export async function sendTechnicianJob(
-  phone: string,
-  ctx: MaintenanceMessageContext
-): Promise<SendResult> {
-  return sendMaintenanceMessage(phone, TECHNICIAN_JOB_TEMPLATE, [
+function technicianJobParams(ctx: MaintenanceMessageContext): string[] {
+  return [
     requestRef(ctx.requestId),
     ctx.propertyName,
     ctx.unitNumber,
@@ -266,7 +323,69 @@ export async function sendTechnicianJob(
     ctx.urgency.toUpperCase(),
     trimDescription(ctx.description),
     tenantContact(ctx),
-  ]);
+  ];
+}
+
+// The Bengali card carries the description twice (translated and as written)
+// and has to stay inside WhatsApp's 1024-character body, so each copy gets a
+// tighter cap than the single-language card.
+const BN_DESCRIPTION_LIMIT = 240;
+
+function clip(text: string, limit: number): string {
+  return text.length > limit ? `${text.slice(0, limit)}…` : text;
+}
+
+async function technicianJobBnParams(ctx: MaintenanceMessageContext): Promise<string[]> {
+  const category = ctx.category ?? "";
+  const translated = await translateToBengali(clip(ctx.description, 400));
+  const tenant = ctx.tenantName ? tenantContact(ctx) : "ভাড়াটিয়া নেই (খালি ইউনিট)";
+  return [
+    requestRef(ctx.requestId),
+    ctx.propertyName,
+    ctx.unitNumber,
+    CATEGORY_LABELS_BN[category] ?? (category || CATEGORY_LABELS_BN.other),
+    URGENCY_LABELS_BN[ctx.urgency.toLowerCase()] ?? ctx.urgency.toUpperCase(),
+    // No translation available: point at the original text further down.
+    translated ? clip(translated, BN_DESCRIPTION_LIMIT) : "নিচে ইংরেজিতে দেখুন",
+    tenant,
+    categoryLabel(ctx.category),
+    ctx.urgency.toUpperCase(),
+    clip(ctx.description, BN_DESCRIPTION_LIMIT),
+  ];
+}
+
+/**
+ * Job card for the assigned technician. The watchman gets it in Bengali with
+ * the English underneath; everyone else gets the English card. If the Bengali
+ * template can't be delivered (e.g. not yet approved by Meta) the watchman
+ * still gets the English card, so a job is never lost to the translation.
+ */
+export async function sendTechnicianJob(
+  phone: string,
+  ctx: MaintenanceMessageContext
+): Promise<SendResult> {
+  if (isWatchman(phone)) {
+    const to = formatWhatsAppPhone(phone);
+    const params = (await technicianJobBnParams(ctx)).map(sanitiseTemplateParam);
+    const bengali = await sendWhatsAppTemplate({
+      to,
+      templateName: TECHNICIAN_JOB_BN_TEMPLATE.name,
+      languageCode: TECHNICIAN_JOB_BN_TEMPLATE.language,
+      components: [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }],
+    });
+    if (bengali.success) return { success: true, via: "template", messageId: bengali.messageId };
+
+    // Inside the 24h window free-form text delivers without an approved template.
+    const text = await sendWhatsAppTextMessage(to, render(TECHNICIAN_JOB_BN_TEMPLATE, params));
+    if (text.success) {
+      return { success: true, via: "text", messageId: text.messageId, templateError: bengali.error };
+    }
+    console.warn("[maintenance-whatsapp] Bengali job card not delivered, sending English", {
+      templateError: bengali.error,
+      textError: text.error,
+    });
+  }
+  return sendMaintenanceMessage(phone, TECHNICIAN_JOB_TEMPLATE, technicianJobParams(ctx));
 }
 
 export interface TenantRecipient {
@@ -300,6 +419,11 @@ export async function sendTenantStatusUpdate(
  * environment names someone else.
  */
 const WATCHMAN = { name: "Watchman", phone: "96894246200" };
+
+/** Whether a number is the watchman's, however it was typed (+968, spaces, bare 8 digits). */
+function isWatchman(phone: string): boolean {
+  return formatWhatsAppPhone(phone) === WATCHMAN.phone;
+}
 
 /**
  * The fixed maintenance technician: MAINTENANCE_TECHNICIAN_PHONE (and
