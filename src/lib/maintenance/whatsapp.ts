@@ -83,7 +83,7 @@ export const TECHNICIAN_JOB_TEMPLATE: MaintenanceTemplate = {
 // {{1}} request ref, {{2}} property, {{3}} unit, {{4}} category (bn),
 // {{5}} urgency (bn), {{6}} description (bn), {{7}} tenant contact,
 // {{8}} category (en), {{9}} urgency (en), {{10}} description as written,
-// {{11}} link to the job's photos and video (or "none")
+// {{11}} link to the job page: photos, video and the progress buttons (or "none")
 const WATCHMAN_JOB_BODY = [
   "নতুন মেরামতের কাজ #{{1}}",
   "",
@@ -137,6 +137,36 @@ export const WATCHMAN_JOB_PHOTO_TEMPLATE: MaintenanceTemplate = {
   example: WATCHMAN_JOB_EXAMPLE,
 };
 
+// Sent to the admins when the technician marks a job finished on the job page.
+// {{1}} request ref, {{2}} property, {{3}} unit, {{4}} category,
+// {{5}} who marked it, {{6}} dashboard link
+export const ADMIN_JOB_DONE_TEMPLATE: MaintenanceTemplate = {
+  name: "maintenance_admin_job_done",
+  language: "en",
+  body: [
+    "Maintenance job #{{1}} marked as done",
+    "",
+    "📍 Property: {{2}}",
+    "🏠 Unit: {{3}}",
+    "🔧 Category: {{4}}",
+    "👷 Marked by: {{5}}",
+    "",
+    "Please check the work and mark the request resolved to inform the tenant.",
+    "",
+    "🔗 {{6}}",
+    "",
+    "MPIRE Property Management",
+  ].join("\n"),
+  example: [
+    "3f9a1c2d",
+    "Bousher Ameen Mosque",
+    "12",
+    "Plumbing",
+    "Watchman",
+    "https://example.com/en/maintenance/3f9a1c2d",
+  ],
+};
+
 // {{1}} tenant name, {{2}} request ref, {{3}} unit, {{4}} property, {{5}} status message
 export const TENANT_UPDATE_TEMPLATES: Record<"en" | "ar", MaintenanceTemplate> = {
   en: {
@@ -185,6 +215,7 @@ export const TENANT_UPDATE_TEMPLATES: Record<"en" | "ar", MaintenanceTemplate> =
 
 export const MAINTENANCE_TEMPLATES: MaintenanceTemplate[] = [
   ADMIN_ALERT_TEMPLATE,
+  ADMIN_JOB_DONE_TEMPLATE,
   TECHNICIAN_JOB_TEMPLATE,
   WATCHMAN_JOB_TEMPLATE,
   WATCHMAN_JOB_PHOTO_TEMPLATE,
@@ -235,6 +266,14 @@ const CATEGORY_LABELS_BN: Record<string, string> = {
   pest: "পোকামাকড় দমন",
   other: "অন্যান্য",
 };
+
+export function categoryLabelBn(category: string | null | undefined): string {
+  return CATEGORY_LABELS_BN[category ?? ""] ?? CATEGORY_LABELS_BN.other;
+}
+
+export function urgencyLabelBn(urgency: string): string {
+  return URGENCY_LABELS_BN[urgency.toLowerCase()] ?? urgency.toUpperCase();
+}
 
 const URGENCY_LABELS_BN: Record<string, string> = {
   low: "কম জরুরি",
@@ -335,6 +374,21 @@ export function adminAlertParams(ctx: MaintenanceMessageContext, dashboardLink: 
   ];
 }
 
+export function adminJobDoneParams(
+  ctx: MaintenanceMessageContext,
+  markedBy: string,
+  dashboardLink: string
+): string[] {
+  return [
+    requestRef(ctx.requestId),
+    ctx.propertyName,
+    ctx.unitNumber,
+    categoryLabel(ctx.category),
+    markedBy,
+    dashboardLink,
+  ];
+}
+
 function technicianJobParams(ctx: MaintenanceMessageContext): string[] {
   return [
     requestRef(ctx.requestId),
@@ -365,7 +419,7 @@ export interface JobAttachment {
 
 export interface JobMedia {
   attachments: JobAttachment[];
-  /** Public page listing every attachment; null when there is nothing to show. */
+  /** Public job page (photos and progress buttons); null when there is none to link. */
   galleryUrl: string | null;
 }
 
@@ -497,7 +551,7 @@ export async function sendTenantStatusUpdate(
 const WATCHMAN = { name: "Watchman", phone: "96894246200" };
 
 /** Whether a number is the watchman's, however it was typed (+968, spaces, bare 8 digits). */
-function isWatchman(phone: string): boolean {
+export function isWatchman(phone: string): boolean {
   return formatWhatsAppPhone(phone) === WATCHMAN.phone;
 }
 

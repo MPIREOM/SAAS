@@ -58,6 +58,12 @@ export const maintenanceRequests = pgTable("maintenance_requests", {
   estimatedCost: numeric("estimated_cost"),
   actualCost: numeric("actual_cost"),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  // Secret in the technician's public job page URL (migration 056).
+  technicianToken: uuid("technician_token")
+    .notNull()
+    .default(sql`gen_random_uuid()`),
+  technicianStartedAt: timestamp("technician_started_at", { withTimezone: true }),
+  technicianDoneAt: timestamp("technician_done_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

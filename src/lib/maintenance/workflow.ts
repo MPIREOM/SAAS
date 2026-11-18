@@ -36,6 +36,8 @@ export interface LoadedRequest {
   actualCost: number | null;
   assignedToName: string | null;
   assignedToPhone: string | null;
+  /** Secret for the technician's job page; null until migration 056 is applied. */
+  technicianToken: string | null;
   tenant: TenantRecipient | null;
   attachments: JobAttachment[];
   ctx: MaintenanceMessageContext;
@@ -64,6 +66,12 @@ export async function loadRequest(
   } | null;
   const tenant = (data.tenants as unknown as TenantRecipient | null) ?? null;
   const attachments = await loadAttachments(supabase, id);
+  // Read on its own so a database without migration 056 still loads requests.
+  const { data: tokenRow } = await supabase
+    .from("maintenance_requests")
+    .select("technician_token")
+    .eq("id", id)
+    .maybeSingle();
 
   return {
     id: data.id as string,
@@ -73,6 +81,7 @@ export async function loadRequest(
     actualCost: data.actual_cost != null ? Number(data.actual_cost) : null,
     assignedToName: (data.assigned_to_name as string | null) ?? null,
     assignedToPhone: (data.assigned_to_phone as string | null) ?? null,
+    technicianToken: (tokenRow?.technician_token as string | undefined) ?? null,
     tenant,
     attachments,
     ctx: {
@@ -107,6 +116,11 @@ export function maintenancePhotosPath(requestId: string): string {
   return `/en/maintenance-photos/${requestId}`;
 }
 
+/** Path of the technician's public job page: details, photos and the progress buttons. */
+export function maintenanceJobPath(technicianToken: string): string {
+  return `/en/maintenance-job/${technicianToken}`;
+}
+
 export interface NotificationSummary {
   tenant?: SendResult;
   technician?: SendResult;
@@ -124,8 +138,9 @@ export async function notifyTenantOfStatus(
 
 /**
  * Job card for the assigned technician. `origin` is this deployment's own
- * origin (never a client-supplied header) and is what the photos link is
- * built on.
+ * origin (never a client-supplied header) and is what the card's link is
+ * built on. The link opens the job page, where the technician sees the
+ * photos and marks the work started and finished.
  */
 export async function notifyTechnician(
   request: LoadedRequest,
@@ -134,8 +149,11 @@ export async function notifyTechnician(
   if (!request.assignedToPhone) return undefined;
   return sendTechnicianJob(request.assignedToPhone, request.ctx, {
     attachments: request.attachments,
-    galleryUrl:
-      request.attachments.length > 0 ? `${origin}${maintenancePhotosPath(request.id)}` : null,
+    galleryUrl: request.technicianToken
+      ? `${origin}${maintenanceJobPath(request.technicianToken)}`
+      : request.attachments.length > 0
+        ? `${origin}${maintenancePhotosPath(request.id)}`
+        : null,
   });
 }
 

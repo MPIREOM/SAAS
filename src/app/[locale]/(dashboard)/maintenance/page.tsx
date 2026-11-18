@@ -239,14 +239,18 @@ export default async function MaintenancePage({
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge
-                        variant={statusVariant(
-                          (request.status as string) || "open"
-                        )}
-                        className="capitalize"
-                      >
-                        {t(`statuses.${request.status}`)}
-                      </Badge>
+                      {request.status === "in_progress" && request.technician_done_at ? (
+                        <Badge variant="info">{t("awaitingConfirmation")}</Badge>
+                      ) : (
+                        <Badge
+                          variant={statusVariant(
+                            (request.status as string) || "open"
+                          )}
+                          className="capitalize"
+                        >
+                          {t(`statuses.${request.status}`)}
+                        </Badge>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-text-secondary tabular-nums ltr-nums">
@@ -304,14 +308,18 @@ export default async function MaintenancePage({
                       </Badge>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <Badge
-                        variant={statusVariant(
-                          (request.status as string) || "open"
-                        )}
-                        className="capitalize"
-                      >
-                        {t(`statuses.${request.status}`)}
-                      </Badge>
+                      {request.status === "in_progress" && request.technician_done_at ? (
+                        <Badge variant="info">{t("awaitingConfirmation")}</Badge>
+                      ) : (
+                        <Badge
+                          variant={statusVariant(
+                            (request.status as string) || "open"
+                          )}
+                          className="capitalize"
+                        >
+                          {t(`statuses.${request.status}`)}
+                        </Badge>
+                      )}
                       <span className="text-text-secondary tabular-nums ltr-nums">
                         {new Date(request.created_at as string).toLocaleDateString()}
                       </span>

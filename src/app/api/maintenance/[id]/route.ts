@@ -81,6 +81,14 @@ export async function PATCH(
       // Reopened: no longer resolved.
       update.resolved_at = null;
     }
+    // A backward move (back to open, or a reopen) sends the job back to the
+    // technician, whose job page offers the buttons again (migration 056).
+    if (input.status === "open") {
+      update.technician_started_at = null;
+      update.technician_done_at = null;
+    } else if (input.status === "in_progress" && current.status !== "open") {
+      update.technician_done_at = null;
+    }
   }
 
   if (input.actual_cost !== undefined) update.actual_cost = input.actual_cost;
