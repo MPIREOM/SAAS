@@ -22,6 +22,7 @@ import { getUserAccessiblePropertyIds } from "@/lib/access-control";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Stepper } from "@/components/ui/stepper";
+import { Alert } from "@/components/ui/alert";
 
 function urgencyVariant(
   u: string
@@ -121,6 +122,11 @@ export default async function MaintenanceDetailPage({
 
   const requestUrgency = (request.urgency as string) || "low";
   const requestStatus = (request.status as string) || "open";
+  // Set from the technician's public job page (migration 056).
+  const technicianStartedAt = (request.technician_started_at as string | null) ?? null;
+  const technicianDoneAt = (request.technician_done_at as string | null) ?? null;
+  const technicianName =
+    (request.assigned_to_name as string | null) || t("technicianFallbackName");
 
   return (
     <div className="space-y-6">
@@ -322,6 +328,24 @@ export default async function MaintenanceDetailPage({
           }))}
           activeIndex={currentIndex}
         />
+        {requestStatus === "in_progress" && technicianDoneAt ? (
+          <Alert
+            variant="info"
+            className="mb-4"
+            title={t("technicianDoneTitle", { name: technicianName })}
+          >
+            {t("technicianDoneMessage", {
+              date: new Date(technicianDoneAt).toLocaleString(),
+            })}
+          </Alert>
+        ) : requestStatus === "in_progress" && technicianStartedAt ? (
+          <p className="mb-4 text-sm text-text-secondary">
+            {t("technicianStartedAt", {
+              name: technicianName,
+              date: new Date(technicianStartedAt).toLocaleString(),
+            })}
+          </p>
+        ) : null}
         <MaintenanceStatusActions
           requestId={id}
           currentStatus={request.status as string}

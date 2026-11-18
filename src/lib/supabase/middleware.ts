@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const isPublicPage = request.nextUrl.pathname.includes("/maintenance-request/") ||
     request.nextUrl.pathname.includes("/maintenance-photos/") ||
+    request.nextUrl.pathname.includes("/maintenance-job/") ||
     request.nextUrl.pathname.includes("/tenant-portal/") ||
     request.nextUrl.pathname.includes("/visit-booking/") ||
     request.nextUrl.pathname.includes("/my-visit/") ||
