@@ -11,6 +11,7 @@ import {
   syncMaintenanceExpense,
   type NotificationSummary,
 } from "@/lib/maintenance/workflow";
+import { reminderReset } from "@/lib/maintenance/reminders";
 
 // Staff-side updates to a maintenance request: status transitions (with the
 // resolve -> expense sync and tenant WhatsApp update) and assignment/cost
@@ -81,6 +82,8 @@ export async function PATCH(
       // Reopened: no longer resolved.
       update.resolved_at = null;
     }
+    // A new stage restarts the technician's reminder schedule (migration 057).
+    Object.assign(update, reminderReset(input.status!));
     // A backward move (back to open, or a reopen) sends the job back to the
     // technician, whose job page offers the buttons again (migration 056).
     if (input.status === "open") {

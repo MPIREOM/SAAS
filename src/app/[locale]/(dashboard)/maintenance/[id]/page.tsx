@@ -125,6 +125,8 @@ export default async function MaintenanceDetailPage({
   // Set from the technician's public job page (migration 056).
   const technicianStartedAt = (request.technician_started_at as string | null) ?? null;
   const technicianDoneAt = (request.technician_done_at as string | null) ?? null;
+  // Reminders sent in the current stage (migration 057).
+  const reminderCount = Number(request.technician_reminder_count ?? 0);
   const technicianName =
     (request.assigned_to_name as string | null) || t("technicianFallbackName");
 
@@ -344,6 +346,12 @@ export default async function MaintenanceDetailPage({
               name: technicianName,
               date: new Date(technicianStartedAt).toLocaleString(),
             })}
+          </p>
+        ) : null}
+        {reminderCount > 0 && !technicianDoneAt &&
+        (requestStatus === "open" || requestStatus === "in_progress") ? (
+          <p className="mb-4 text-sm text-text-secondary">
+            {t("technicianReminders", { count: reminderCount, name: technicianName })}
           </p>
         ) : null}
         <MaintenanceStatusActions

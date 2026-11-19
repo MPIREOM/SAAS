@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  integer,
   numeric,
   pgEnum,
   pgTable,
@@ -64,6 +65,9 @@ export const maintenanceRequests = pgTable("maintenance_requests", {
     .default(sql`gen_random_uuid()`),
   technicianStartedAt: timestamp("technician_started_at", { withTimezone: true }),
   technicianDoneAt: timestamp("technician_done_at", { withTimezone: true }),
+  // Reminder schedule for the technician (migration 057).
+  technicianNextReminderAt: timestamp("technician_next_reminder_at", { withTimezone: true }),
+  technicianReminderCount: integer("technician_reminder_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

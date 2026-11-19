@@ -167,6 +167,104 @@ export const ADMIN_JOB_DONE_TEMPLATE: MaintenanceTemplate = {
   ],
 };
 
+// Reminder for a job the technician hasn't finished (cron maintenance-reminders).
+// The watchman gets it in Bengali with the English underneath:
+// {{1}} request ref, {{2}} property, {{3}} unit, {{4}} category (bn),
+// {{5}} where the job stands and what to do (bn), {{6}} category (en),
+// {{7}} the same in English, {{8}} link to the job page
+export const WATCHMAN_REMINDER_TEMPLATE: MaintenanceTemplate = {
+  name: "maintenance_watchman_reminder_bn",
+  language: "bn",
+  body: [
+    "মেরামতের কাজের রিমাইন্ডার #{{1}}",
+    "",
+    "📍 ভবন: {{2}}",
+    "🏠 ইউনিট: {{3}}",
+    "🔧 কাজের ধরন: {{4}}",
+    "",
+    "{{5}}",
+    "",
+    "English:",
+    "🔧 Category: {{6}}",
+    "{{7}}",
+    "",
+    "🔗 কাজের পাতা / Job page: {{8}}",
+    "",
+    "MPIRE Property Management",
+  ].join("\n"),
+  example: [
+    "3f9a1c2d",
+    "Bousher Ameen Mosque",
+    "12",
+    "প্লাম্বিং (পানির লাইন)",
+    "এই কাজটি এখনো শুরু হয়নি। কাজ শুরু করলে নিচের লিংক খুলে «কাজ শুরু করুন» বোতামে চাপ দিন।",
+    "Plumbing",
+    "This job has not been started yet. When you start, open the link below and tap Start work.",
+    "https://example.com/en/maintenance-job/3f9a1c2d-0000-4000-8000-000000000000",
+  ],
+};
+
+// The same reminder for any other technician.
+// {{1}} request ref, {{2}} property, {{3}} unit, {{4}} category,
+// {{5}} where the job stands and what to do, {{6}} link to the job page
+export const TECHNICIAN_REMINDER_TEMPLATE: MaintenanceTemplate = {
+  name: "maintenance_technician_reminder",
+  language: "en",
+  body: [
+    "Reminder for maintenance job #{{1}}",
+    "",
+    "📍 Property: {{2}}",
+    "🏠 Unit: {{3}}",
+    "🔧 Category: {{4}}",
+    "",
+    "{{5}}",
+    "",
+    "🔗 Job page: {{6}}",
+    "",
+    "MPIRE Property Management",
+  ].join("\n"),
+  example: [
+    "3f9a1c2d",
+    "Bousher Ameen Mosque",
+    "12",
+    "Plumbing",
+    "This job has not been started yet. When you start, open the link below and tap Start work.",
+    "https://example.com/en/maintenance-job/3f9a1c2d-0000-4000-8000-000000000000",
+  ],
+};
+
+// Sent to the admins once a job has had several reminders with no change.
+// {{1}} request ref, {{2}} property, {{3}} unit, {{4}} category,
+// {{5}} who it is assigned to, {{6}} where it stands, {{7}} dashboard link
+export const ADMIN_JOB_STUCK_TEMPLATE: MaintenanceTemplate = {
+  name: "maintenance_admin_job_stuck",
+  language: "en",
+  body: [
+    "Maintenance job #{{1}} needs attention",
+    "",
+    "📍 Property: {{2}}",
+    "🏠 Unit: {{3}}",
+    "🔧 Category: {{4}}",
+    "👷 Assigned to: {{5}}",
+    "📌 Status: {{6}}",
+    "",
+    "Reminders will keep going until the job is marked on its job page or resolved here.",
+    "",
+    "🔗 {{7}}",
+    "",
+    "MPIRE Property Management",
+  ].join("\n"),
+  example: [
+    "3f9a1c2d",
+    "Bousher Ameen Mosque",
+    "12",
+    "Plumbing",
+    "Watchman",
+    "Not started after 3 reminders",
+    "https://example.com/en/maintenance/3f9a1c2d",
+  ],
+};
+
 // {{1}} tenant name, {{2}} request ref, {{3}} unit, {{4}} property, {{5}} status message
 export const TENANT_UPDATE_TEMPLATES: Record<"en" | "ar", MaintenanceTemplate> = {
   en: {
@@ -219,6 +317,9 @@ export const MAINTENANCE_TEMPLATES: MaintenanceTemplate[] = [
   TECHNICIAN_JOB_TEMPLATE,
   WATCHMAN_JOB_TEMPLATE,
   WATCHMAN_JOB_PHOTO_TEMPLATE,
+  WATCHMAN_REMINDER_TEMPLATE,
+  TECHNICIAN_REMINDER_TEMPLATE,
+  ADMIN_JOB_STUCK_TEMPLATE,
   TENANT_UPDATE_TEMPLATES.en,
   TENANT_UPDATE_TEMPLATES.ar,
 ];
@@ -516,6 +617,68 @@ export async function sendTechnicianJob(
     });
   }
   return sendMaintenanceMessage(phone, TECHNICIAN_JOB_TEMPLATE, technicianJobParams(ctx));
+}
+
+const REMINDER_TEXT: Record<"open" | "in_progress", { bn: string; en: string }> = {
+  open: {
+    bn: "এই কাজটি এখনো শুরু হয়নি। কাজ শুরু করলে নিচের লিংক খুলে «কাজ শুরু করুন» বোতামে চাপ দিন।",
+    en: "This job has not been started yet. When you start, open the link below and tap Start work.",
+  },
+  in_progress: {
+    bn: "এই কাজটি চলছে বলে চিহ্নিত আছে। কাজ শেষ হলে নিচের লিংক খুলে «কাজ শেষ হয়েছে» বোতামে চাপ দিন।",
+    en: "This job is marked as in progress. When it is finished, open the link below and tap Work finished.",
+  },
+};
+
+/**
+ * Reminder for a job the technician hasn't finished: Bengali with English for
+ * the watchman, English for anyone else. `jobUrl` is the job page, where the
+ * work is marked started and finished.
+ */
+export async function sendTechnicianReminder(
+  phone: string,
+  ctx: MaintenanceMessageContext,
+  stage: "open" | "in_progress",
+  jobUrl: string
+): Promise<SendResult> {
+  const text = REMINDER_TEXT[stage];
+  if (isWatchman(phone)) {
+    return sendMaintenanceMessage(phone, WATCHMAN_REMINDER_TEMPLATE, [
+      requestRef(ctx.requestId),
+      ctx.propertyName,
+      ctx.unitNumber,
+      categoryLabelBn(ctx.category),
+      text.bn,
+      categoryLabel(ctx.category),
+      text.en,
+      jobUrl,
+    ]);
+  }
+  return sendMaintenanceMessage(phone, TECHNICIAN_REMINDER_TEMPLATE, [
+    requestRef(ctx.requestId),
+    ctx.propertyName,
+    ctx.unitNumber,
+    categoryLabel(ctx.category),
+    text.en,
+    jobUrl,
+  ]);
+}
+
+export function adminJobStuckParams(
+  ctx: MaintenanceMessageContext,
+  assignedTo: string,
+  standing: string,
+  dashboardLink: string
+): string[] {
+  return [
+    requestRef(ctx.requestId),
+    ctx.propertyName,
+    ctx.unitNumber,
+    categoryLabel(ctx.category),
+    assignedTo,
+    standing,
+    dashboardLink,
+  ];
 }
 
 export interface TenantRecipient {
