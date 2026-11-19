@@ -833,6 +833,7 @@
     "technicianDoneTitle": "{name} marked this job as done",
     "technicianDoneMessage": "Marked on {date}. Check the work, then mark the request resolved to inform the tenant. If it is not finished, move it back to Open.",
     "technicianFallbackName": "The technician",
+    "technicianReminders": "{count, plural, one {# reminder} other {# reminders}} sent to {name} with no update yet. Reminders continue every 2 days until work starts, then every 3 days until it is marked finished.",
     "assignmentAndCost": "Assignment & Cost",
     "assignmentHint": "Setting a new technician phone sends them the job details on WhatsApp.",
     "saved": "Saved.",

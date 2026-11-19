@@ -9,6 +9,7 @@ import {
   requestRef,
 } from "@/lib/maintenance/whatsapp";
 import { loadRequest, notifyTenantOfStatus, type LoadedRequest } from "@/lib/maintenance/workflow";
+import { reminderReset } from "@/lib/maintenance/reminders";
 import { DONE_PHOTO_MIME, MAX_DONE_PHOTOS, donePhotoPrefix } from "@/lib/maintenance/job-page";
 
 export const maxDuration = 60;
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (input.action === "start") {
     const { data: claimed, error } = await db
       .from("maintenance_requests")
-      .update({ status: "in_progress", technician_started_at: now })
+      .update({ status: "in_progress", technician_started_at: now, ...reminderReset("in_progress") })
       .eq("id", job.id)
       .eq("status", "open")
       .select("id");

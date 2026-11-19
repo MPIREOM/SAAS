@@ -21,7 +21,8 @@ import { GATE_KEY_LOW_STOCK_TEMPLATE } from "@/lib/gate-keys/template";
 //   owner_monthly_report (owner-reports): document header + 3 body parameters
 //   maintenance_* (lib/maintenance/whatsapp.ts): admin alert, technician
 //     job, the watchman's Bengali job card (text, and image header + the
-//     same body), tenant status update (en + ar)
+//     same body), job reminders (bn + en), job done / job stuck admin
+//     alerts, tenant status update (en + ar)
 //   visit_booking_* (lib/visits/whatsapp.ts): invite, confirmation and
 //     day-before reminder for building-wide visits (en + ar)
 //   gate_keys_low_stock (lib/gate-keys/stock.ts): admin alert when a
